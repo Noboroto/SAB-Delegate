@@ -46,6 +46,7 @@ module.exports = {
 					description: file[1].description,
 				});
 		}
+		targetChannel.send(message);
 		await interaction.reply({
 			content: "Done!",
 			ephemeral: true,
