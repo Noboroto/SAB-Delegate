@@ -8,7 +8,7 @@ WORKDIR /usr/src/bot
 # A wildcard is used to ensure both package.json AND package-lock.json are copied
 # where available (npm@5+)
 COPY ./source/package*.json ./
-VOLUME ./source ./
+COPY ./source ./
 
 RUN npm install
 # If you are building your code for production
