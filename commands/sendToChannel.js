@@ -15,7 +15,6 @@ module.exports = {
 		// interaction.user is the object representing the User who ran the command
 		// interaction.member is the GuildMember object, which represents the user in the specific guild
 		const targetChannel = interaction.channel;
-		targetChannel.sendTyping();
 		const response = interaction.options.getString("content");
 
 		const message = {
