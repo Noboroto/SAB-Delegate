@@ -2,16 +2,11 @@ const { SlashCommandBuilder, PermissionFlagsBits } = require("discord.js");
 
 module.exports = {
 	data: new SlashCommandBuilder()
-		.setName("send-to-channel")
-		.setDescription("Copy a messsage to another channel!")
-		.addChannelOption(Option =>
-			Option.setName("destination")
-				.setDescription("destination channel")
-				.setRequired(true),
-		)
+		.setName("send-to-this-channel")
+		.setDescription("Send a messsage to this channel!")
 		.addStringOption(Option =>
-			Option.setName("message-link")
-				.setDescription("message link")
+			Option.setName("content")
+				.setDescription("message content")
 				.setRequired(true),
 		)
 		.setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels)
@@ -19,32 +14,13 @@ module.exports = {
 	async execute(interaction) {
 		// interaction.user is the object representing the User who ran the command
 		// interaction.member is the GuildMember object, which represents the user in the specific guild
-		const targetChannel = interaction.options.getChannel("destination");
+		const targetChannel = interaction.channel;
 		targetChannel.sendTyping();
-		const messageLink = interaction.options.getString("message-link");
-
-		const part = messageLink.split("/");
-		const channelId = part[part.length - 2];
-		const messageId = part[part.length - 1];
-
-		const channel = await interaction.client.channels.resolve(channelId);
-		// const message = await channel.messages.fetch(messageId);
-		// console.log(message);
-		const messageFromID = await channel.messages.fetch(messageId);
-		console.log(messageFromID.attachments);
+		const response = interaction.options.getString("content");
 
 		const message = {
-			content: messageFromID.content,
-			files: [],
+			content: response,
 		};
-		for (const file of messageFromID.attachments) {
-			message.files.push(
-				{
-					attachment: file[1].attachment,
-					name: file[1].name,
-					description: file[1].description,
-				});
-		}
 		targetChannel.send(message);
 		await interaction.reply({
 			content: "Done!",
