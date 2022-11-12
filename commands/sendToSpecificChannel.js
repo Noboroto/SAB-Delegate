@@ -2,7 +2,7 @@ const { SlashCommandBuilder, PermissionFlagsBits, ChannelType } = require("disco
 
 module.exports = {
 	data: new SlashCommandBuilder()
-		.setName("send-to-this-channel")
+		.setName("send-to-specific-channel")
 		.setDescription("Send a messsage to specific channel!")
 		.addChannelOption(Option =>
 			Option.setName("destination")
