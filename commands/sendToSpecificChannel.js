@@ -1,0 +1,31 @@
+const { SlashCommandBuilder, PermissionFlagsBits, ChannelType } = require("discord.js");
+
+module.exports = {
+	data: new SlashCommandBuilder()
+		.setName("send-to-this-channel")
+		.setDescription("Send a messsage to specific channel!")
+		.addChannelOption(Option =>
+			Option.setName("destination")
+				.addChannelTypes(ChannelType.GuildText | ChannelType.PublicThread | ChannelType.PrivateThread)
+				.setDescription("destination channel")
+				.setRequired(true),
+		)
+		.setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels)
+		.setDMPermission(false),
+	async execute(interaction) {
+		// interaction.user is the object representing the User who ran the command
+		// interaction.member is the GuildMember object, which represents the user in the specific guild
+		const targetChannel = interaction.channel;
+		targetChannel.sendTyping();
+		const response = interaction.options.getString("content");
+
+		const message = {
+			content: response,
+		};
+		targetChannel.send(message);
+		await interaction.reply({
+			content: "Done!",
+			ephemeral: true,
+		});
+	},
+};
