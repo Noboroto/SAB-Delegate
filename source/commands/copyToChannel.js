@@ -30,7 +30,7 @@ module.exports = {
 		const channelId = part[part.length - 2];
 		const messageId = part[part.length - 1];
 
-		const channel = await interaction.client.channels.resolve(channelId);
+		const channel = await interaction.client.channels.fetch(channelId);
 		// const message = await channel.messages.fetch(messageId);
 		// console.log(message);
 		const messageFromID = await channel.messages.fetch(messageId);
