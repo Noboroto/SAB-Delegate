@@ -16,4 +16,6 @@ RUN npm install
 
 # Bundle app source
 
+CMD [ "node", "delete-all-commands.js"]
+CMD [ "node", "deploy-global-commands.js"]
 CMD [ "node", "main.js" ]
