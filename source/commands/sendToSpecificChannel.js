@@ -22,11 +22,10 @@ module.exports = {
 		// interaction.member is the GuildMember object, which represents the user in the specific guild
 		const targetChannel = interaction.options.getChannel("destination");
 		const response = interaction.options.getString("content");
-
 		const message = {
 			content: response,
 		};
-		targetChannel.send(message);
+		await targetChannel.send(message);
 		await interaction.reply({
 			content: "Done!",
 			ephemeral: true,

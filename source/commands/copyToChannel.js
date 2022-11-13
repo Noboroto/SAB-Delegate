@@ -20,10 +20,12 @@ module.exports = {
 	async execute(interaction) {
 		// interaction.user is the object representing the User who ran the command
 		// interaction.member is the GuildMember object, which represents the user in the specific guild
+		await interaction.startTyping();
+
 		const targetChannel = interaction.options.getChannel("destination");
 		targetChannel.sendTyping();
-		const messageLink = interaction.options.getString("message-link");
 
+		const messageLink = interaction.options.getString("message-link");
 		const part = messageLink.split("/");
 		const channelId = part[part.length - 2];
 		const messageId = part[part.length - 1];
@@ -46,7 +48,7 @@ module.exports = {
 					description: file[1].description,
 				});
 		}
-		targetChannel.send(message);
+		await targetChannel.send(message);
 		await interaction.reply({
 			content: "Done!",
 			ephemeral: true,
