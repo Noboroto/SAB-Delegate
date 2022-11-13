@@ -20,8 +20,6 @@ module.exports = {
 	async execute(interaction) {
 		// interaction.user is the object representing the User who ran the command
 		// interaction.member is the GuildMember object, which represents the user in the specific guild
-		await interaction.startTyping();
-
 		const targetChannel = interaction.options.getChannel("destination");
 		targetChannel.sendTyping();
 
@@ -48,8 +46,9 @@ module.exports = {
 					description: file[1].description,
 				});
 		}
+		await interaction.deferReply({ephemeral:true});
 		await targetChannel.send(message);
-		await interaction.reply({
+		await interaction.editReply({
 			content: "Done!",
 			ephemeral: true,
 		});
