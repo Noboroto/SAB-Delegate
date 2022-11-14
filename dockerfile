@@ -10,7 +10,7 @@ WORKDIR /usr/src/bot
 COPY ./source/package*.json ./
 COPY ./source ./
 
-RUN npm install
+RUN npm install --only=production
 # If you are building your code for production
 # RUN npm ci --only=production
 
@@ -18,4 +18,4 @@ RUN npm install
 
 CMD [ "node", "delete-all-commands.js"]
 CMD [ "node", "deploy-global-commands.js"]
-CMD [ "node", "main.js", "--production" ]
+CMD [ "node", "main.js" ]
