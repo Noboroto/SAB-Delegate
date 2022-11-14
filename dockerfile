@@ -18,4 +18,4 @@ RUN npm install
 
 CMD [ "node", "delete-all-commands.js"]
 CMD [ "node", "deploy-global-commands.js"]
-CMD [ "node", "main.js" ]
+CMD [ "node", "main.js", "--production" ]
