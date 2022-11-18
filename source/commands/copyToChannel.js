@@ -6,7 +6,7 @@ module.exports = {
 		.setDescription("Copy a messsage to specific channel!")
 		.addChannelOption(Option =>
 			Option.setName("destination")
-				.addChannelTypes(ChannelType.GuildText)
+				.addChannelTypes(ChannelType.GuildText | ChannelType.GuildAnnouncement | ChannelType.GuildForum)
 				.setDescription("destination channel")
 				.setRequired(true),
 		)
@@ -46,7 +46,7 @@ module.exports = {
 					description: file[1].description,
 				});
 		}
-		await interaction.deferReply({ephemeral:true});
+		await interaction.deferReply({ ephemeral: true });
 		await targetChannel.send(message);
 		await interaction.editReply({
 			content: "Done!",
