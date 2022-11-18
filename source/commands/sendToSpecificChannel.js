@@ -7,6 +7,8 @@ module.exports = {
 		.addChannelOption(Option =>
 			Option.setName("destination")
 				.addChannelTypes(ChannelType.GuildText)
+				.addChannelTypes(ChannelType.GuildAnnouncement)
+				.addChannelTypes(ChannelType.AnnouncementThread)
 				.setDescription("destination channel")
 				.setRequired(true),
 		)

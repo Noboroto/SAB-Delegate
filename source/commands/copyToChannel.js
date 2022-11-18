@@ -6,7 +6,9 @@ module.exports = {
 		.setDescription("Copy a messsage to specific channel!")
 		.addChannelOption(Option =>
 			Option.setName("destination")
-				.addChannelTypes(ChannelType.GuildText | ChannelType.GuildAnnouncement | ChannelType.GuildForum)
+				.addChannelTypes(ChannelType.GuildText)
+				.addChannelTypes(ChannelType.GuildAnnouncement)
+				.addChannelTypes(ChannelType.AnnouncementThread)
 				.setDescription("destination channel")
 				.setRequired(true),
 		)
