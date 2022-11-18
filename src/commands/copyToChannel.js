@@ -34,8 +34,6 @@ module.exports = {
 		// const message = await channel.messages.fetch(messageId);
 		// console.log(message);
 		const messageFromID = await channel.messages.fetch(messageId);
-		console.log(messageFromID.attachments);
-
 		const message = {
 			content: messageFromID.content,
 			files: [],
