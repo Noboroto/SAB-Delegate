@@ -48,9 +48,8 @@ module.exports = {
 		}
 		await interaction.deferReply({ ephemeral: true });
 		const resultMsg = await targetChannel.send(message);
-		if (resultMsg.content.indexOf("react ok") != -1)
-		{
-			await resultMsg.react("👌")
+		if (resultMsg.content.indexOf("react ok") != -1) {
+			await resultMsg.react("👌");
 		}
 
 		await interaction.editReply({
