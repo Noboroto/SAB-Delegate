@@ -28,6 +28,10 @@ module.exports = {
 			content: response,
 		};
 		await targetChannel.send(message);
+		const resultMsg = await targetChannel.send(message);
+		if (resultMsg.content.indexOf("react ok") != -1) {
+			await resultMsg.react("👌");
+		}
 		await interaction.reply({
 			content: "Done!",
 			ephemeral: true,
