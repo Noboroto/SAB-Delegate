@@ -47,7 +47,12 @@ module.exports = {
 				});
 		}
 		await interaction.deferReply({ ephemeral: true });
-		await targetChannel.send(message);
+		const resultMsg = await targetChannel.send(message);
+		if (resultMsg.content.indexOf("react ok") != -1)
+		{
+			await resultMsg.react("👌")
+		}
+
 		await interaction.editReply({
 			content: "Done!",
 			ephemeral: true,
