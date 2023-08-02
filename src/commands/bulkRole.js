@@ -23,13 +23,15 @@ module.exports = {
 		//const role = interaction.options.getRole("role");
 		//const ids = interaction.options.getString("ids").replace(">", "").replace("<", "").replace("@").split(",");
 
+		let members = await interaction.members.cache
+
 		/*ids.forEach(id => {
 			let member = guild.members.cache.get(id);
 			member.addRole(role);
 		});*/
 
 		const message = {
-			content: `${interaction}\n\n${interaction.members}`,
+			content: `${interaction}\n\n${members}`,
 		};
 		await interaction.reply(message);
 	},
