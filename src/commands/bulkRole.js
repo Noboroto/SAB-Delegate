@@ -19,17 +19,17 @@ module.exports = {
 	async execute(interaction) {
 		// interaction.user is the object representing the User who ran the command
 		// interaction.member is the GuildMember object, which represents the user in the specific guild
-		const guild = interaction.client.guilds.cache.get('Guild ID');
-		const role = interaction.options.getRole("role");
-		const ids = interaction.options.getString("ids").replace(">", "").replace("<", "").replace("@").split(",");
+		//const guild = interaction.client.guilds.cache.get('Guild ID');
+		//const role = interaction.options.getRole("role");
+		//const ids = interaction.options.getString("ids").replace(">", "").replace("<", "").replace("@").split(",");
 
-		ids.forEach(id => {
+		/*ids.forEach(id => {
 			let member = guild.members.cache.get(id);
 			member.addRole(role);
-		});
+		});*/
 
 		const message = {
-			content: `Complete add ${ids.length}`,
+			content: `${interaction}\n\n${interaction.members}`,
 		};
 		await interaction.reply(message);
 	},
