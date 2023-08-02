@@ -25,7 +25,7 @@ module.exports = {
 
 		ids.forEach(id => {
 			let member = guild.members.cache.get(id);
-			member.roles.add(role);
+			member.addRole(role);
 		});
 
 		const message = {
