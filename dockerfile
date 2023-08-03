@@ -7,8 +7,8 @@ WORKDIR /usr/src/bot
 # Install app dependencies
 # A wildcard is used to ensure both package.json AND package-lock.json are copied
 # where available (npm@5+)
-COPY ./src/package*.json ./
-COPY ./src ./
+COPY ./root/package*.json ./
+COPY ./root ./
 
 RUN npm install --only=production
 # If you are building your code for production
