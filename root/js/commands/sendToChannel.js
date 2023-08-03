@@ -4,11 +4,7 @@ module.exports = {
 	data: new SlashCommandBuilder()
 		.setName("send-to-this-channel")
 		.setDescription("Send a messsage to this channel!")
-		.addStringOption(Option =>
-			Option.setName("content")
-				.setDescription("message content")
-				.setRequired(true),
-		)
+		.addStringOption((Option) => Option.setName("content").setDescription("message content").setRequired(true))
 		.setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels)
 		.setDMPermission(false),
 	async execute(interaction) {
@@ -17,7 +13,7 @@ module.exports = {
 		const targetChannel = interaction.channel;
 		const response = interaction.options.getString("content");
 		const message = {
-			content: response,
+			content: response
 		};
 		const resultMsg = await targetChannel.send(message);
 		if (resultMsg.content.indexOf("react ok") != -1) {
@@ -25,7 +21,7 @@ module.exports = {
 		}
 		await interaction.reply({
 			content: "Done!",
-			ephemeral: true,
+			ephemeral: true
 		});
-	},
+	}
 };

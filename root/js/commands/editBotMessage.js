@@ -4,15 +4,11 @@ module.exports = {
 	data: new SlashCommandBuilder()
 		.setName("edit-bot-message")
 		.setDescription("Edit a message send by this bot!")
-		.addStringOption(Option =>
-			Option.setName("bot-message-link")
-				.setDescription("bot message link")
-				.setRequired(true),
+		.addStringOption((Option) =>
+			Option.setName("bot-message-link").setDescription("bot message link").setRequired(true)
 		)
-		.addStringOption(Option =>
-			Option.setName("new-message-link")
-				.setDescription("new message link")
-				.setRequired(true),
+		.addStringOption((Option) =>
+			Option.setName("new-message-link").setDescription("new message link").setRequired(true)
 		)
 		.setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels)
 		.setDMPermission(false),
@@ -26,22 +22,21 @@ module.exports = {
 
 		const message = {
 			content: newMessageFromID.content,
-			files: [],
+			files: []
 		};
 		for (const file of newMessageFromID.attachments) {
-			message.files.push(
-				{
-					attachment: file[1].attachment,
-					name: file[1].name,
-					description: file[1].description,
-				});
+			message.files.push({
+				attachment: file[1].attachment,
+				name: file[1].name,
+				description: file[1].description
+			});
 		}
 		botMessageFromID.edit(message);
 		await interaction.editReply({
 			content: "Done!",
-			ephemeral: true,
+			ephemeral: true
 		});
-	},
+	}
 };
 
 const getMessageFromOption = async (interaction, optionName) => {

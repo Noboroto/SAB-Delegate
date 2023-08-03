@@ -4,19 +4,15 @@ module.exports = {
 	data: new SlashCommandBuilder()
 		.setName("copy-to-channel")
 		.setDescription("Copy a messsage to specific channel!")
-		.addChannelOption(Option =>
+		.addChannelOption((Option) =>
 			Option.setName("destination")
 				.addChannelTypes(ChannelType.GuildText)
 				.addChannelTypes(ChannelType.GuildAnnouncement)
 				.addChannelTypes(ChannelType.AnnouncementThread)
 				.setDescription("destination channel")
-				.setRequired(true),
+				.setRequired(true)
 		)
-		.addStringOption(Option =>
-			Option.setName("message-link")
-				.setDescription("message link")
-				.setRequired(true),
-		)
+		.addStringOption((Option) => Option.setName("message-link").setDescription("message link").setRequired(true))
 		.setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels)
 		.setDMPermission(false),
 	async execute(interaction) {
@@ -36,15 +32,14 @@ module.exports = {
 		const messageFromID = await channel.messages.fetch(messageId);
 		const message = {
 			content: messageFromID.content,
-			files: [],
+			files: []
 		};
 		for (const file of messageFromID.attachments) {
-			message.files.push(
-				{
-					attachment: file[1].attachment,
-					name: file[1].name,
-					description: file[1].description,
-				});
+			message.files.push({
+				attachment: file[1].attachment,
+				name: file[1].name,
+				description: file[1].description
+			});
 		}
 		await interaction.deferReply({ ephemeral: true });
 		const resultMsg = await targetChannel.send(message);
@@ -54,7 +49,7 @@ module.exports = {
 
 		await interaction.editReply({
 			content: "Done!",
-			ephemeral: true,
+			ephemeral: true
 		});
-	},
+	}
 };

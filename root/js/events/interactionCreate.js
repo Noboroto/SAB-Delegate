@@ -14,15 +14,16 @@ module.exports = {
 
 		try {
 			await command.execute(interaction);
-		}
-		catch (error) {
-			const channel = interaction.client.guilds.cache.get("713025650176294945").channels.cache.find(channel => channel.name === "bot-log");
-			
-			channel.send({content:`Error executing ${interaction.commandName}`});
-			channel.send({ content: "```json\n" + JSON.stringify(error,null,4) + "\n```"});
+		} catch (error) {
+			const channel = interaction.client.guilds.cache
+				.get("713025650176294945")
+				.channels.cache.find((channel) => channel.name === "bot-log");
+
+			channel.send({ content: `Error executing ${interaction.commandName}` });
+			channel.send({ content: "```json\n" + JSON.stringify(error, null, 4) + "\n```" });
 
 			console.error(`Error executing ${interaction.commandName}`);
 			console.error(error);
 		}
-	},
+	}
 };

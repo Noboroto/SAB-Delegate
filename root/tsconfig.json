@@ -1,0 +1,14 @@
+{
+	"compilerOptions": {
+		"baseUrl": "src",
+		"outDir": "bin",
+		"moduleResolution": "node",
+		"noUnusedLocals": true,
+		"sourceMap": true,
+		"esModuleInterop": true,
+		"resolveJsonModule": true
+	},
+	"include": [
+		"src/**/*"
+	]
+}

@@ -4,19 +4,15 @@ module.exports = {
 	data: new SlashCommandBuilder()
 		.setName("send-to-specific-channel")
 		.setDescription("Send a messsage to specific channel!")
-		.addChannelOption(Option =>
+		.addChannelOption((Option) =>
 			Option.setName("destination")
 				.addChannelTypes(ChannelType.GuildText)
 				.addChannelTypes(ChannelType.GuildAnnouncement)
 				.addChannelTypes(ChannelType.AnnouncementThread)
 				.setDescription("destination channel")
-				.setRequired(true),
+				.setRequired(true)
 		)
-		.addStringOption(Option =>
-			Option.setName("content")
-				.setDescription("message content")
-				.setRequired(true),
-		)
+		.addStringOption((Option) => Option.setName("content").setDescription("message content").setRequired(true))
 		.setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels)
 		.setDMPermission(false),
 	async execute(interaction) {
@@ -25,7 +21,7 @@ module.exports = {
 		const targetChannel = interaction.options.getChannel("destination");
 		const response = interaction.options.getString("content");
 		const message = {
-			content: response,
+			content: response
 		};
 		await targetChannel.send(message);
 		const resultMsg = await targetChannel.send(message);
@@ -34,7 +30,7 @@ module.exports = {
 		}
 		await interaction.reply({
 			content: "Done!",
-			ephemeral: true,
+			ephemeral: true
 		});
-	},
+	}
 };

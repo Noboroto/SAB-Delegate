@@ -1,0 +1,1 @@
+{"version":3,"file":"ready.js","sourceRoot":"","sources":["../../src/events-bot/ready.ts"],"names":[],"mappings":";;AAAA,yCAA4C;AAE5C,kBAAe;IACd,IAAI,EAAE,mBAAM,CAAC,WAAW;IACxB,IAAI,EAAE,IAAI;IACV,OAAO,YAAC,MAAc;;QACrB,OAAO,CAAC,GAAG,CAAC,8BAAuB,MAAA,MAAM,CAAC,IAAI,0CAAE,GAAG,CAAE,CAAC,CAAC;IACxD,CAAC;CACD,CAAC"}
