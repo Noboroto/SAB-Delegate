@@ -1,9 +1,9 @@
 import ready from "./ready";
-import removeAllCommands from "./remove-all-commands";
+import interactionCreate from "./interactionCreate";
 
 const events = [
     ready,
-    removeAllCommands,
+    interactionCreate
 ];
 
 export default events;
