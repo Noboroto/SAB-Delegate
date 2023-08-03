@@ -75,3 +75,5 @@ config.json
 
 # FuseBox cache
 .fusebox/
+
+config.ts
