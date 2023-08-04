@@ -16,4 +16,4 @@ RUN pnpm install --only=production
 
 # Bundle app source
 
-CMD [ "pnpm", "start" ]
+CMD [ "node", "start" ]
