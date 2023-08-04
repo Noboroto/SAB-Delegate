@@ -10,7 +10,7 @@ WORKDIR /usr/src/bot
 COPY ./root/package*.json ./
 COPY ./root ./
 
-RUN yarn install --omit=dev
+RUN yarn install --production
 # If you are building your code for production
 # RUN npm --omit=dev
 
