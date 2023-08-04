@@ -10,10 +10,10 @@ WORKDIR /usr/src/bot
 COPY ./root/package*.json ./
 COPY ./root ./
 
-RUN npm install --omit=dev
+RUN yarn install --omit=dev
 # If you are building your code for production
 # RUN npm --omit=dev
 
 # Bundle app source
 
-CMD [ "node", "start" ]
+CMD [ "yarn", "start" ]
