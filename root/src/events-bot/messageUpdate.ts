@@ -1,7 +1,7 @@
 import { Events, Message } from "discord.js";
 import fs from "fs";
 
-const dictionaryPath = ".\\config\\reactionsDict.json";
+const dictionaryPath = "./config/reactionsDict.json";
 const reactionsDict = JSON.parse(fs.readFileSync(dictionaryPath, "utf8"));
 
 export default {
