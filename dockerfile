@@ -10,7 +10,7 @@ WORKDIR /usr/src/bot
 COPY ./root/package*.json ./
 COPY ./root ./
 
-RUN pnpm install --only=production
+RUN node install --only=production
 # If you are building your code for production
 # RUN npm ci --only=production
 
