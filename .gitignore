@@ -76,6 +76,6 @@ config.json
 # FuseBox cache
 .fusebox/
 
-config.ts
+configValues.ts
 **/bin
 **/**.DS_Store

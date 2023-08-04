@@ -1,7 +1,7 @@
 // Require the necessary discord.js classes
 import { Client, GatewayIntentBits } from "discord.js";
 import events from "./events-bot/index";
-import config from "./config";
+import config from "./configValues";
 
 // Create a new client instance
 const client = new Client({
