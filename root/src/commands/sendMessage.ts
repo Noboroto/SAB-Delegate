@@ -1,29 +1,53 @@
-import { SlashCommandBuilder, PermissionFlagsBits, ChatInputCommandInteraction } from "discord.js";
+import { SlashCommandBuilder, PermissionFlagsBits, ChatInputCommandInteraction, ChannelType, TextChannel } from "discord.js";
+
+const emojiPoll = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣","🔟"]
 
 export default {
 	data: new SlashCommandBuilder()
 		.setName("send-message")
-		.setDescription("Send a messsage to this channel!")
+		.setDescription("Send a messsage to this channel or another")
 		.addStringOption((Option) => Option.setName("content").setDescription("message content").setRequired(true))
+
+		.addChannelOption((Option) =>
+			Option.setName("destination")
+				.addChannelTypes(ChannelType.GuildText)
+				.addChannelTypes(ChannelType.GuildAnnouncement)
+				.addChannelTypes(ChannelType.AnnouncementThread)
+				.addChannelTypes(ChannelType.PublicThread)
+				.addChannelTypes(ChannelType.PrivateThread)
+				.setDescription("destination channel")
+				.setRequired(false)
+		)
+
+		.addIntegerOption((Option) =>
+			Option.setName("poll-choice-count")
+				.setDescription("number of choices for poll")
+				.setMinValue(0)
+				.setMaxValue(10)
+				.setRequired(false)
+		)
+
 		.setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels)
 		.setDMPermission(false),
 
 	async execute(interaction: ChatInputCommandInteraction) {
-		// interaction.user is the object representing the User who ran the command
-		// interaction.member is the GuildMember object, which represents the user in the specific guild
-		const targetChannel = interaction.channel;
+		const targetChannel = (interaction.options.getChannel("destination") ?? interaction.channel) as TextChannel;
 		const response = interaction.options.getString("content");
+		const pollChoiceCount = interaction.options.getInteger("poll-choice-count") ?? 0;
+
+		await interaction.deferReply({ ephemeral: true });
+
 		const message = {
-			content: response
+			content: response,
 		};
+
 		const resultMsg = await targetChannel.send(message);
-		if (resultMsg.content.indexOf("react ok") != -1) {
-			resultMsg.react("👌");
+		for (let i = 0; i < pollChoiceCount; i++) {
+			await resultMsg.react(emojiPoll[i]);
 		}
 
-		interaction.reply({
-			content: "Message send!",
-			ephemeral: true
+		interaction.editReply({
+			content: "Sent!",
 		});
-	}
+	},
 };

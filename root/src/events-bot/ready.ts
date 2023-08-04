@@ -4,11 +4,11 @@ import commands from "../commands";
 export default {
 	name: Events.ClientReady,
 	once: true,
-	execute(args: any) {
+	async execute(args: any) {
 		const client = args[0] as Client;
 		console.log(`Ready! Logged in as ${client.user?.tag}`);
 
-		client.application.commands.set([]).then(() => console.log("Successfully deleted application command"));
+		await client.application.commands.set([]).then(() => console.log("Successfully deleted application command"));
 
 		console.log();
 		for (const command of commands) {
