@@ -1,4 +1,11 @@
-import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, TextChannel, ChatInputCommandInteraction, Message } from "discord.js";
+import {
+	SlashCommandBuilder,
+	PermissionFlagsBits,
+	ChannelType,
+	TextChannel,
+	ChatInputCommandInteraction,
+	Message,
+} from "discord.js";
 
 const emojiPoll = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"];
 
@@ -44,12 +51,14 @@ export default {
 		const channel = (await interaction.client.channels.fetch(channelId)) as TextChannel;
 
 		const messageFromID = (await channel.messages.fetch(messageId)) as Message;
+		const attachments = messageFromID.attachments.values();
 		const message = {
 			content: messageFromID.content,
 			files: [],
 		};
-
-		for (const file of messageFromID.attachments.values()) {
+		console.log(attachments);
+		console.log(typeof attachments);
+		for (const file of attachments) {
 			message.files.push({
 				attachment: file[1].attachment,
 				name: file[1].name,
