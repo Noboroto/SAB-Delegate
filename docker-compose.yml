@@ -1,3 +1,4 @@
-services:
-  discord_bot:
-    build: .
+discord_bot:
+  container_name: sab-bot
+  build: .
+  restart: unless-stopped
