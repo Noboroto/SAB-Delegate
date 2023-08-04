@@ -1,5 +1,6 @@
 {
 	"compilerOptions": {
+		"target": "ES2022",
 		"baseUrl": "src",
 		"outDir": "bin",
 		"moduleResolution": "node",
