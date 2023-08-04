@@ -35,12 +35,15 @@ export default {
 
 		.setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels)
 		.setDMPermission(false),
+		
 	async execute(interaction: ChatInputCommandInteraction) {
 		// interaction.user is the object representing the User who ran the command
 		// interaction.member is the GuildMember object, which represents the user in the specific guild
 		const targetChannel = (interaction.options.getChannel("destination") ?? interaction.channel) as TextChannel;
 
 		targetChannel.sendTyping();
+		await interaction.deferReply({ ephemeral: true });
+
 		const messageLink = interaction.options.getString("message-link");
 		const pollChoiceCount = interaction.options.getInteger("poll-choice-count") ?? 0;
 
@@ -51,21 +54,15 @@ export default {
 		const channel = (await interaction.client.channels.fetch(channelId)) as TextChannel;
 
 		const messageFromID = (await channel.messages.fetch(messageId)) as Message;
-		const attachments = messageFromID.attachments.values();
+		const attachments = await messageFromID.attachments.values();
 		const message = {
 			content: messageFromID.content,
 			files: [],
 		};
-		console.log(attachments);
-		console.log(typeof attachments);
+
 		for (const file of attachments) {
-			message.files.push({
-				attachment: file[1].attachment,
-				name: file[1].name,
-				description: file[1].description,
-			});
+			message.files.push(file);
 		}
-		await interaction.deferReply({ ephemeral: true });
 
 		const resultMsg = await targetChannel.send(message);
 		for (let i = 0; i < pollChoiceCount; i++) {

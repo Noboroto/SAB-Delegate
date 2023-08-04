@@ -31,18 +31,16 @@ export default {
 		const newMessageFromID = await getMessageFromOption(interaction, "new-message-link");
 		const pollChoiceCount = interaction.options.getInteger("poll-choice-count") ?? 0;
 
-
+		const attachments = await newMessageFromID.attachments.values();
 		const message = {
 			content: newMessageFromID.content,
 			files: [],
 		};
-		for (const file of newMessageFromID.attachments) {
-			message.files.push({
-				attachment: file[1].attachment,
-				name: file[1].name,
-				description: file[1].description,
-			});
+
+		for (const file of attachments) {
+			message.files.push(file);
 		}
+		
 		botMessageFromID.edit(message);
 		for (let i = 0; i < pollChoiceCount; i++) {
 			await botMessageFromID.react(emojiPoll[i]);

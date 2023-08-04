@@ -12,7 +12,7 @@ export default {
 
 		console.log();
 		for (const command of commands) {
-			client.application.commands
+			await client.application.commands
 				.create(command.data)
 				.then(() => console.log(`Successfully registered application command "${command.data.name}"`))
 				.catch((error) =>

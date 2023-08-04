@@ -1,24 +1,25 @@
-import { SlashCommandBuilder, PermissionFlagsBits } from "discord.js";
+import { SlashCommandBuilder, PermissionFlagsBits, ChatInputCommandInteraction, Role } from "discord.js";
 
-module.exports = {
+export default {
 	data: new SlashCommandBuilder()
 		.setName("bulk-assign-role")
 		.setDescription("Assign or remove a role for many members by ID")
 		.addStringOption((Option) =>
 			Option.setName("ids").setDescription("seperate by comma, can be present as mention").setRequired(true)
 		)
-		.addRoleOption((Option) => 
-				Option.setName("role")
-		.setDescription("Role you want to assign").setRequired(true))
+		.addRoleOption((Option) => Option.setName("role").setDescription("Role you want to assign").setRequired(true))
 
 		.addBooleanOption((Option) => Option.setName("is-remove").setDescription("default is false").setRequired(false))
 		.setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels)
 		.setDMPermission(false),
-	async execute(interaction) {
+		
+	async execute(interaction: ChatInputCommandInteraction) {
 		// interaction.user is the object representing the User who ran the command
 		// interaction.member is the GuildMember object, which represents the user in the specific guild
 		//const guild = interaction.client.guilds.cache.get('Guild ID');
-		const role = interaction.options.getRole("role");
+
+		await interaction.deferReply({ ephemeral: true });
+		const role = interaction.options.getRole("role") as Role;
 		const isRemove = interaction.options.getBoolean("is-remove");
 		const ids = interaction.options
 			.getString("ids")
@@ -26,19 +27,25 @@ module.exports = {
 			.replaceAll("<", "")
 			.replaceAll("@", "")
 			.split(/[\s,]+/);
+		const unique_ids = [...new Set(ids)];
+
 		let guild = await interaction.guild.fetch();
 		let members = await guild.members.cache;
 
-		ids.forEach(async (id) => {
+		let counter = 0;
+
+		unique_ids.forEach(async (id) => {
 			let member = await members.get(id);
 			if (!member) return;
-			await member.roles.add(role);
-			//else await member.roles.isRemove(role);
+			counter++;
+			if (!isRemove) await member.roles.add(role);
+			else await member.roles.remove(role);
 		});
 
 		const message = {
-			content: `Complete add role`
+			content: `Done ${counter} member(s)!`,
 		};
-		await interaction.reply(message);
-	}
+
+		await interaction.editReply(message);
+	},
 };
