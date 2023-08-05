@@ -8,7 +8,7 @@ export default {
 		.setName("react-message")
 		.setDescription("react to a messsage!")
 
-		.addStringOption((Option) => Option.setName("emoji").setDescription("emoji").setMaxLength(2).setRequired(true))
+		.addStringOption((Option) => Option.setName("emoji").setDescription("emoji").setRequired(true))
 
 		.addStringOption((Option) => Option.setName("message-link").setDescription("message link").setRequired(true))
 
