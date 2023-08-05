@@ -5,14 +5,12 @@ const emojiPoll = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️�
 
 export default {
 	data: new SlashCommandBuilder()
-		.setName("edit-bot-message")
-		.setDescription("Edit a message send by this bot!")
-		.addStringOption((Option) =>
-			Option.setName("bot-message-link").setDescription("bot message link").setRequired(true)
-		)
-		.addStringOption((Option) =>
-			Option.setName("new-message-link").setDescription("new message link").setRequired(true)
-		)
+		.setName("react-message")
+		.setDescription("react to a messsage!")
+
+		.addStringOption((Option) => Option.setName("emoji").setDescription("emoji").setMaxLength(2).setRequired(true))
+
+		.addStringOption((Option) => Option.setName("message-link").setDescription("message link").setRequired(true))
 
 		.addIntegerOption((Option) =>
 			Option.setName("poll-choice-count")
@@ -26,28 +24,21 @@ export default {
 		.setDMPermission(false),
 
 	async execute(interaction: ChatInputCommandInteraction) {
+		// interaction.user is the object representing the User who ran the command
+		// interaction.member is the GuildMember object, which represents the user in the specific guild
 		await interaction.deferReply({ ephemeral: true });
 
-		const botMessageFromID = await getMessageFromOption(interaction, "bot-message-link");
-		const newMessageFromID = await getMessageFromOption(interaction, "new-message-link");
 		const pollChoiceCount = interaction.options.getInteger("poll-choice-count") ?? 0;
-
-		const attachments = await newMessageFromID.attachments.values();
-		const message = {
-			content: newMessageFromID.content,
-			files: [],
-		};
-
-		for (const file of attachments) {
-			message.files.push(file);
-		}
+		const reaction = interaction.options.getString("emoji")?.trim() ?? "";
+		const messageFromID = await getMessageFromOption(interaction, "message-link");
 		
-		botMessageFromID.edit(message);
+		await messageFromID.react(reaction);
+
 		for (let i = 0; i < pollChoiceCount; i++) {
-			await botMessageFromID.react(emojiPoll[i]);
+			await messageFromID.react(emojiPoll[i]);
 		}
 
-		await interaction.editReply({
+		interaction.editReply({
 			content: "Done!",
 		});
 	},

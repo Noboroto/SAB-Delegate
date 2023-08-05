@@ -3,13 +3,15 @@ import sendMessage from './sendMessage';
 import copyToChannel from './copyToChannel';
 import editBotMessage from './editBotMessage';
 import bulkRole from './bulkRole';
+import reactMessaage from './reactMessaage';
 
 const commands = [
     ping,
     sendMessage,
     copyToChannel,
     editBotMessage,
-    bulkRole
+    bulkRole,
+    reactMessaage
 ];
 
 export default commands;

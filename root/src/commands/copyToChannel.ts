@@ -4,8 +4,8 @@ import {
 	ChannelType,
 	TextChannel,
 	ChatInputCommandInteraction,
-	Message,
 } from "discord.js";
+import { getMessageFromOption } from "../ultils";
 
 const emojiPoll = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"];
 
@@ -44,16 +44,9 @@ export default {
 		targetChannel.sendTyping();
 		await interaction.deferReply({ ephemeral: true });
 
-		const messageLink = interaction.options.getString("message-link");
+		const messageFromID = await getMessageFromOption(interaction, "nmessage-link");
 		const pollChoiceCount = interaction.options.getInteger("poll-choice-count") ?? 0;
 
-		const part = messageLink.split("/");
-		const channelId = part[part.length - 2];
-		const messageId = part[part.length - 1];
-
-		const channel = (await interaction.client.channels.fetch(channelId)) as TextChannel;
-
-		const messageFromID = (await channel.messages.fetch(messageId)) as Message;
 		const attachments = await messageFromID.attachments.values();
 		const message = {
 			content: messageFromID.content,

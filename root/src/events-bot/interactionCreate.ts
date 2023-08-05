@@ -27,7 +27,15 @@ export default {
 			channel.send({ content: "```json\n" + JSON.stringify(error, null, 4) + "\n```" });
 
 			console.error(`Error executing ${interaction.commandName}`);
+
+			const errorMessage = {
+				content: "There was an error while executing this command!",
+				ephemeral: true,
+			};
+
+			interaction.followUp(errorMessage);
+
 			console.error(error);
 		}
-	}
+	},
 };
