@@ -2,3 +2,5 @@ discord_bot:
   container_name: sab-bot
   build: .
   restart: unless-stopped
+  volumes:
+    - ./root/files:/usr/src/bot/files

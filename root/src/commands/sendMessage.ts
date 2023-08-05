@@ -1,4 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits, ChatInputCommandInteraction, ChannelType, TextChannel } from "discord.js";
+import { getMessageFromOption } from "../ultils";
 
 const emojiPoll = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣","🔟"]
 
@@ -19,6 +20,9 @@ export default {
 				.setRequired(false)
 		)
 
+		.addStringOption((Option) => Option.setName("reply-message").setDescription("reply message link").setRequired(false))
+
+
 		.addIntegerOption((Option) =>
 			Option.setName("poll-choice-count")
 				.setDescription("number of choices for poll")
@@ -31,17 +35,25 @@ export default {
 		.setDMPermission(false),
 
 	async execute(interaction: ChatInputCommandInteraction) {
+		await interaction.deferReply({ ephemeral: true });
+		
 		const targetChannel = (interaction.options.getChannel("destination") ?? interaction.channel) as TextChannel;
 		const response = interaction.options.getString("content");
 		const pollChoiceCount = interaction.options.getInteger("poll-choice-count") ?? 0;
-
-		await interaction.deferReply({ ephemeral: true });
+		const messageFromID = await getMessageFromOption(interaction, "reply-message");
 
 		const message = {
 			content: response,
 		};
 
-		const resultMsg = await targetChannel.send(message);
+		let resultMsg = null;
+		if (messageFromID) {
+			resultMsg = messageFromID.reply(message);
+		}
+		else {
+			resultMsg = await targetChannel.send(message);
+		}
+
 		for (let i = 0; i < pollChoiceCount; i++) {
 			await resultMsg.react(emojiPoll[i]);
 		}
