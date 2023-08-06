@@ -1,9 +1,9 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction } from "discord.js";
-import { readFileSync, writeFileSync } from "fs";
+import { existsSync, readFileSync, writeFileSync } from "fs";
 
 const savePath = "./files/notes.json";
-if (!readFileSync(savePath, "utf-8")) {
-	writeFileSync(savePath, "{}");
+if (!existsSync(savePath)) {
+	writeFileSync(savePath, JSON.stringify({}, null, 4));
 }
 
 export default {
