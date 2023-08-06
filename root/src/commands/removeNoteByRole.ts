@@ -1,35 +1,37 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction } from "discord.js";
-import { readFileSync } from "fs";
+import { readFileSync, writeFileSync } from "fs";
 
 const savePath = "./files/notes.json";
 
 export default {
 	data: new SlashCommandBuilder()
-		.setName("get-note-by-role")
-		.setDescription("Note eveything and find by role")
+		.setName("remove-note-by-role")
+		.setDescription("Remove saved-note by role")
+
 		.addRoleOption((Option) =>
 			Option.setName("role")
 				.setDescription("role to note")
 				.setRequired(true)
 		)
+		.addStringOption((Option) =>
+			Option.setName("topic").setDescription("topic").setRequired(true)
+		)
+
 		.setDMPermission(false),
 
 	async execute(interaction: ChatInputCommandInteraction) {
 		const role = interaction.options.getRole("role");
-
+		const topic = interaction.options.getString("topic");
 		const notes = readFileSync(savePath, "utf-8");
 		const notesJson = JSON.parse(notes);
 
-		notesJson[role.id] = notesJson[role.id] || {};
+		delete notesJson[role.id][topic];
+
+		writeFileSync(savePath, JSON.stringify(notesJson, null, 4));
 
 		interaction.reply({
-			content: `Note for @${role.name}:\n${JSON.stringify(
-				notesJson[role.id],
-				null,
-				4
-			)}`,
+			content: `Note removed for @${role.name} with topic ${topic}`,
 			ephemeral: false,
-			embeds: [],
 		});
 	},
 };

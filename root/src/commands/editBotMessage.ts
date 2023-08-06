@@ -1,4 +1,8 @@
-import { SlashCommandBuilder, PermissionFlagsBits, ChatInputCommandInteraction } from "discord.js";
+import {
+	SlashCommandBuilder,
+	PermissionFlagsBits,
+	ChatInputCommandInteraction,
+} from "discord.js";
 import { getMessageFromOption } from "../ultils";
 
 const emojiPoll = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"];
@@ -8,10 +12,14 @@ export default {
 		.setName("edit-bot-message")
 		.setDescription("Edit a message send by this bot!")
 		.addStringOption((Option) =>
-			Option.setName("bot-message-link").setDescription("bot message link").setRequired(true)
+			Option.setName("bot-message-link")
+				.setDescription("bot message link")
+				.setRequired(true)
 		)
 		.addStringOption((Option) =>
-			Option.setName("new-message-link").setDescription("new message link").setRequired(true)
+			Option.setName("new-message-link")
+				.setDescription("new message link")
+				.setRequired(true)
 		)
 
 		.addIntegerOption((Option) =>
@@ -28,9 +36,16 @@ export default {
 	async execute(interaction: ChatInputCommandInteraction) {
 		await interaction.deferReply({ ephemeral: true });
 
-		const botMessageFromID = await getMessageFromOption(interaction, "bot-message-link");
-		const newMessageFromID = await getMessageFromOption(interaction, "new-message-link");
-		const pollChoiceCount = interaction.options.getInteger("poll-choice-count") ?? 0;
+		const botMessageFromID = await getMessageFromOption(
+			interaction,
+			"bot-message-link"
+		);
+		const newMessageFromID = await getMessageFromOption(
+			interaction,
+			"new-message-link"
+		);
+		const pollChoiceCount =
+			interaction.options.getInteger("poll-choice-count") ?? 0;
 
 		const attachments = await newMessageFromID.attachments.values();
 		const message = {
@@ -41,7 +56,7 @@ export default {
 		for (const file of attachments) {
 			message.files.push(file);
 		}
-		
+
 		botMessageFromID.edit(message);
 		for (let i = 0; i < pollChoiceCount; i++) {
 			await botMessageFromID.react(emojiPoll[i]);

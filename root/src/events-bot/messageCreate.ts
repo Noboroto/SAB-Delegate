@@ -7,13 +7,13 @@ const reactionsDict = JSON.parse(fs.readFileSync(dictionaryPath, "utf8"));
 export default {
 	name: Events.MessageCreate,
 	once: false,
-	async execute(args: any) {
+	async execute(args: Message[]) {
 		const message = args[0] as Message;
 
-        for (const key in reactionsDict) {
-            if (message.content.toLowerCase().includes(key)) {
-                message.react(reactionsDict[key]);
-            }
-        }
+		for (const key in reactionsDict) {
+			if (message.content.toLowerCase().includes(key)) {
+				message.react(reactionsDict[key]);
+			}
+		}
 	},
 };

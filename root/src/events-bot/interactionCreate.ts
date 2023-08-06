@@ -1,18 +1,22 @@
-import { Events } from "discord.js";
+import { Events, Interaction, TextChannel } from "discord.js";
 import commands from "../commands";
 
 export default {
 	name: Events.InteractionCreate,
 	once: false,
-	async execute(args: any) {
+	async execute(args: Interaction[]) {
 		const interaction = args[0];
 
 		if (!interaction.isChatInputCommand()) return;
 
-		const command = commands.find((command) => command.data.name === interaction.commandName);
+		const command = commands.find(
+			(command) => command.data.name === interaction.commandName
+		);
 
 		if (!command) {
-			console.error(`No command matching ${interaction.commandName} was found.`);
+			console.error(
+				`No command matching ${interaction.commandName} was found.`
+			);
 			return;
 		}
 
@@ -21,10 +25,16 @@ export default {
 		} catch (error) {
 			const channel = interaction.client.guilds.cache
 				.get("713025650176294945")
-				.channels.cache.find((channel) => channel.name === "bot-log");
+				.channels.cache.find(
+					(channel) => channel.name === "bot-log"
+				) as TextChannel;
 
-			channel.send({ content: `Error executing ${interaction.commandName}` });
-			channel.send({ content: "```json\n" + JSON.stringify(error, null, 4) + "\n```" });
+			channel.send({
+				content: `Error executing ${interaction.commandName}`,
+			});
+			channel.send({
+				content: "```json\n" + JSON.stringify(error, null, 4) + "\n```",
+			});
 
 			console.error(`Error executing ${interaction.commandName}`);
 

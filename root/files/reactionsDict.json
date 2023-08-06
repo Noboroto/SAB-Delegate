@@ -1,9 +1,9 @@
 {
-    "react ok": "👌",
-    "react error": "❌",
-    "react warning": "⚠️",
-    "react info": "ℹ️",
-    "react debug": "🐛",
-    "react success": "✅",
-    "react fatal": "💀"
+	"react ok": "👌",
+	"react error": "❌",
+	"react warning": "⚠️",
+	"react info": "ℹ️",
+	"react debug": "🐛",
+	"react success": "✅",
+	"react fatal": "💀"
 }

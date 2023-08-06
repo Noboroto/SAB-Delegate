@@ -1,18 +1,33 @@
-import { SlashCommandBuilder, PermissionFlagsBits, ChatInputCommandInteraction, Role } from "discord.js";
+import {
+	SlashCommandBuilder,
+	PermissionFlagsBits,
+	ChatInputCommandInteraction,
+	Role,
+} from "discord.js";
 
 export default {
 	data: new SlashCommandBuilder()
 		.setName("bulk-assign-role")
 		.setDescription("Assign or remove a role for many members by ID")
 		.addStringOption((Option) =>
-			Option.setName("ids").setDescription("seperate by comma, can be present as mention").setRequired(true)
+			Option.setName("ids")
+				.setDescription("seperate by comma, can be present as mention")
+				.setRequired(true)
 		)
-		.addRoleOption((Option) => Option.setName("role").setDescription("Role you want to assign").setRequired(true))
+		.addRoleOption((Option) =>
+			Option.setName("role")
+				.setDescription("Role you want to assign")
+				.setRequired(true)
+		)
 
-		.addBooleanOption((Option) => Option.setName("is-remove").setDescription("default is false").setRequired(false))
+		.addBooleanOption((Option) =>
+			Option.setName("is-remove")
+				.setDescription("default is false")
+				.setRequired(false)
+		)
 		.setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels)
 		.setDMPermission(false),
-		
+
 	async execute(interaction: ChatInputCommandInteraction) {
 		// interaction.user is the object representing the User who ran the command
 		// interaction.member is the GuildMember object, which represents the user in the specific guild
@@ -29,13 +44,13 @@ export default {
 			.split(/[\s,]+/);
 		const unique_ids = [...new Set(ids)];
 
-		let guild = await interaction.guild.fetch();
-		let members = await guild.members.cache;
+		const guild = await interaction.guild.fetch();
+		const members = await guild.members.cache;
 
 		let counter = 0;
 
 		unique_ids.forEach(async (id) => {
-			let member = await members.get(id);
+			const member = await members.get(id);
 			if (!member) return;
 			counter++;
 			if (!isRemove) await member.roles.add(role);

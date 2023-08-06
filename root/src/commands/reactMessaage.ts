@@ -1,4 +1,8 @@
-import { SlashCommandBuilder, PermissionFlagsBits, ChatInputCommandInteraction } from "discord.js";
+import {
+	SlashCommandBuilder,
+	PermissionFlagsBits,
+	ChatInputCommandInteraction,
+} from "discord.js";
 import { getMessageFromOption } from "../ultils";
 
 const emojiPoll = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"];
@@ -8,9 +12,15 @@ export default {
 		.setName("react-message")
 		.setDescription("react to a messsage!")
 
-		.addStringOption((Option) => Option.setName("emoji").setDescription("emoji").setRequired(true))
+		.addStringOption((Option) =>
+			Option.setName("emoji").setDescription("emoji").setRequired(true)
+		)
 
-		.addStringOption((Option) => Option.setName("message-link").setDescription("message link").setRequired(true))
+		.addStringOption((Option) =>
+			Option.setName("message-link")
+				.setDescription("message link")
+				.setRequired(true)
+		)
 
 		.addIntegerOption((Option) =>
 			Option.setName("poll-choice-count")
@@ -28,10 +38,14 @@ export default {
 		// interaction.member is the GuildMember object, which represents the user in the specific guild
 		await interaction.deferReply({ ephemeral: true });
 
-		const pollChoiceCount = interaction.options.getInteger("poll-choice-count") ?? 0;
+		const pollChoiceCount =
+			interaction.options.getInteger("poll-choice-count") ?? 0;
 		const reaction = interaction.options.getString("emoji")?.trim() ?? "";
-		const messageFromID = await getMessageFromOption(interaction, "message-link");
-		
+		const messageFromID = await getMessageFromOption(
+			interaction,
+			"message-link"
+		);
+
 		await messageFromID.react(reaction);
 
 		for (let i = 0; i < pollChoiceCount; i++) {

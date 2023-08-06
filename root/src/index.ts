@@ -5,14 +5,22 @@ import config from "./configValues";
 
 // Create a new client instance
 const client = new Client({
-	intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
+	intents: [
+		GatewayIntentBits.Guilds,
+		GatewayIntentBits.GuildMessages,
+		GatewayIntentBits.MessageContent,
+	],
 });
 
 for (const event of events) {
 	if (event.once) {
-		client.once(event.name as string, (...args: []) => event.execute([...args]));
+		client.once(event.name as string, (...args: []) =>
+			event.execute([...args])
+		);
 	} else {
-		client.on(event.name as string, (...args: []) => event.execute([...args]));
+		client.on(event.name as string, (...args: []) =>
+			event.execute([...args])
+		);
 	}
 }
 

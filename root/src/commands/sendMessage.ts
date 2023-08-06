@@ -1,13 +1,23 @@
-import { SlashCommandBuilder, PermissionFlagsBits, ChatInputCommandInteraction, ChannelType, TextChannel } from "discord.js";
+import {
+	SlashCommandBuilder,
+	PermissionFlagsBits,
+	ChatInputCommandInteraction,
+	ChannelType,
+	TextChannel,
+} from "discord.js";
 import { getMessageFromOption } from "../ultils";
 
-const emojiPoll = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣","🔟"]
+const emojiPoll = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"];
 
 export default {
 	data: new SlashCommandBuilder()
 		.setName("send-message")
 		.setDescription("Send a messsage to this channel or another")
-		.addStringOption((Option) => Option.setName("content").setDescription("message content").setRequired(true))
+		.addStringOption((Option) =>
+			Option.setName("content")
+				.setDescription("message content")
+				.setRequired(true)
+		)
 
 		.addChannelOption((Option) =>
 			Option.setName("destination")
@@ -20,8 +30,11 @@ export default {
 				.setRequired(false)
 		)
 
-		.addStringOption((Option) => Option.setName("reply-message").setDescription("reply message link").setRequired(false))
-
+		.addStringOption((Option) =>
+			Option.setName("reply-message")
+				.setDescription("reply message link")
+				.setRequired(false)
+		)
 
 		.addIntegerOption((Option) =>
 			Option.setName("poll-choice-count")
@@ -36,11 +49,16 @@ export default {
 
 	async execute(interaction: ChatInputCommandInteraction) {
 		await interaction.deferReply({ ephemeral: true });
-		
-		const targetChannel = (interaction.options.getChannel("destination") ?? interaction.channel) as TextChannel;
+
+		const targetChannel = (interaction.options.getChannel("destination") ??
+			interaction.channel) as TextChannel;
 		const response = interaction.options.getString("content");
-		const pollChoiceCount = interaction.options.getInteger("poll-choice-count") ?? 0;
-		const messageFromID = await getMessageFromOption(interaction, "reply-message");
+		const pollChoiceCount =
+			interaction.options.getInteger("poll-choice-count") ?? 0;
+		const messageFromID = await getMessageFromOption(
+			interaction,
+			"reply-message"
+		);
 
 		const message = {
 			content: response,
@@ -49,8 +67,7 @@ export default {
 		let resultMsg = null;
 		if (messageFromID) {
 			resultMsg = messageFromID.reply(message);
-		}
-		else {
+		} else {
 			resultMsg = await targetChannel.send(message);
 		}
 

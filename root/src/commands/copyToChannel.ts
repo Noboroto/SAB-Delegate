@@ -13,7 +13,11 @@ export default {
 	data: new SlashCommandBuilder()
 		.setName("copy-to-channel")
 		.setDescription("Copy a messsage to specific channel!")
-		.addStringOption((Option) => Option.setName("message-link").setDescription("message link").setRequired(true))
+		.addStringOption((Option) =>
+			Option.setName("message-link")
+				.setDescription("message link")
+				.setRequired(true)
+		)
 
 		.addChannelOption((Option) =>
 			Option.setName("destination")
@@ -35,17 +39,22 @@ export default {
 
 		.setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels)
 		.setDMPermission(false),
-		
+
 	async execute(interaction: ChatInputCommandInteraction) {
 		// interaction.user is the object representing the User who ran the command
 		// interaction.member is the GuildMember object, which represents the user in the specific guild
-		const targetChannel = (interaction.options.getChannel("destination") ?? interaction.channel) as TextChannel;
+		const targetChannel = (interaction.options.getChannel("destination") ??
+			interaction.channel) as TextChannel;
 
 		targetChannel.sendTyping();
 		await interaction.deferReply({ ephemeral: true });
 
-		const messageFromID = await getMessageFromOption(interaction, "nmessage-link");
-		const pollChoiceCount = interaction.options.getInteger("poll-choice-count") ?? 0;
+		const messageFromID = await getMessageFromOption(
+			interaction,
+			"nmessage-link"
+		);
+		const pollChoiceCount =
+			interaction.options.getInteger("poll-choice-count") ?? 0;
 
 		const attachments = await messageFromID.attachments.values();
 		const message = {
