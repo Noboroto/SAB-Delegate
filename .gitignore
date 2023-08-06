@@ -79,3 +79,4 @@ config.json
 configValues.ts
 **/bin
 **/**.DS_Store
+root/files/notes.json
