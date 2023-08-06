@@ -17,7 +17,9 @@ export default {
 				.setRequired(true)
 		)
 		.addStringOption((Option) =>
-			Option.setName("topic").setDescription("case-sensitive").setRequired(true)
+			Option.setName("topic")
+				.setDescription("case-sensitive")
+				.setRequired(true)
 		)
 		.addStringOption((Option) =>
 			Option.setName("note")

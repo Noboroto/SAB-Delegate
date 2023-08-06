@@ -12,7 +12,9 @@ export default {
 
 		for (const key in reactionsDict) {
 			if (message.content.toLowerCase().includes(key)) {
-				message.react(reactionsDict[key]);
+				reactionsDict[key].forEach((reaction: string) => {
+					message.react(reaction);
+				});
 			}
 		}
 	},
