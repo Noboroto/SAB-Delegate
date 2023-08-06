@@ -6,5 +6,5 @@
 	"react debug": ["🐛"],
 	"react success": ["✅"],
 	"react fatal": ["💀"],
-	"react yes no": ["👍", "👎"]
+	"react yes no": ["yes", "no"]
 }

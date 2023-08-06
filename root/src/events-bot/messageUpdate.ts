@@ -13,7 +13,12 @@ export default {
 		for (const key in reactionsDict) {
 			if (message.content.toLowerCase().includes(key)) {
 				reactionsDict[key].forEach((reaction: string) => {
-					message.react(reaction);
+					const emoji =
+						message.guild?.emojis.cache.find(
+							(emo) => emo.name === reaction
+						) ?? reaction;
+
+					message.react(emoji);
 				});
 			}
 		}
