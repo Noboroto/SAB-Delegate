@@ -17,7 +17,9 @@ export default {
 				.setRequired(true)
 		)
 		.addStringOption((Option) =>
-			Option.setName("topic").setDescription("topic").setRequired(true)
+			Option.setName("topic")
+				.setDescription("case sensitive")
+				.setRequired(true)
 		)
 
 		.setDMPermission(false),
@@ -27,6 +29,14 @@ export default {
 		const topic = interaction.options.getString("topic");
 		const notes = readFileSync(savePath, "utf-8");
 		const notesJson = JSON.parse(notes);
+
+		if (!notesJson[role.id][topic]) {
+			interaction.reply({
+				content: `No note found for @${role.name} with topic ${topic}`,
+				ephemeral: false,
+			});
+			return;
+		}
 
 		delete notesJson[role.id][topic];
 
