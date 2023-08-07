@@ -5,8 +5,6 @@ import {
 } from "discord.js";
 import { getMessageFromOption } from "../ultils";
 
-const emojiPoll = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"];
-
 export default {
 	data: new SlashCommandBuilder()
 		.setName("edit-bot-message")
@@ -20,14 +18,6 @@ export default {
 			Option.setName("new-message-link")
 				.setDescription("new message link")
 				.setRequired(true)
-		)
-
-		.addIntegerOption((Option) =>
-			Option.setName("poll-choice-count")
-				.setDescription("number of choices for poll")
-				.setMinValue(0)
-				.setMaxValue(10)
-				.setRequired(false)
 		)
 
 		.setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels)
@@ -44,8 +34,6 @@ export default {
 			interaction,
 			"new-message-link"
 		);
-		const pollChoiceCount =
-			interaction.options.getInteger("poll-choice-count") ?? 0;
 
 		const attachments = await newMessageFromID.attachments.values();
 		const message = {
@@ -58,9 +46,6 @@ export default {
 		}
 
 		botMessageFromID.edit(message);
-		for (let i = 0; i < pollChoiceCount; i++) {
-			await botMessageFromID.react(emojiPoll[i]);
-		}
 
 		await interaction.editReply({
 			content: "Done!",

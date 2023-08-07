@@ -9,7 +9,7 @@ import {
 
 export default {
 	data: new SlashCommandBuilder()
-		.setName("check-attendance")
+		.setName("attendance-by-role")
 		.setDescription("attendance check for many members by role")
 		.addRoleOption((Option) =>
 			Option.setName("role")
@@ -42,7 +42,7 @@ export default {
 		const present = members.filter((member) => channelMembers.find((id) => id === member.id) !== undefined);
 
 		const message = {
-			content: `Channel ${voiceChannel} **@${role.name}** has **${members.size}** members\n**${
+			content: `Channel ${voiceChannel}, role **@${role.name}** has **${members.size}** members\n**${
 				present.size
 			}** members are present\n**${
 				absent.size

@@ -7,8 +7,6 @@ import {
 } from "discord.js";
 import { getMessageFromOption } from "../ultils";
 
-const emojiPoll = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"];
-
 export default {
 	data: new SlashCommandBuilder()
 		.setName("copy-to-channel")
@@ -29,13 +27,6 @@ export default {
 				.setDescription("default is where you run this command")
 				.setRequired(false)
 		)
-		.addIntegerOption((Option) =>
-			Option.setName("poll-choice-count")
-				.setDescription("number of choices for poll")
-				.setMinValue(0)
-				.setMaxValue(10)
-				.setRequired(false)
-		)
 
 		.setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels)
 		.setDMPermission(false),
@@ -53,8 +44,6 @@ export default {
 			interaction,
 			"nmessage-link"
 		);
-		const pollChoiceCount =
-			interaction.options.getInteger("poll-choice-count") ?? 0;
 
 		const attachments = await messageFromID.attachments.values();
 		const message = {
@@ -66,10 +55,7 @@ export default {
 			message.files.push(file);
 		}
 
-		const resultMsg = await targetChannel.send(message);
-		for (let i = 0; i < pollChoiceCount; i++) {
-			await resultMsg.react(emojiPoll[i]);
-		}
+		await targetChannel.send(message);
 
 		interaction.editReply({
 			content: "Done!",

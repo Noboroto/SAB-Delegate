@@ -7,7 +7,8 @@ import reactMessaage from "./reactMessaage";
 import addNoteByRole from "./addNoteByRole";
 import removeNoteByRole from "./removeNoteByRole";
 import getNoteByRole from "./getNoteByRole";
-import checkAttandance from "./checkAttandance";
+import attandanceByRole from "./attandanceByRole";
+import addPoll from "./addPoll";
 
 const commands = [
 	ping,
@@ -19,7 +20,8 @@ const commands = [
 	addNoteByRole,
 	removeNoteByRole,
 	getNoteByRole,
-	checkAttandance,
+	attandanceByRole,
+	addPoll,
 ];
 
 export default commands;
