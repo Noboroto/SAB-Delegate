@@ -26,7 +26,7 @@ export default {
 				.addChannelTypes(ChannelType.AnnouncementThread)
 				.addChannelTypes(ChannelType.PublicThread)
 				.addChannelTypes(ChannelType.PrivateThread)
-				.setDescription("destination channel")
+				.setDescription("default is where you run this command")
 				.setRequired(false)
 		)
 		.addIntegerOption((Option) =>
