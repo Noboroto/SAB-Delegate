@@ -42,7 +42,7 @@ export default {
 		const present = members.filter((member) => channelMembers.find((id) => id === member.id) !== undefined);
 
 		const message = {
-			content: `**@${role.name}** has **${members.size}** members\n**${
+			content: `Channel ${voiceChannel} **@${role.name}** has **${members.size}** members\n**${
 				present.size
 			}** members are present\n**${
 				absent.size
