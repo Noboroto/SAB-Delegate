@@ -42,10 +42,17 @@ export default {
 
 		const messageFromID = await getMessageFromOption(
 			interaction,
-			"nmessage-link"
+			"message-link"
 		);
 
-		const attachments = await messageFromID.attachments.values();
+		if (!messageFromID) {
+			interaction.editReply({
+				content: "Message not found!",
+			});
+			return;
+		}
+
+		const attachments = messageFromID.attachments.values();
 		const message = {
 			content: messageFromID.content,
 			files: [],
