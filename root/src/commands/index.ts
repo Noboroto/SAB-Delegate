@@ -9,6 +9,7 @@ import removeNoteByRole from "./removeNoteByRole";
 import getNoteByRole from "./getNoteByRole";
 import attandanceByRole from "./attandanceByRole";
 import addPoll from "./addPoll";
+import getIntroduction from "./getIntroduction";
 
 const commands = [
 	ping,
@@ -22,6 +23,7 @@ const commands = [
 	getNoteByRole,
 	attandanceByRole,
 	addPoll,
+	getIntroduction,
 ];
 
 export default commands;
