@@ -9,7 +9,7 @@ import removeNoteByRole from "./removeNoteByRole";
 import getNoteByRole from "./getNoteByRole";
 import attandanceByRole from "./attandanceByRole";
 import addPoll from "./addPoll";
-import getIntroduction from "./getIntroduction";
+import getIntroduction from "./getInfo";
 
 const commands = [
 	ping,

@@ -14,7 +14,6 @@ export default {
 			Option.setName("user").setDescription("user to get introduction").setRequired(true)
 		)
 
-		.setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels)
 		.setDMPermission(false),
 
 	async execute(interaction: ChatInputCommandInteraction) {
