@@ -3,4 +3,4 @@ discord_bot:
   build: .
   restart: unless-stopped
   volumes:
-    - ./root:/usr/src/bot
+    - ./root/files:/usr/src/bot/files
