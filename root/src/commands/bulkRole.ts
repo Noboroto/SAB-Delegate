@@ -58,6 +58,7 @@ export default {
 			else await member.roles.remove(role);
 		})
 
+		console.log(counter);
 		const message = {
 			content: `Done ${counter} member(s)!`,
 		};
