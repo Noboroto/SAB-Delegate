@@ -52,7 +52,7 @@ export default {
 		unique_ids.forEach(async (id) => {
 			const member = await members.get(id);
 			if (!member) return;
-			counter++;
+			counter+=1;
 			if (!isRemove) await member.roles.add(role);
 			else await member.roles.remove(role);
 		});
