@@ -54,8 +54,8 @@ export default {
 			if (!member) return;
 			counter++;
 			console.log(counter);
-			//if (!isRemove) await member.roles.add(role);
-			//else await member.roles.remove(role);
+			if (!isRemove) await member.roles.add(role);
+			else await member.roles.remove(role);
 		})
 
 		console.log(counter + " members done");
