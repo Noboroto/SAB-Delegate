@@ -49,7 +49,7 @@ export default {
 
 		let counter = 0;
 
-		unique_ids.forEach(async (id) => {
+		await unique_ids.forEach(async (id) => {
 			const member = await members.get(id);
 			if (!member) return;
 			counter++;
