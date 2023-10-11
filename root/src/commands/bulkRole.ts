@@ -47,16 +47,17 @@ export default {
 		const guild = await interaction.guild.fetch();
 		const members = await guild.members.cache;
 
-		let counter = 0;
+		let counter = 50;
 
 		unique_ids.forEach(async (id) => {
 			const member = await members.get(id);
 			if (!member) return;
-			counter+=1;
+			counter++;
 			if (!isRemove) await member.roles.add(role);
 			else await member.roles.remove(role);
-		});
+		})
 
+		counter = 45;
 		const message = {
 			content: `Done ${counter} member(s)!`,
 		};
