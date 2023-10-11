@@ -3,7 +3,6 @@ import sendMessage from "./sendMessage";
 import copyToChannel from "./copyToChannel";
 import editBotMessage from "./editBotMessage";
 import bulkRole from "./bulkRole";
-import bulkRemvoeAllRole from "./bulkRemvoeAllRole";
 import reactMessaage from "./reactMessaage";
 import addNoteByRole from "./addNoteByRole";
 import removeNoteByRole from "./removeNoteByRole";
@@ -25,7 +24,6 @@ const commands = [
 	attandanceByRole,
 	addPoll,
 	getIntroduction,
-	bulkRemvoeAllRole,
 ];
 
 export default commands;
