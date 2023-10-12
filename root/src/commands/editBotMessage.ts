@@ -10,13 +10,13 @@ export default {
 		.setName("edit-bot-message")
 		.setDescription("Edit a message send by this bot!")
 		.addStringOption((Option) =>
-			Option.setName("bot-message-link")
-				.setDescription("bot message link")
+			Option.setName("new-message-link")
+				.setDescription("new message link")
 				.setRequired(true)
 		)
 		.addStringOption((Option) =>
-			Option.setName("new-message-link")
-				.setDescription("new message link")
+			Option.setName("bot-message-link")
+				.setDescription("bot message link")
 				.setRequired(true)
 		)
 
