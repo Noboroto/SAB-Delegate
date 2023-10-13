@@ -5,7 +5,7 @@ import {
 	FetchMessagesOptions,
 } from "discord.js";
 
-const lots_of_messages_getter = async (channel, limit = 500) => {
+const lots_of_messages_getter = async (channel, limit = 1000) => {
 	let sum_messages = [];
 	let last_id;
 
@@ -17,7 +17,7 @@ const lots_of_messages_getter = async (channel, limit = 500) => {
 		}
 
 		const messages = await channel.messages.fetch(options);
-		sum_messages = sum_messages.concat(messages);
+		sum_messages = sum_messages.concat([messages]);
 		last_id = messages.last().id;
 
 		if (messages.size != 100 || sum_messages.length >= limit) {
@@ -44,9 +44,17 @@ export default {
 		// interaction.member is the GuildMember object, which represents the user in the specific guild
 		const srcChannel = (await interaction.client.channels.fetch("1082277720462995566")) as TextChannel;
 		const user = interaction.options.getUser("user");
-		const messages = await lots_of_messages_getter(srcChannel);
+		const messageCollections = await lots_of_messages_getter(srcChannel);
 		
-		const message = messages.reverse().find((msg) => msg.author.id === user.id);
+		let message = null;
+		messageCollections.forEach((messages) => {
+			const tempMessage = messages.reverse().find((msg) => msg.author.id === user.id);
+			if (tempMessage) {
+				message = tempMessage;
+				return;
+			}
+		});
+
 		if (!message) {
 			await interaction.reply({
 				content: "User has no introduction",
@@ -58,7 +66,7 @@ export default {
 		const messageContent = message.content;
 		const replyMessage = 
 		{
-			content: `${user}'s introduction: \n ${messageContent}`,
+			content: `${user}'s introduction: \n${messageContent}`,
 		}
 		interaction.reply(replyMessage);
 	},
