@@ -6,7 +6,7 @@ import {
 } from "discord.js";
 
 const lots_of_messages_getter = async (channel, limit = 500) => {
-	const sum_messages = [];
+	let sum_messages = [];
 	let last_id;
 
 	// eslint-disable-next-line no-constant-condition
@@ -17,7 +17,7 @@ const lots_of_messages_getter = async (channel, limit = 500) => {
 		}
 
 		const messages = await channel.messages.fetch(options);
-		sum_messages.push(...messages.array());
+		sum_messages = sum_messages.concat(messages);
 		last_id = messages.last().id;
 
 		if (messages.size != 100 || sum_messages.length >= limit) {
