@@ -15,7 +15,7 @@ export default {
 				.setRequired(true)
 		)
 		.addStringOption((Option) =>
-			Option.setName("bot-message-link")
+			Option.setName("old-bot-message-link")
 				.setDescription("bot message link")
 				.setRequired(true)
 		)
@@ -28,7 +28,7 @@ export default {
 
 		const botMessageFromID = await getMessageFromOption(
 			interaction,
-			"bot-message-link"
+			"old-bot-message-link"
 		);
 		const newMessageFromID = await getMessageFromOption(
 			interaction,
