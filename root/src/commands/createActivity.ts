@@ -124,6 +124,7 @@ export default {
             name: emoji + "┃" + name + " voice",
             parent: "1046973611199697022",
             type: ChannelType.GuildVoice,
+            userLimit: 99,
             permissionOverwrites: [
                 {
                     id: interaction.guild?.roles.everyone.id ?? "",
@@ -141,7 +142,7 @@ export default {
             ],
         })
 
-        const replyMsg =  `Created activity name ${name}:\n- role ${createdRole} \n- ${createdGeneralChannel}\n- ${createdThreadOnlyChannel}\n- ${createdVoiceChannel}`;
+        const replyMsg =  `Created activity name "${name}":\n- role ${createdRole} \n- ${createdGeneralChannel}\n- ${createdThreadOnlyChannel}\n- ${createdVoiceChannel}`;
 
         interaction.reply(replyMsg)
 	},
