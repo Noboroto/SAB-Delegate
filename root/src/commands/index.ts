@@ -11,6 +11,7 @@ import attandanceByRole from "./attandanceByRole";
 import addPoll from "./addPoll";
 import getIntroduction from "./getInfo";
 import createActivity from "./createActivity";
+import mentionReactions from "./mentionReactions";
 
 const commands = [
 	ping,
@@ -26,6 +27,7 @@ const commands = [
 	addPoll,
 	getIntroduction,
 	createActivity,
+	mentionReactions
 ];
 
 export default commands;
