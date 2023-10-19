@@ -49,7 +49,7 @@ export default {
 			return;
 		}
 
-		let replyMsg = `Users who reacted with ${reaction} to are: \n`;
+		let replyMsg = `Users who reacted with ${reaction} are: \n`;
 		const reactionList = await messageFromID.reactions.cache;
 
 		reactionList.forEach((reactionFromMessage) => {
