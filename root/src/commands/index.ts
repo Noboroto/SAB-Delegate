@@ -12,6 +12,7 @@ import addPoll from "./addPoll";
 import getIntroduction from "./getInfo";
 import createActivity from "./createActivity";
 import mentionReactions from "./mentionReactions";
+import notReact from "./notReact";
 
 const commands = [
 	ping,
@@ -27,7 +28,8 @@ const commands = [
 	addPoll,
 	getIntroduction,
 	createActivity,
-	mentionReactions
+	mentionReactions,
+	notReact,
 ];
 
 export default commands;

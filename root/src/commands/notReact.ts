@@ -1,6 +1,7 @@
 import {
 	SlashCommandBuilder,
 	PermissionFlagsBits,
+	Role,
 	ChatInputCommandInteraction,
 } from "discord.js";
 import { getMessageFromOption } from "../ultils";
@@ -8,21 +9,17 @@ import { getMessageFromOption } from "../ultils";
 
 export default {
 	data: new SlashCommandBuilder()
-		.setName("mention-reaction")
-		.setDescription("Mention who reacted to a message")
+		.setName("mention-who-not-reaction")
+		.setDescription("Mention who didn't react to a message")
 		.addStringOption((Option) =>
 			Option.setName("message-link")
 				.setDescription("message link")
 				.setRequired(true)
 		)
-		.addStringOption((Option) =>
-			Option.setName("emoji").setDescription("emoji").setRequired(true)
-		)
-
-		.addStringOption((Option) =>
-			Option.setName("reply-message")
-				.setDescription("reply message link")
-				.setRequired(false)
+		.addRoleOption((Option) =>
+			Option.setName("role")
+				.setDescription("Role you want to check")
+				.setRequired(true)
 		)
 
 		.setDefaultMemberPermissions(PermissionFlagsBits.ViewChannel)
@@ -31,16 +28,14 @@ export default {
 	async execute(interaction: ChatInputCommandInteraction) {
 		// interaction.user is the object representing the User who ran the command
 		// interaction.member is the GuildMember object, which represents the user in the specific guild
-		const reaction = interaction.options.getString("emoji")?.trim() ?? "";
 		const messageFromID = await getMessageFromOption(
 			interaction,
 			"message-link"
 		);
 
-		const replyMessage = await getMessageFromOption(
-			interaction,
-			"reply-message"
-		);
+		const role = interaction.options.getRole("role") as Role;
+		const members = role.members;
+
 
 		if (!messageFromID) {
 			await interaction.editReply({
@@ -49,35 +44,41 @@ export default {
 			return;
 		}
 
-		let replyMsg = `Users who reacted with ${reaction} are: \n`;
+		const reactMemberListID: string[] = [];
+		
 		const reactionList = await messageFromID.reactions.cache;
 
-		reactionList.forEach((reactionFromMessage) => {
-			if (reactionFromMessage.emoji.toString() !== reaction) return;
-			reactionFromMessage.users
+		for (const reactionFromMessage of reactionList.values()) {
+			await reactionFromMessage.users
 				.fetch()
 				.then(async (users) => {
 					await users.forEach(async (user) => {
 						if (user.bot) return;
-						if (user.id === interaction.user.id) return;
-						replyMsg += user.toString() + "\n";
+						reactMemberListID.push(user.id);
 					});
-				})
-				.then(() => {
-					if (replyMessage) {
-						replyMessage.reply(replyMsg);
-						interaction.reply({
-							content: "Successfully replied to the message",
-							ephemeral: true,
-						});
-					}
-					else interaction.reply(replyMsg);
 				});
-		})
+		}
 
-		if (!interaction.replied) {
+		let replyMsg = `Users who didn't reacted are: \n`;
+		const absent = members.filter(
+			(member) =>
+				reactMemberListID.find((id) => id === member.id) === undefined
+		);
+		
+
+		if (absent.size === 0) {
 			interaction.reply({
-				content: "No one reacted with that emoji",
+				content: "Everyone in role reacted to the message",
+				ephemeral: true,
+			});
+		}
+		else {
+			absent.forEach((member) => {
+				replyMsg += member.toString() + "\n";
+			});
+			messageFromID.reply(replyMsg);
+			interaction.reply({
+				content: "Successfully check the message",
 				ephemeral: true,
 			});
 		}
