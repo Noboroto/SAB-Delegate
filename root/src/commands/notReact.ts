@@ -80,7 +80,7 @@ export default {
 			absent.forEach((member) => {
 				replyMsg += member.toString() + "\n";
 			});
-			if (isReply) {
+			if (!isReply) {
 				interaction.reply(replyMsg);
 			}
 			else messageFromID.reply(replyMsg);
