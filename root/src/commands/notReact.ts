@@ -65,7 +65,7 @@ export default {
 			});
 		}
 
-		let replyMsg = `Users who didn't reacted are: \n`;
+		let replyMsg = `Reply to ${interaction.user} Users who didn't reacted are: \n`;
 		const absent = members.filter(
 			(member) =>
 				reactMemberListID.find((id) => id === member.id) === undefined
