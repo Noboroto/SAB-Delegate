@@ -27,6 +27,11 @@ export default {
 				.setDescription("default is false")
 				.setRequired(false)
 		)
+		.addStringOption((Option) =>
+			Option.setName("content")
+				.setDescription("message content")
+				.setRequired(false)
+		)
 
 		.setDefaultMemberPermissions(PermissionFlagsBits.ViewChannel)
 		.setDMPermission(false),
@@ -36,6 +41,7 @@ export default {
 		// interaction.member is the GuildMember object, which represents the user in the specific guild
 
 		const isReply = interaction.options.getBoolean("is-reply");
+		const response = interaction.options.getString("content");
 
 		const messageFromID = await getMessageFromOption(
 			interaction,
@@ -77,13 +83,13 @@ export default {
 				ephemeral: true,
 			});
 		} else {
-			absent.forEach((member) => {
-				replyMsg += member.toString() + "\n";
-			});
+			for (const member of absent.values()) {
+				replyMsg += `${member}\n`;
+			}
+			replyMsg += response ? `\n${response}` : "";
 			if (!isReply) {
 				interaction.reply(replyMsg);
-			}
-			else messageFromID.reply(replyMsg);
+			} else messageFromID.reply(replyMsg);
 		}
 	},
 };

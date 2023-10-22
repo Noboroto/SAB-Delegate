@@ -24,6 +24,11 @@ export default {
 				.setDescription("reply message link")
 				.setRequired(false)
 		)
+		.addStringOption((Option) =>
+			Option.setName("content")
+				.setDescription("message content")
+				.setRequired(false)
+		)
 
 		.setDefaultMemberPermissions(PermissionFlagsBits.ViewChannel)
 		.setDMPermission(false),
@@ -31,13 +36,14 @@ export default {
 	async execute(interaction: ChatInputCommandInteraction) {
 		// interaction.user is the object representing the User who ran the command
 		// interaction.member is the GuildMember object, which represents the user in the specific guild
+		const response = interaction.options.getString("content");
 		const reaction = interaction.options.getString("emoji")?.trim() ?? "";
 		const messageFromID = await getMessageFromOption(
 			interaction,
 			"message-link"
 		);
 
-		const replyMessage = await getMessageFromOption(
+		const needReplyMessage = await getMessageFromOption(
 			interaction,
 			"reply-message"
 		);
@@ -54,15 +60,13 @@ export default {
 
 		for (const reactionFromMessage of reactionList.values()) {
 			if (reactionFromMessage.emoji.toString() !== reaction) return;
-			await reactionFromMessage.users
-				.fetch()
-				.then(async (users) => {
-					await users.forEach(async (user) => {
-						if (user.bot) return;
-						if (user.id === interaction.user.id) return;
-						reactMemberListID.push(user.id);
-					});
+			await reactionFromMessage.users.fetch().then(async (users) => {
+				await users.forEach(async (user) => {
+					if (user.bot) return;
+					if (user.id === interaction.user.id) return;
+					reactMemberListID.push(user.id);
 				});
+			});
 		}
 
 		let replyMsg = `There are ${reactMemberListID.length} user(s) who reacted with ${reaction}: \n`;
@@ -70,8 +74,10 @@ export default {
 			replyMsg += `<@${userID}>\n`;
 		}
 
-		if (replyMessage) {
-			await replyMessage.reply(replyMsg);
+		replyMsg += response ? `\n${response}` : "";
+
+		if (needReplyMessage) {
+			await needReplyMessage.reply(replyMsg);
 		} else await interaction.reply(replyMsg);
 
 		if (!reactMemberListID.length) {
