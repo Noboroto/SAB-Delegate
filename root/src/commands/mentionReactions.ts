@@ -69,7 +69,7 @@ export default {
 			});
 		}
 
-		let replyMsg = `There are ${reactMemberListID.length} user(s) who reacted with ${reaction}: \n`;
+		let replyMsg = `Reply to ${interaction.user}, there are ${reactMemberListID.length} user(s) who reacted with ${reaction}: \n`;
 		for (const userID of reactMemberListID) {
 			replyMsg += `<@${userID}>\n`;
 		}
