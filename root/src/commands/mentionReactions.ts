@@ -49,33 +49,32 @@ export default {
 			return;
 		}
 
-		let replyMsg = `Users who reacted with ${reaction} are: \n`;
+		const reactMemberListID: string[] = [];
 		const reactionList = await messageFromID.reactions.cache;
 
-		reactionList.forEach((reactionFromMessage) => {
+		for (const reactionFromMessage of reactionList.values()) {
 			if (reactionFromMessage.emoji.toString() !== reaction) return;
-			reactionFromMessage.users
+			await reactionFromMessage.users
 				.fetch()
 				.then(async (users) => {
 					await users.forEach(async (user) => {
 						if (user.bot) return;
 						if (user.id === interaction.user.id) return;
-						replyMsg += user.toString() + "\n";
+						reactMemberListID.push(user.id);
 					});
-				})
-				.then(() => {
-					if (replyMessage) {
-						replyMessage.reply(replyMsg);
-						interaction.reply({
-							content: "Successfully replied to the message",
-							ephemeral: true,
-						});
-					}
-					else interaction.reply(replyMsg);
 				});
-		})
+		}
 
-		if (!interaction.replied) {
+		let replyMsg = `There are ${reactMemberListID.length} user(s) who reacted with ${reaction}: \n`;
+		for (const userID of reactMemberListID) {
+			replyMsg += `<@${userID}>\n`;
+		}
+
+		if (replyMessage) {
+			await replyMessage.reply(replyMsg);
+		} else await interaction.reply(replyMsg);
+
+		if (!reactMemberListID.length) {
 			interaction.reply({
 				content: "No one reacted with that emoji",
 				ephemeral: true,

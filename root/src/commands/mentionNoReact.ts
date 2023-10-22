@@ -65,11 +65,11 @@ export default {
 			});
 		}
 
-		let replyMsg = `Reply to ${interaction.user} Users who didn't reacted are: \n`;
 		const absent = members.filter(
 			(member) =>
 				reactMemberListID.find((id) => id === member.id) === undefined
 		);
+		let replyMsg = `Reply to ${interaction.user}, there are ${absent.size} user(s) who didn't reacted are: \n`;
 
 		if (absent.size === 0) {
 			interaction.reply({
