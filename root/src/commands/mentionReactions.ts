@@ -59,9 +59,9 @@ export default {
 		const reactionList = await messageFromID.reactions.cache;
 
 		for (const reactionFromMessage of reactionList.values()) {
-			if (reactionFromMessage.emoji.toString() !== reaction) return;
-			await reactionFromMessage.users.fetch().then(async (users) => {
-				await users.forEach(async (user) => {
+			if (reactionFromMessage.emoji.toString() !== reaction) continue;
+			await reactionFromMessage.users.fetch().then((users) => {
+				users.forEach((user) => {
 					if (user.bot) return;
 					if (user.id === interaction.user.id) return;
 					reactMemberListID.push(user.id);
@@ -78,10 +78,11 @@ export default {
 
 		if (needReplyMessage) {
 			await needReplyMessage.reply(replyMsg);
-		} else await interaction.reply(replyMsg);
+		}
+		else await interaction.reply(replyMsg);
 
 		if (!reactMemberListID.length) {
-			interaction.reply({
+			await interaction.reply({
 				content: "No one reacted with that emoji",
 				ephemeral: true,
 			});

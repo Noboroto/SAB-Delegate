@@ -63,8 +63,8 @@ export default {
 		const reactionList = await messageFromID.reactions.cache;
 
 		for (const reactionFromMessage of reactionList.values()) {
-			await reactionFromMessage.users.fetch().then(async (users) => {
-				await users.forEach(async (user) => {
+			await reactionFromMessage.users.fetch().then((users) => {
+				users.forEach((user) => {
 					if (user.bot) return;
 					reactMemberListID.push(user.id);
 				});

@@ -43,6 +43,8 @@ for (const event of events) {
 			console.error(error);
 		}
 	} else {
+		//log date and time of event execution
+		console.log(`${new Date().toLocaleString()} - [Event] ${event.name}`)
 		client.on(event.name as string, (...args: []) =>
 			event.execute([...args])
 		);
