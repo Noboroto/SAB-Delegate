@@ -69,6 +69,13 @@ export default {
 				.setDescription("Activity name")
 				.setRequired(true)
 		)
+		.addStringOption((Option) =>
+			Option.setName("3-short-name")
+				.setDescription("Activity short name with 3 characters")
+				.setRequired(true)
+				.setMaxLength(3)
+				.setMinLength(3)
+		)
 
 		.setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels)
 		.setDMPermission(false),
@@ -78,13 +85,19 @@ export default {
 		// interaction.member is the GuildMember object, which represents the user in the specific guild
 		const emoji = interaction.options.getString("1-emoji")?.trim() ?? "";
 		const name = interaction.options.getString("2-name")?.trim() ?? "";
+		const shortName =
+			interaction.options.getString("3-short-name")?.trim() ?? "";
 
 		const createdRole = await interaction.guild?.roles.create({
-			name: name,
+			name: shortName + "-Event",
 		});
 
 		const createMultiRole = await interaction.guild?.roles.create({
-			name: name + "-multi",
+			name: shortName + "-Multi",
+		});
+
+		const createMCRole = await interaction.guild?.roles.create({
+			name: shortName + "-MC",
 		});
 
 		const channelName = (emoji + "┃" + name)
@@ -105,6 +118,10 @@ export default {
 				},
 				{
 					id: createMultiRole?.id ?? "",
+					allow: textPermissions,
+				},
+				{
+					id: createMCRole?.id ?? "",
 					allow: textPermissions,
 				},
 				{
@@ -137,6 +154,10 @@ export default {
 						allow: threadOnlyPermissions,
 					},
 					{
+						id: createMCRole?.id ?? "",
+						allow: threadOnlyPermissions,
+					},
+					{
 						id:
 							interaction.guild?.roles.cache.find(
 								(role) => role.name === "Muted"
@@ -166,6 +187,10 @@ export default {
 					allow: voicePermissions,
 				},
 				{
+					id: createMCRole?.id ?? "",
+					allow: voicePermissions,
+				},
+				{
 					id:
 						interaction.guild?.roles.cache.find(
 							(role) => role.name === "Muted"
@@ -176,7 +201,7 @@ export default {
 			],
 		});
 
-		const replyMsg = `Created activity name "${name}":\n- role ${createdRole} and ${createMultiRole}\n- ${createdGeneralChannel}\n- ${createdThreadOnlyChannel}\n- ${createdVoiceChannel}`;
+		const replyMsg = `Created activity name "${name}":\n- role ${createdRole}, ${createMultiRole} and ${createMCRole}\n - ${createdGeneralChannel} \n- ${createdThreadOnlyChannel}\n- ${createdVoiceChannel}`;
 
 		interaction.reply(replyMsg);
 	},
