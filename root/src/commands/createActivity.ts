@@ -88,24 +88,32 @@ export default {
 		const shortName =
 			interaction.options.getString("3-short-name")?.trim() ?? "";
 
+		await interaction.deferReply();
+
 		const createdRole = await interaction.guild?.roles.create({
-			name: shortName + "-Event",
+			name: name + "-Event",
 		});
 
 		const createMultiRole = await interaction.guild?.roles.create({
-			name: shortName + "-Multi",
+			name: name + "-Multi",
 		});
 
 		const createMCRole = await interaction.guild?.roles.create({
-			name: shortName + "-MC",
+			name: name + "-MC",
 		});
 
 		const channelName = (emoji + "┃" + name)
 			.toLowerCase()
 			.replace(" ", "-");
+
 		const createdGeneralChannel = await interaction.guild?.channels.create({
 			name: channelName + "-general",
 			parent: "1046973611199697022",
+			topic:
+				"General channel for " +
+				`"${name}"` +
+				" with short name " +
+				`"${shortName}"`,
 			type: ChannelType.GuildText,
 			permissionOverwrites: [
 				{
@@ -138,6 +146,11 @@ export default {
 		const createdThreadOnlyChannel =
 			await interaction.guild?.channels.create({
 				name: channelName + "-thread-only",
+				topic:
+					"Thread only channel for " +
+					`"${name}"` +
+					" with short name " +
+					`"${shortName}"`,
 				parent: "1046973611199697022",
 				type: ChannelType.GuildText,
 				permissionOverwrites: [
@@ -171,6 +184,11 @@ export default {
 		const createdVoiceChannel = await interaction.guild?.channels.create({
 			name: emoji + "┃" + name + " voice",
 			parent: "1046973611199697022",
+			topic:
+				"Voice channel for " +
+				`"${name}"` +
+				" with short name " +
+				`"${shortName}"`,
 			type: ChannelType.GuildVoice,
 			userLimit: 99,
 			permissionOverwrites: [
@@ -201,8 +219,8 @@ export default {
 			],
 		});
 
-		const replyMsg = `Created activity name "${name}":\n- role ${createdRole}, ${createMultiRole} and ${createMCRole}\n - ${createdGeneralChannel} \n- ${createdThreadOnlyChannel}\n- ${createdVoiceChannel}`;
-
-		interaction.reply(replyMsg);
+		await interaction.editReply(
+			`Created activity name "${name}":\n- role ${createdRole}, ${createMultiRole} and ${createMCRole}\n- ${createdGeneralChannel}\n- ${createdThreadOnlyChannel}\n- ${createdVoiceChannel}`
+		);
 	},
 };
