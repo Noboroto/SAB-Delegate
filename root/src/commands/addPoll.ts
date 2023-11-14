@@ -26,7 +26,7 @@ export default {
 				.setRequired(false)
 		)
 
-		.setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels)
+		.setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
 		.setDMPermission(false),
 
 	async execute(interaction: ChatInputCommandInteraction) {

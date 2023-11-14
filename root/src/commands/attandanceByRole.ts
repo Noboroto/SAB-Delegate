@@ -1,6 +1,5 @@
 import {
 	SlashCommandBuilder,
-	PermissionFlagsBits,
 	ChatInputCommandInteraction,
 	Role,
 	ChannelType,
@@ -24,7 +23,6 @@ export default {
 				.setRequired(true)
 		)
 
-		.setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels)
 		.setDMPermission(false),
 
 	async execute(interaction: ChatInputCommandInteraction) {
