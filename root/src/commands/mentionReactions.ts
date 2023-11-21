@@ -63,7 +63,6 @@ export default {
 			await reactionFromMessage.users.fetch().then((users) => {
 				users.forEach((user) => {
 					if (user.bot) return;
-					if (user.id === interaction.user.id) return;
 					reactMemberListID.push(user.id);
 				});
 			});
@@ -71,7 +70,9 @@ export default {
 
 		let replyMsg = `Reply to ${interaction.user}, there are ${reactMemberListID.length} user(s) who reacted with ${reaction}: \n`;
 		for (const userID of reactMemberListID) {
-			replyMsg += `<@${userID}>\n`;
+			replyMsg += `<@${userID}>`;
+			if (userID === interaction.user.id) replyMsg += " (author)";
+			replyMsg += "\n";
 		}
 
 		replyMsg += response ? `\n${response}` : "";

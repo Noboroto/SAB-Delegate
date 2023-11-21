@@ -84,7 +84,11 @@ export default {
 			});
 		} else {
 			for (const member of absent.values()) {
-				replyMsg += `${member}\n`;
+				replyMsg += `${member}`;
+				if (member.id === interaction.user.id) {
+					replyMsg += " (author)";
+				}
+				replyMsg += "\n";
 			}
 			replyMsg += response ? `\n${response}` : "";
 			if (!isReply) {
