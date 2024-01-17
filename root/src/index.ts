@@ -1,6 +1,7 @@
 // Require the necessary discord.js classes
 import { Client, GatewayIntentBits, TextChannel } from "discord.js";
 import events from "./events-bot/index";
+import * as dotenv from "dotenv";
 
 // Create a new client instance
 
@@ -49,6 +50,10 @@ for (const event of events) {
 			event.execute([...args])
 		);
 	}
+}
+
+if(!process.env.TOKEN) { 
+	dotenv.config();
 }
 
 client.login(process.env.TOKEN);
