@@ -42,10 +42,12 @@ const threadOnlyPermissions = new PermissionsBitField(textPermissions);
 threadOnlyPermissions.remove(PermissionFlagsBits.SendMessages);
 
 const muteTextPermissions = new PermissionsBitField(textPermissions);
+//muteTextPermissions.remove(PermissionFlagsBits.ViewChannel);
 muteTextPermissions.remove(PermissionFlagsBits.SendMessages);
 muteTextPermissions.remove(PermissionFlagsBits.SendMessagesInThreads);
 
 const muteVoicePermissions = new PermissionsBitField(voicePermissions);
+//muteVoicePermissions.remove(PermissionFlagsBits.ViewChannel);
 muteVoicePermissions.remove(PermissionFlagsBits.Speak);
 
 const willBeMutePermit = [
