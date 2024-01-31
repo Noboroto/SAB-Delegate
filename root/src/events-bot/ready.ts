@@ -1,4 +1,4 @@
-import { Client, Events  } from "discord.js";
+import { Client, Events } from "discord.js";
 import commands from "../commands";
 
 export default {
