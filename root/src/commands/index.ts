@@ -10,7 +10,7 @@ import getIntroduction from "./getInfo";
 import createActivity from "./createActivity";
 import mentionReactions from "./mentionReactions";
 import notReact from "./mentionNoReact";
-import note from "./noteCommand";
+import note from "./note";
 
 const commands = [
 	ping,

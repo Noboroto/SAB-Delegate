@@ -13,13 +13,13 @@ export default {
 	async execute(interaction) {
 		const commands = interaction.options.getSubcommand();
 		switch (commands) {
-			case "add-by-role":
+			case "add":
 				addCmd.execute(interaction);
 				break;
-			case "get-by-role":
+			case "get":
 				getCmd.execute(interaction);
 				break;
-			case "remove-by-role":
+			case "remove":
 				removeCmd.execute(interaction);
 				break;
 			default:
