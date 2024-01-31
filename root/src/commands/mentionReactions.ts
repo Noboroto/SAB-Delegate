@@ -80,7 +80,7 @@ export default {
 			await needReplyMessage.reply(replyMsg);
 		} else await interaction.reply(replyMsg);
 
-		if (!reactMemberListID.length) {
+		if (!reactMemberListID.length && !interaction.replied) {
 			await interaction.reply({
 				content: "No one reacted with that emoji",
 				ephemeral: true,
