@@ -76,15 +76,18 @@ export default {
 
 		replyMsg += response ? `\n${response}` : "";
 
-		if (needReplyMessage) {
-			await needReplyMessage.reply(replyMsg);
-		} else await interaction.reply(replyMsg);
-
-		if (!reactMemberListID.length && !interaction.replied) {
-			await interaction.reply({
+		if (!reactMemberListID.length) {
+			interaction.reply({
 				content: "No one reacted with that emoji",
 				ephemeral: true,
 			});
+			return;
 		}
+
+		if (needReplyMessage) {
+			needReplyMessage.reply(replyMsg);
+			return;
+		} 
+		else interaction.reply(replyMsg);
 	},
 };
