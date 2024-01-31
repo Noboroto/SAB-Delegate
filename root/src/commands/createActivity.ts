@@ -119,10 +119,11 @@ export default {
 			type: ChannelType.GuildText,
 			permissionOverwrites: [
 				{
-					id: interaction.guild?.roles.cache.find(
-						(role) => role.name === "Technician"
-					).id ?? "",
-					allow: PermissionsBitField.All
+					id:
+						interaction.guild?.roles.cache.find(
+							(role) => role.name === "Technician"
+						).id ?? "",
+					allow: PermissionsBitField.All,
 				},
 				{
 					id: interaction.guild?.roles.everyone.id ?? "",
@@ -163,10 +164,11 @@ export default {
 				type: ChannelType.GuildText,
 				permissionOverwrites: [
 					{
-						id: interaction.guild?.roles.cache.find(
-							(role) => role.name === "Technician"
-						).id ?? "",
-						allow: PermissionsBitField.All
+						id:
+							interaction.guild?.roles.cache.find(
+								(role) => role.name === "Technician"
+							).id ?? "",
+						allow: PermissionsBitField.All,
 					},
 					{
 						id: interaction.guild?.roles.everyone.id ?? "",
@@ -207,10 +209,11 @@ export default {
 			userLimit: 99,
 			permissionOverwrites: [
 				{
-					id: interaction.guild?.roles.cache.find(
-						(role) => role.name === "Technician"
-					).id ?? "",
-					allow: PermissionsBitField.All
+					id:
+						interaction.guild?.roles.cache.find(
+							(role) => role.name === "Technician"
+						).id ?? "",
+					allow: PermissionsBitField.All,
 				},
 				{
 					id: interaction.guild?.roles.everyone.id ?? "",

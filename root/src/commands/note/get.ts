@@ -1,4 +1,7 @@
-import { SlashCommandSubcommandBuilder, ChatInputCommandInteraction } from "discord.js";
+import {
+	SlashCommandSubcommandBuilder,
+	ChatInputCommandInteraction,
+} from "discord.js";
 import { existsSync, readFileSync, writeFileSync } from "fs";
 
 const savePath = "./files/notes.json";
@@ -9,13 +12,14 @@ if (!existsSync(savePath)) {
 export default {
 	addCommand(builder: SlashCommandSubcommandBuilder) {
 		return builder
-		.setName("get")
-		.setDescription("Note eveything and find by role")
-		.addRoleOption((Option) =>
-			Option.setName("role")
-				.setDescription("role to note")
-				.setRequired(true)
-		)},
+			.setName("get")
+			.setDescription("Note eveything and find by role")
+			.addRoleOption((Option) =>
+				Option.setName("role")
+					.setDescription("role to note")
+					.setRequired(true)
+			);
+	},
 
 	async execute(interaction: ChatInputCommandInteraction) {
 		const role = interaction.options.getRole("role");

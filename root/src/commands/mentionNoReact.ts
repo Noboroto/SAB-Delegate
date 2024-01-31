@@ -6,7 +6,6 @@ import {
 } from "discord.js";
 import { getMessageFromOption } from "../ultils";
 
-
 export default {
 	data: new SlashCommandBuilder()
 		.setName("mention-who-not-reaction")
@@ -97,4 +96,3 @@ export default {
 		}
 	},
 };
-

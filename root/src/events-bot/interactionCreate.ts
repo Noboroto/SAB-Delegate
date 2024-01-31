@@ -21,7 +21,11 @@ export default {
 		}
 
 		try {
-			console.log(`${new Date().toLocaleString()} - [Command] ${interaction.commandName}`)
+			console.log(
+				`${new Date().toLocaleString()} - [Command] ${
+					interaction.commandName
+				}`
+			);
 			await command.execute(interaction);
 		} catch (error) {
 			const channel = interaction.client.guilds.cache

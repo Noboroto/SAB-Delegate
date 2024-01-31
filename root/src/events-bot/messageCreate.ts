@@ -17,7 +17,7 @@ const reactToMessage = (message: Message) => {
 			});
 		}
 	}
-}
+};
 
 export default {
 	name: Events.MessageCreate,

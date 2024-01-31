@@ -25,7 +25,7 @@ const commands = [
 	createActivity,
 	mentionReactions,
 	notReact,
-	note
+	note,
 ];
 
 export default commands;

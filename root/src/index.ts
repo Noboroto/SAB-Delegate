@@ -52,7 +52,7 @@ for (const event of events) {
 	}
 }
 
-if(!process.env.TOKEN) { 
+if (!process.env.TOKEN) {
 	dotenv.config();
 }
 

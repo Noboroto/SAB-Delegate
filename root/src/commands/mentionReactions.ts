@@ -5,7 +5,6 @@ import {
 } from "discord.js";
 import { getMessageFromOption } from "../ultils";
 
-
 export default {
 	data: new SlashCommandBuilder()
 		.setName("mention-reaction")
@@ -79,8 +78,7 @@ export default {
 
 		if (needReplyMessage) {
 			await needReplyMessage.reply(replyMsg);
-		}
-		else await interaction.reply(replyMsg);
+		} else await interaction.reply(replyMsg);
 
 		if (!reactMemberListID.length) {
 			await interaction.reply({
@@ -90,4 +88,3 @@ export default {
 		}
 	},
 };
-

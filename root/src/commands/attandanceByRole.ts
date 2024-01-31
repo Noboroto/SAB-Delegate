@@ -31,18 +31,26 @@ export default {
 		//const guild = interaction.client.guilds.cache.get('Guild ID');
 
 		const role = interaction.options.getRole("role") as Role;
-		const voiceChannel = (await (interaction.options.getChannel("voice-channel") as VoiceChannel).fetch()) as VoiceChannel;
+		const voiceChannel = (await (
+			interaction.options.getChannel("voice-channel") as VoiceChannel
+		).fetch()) as VoiceChannel;
 
 		const members = role.members;
 		const channelMembers = voiceChannel.members.map((member) => member.id);
 
-		const absent = members.filter((member) => channelMembers.find((id) => id === member.id) === undefined);
-		const present = members.filter((member) => channelMembers.find((id) => id === member.id) !== undefined);
+		const absent = members.filter(
+			(member) =>
+				channelMembers.find((id) => id === member.id) === undefined
+		);
+		const present = members.filter(
+			(member) =>
+				channelMembers.find((id) => id === member.id) !== undefined
+		);
 
 		const message = {
-			content: `Channel ${voiceChannel}, role **@${role.name}** has **${members.size}** members\n**${
-				present.size
-			}** members are present\n**${
+			content: `Channel ${voiceChannel}, role **@${role.name}** has **${
+				members.size
+			}** members\n**${present.size}** members are present\n**${
 				absent.size
 			}** members are absent\n\n**Present Members**\n${present
 				.map((member) => `@${member.user.username}`)

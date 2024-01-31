@@ -22,7 +22,9 @@ export default {
 
 		.addStringOption((Option) =>
 			Option.setName("message-link")
-				.setDescription("existed message link, default will create new message")
+				.setDescription(
+					"existed message link, default will create new message"
+				)
 				.setRequired(false)
 		)
 
@@ -36,10 +38,9 @@ export default {
 
 		const pollChoiceCount =
 			interaction.options.getInteger("poll-choice-count") ?? 0;
-		const messageFromID = await getMessageFromOption(
-			interaction,
-			"message-link"
-		) ?? await interaction.channel?.send("New Poll!");
+		const messageFromID =
+			(await getMessageFromOption(interaction, "message-link")) ??
+			(await interaction.channel?.send("New Poll!"));
 
 		for (let i = 0; i < pollChoiceCount; i++) {
 			await messageFromID.react(emojiPoll[i]);
