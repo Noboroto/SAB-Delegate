@@ -81,6 +81,7 @@ export default {
 				content: "Everyone in role reacted to the message",
 				ephemeral: true,
 			});
+			return;
 		} else {
 			for (const member of absent.values()) {
 				replyMsg += `${member}`;
@@ -92,6 +93,7 @@ export default {
 			replyMsg += response ? `\n${response}` : "";
 			if (!isReply) {
 				interaction.reply(replyMsg);
+				return;
 			} else messageFromID.reply(replyMsg);
 		}
 	},
