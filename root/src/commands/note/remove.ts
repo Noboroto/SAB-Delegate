@@ -8,7 +8,7 @@ if (!existsSync(savePath)) {
 
 export default {
 	addCommand(builder: SlashCommandSubcommandBuilder) {
-		return builder.setName("remove-by-role")
+		return builder.setName("remove")
 			.setDescription("Remove saved-note by role")
 
 			.addRoleOption((Option) =>

@@ -1,6 +1,6 @@
-import addCmd from './note/addNoteByRole'
-import getCmd from './note/getNoteByRole'
-import removeCmd from './note/removeNoteByRole'
+import addCmd from './note/add'
+import getCmd from './note/get'
+import removeCmd from './note/remove'
 import { SlashCommandBuilder } from "discord.js";
 
 export default {
