@@ -1,4 +1,5 @@
 import { Events, Message } from "discord.js";
+import { errNotice, successNotice, wordGame } from "../ultils";
 import fs from "fs";
 
 const reactionDictPath = "./files/reactionsDict.json";
@@ -12,10 +13,43 @@ const reactToMessage = (message: Message) => {
 					message.guild?.emojis.cache.find(
 						(emo) => emo.name === reaction
 					) ?? reaction;
-
 				message.react(emoji);
 			});
 		}
+	}
+};
+
+const handleWordGame = async (message: Message) => {
+	const authorID = message.author.id;
+	const guildID = message.guild.id;
+	const channelID = message.channel.id;
+
+	if (message.guild.members.cache.get(authorID).user.bot) return;
+	if (!await wordGame.isValidChannel(guildID, channelID)) return;
+
+	const word = message.content.toLowerCase().trimEnd().trimStart();
+	const result = await wordGame.getWordStatus(guildID, word, authorID);
+
+	switch (result) {
+		case wordGame.WordGameStatus.NOT_EXIST:
+			errNotice(message, "Từ này không tồn tại trong từ điển");
+			break;
+		case wordGame.WordGameStatus.NOT_LINK:
+			errNotice(
+				message,
+				`Từ mới phải bắt đầu bằng ${await wordGame.getStarter(guildID)}`
+			);
+			break;
+		case wordGame.WordGameStatus.SAME_AUTHOR:
+			errNotice(message, "Bạn đã nối từ trước đó");
+			break;
+		case wordGame.WordGameStatus.SAME_WORD:
+			errNotice(message, "Từ này đã được nối");
+			break;
+		case wordGame.WordGameStatus.SUCCESS:
+			await wordGame.setWord(guildID, word, authorID);
+			successNotice(message);
+			break;
 	}
 };
 
@@ -26,5 +60,6 @@ export default {
 		const message = args[0] as Message;
 
 		reactToMessage(message);
+		handleWordGame(message);
 	},
 };

@@ -11,6 +11,7 @@ import createActivity from "./createActivity";
 import mentionReactions from "./mentionReactions";
 import notReact from "./mentionNoReact";
 import note from "./note";
+import word from "./word";
 
 const commands = [
 	ping,
@@ -26,6 +27,7 @@ const commands = [
 	mentionReactions,
 	notReact,
 	note,
+	word,
 ];
 
 export default commands;

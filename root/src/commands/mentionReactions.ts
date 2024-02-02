@@ -87,7 +87,6 @@ export default {
 		if (needReplyMessage) {
 			needReplyMessage.reply(replyMsg);
 			return;
-		} 
-		else interaction.reply(replyMsg);
+		} else interaction.reply(replyMsg);
 	},
 };
