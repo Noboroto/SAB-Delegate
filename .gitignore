@@ -81,3 +81,4 @@ configValues.ts
 **/**.DS_Store
 root/files/notes.json
 root/files/words_dictionary.json
+**/**.sqlite
