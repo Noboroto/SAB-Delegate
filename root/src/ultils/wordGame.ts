@@ -36,6 +36,7 @@ export enum WordGameStatus {
 	SAME_WORD,
 	NOT_EXIST,
 	NOT_LINK,
+	NOTHING
 }
 
 export const getWordStatus = async (
@@ -44,6 +45,9 @@ export const getWordStatus = async (
 	authorID: string
 ): Promise<WordGameStatus> => {
 	const query = word.toLowerCase();
+
+	if (query.split(" ").length > 1) return WordGameStatus.NOTHING
+
 	const isStart: boolean = await wordDb.get(`${guildID}.start`);
 	const wordArr: string[] = await wordDb.get(`${guildID}.wordArray`);
 	const lastWord: string = await wordDb.get(`${guildID}.lastWord`);
@@ -64,10 +68,16 @@ export const setWord = async (
 	word: string,
 	authorID: string
 ): Promise<void> => {
-	await wordDb.push(`${guildID}.wordArray`, word.toLowerCase());
-	await wordDb.set(`${guildID}.lastUser`, authorID);
-	await wordDb.set(`${guildID}.lastWord`, word.toLowerCase());
-	await wordDb.set(`${guildID}.start`, false);
+	const tasks = [];
+	tasks.push(
+		wordDb.push(`${guildID}.wordArray`, word.toLowerCase()));
+	tasks.push(
+		wordDb.set(`${guildID}.lastUser`, authorID));
+	tasks.push(
+		wordDb.set(`${guildID}.lastWord`, word.toLowerCase()));
+	tasks.push
+		(wordDb.set(`${guildID}.start`, false));
+	await Promise.all(tasks);
 };
 
 export const getStarter = async (guildID: string): Promise<string> => {
