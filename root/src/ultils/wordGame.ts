@@ -29,8 +29,9 @@ export const isValidChannel = async (
 	const maxWord = await getMax(guildID);
 	const counter = await wordDb.get(`${guildID}.count`);
 
-	if (maxWord >= counter) return false;
-
+	console.log(`${maxWord} - ${counter}`)
+	if (maxWord <= counter) return false;
+	console.log("nothing")
 	const wordChannel = await wordDb.get(`${guildID}.channelID`);
 	if (!wordChannel) return false;
 	return (wordChannel === channelID);
@@ -57,11 +58,11 @@ export const getWordStatus = async (
 
 	const isStart: boolean = await wordDb.get(`${guildID}.start`);
 	const lastWord: string = await wordDb.get(`${guildID}.lastWord`);
-	//const lastUser: string = await wordDb.get(`${guildID}.lastUser`);
+	const lastUser: string = await wordDb.get(`${guildID}.lastUser`);
 	const wordCounter = await wordDb.get (`${guildID}.used.${query}`);
 
 	if (!isStart) {
-		//if (lastUser === authorID) return WordGameStatus.SAME_AUTHOR;
+		if (lastUser === authorID) return WordGameStatus.SAME_AUTHOR;
 		if (wordCounter || wordCounter > 0) return WordGameStatus.SAME_WORD;
 		if (!word.startsWith(lastWord.slice(-1))) return WordGameStatus.NOT_LINK;
 	}
