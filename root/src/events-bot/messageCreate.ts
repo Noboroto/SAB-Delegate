@@ -24,7 +24,7 @@ const handleWordGame = async (message: Message) => {
 	const guildID = message.guild.id;
 	const channelID = message.channel.id;
 
-	if (message.guild.members.cache.get(authorID).user.bot) return;
+	if (message.author.bot) return;
 	if (!await wordGame.isValidChannel(guildID, channelID)) return;
 
 	const word = message.content.toLowerCase().trimEnd().trimStart();

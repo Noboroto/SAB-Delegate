@@ -2,7 +2,6 @@ import {
 	SlashCommandSubcommandBuilder,
 	ChatInputCommandInteraction,
 } from "discord.js";
-import { readFileSync, writeFileSync, existsSync } from "fs";
 import { noteUltils } from "../../ultils";
 
 export default {
