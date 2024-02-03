@@ -29,6 +29,7 @@ const handleWordGame = async (message: Message) => {
 
 	const word = message.content.toLowerCase().trimEnd().trimStart();
 	const result = await wordGame.getWordStatus(guildID, word, authorID);
+	const maxWord = await wordGame.getMax(guildID);
 
 	switch (result) {
 		case wordGame.WordGameStatus.NOT_EXIST:
@@ -49,6 +50,9 @@ const handleWordGame = async (message: Message) => {
 		case wordGame.WordGameStatus.SUCCESS:
 			await wordGame.setWord(guildID, word, authorID);
 			successNotice(message);
+			break;
+		case wordGame.WordGameStatus.MAX_WORD:
+			successNotice(message, `Trò chơi kết thú do đã vượt quá ${maxWord} từ.Hãy reset nếu muốn chơi tiếp nhé`)
 			break;
 	}
 };

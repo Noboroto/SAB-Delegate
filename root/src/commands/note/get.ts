@@ -2,12 +2,8 @@ import {
 	SlashCommandSubcommandBuilder,
 	ChatInputCommandInteraction,
 } from "discord.js";
-import { existsSync, readFileSync, writeFileSync } from "fs";
+import { noteUltils } from "../../ultils";
 
-const savePath = "./files/notes.json";
-if (!existsSync(savePath)) {
-	writeFileSync(savePath, JSON.stringify({}, null, 4));
-}
 
 export default {
 	addCommand(builder: SlashCommandSubcommandBuilder) {
@@ -24,17 +20,8 @@ export default {
 	async execute(interaction: ChatInputCommandInteraction) {
 		const role = interaction.options.getRole("role");
 
-		const notes = readFileSync(savePath, "utf-8");
-		const notesJson = JSON.parse(notes);
-
-		notesJson[role.id] = notesJson[role.id] || {};
-
 		interaction.reply({
-			content: `Note for @${role.name}:\n${JSON.stringify(
-				notesJson[role.id],
-				null,
-				4
-			)}`,
+			content: `Note for @${role.name}:\n${await noteUltils.getNote(role.id)}`,
 			ephemeral: false,
 			embeds: [],
 		});

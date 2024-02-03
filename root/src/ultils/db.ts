@@ -19,5 +19,6 @@ export const dictDb = new QuickDB({ filePath: dictDbPath });
 	await dictDb.init();
 	await noteDb.init();
 	await wordDb.init();
+ 
 	console.log("Database initialized");
 })();

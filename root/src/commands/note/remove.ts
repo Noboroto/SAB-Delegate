@@ -2,12 +2,8 @@ import {
 	SlashCommandSubcommandBuilder,
 	ChatInputCommandInteraction,
 } from "discord.js";
-import { existsSync, readFileSync, writeFileSync } from "fs";
 
-const savePath = "./files/notes.json";
-if (!existsSync(savePath)) {
-	writeFileSync(savePath, JSON.stringify({}, null, 4));
-}
+import { noteUltils } from "../../ultils";
 
 export default {
 	addCommand(builder: SlashCommandSubcommandBuilder) {
@@ -30,20 +26,8 @@ export default {
 	async execute(interaction: ChatInputCommandInteraction) {
 		const role = interaction.options.getRole("role");
 		const topic = interaction.options.getString("topic");
-		const notes = readFileSync(savePath, "utf-8");
-		const notesJson = JSON.parse(notes);
 
-		if (!notesJson[role.id][topic]) {
-			interaction.reply({
-				content: `No note found for @${role.name} with topic ${topic}`,
-				ephemeral: false,
-			});
-			return;
-		}
-
-		delete notesJson[role.id][topic];
-
-		writeFileSync(savePath, JSON.stringify(notesJson, null, 4));
+		noteUltils.removeNote(role.id, topic)
 
 		interaction.reply({
 			content: `Note removed for @${role.name} with topic ${topic}`,
