@@ -30,7 +30,7 @@ export const isValidChannel = async (
 	const counter = await wordDb.get(`${guildID}.count`);
 
 	if (maxWord <= counter) return false;
-	if (!maxWord || !counter) return false;
+	if (!maxWord) return false;
 	const wordChannel = await wordDb.get(`${guildID}.channelID`);
 	if (!wordChannel) return false;
 	return (wordChannel === channelID);
