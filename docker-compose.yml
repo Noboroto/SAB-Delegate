@@ -23,6 +23,6 @@ services:
     build: ./THHV
     restart: unless-stopped
     volumes:
-      - ./root/files:/usr/src/bot/files
+      - ./THHV/root/files:/usr/src/bot/files
     environment:
       - TOKEN
