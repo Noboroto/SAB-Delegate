@@ -18,8 +18,8 @@ services:
       - ./root/files:/usr/src/bot/files
     environment:
       - TOKEN
-  THHV_noichu:
-    container_name: THHV_noichu
+  thhv_noichu:
+    container_name: thhv_noichu
     build: ./THHV
     restart: unless-stopped
     volumes:
