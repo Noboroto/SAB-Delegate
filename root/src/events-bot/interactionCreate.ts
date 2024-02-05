@@ -22,7 +22,7 @@ export default {
 
 		try {
 			console.log(
-				`${new Date().toLocaleString()} - [Command] ${
+				`${new Date().toLocaleString()} - ${interaction.client.user?.username}[Command] ${
 					interaction.commandName
 				}`
 			);
@@ -33,6 +33,8 @@ export default {
 				.channels.cache.find(
 					(channel) => channel.name === "bot-log"
 				) as TextChannel;
+			
+			if (!channel) return;
 
 			channel.send({
 				content: `Error executing ${interaction.commandName}`,

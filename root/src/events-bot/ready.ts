@@ -6,13 +6,13 @@ export default {
 	once: true,
 	async execute(args: Client[]) {
 		const client = args[0] as Client;
-		console.log(`Ready! Logged in as ${client.user?.tag}`);
+		console.log(`Ready! Logged in as ${client.user?.username}`);
 
 		return;
 		await client.application.commands
 			.set([])
 			.then(() =>
-				console.log("Successfully deleted application command")
+				console.log(`${client.user?.username} Successfully deleted application command`)
 			);
 
 		console.log();
@@ -21,16 +21,16 @@ export default {
 				.create(command.data)
 				.then(() =>
 					console.log(
-						`Successfully registered application command "${command.data.name}"`
+						`${client.user?.username} Successfully registered application command "${command.data.name}"`
 					)
 				)
 				.catch((error) =>
 					console.error(
-						`Error registering application command "${command.data.name}"\n${error}`
+						`${client.user?.username} Error registering application command "${command.data.name}"\n${error}`
 					)
 				);
 		}
 
-		console.log("Successfully registered all application commands");
+		console.log(`${client.user?.username} Successfully registered all application commands`);
 	},
 };

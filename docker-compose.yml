@@ -10,19 +10,3 @@ services:
     environment:
       - TOKEN
 
-  cs101_bot:
-    container_name: cs101-bot
-    build: .
-    restart: unless-stopped
-    volumes:
-      - ./root/files:/usr/src/bot/files
-    environment:
-      - TOKEN
-  thhv_noichu:
-    container_name: thhv_noichu
-    build: ./THHV
-    restart: unless-stopped
-    volumes:
-      - ./THHV/root/files:/usr/src/bot/files
-    environment:
-      - TOKEN
