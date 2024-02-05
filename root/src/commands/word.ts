@@ -10,7 +10,7 @@ export default {
 		.addSubcommand((subcommad) => resetCmd.addCommand(subcommad)),
 	async execute(interaction) {
 		const commands = interaction.options.getSubcommand();
-		console.log(`subcommand: ${commands}`)
+		console.info(`subcommand: ${commands}`)
 		switch (commands) {
 			case "set":
 				setCmd.execute(interaction);

@@ -80,7 +80,6 @@ export const setWord = async (
 	await wordDb.set(`${guildID}.lastWord`, word.toLowerCase())
 	await wordDb.set(`${guildID}.start`, false)
 	await wordDb.add(`${guildID}.count`, 1)
-	console.log(JSON.stringify(await wordDb.all(), null, "\t"))
 };
 
 export const getStarter = async (guildID: string): Promise<string> => {

@@ -21,9 +21,8 @@ export default {
 		}
 
 		try {
-			console.log(
-				`${new Date().toLocaleString()} - ${interaction.client.user?.username}[Command] ${
-					interaction.commandName
+			console.info(
+				`${new Date().toLocaleString()} - ${interaction.client.user?.username}[Command] ${interaction.commandName
 				}`
 			);
 			await command.execute(interaction);
@@ -33,7 +32,7 @@ export default {
 				.channels.cache.find(
 					(channel) => channel.name === "bot-log"
 				) as TextChannel;
-			
+
 			if (!channel) return;
 
 			channel.send({

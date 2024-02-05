@@ -14,11 +14,11 @@ export const dictDb = new QuickDB({ filePath: dictDbPath });
 	if (!(await dictDb.get("dict"))) {
 		const dictObj = JSON.parse(readFileSync(dictTemplate, "utf-8"));
 		await dictDb.set("dict", dictObj);
-		console.log("Dictionary initialized");
+		console.info("Dictionary initialized");
 	}
 	await dictDb.init();
 	await noteDb.init();
 	await wordDb.init();
- 
-	console.log("Database initialized");
+
+	console.info("Database initialized");
 })();

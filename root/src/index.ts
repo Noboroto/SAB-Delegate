@@ -61,7 +61,7 @@ for (const event of events) {
 		}
 	} else {
 		//log date and time of event execution
-		console.log(`${new Date().toLocaleString()} - [Event] ${event.name}`);
+		console.info(`${new Date().toLocaleString()} - [Event] ${event.name}`);
 		clients.forEach((client) => {
 			client.on(event.name as string, (...args: []) =>
 				event.execute([...args])

@@ -6,21 +6,21 @@ export default {
 	once: true,
 	async execute(args: Client[]) {
 		const client = args[0] as Client;
-		console.log(`Ready! Logged in as ${client.user?.username}`);
+		console.info(`Ready! Logged in as ${client.user?.username}`);
 
 		return;
 		await client.application.commands
 			.set([])
 			.then(() =>
-				console.log(`${client.user?.username} Successfully deleted application command`)
+				console.info(`${client.user?.username} Successfully deleted application command`)
 			);
 
-		console.log();
+		console.info();
 		for (const command of commands) {
 			await client.application.commands
 				.create(command.data)
 				.then(() =>
-					console.log(
+					console.info(
 						`${client.user?.username} Successfully registered application command "${command.data.name}"`
 					)
 				)
@@ -31,6 +31,6 @@ export default {
 				);
 		}
 
-		console.log(`${client.user?.username} Successfully registered all application commands`);
+		console.info(`${client.user?.username} Successfully registered all application commands`);
 	},
 };
