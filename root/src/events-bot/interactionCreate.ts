@@ -15,14 +15,14 @@ export default {
 
 		if (!command) {
 			console.error(
-				`No command matching ${interaction.commandName} was found.`
+				`[${new Date().toLocaleString()} - ${interaction.client.user?.username}] No command matching ${interaction.commandName} was found.`
 			);
 			return;
 		}
 
 		try {
 			console.info(
-				`${new Date().toLocaleString()} - ${interaction.client.user?.username}[Command] ${interaction.commandName
+				`[${new Date().toLocaleString()} - ${interaction.client.user?.username}][Command] ${interaction.commandName
 				}`
 			);
 			await command.execute(interaction);
