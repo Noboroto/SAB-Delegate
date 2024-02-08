@@ -8,7 +8,7 @@ export default {
 		const client = args[0] as Client;
 		console.info(`Ready! Logged in as ${client.user?.username}`);
 
-		return;
+		//return;
 		await client.application.commands
 			.set([])
 			.then(() =>

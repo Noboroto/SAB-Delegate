@@ -1,28 +1,25 @@
 import {
-	SlashCommandBuilder,
-	PermissionFlagsBits,
 	ChatInputCommandInteraction,
+	SlashCommandSubcommandBuilder,
 } from "discord.js";
-import { getMessageFromOption } from "../ultils";
+import { getMessageFromOption } from "../../ultils";
 
 export default {
-	data: new SlashCommandBuilder()
-		.setName("edit-bot-message")
-		.setDescription("Edit a message send by this bot!")
-		.addStringOption((Option) =>
-			Option.setName("new-message-link")
-				.setDescription("new message link")
-				.setRequired(true)
-		)
-		.addStringOption((Option) =>
-			Option.setName("old-bot-message-link")
-				.setDescription("bot message link")
-				.setRequired(true)
-		)
-
-		.setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels)
-		.setDMPermission(false),
-
+	addCommand(builder: SlashCommandSubcommandBuilder) {
+		return builder
+			.setName("edit")
+			.setDescription("Edit a message send by this bot!")
+			.addStringOption((Option) =>
+				Option.setName("new-message-link")
+					.setDescription("new message link")
+					.setRequired(true)
+			)
+			.addStringOption((Option) =>
+				Option.setName("old-bot-message-link")
+					.setDescription("bot message link")
+					.setRequired(true)
+			)
+	},
 	async execute(interaction: ChatInputCommandInteraction) {
 		await interaction.deferReply({ ephemeral: true });
 

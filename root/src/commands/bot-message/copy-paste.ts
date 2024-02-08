@@ -1,36 +1,33 @@
 import {
-	SlashCommandBuilder,
-	PermissionFlagsBits,
 	ChannelType,
 	TextChannel,
 	ChatInputCommandInteraction,
+	SlashCommandSubcommandBuilder,
 } from "discord.js";
-import { getMessageFromOption } from "../ultils";
+import { getMessageFromOption } from "../../ultils";
 
 export default {
-	data: new SlashCommandBuilder()
-		.setName("copy-to-channel")
-		.setDescription("Copy a messsage to specific channel!")
-		.addStringOption((Option) =>
-			Option.setName("message-link")
-				.setDescription("message link")
-				.setRequired(true)
-		)
-
-		.addChannelOption((Option) =>
-			Option.setName("destination")
-				.addChannelTypes(ChannelType.GuildText)
-				.addChannelTypes(ChannelType.GuildAnnouncement)
-				.addChannelTypes(ChannelType.AnnouncementThread)
-				.addChannelTypes(ChannelType.PublicThread)
-				.addChannelTypes(ChannelType.PrivateThread)
-				.setDescription("default is where you run this command")
-				.setRequired(false)
-		)
-
-		.setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
-		.setDMPermission(false),
-
+	addCommand(builder: SlashCommandSubcommandBuilder) {
+		return builder
+			.setName("copy-paste")
+			.setDescription("Copy a messsage to specific channel!")
+			.addStringOption((Option) =>
+				Option.setName("message-link")
+					.setDescription("message link")
+					.setRequired(true)
+			)
+			.addChannelOption((Option) =>
+				Option.setName("destination")
+					.addChannelTypes(ChannelType.GuildText)
+					.addChannelTypes(ChannelType.GuildAnnouncement)
+					.addChannelTypes(ChannelType.AnnouncementThread)
+					.addChannelTypes(ChannelType.PublicThread)
+					.addChannelTypes(ChannelType.PrivateThread)
+					.setDescription("default is where you run this command")
+					.setRequired(false)
+			)
+			
+	},
 	async execute(interaction: ChatInputCommandInteraction) {
 		// interaction.user is the object representing the User who ran the command
 		// interaction.member is the GuildMember object, which represents the user in the specific guild
