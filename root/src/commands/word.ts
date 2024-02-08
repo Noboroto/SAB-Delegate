@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import setCmd from "./word/set";
 import resetCmd from "./word/reset";
 
@@ -6,6 +6,7 @@ export default {
 	data: new SlashCommandBuilder()
 		.setName("word")
 		.setDescription("Trò chơi nối chữ")
+		.setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
 		.addSubcommand((subcommad) => setCmd.addCommand(subcommad))
 		.addSubcommand((subcommad) => resetCmd.addCommand(subcommad)),
 	async execute(interaction) {
