@@ -12,6 +12,7 @@ export default {
 		.addSubcommand((subcommad) => removeCmd.addCommand(subcommad)),
 	async execute(interaction) {
 		const commands = interaction.options.getSubcommand();
+		console.info(`subcommand: ${commands}`)
 		switch (commands) {
 			case "add":
 				addCmd.execute(interaction);
