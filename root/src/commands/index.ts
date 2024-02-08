@@ -9,6 +9,7 @@ import notReact from "./mentionNoReact";
 import note from "./note";
 import word from "./word";
 import botMessage from "./bot-message";
+import scheduler from "./scheduler";
 
 const commands = [
 	ping,
@@ -21,7 +22,8 @@ const commands = [
 	notReact,
 	note,
 	word,
-	botMessage
+	botMessage,
+	scheduler
 ];
 
 export default commands;
