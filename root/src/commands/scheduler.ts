@@ -13,10 +13,10 @@ export default {
 		const commands = interaction.options.getSubcommand();
 		console.info(`subcommand: ${commands}`)
 		switch (commands) {
-			case "set":
+			case "get":
 				getCmd.execute(interaction);
 				break;
-			case "reset":
+			case "cancel":
 				cancelCmd.execute(interaction);
 				break;
 			default:

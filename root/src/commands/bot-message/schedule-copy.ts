@@ -73,14 +73,6 @@ export default {
 		const hour = interaction.options.getInteger("hour");
 		const minute = interaction.options.getInteger("minute");
 
-		if (!day || !month || !year || !hour || !minute) {
-			interaction.reply({
-				content: "Date time null",
-				ephemeral: true,
-			});
-			return;
-		}
-
 		const scheduleTime = new Date(year, month - 1, day, hour, minute, 0, 0);
 		const currentTime = new Date();
 		if (scheduleTime < currentTime) {

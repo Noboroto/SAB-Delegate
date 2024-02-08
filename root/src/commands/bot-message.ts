@@ -17,6 +17,7 @@ export default {
 		
 	async execute(interaction) {
 		const commands = interaction.options.getSubcommand();
+		console.info(`subcommand: ${commands}`)
 		switch (commands) {
 			case "copy-paste":
 				copyPaste.execute(interaction);
