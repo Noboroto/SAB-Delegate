@@ -4,7 +4,6 @@ import {
 } from "discord.js";
 import { jobScheduler } from "../../ultils";
 
-
 export default {
 	addCommand(builder: SlashCommandSubcommandBuilder) {
 		return builder

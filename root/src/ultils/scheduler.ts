@@ -7,11 +7,10 @@ const schedulerArr: Map<string, {
 	job: nodeScheduler.Job
 }[]> = new Map();
 
-export const saveJob = (groupID: string, description: string, time: string, job: nodeScheduler.Job):string => {
-	if (!schedulerArr[groupID]) {
+export const saveJob = (groupID: string, description: string, time: string, job: nodeScheduler.Job): string => {
+	if (!schedulerArr.has(groupID)) {
 		schedulerArr[groupID] = [];
 	}
-	schedulerArr[groupID].push(job);
 	// get unique id for the job
 	const id = schedulerArr[groupID].length.toString();
 	// save to array
@@ -24,7 +23,7 @@ export const saveJob = (groupID: string, description: string, time: string, job:
 	return id;
 }
 
-export const getJobs = (groupID: string):string => {
+export const getJobs = (groupID: string): string => {
 	if (!schedulerArr[groupID]) {
 		return "No job found";
 	}
@@ -34,7 +33,7 @@ export const getJobs = (groupID: string):string => {
 }
 
 export const cancelJob = (groupID: string, id: number) => {
-	if (!schedulerArr[groupID]) {
+	if (!schedulerArr.has(groupID)) {
 		return;
 	}
 	const job = schedulerArr[groupID][id];

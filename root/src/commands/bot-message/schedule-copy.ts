@@ -73,6 +73,8 @@ export default {
 		const hour = interaction.options.getInteger("hour");
 		const minute = interaction.options.getInteger("minute");
 
+		const gui = interaction.guildId;
+
 		const scheduleTime = new Date(year, month - 1, day, hour, minute, 0, 0);
 		const currentTime = new Date();
 		if (scheduleTime < currentTime) {
@@ -114,10 +116,11 @@ export default {
 		);
 
 		// save job to scheduler
-		const id = jobScheduler.saveJob(targetChannel.id, `Copy message to ${targetChannel}: ${message.content.substring(0, 20)}...`, scheduleTime.toUTCString(), job);
+		const id = jobScheduler.saveJob(gui, `Copy from message to ${targetChannel}: ${message.content.substring(0, 20)}...`, scheduleTime.toUTCString(), job);
 
 		interaction.reply({
 			content: `Job has been scheduled with id ${id} at ${scheduleTime.toUTCString()}`,
+			ephemeral: true,
 		});
 	},
 };
