@@ -86,9 +86,6 @@ export default {
 		const targetChannel = (interaction.options.getChannel("destination") ??
 			interaction.channel) as TextChannel;
 
-		targetChannel.sendTyping();
-		await interaction.deferReply({ ephemeral: true });
-
 		const messageFromID = await getMessageFromOption(
 			interaction,
 			"message-link"
@@ -119,7 +116,7 @@ export default {
 		// save job to scheduler
 		const id = jobScheduler.saveJob(targetChannel.id, `Copy message to ${targetChannel}: ${message.content.substring(0, 20)}...`, scheduleTime.toUTCString(), job);
 
-		interaction.editReply({
+		interaction.reply({
 			content: `Job has been scheduled with id ${id} at ${scheduleTime.toUTCString()}`,
 		});
 	},
