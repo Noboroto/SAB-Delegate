@@ -20,11 +20,10 @@ export default {
 	async execute(interaction: ChatInputCommandInteraction) {
 		const groupID = interaction.guildId;
 		const id = interaction.options.getInteger("id");
-		jobScheduler.cancelJob(groupID, id);
+		const msg = jobScheduler.cancelJob(groupID, id);
 		interaction.reply({
-			content: `Job with id ${id} has been canceled`,
+			content: `${msg}`,
 			ephemeral: true,
-			embeds: [],
 		});
 	},
 };

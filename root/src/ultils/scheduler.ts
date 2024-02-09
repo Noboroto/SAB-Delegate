@@ -24,19 +24,24 @@ export const saveJob = (groupID: string, description: string, time: string, job:
 }
 
 export const getJobs = (groupID: string): string => {
-	if (!schedulerArr[groupID]) {
+	if (!schedulerArr[groupID] || schedulerArr[groupID].length === 0) {
 		return "No job found";
 	}
-	return schedulerArr[groupID].map((job, index) => {
-		return `${index}. ${job.description} - ${job.time}`;
+	return schedulerArr[groupID].map((job) => {
+		return `\`${job.id}\`. ${job.description} - ${job.time}`;
 	}).join("\n");
 }
 
-export const cancelJob = (groupID: string, id: number) => {
-	if (!schedulerArr.has(groupID)) {
-		return;
+export const cancelJob = (groupID: string, id: number): string => {
+	if (!schedulerArr[groupID] || schedulerArr[groupID].length === 0) {
+		return "No job found";
 	}
-	const job = schedulerArr[groupID][id];
+	const job = schedulerArr[groupID].find((job) => job.id === id.toString());
+	if (!job) {
+		return "Job not found";
+	}
+	const index = schedulerArr[groupID].indexOf(job);
 	job.cancel();
-	schedulerArr[groupID].splice(id, 1);
+	schedulerArr[groupID].splice(index, 1);
+	return `Job \`${id}\` has been canceled`;
 }
