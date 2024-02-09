@@ -18,7 +18,7 @@ export default {
 					.setDescription("message link")
 					.setRequired(true)
 			)
-			.addIntegerOption((Option) => 
+			.addIntegerOption((Option) =>
 				Option.setName("day")
 					.setDescription("The day you want to schedule")
 					.setMinValue(1)
@@ -110,16 +110,16 @@ export default {
 			message.files.push(file);
 		}
 
-		const job = nodeScheduler.scheduleJob(scheduleTime, async() => {
+		const job = nodeScheduler.scheduleJob(scheduleTime, async () => {
 			await targetChannel.send(message);
 		}
 		);
 
 		// save job to scheduler
-		const id = jobScheduler.saveJob(gui, `Copy from message to ${targetChannel}: ${message.content.substring(0, 20)}...`, scheduleTime.toLocaleString('vn-VI'), job);
+		const id = jobScheduler.saveJob(gui, `Copy from message to ${targetChannel}: ${message.content.substring(0, 20)}...`, scheduleTime.toLocaleString('en-VN'), job);
 
 		interaction.reply({
-			content: `Job has been scheduled with id ${id} at ${scheduleTime.toUTCString()}`,
+			content: `Job has been scheduled with id ${id} at ${scheduleTime.toLocaleString('en-VN')}`,
 			ephemeral: true,
 		});
 	},
