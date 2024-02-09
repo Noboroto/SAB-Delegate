@@ -116,7 +116,7 @@ export default {
 		);
 
 		// save job to scheduler
-		const id = jobScheduler.saveJob(gui, `Copy from message to ${targetChannel}: ${message.content.substring(0, 20)}...`, scheduleTime.toUTCString(), job);
+		const id = jobScheduler.saveJob(gui, `Copy from message to ${targetChannel}: ${message.content.substring(0, 20)}...`, scheduleTime.toLocaleString('vn-VI'), job);
 
 		interaction.reply({
 			content: `Job has been scheduled with id ${id} at ${scheduleTime.toUTCString()}`,
