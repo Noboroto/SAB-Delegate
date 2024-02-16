@@ -33,7 +33,7 @@ export default {
 					.addChannelTypes(ChannelType.PublicThread)
 					.addChannelTypes(ChannelType.PrivateThread)
 					.setDescription("destination channel")
-					.setRequired(true)
+					.setRequired(false)
 			)
 	},
 	async execute(interaction: ChatInputCommandInteraction) {
