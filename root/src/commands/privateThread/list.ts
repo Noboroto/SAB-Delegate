@@ -33,7 +33,7 @@ export default {
 					.addChannelTypes(ChannelType.PublicThread)
 					.addChannelTypes(ChannelType.PrivateThread)
 					.setDescription("destination channel")
-					.setRequired(false)
+					.setRequired(true)
 			)
 	},
 	async execute(interaction: ChatInputCommandInteraction) {
@@ -69,8 +69,10 @@ export default {
 				autoArchiveDuration: 10080,
 				reason: `Create thread for ${prefix}`,
 			});
+			await latestThread.members.add(member);
+			await latestThread.members.add(interaction.user);
 			await latestThread.send({
-				content: `Hello ${member}, ${interaction.user}!\n${msg}`,
+				content: `${msg}`,
 			});
 		});
 

@@ -1,7 +1,7 @@
 import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
-import list from "./createPrivateThread/list";
-import byReaction from "./createPrivateThread/byReaction";
-import removeByPrefix from "./createPrivateThread/removeByPrefix";
+import list from "./privateThread/list";
+import byReaction from "./privateThread/byReaction";
+import removeByPrefix from "./privateThread/removeByPrefix";
 
 export default {
 	data: new SlashCommandBuilder()

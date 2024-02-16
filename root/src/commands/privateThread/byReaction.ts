@@ -25,6 +25,11 @@ export default {
 			.addStringOption((Option) =>
 				Option.setName("emoji").setDescription("emoji").setRequired(true)
 			)
+			.addStringOption((Option) =>
+				Option.setName("message")
+					.setDescription("The message to send to each member")
+					.setRequired(false)
+			)
 			.addChannelOption((Option) =>
 				Option.setName("destination")
 					.addChannelTypes(ChannelType.GuildText)
@@ -43,13 +48,14 @@ export default {
 		const targetChannel = (interaction.options.getChannel("destination") ??
 			interaction.channel) as TextChannel;
 		const prefix = interaction.options.getString("prefix") ?? "unknown";
-
+		
 		await interaction.deferReply({ ephemeral: true });
 		const reaction = interaction.options.getString("emoji")?.trim() ?? "";
 		const messageFromID = await getMessageFromOption(
 			interaction,
 			"message-link"
 		);
+		const msg = interaction.options.getString("message") ?? "";
 
 		if (!messageFromID) {
 			await interaction.editReply({
@@ -86,10 +92,13 @@ export default {
 				autoArchiveDuration: 10080,
 				reason: `Create thread for ${prefix}`,
 			});
-			latestThread.send({
-				content: `Hello ${member}, ${interaction.user}!`,
+			await latestThread.members.add(member);
+			await latestThread.members.add(interaction.user);
+			await latestThread.send({
+				content: `${msg}`,
 			});
 		});
+
 
 		const message = {
 			content: `Done ${counter} thread(s)!`,
