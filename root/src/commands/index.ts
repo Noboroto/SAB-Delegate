@@ -9,7 +9,7 @@ import note from "./note";
 import word from "./word";
 import botMessage from "./botMessage";
 import scheduler from "./scheduler";
-import createPrivateThread from "./createPrivateThread";
+import privateThread from "./privateThread";
 
 const commands = [
 	ping,
@@ -23,7 +23,7 @@ const commands = [
 	botMessage,
 	scheduler,
 	get,
-	createPrivateThread,
+	privateThread,
 ];
 
 export default commands;

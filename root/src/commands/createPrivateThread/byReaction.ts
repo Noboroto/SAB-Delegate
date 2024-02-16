@@ -92,7 +92,7 @@ export default {
 		});
 
 		const message = {
-			content: `Done ${counter} member(s)!`,
+			content: `Done ${counter} thread(s)!`,
 		};
 
 		await interaction.editReply(message);
