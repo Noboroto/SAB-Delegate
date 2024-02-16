@@ -7,6 +7,7 @@ export default {
 		.setName("thread")
 		.setDescription("Manage a thread for each member by condition")
 		.addSubcommand(removeByPrefix.addCommand)
+		.addSubcommand(editPrefix.addCommand)
 		.setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
 	async execute(interaction) {
 		const commands = interaction.options.getSubcommand();
