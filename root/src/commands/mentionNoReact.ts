@@ -88,7 +88,7 @@ export default {
 				if (member.id === interaction.user.id) {
 					replyMsg += " (author)";
 				}
-				replyMsg += "\n";
+				replyMsg += ",\n";
 			}
 			replyMsg += response ? `\n${response}` : "";
 			if (!isReply) {

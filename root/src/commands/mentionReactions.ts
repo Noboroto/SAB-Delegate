@@ -71,7 +71,7 @@ export default {
 		for (const userID of reactMemberListID) {
 			replyMsg += `<@${userID}>`;
 			if (userID === interaction.user.id) replyMsg += " (author)";
-			replyMsg += "\n";
+			replyMsg += ",\n";
 		}
 
 		replyMsg += response ? `\n${response}` : "";
