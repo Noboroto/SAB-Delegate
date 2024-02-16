@@ -1,40 +1,37 @@
 import {
-	SlashCommandBuilder,
-	PermissionFlagsBits,
+	SlashCommandSubcommandBuilder,
 	Role,
 	ChatInputCommandInteraction,
+	TextChannel,
 } from "discord.js";
-import { getMessageFromOption } from "../ultils";
+import { getMessageFromOption } from "../../ultils";
 
 export default {
-	data: new SlashCommandBuilder()
-		.setName("mention-who-not-reaction")
-		.setDescription("Mention who didn't react to a message")
-		.addStringOption((Option) =>
-			Option.setName("message-link")
-				.setDescription("message link")
-				.setRequired(true)
-		)
-		.addRoleOption((Option) =>
-			Option.setName("role")
-				.setDescription("Role you want to check")
-				.setRequired(true)
-		)
+	addCommand(builder: SlashCommandSubcommandBuilder) {
+		return builder.setName("not-react")
+			.setDescription("Mention who didn't react to a message")
+			.addStringOption((Option) =>
+				Option.setName("message-link")
+					.setDescription("message link")
+					.setRequired(true)
+			)
+			.addRoleOption((Option) =>
+				Option.setName("role")
+					.setDescription("Role you want to check")
+					.setRequired(true)
+			)
 
-		.addBooleanOption((Option) =>
-			Option.setName("is-reply")
-				.setDescription("default is false")
-				.setRequired(false)
-		)
-		.addStringOption((Option) =>
-			Option.setName("content")
-				.setDescription("message content")
-				.setRequired(false)
-		)
-
-		.setDefaultMemberPermissions(PermissionFlagsBits.ViewChannel)
-		.setDMPermission(false),
-
+			.addBooleanOption((Option) =>
+				Option.setName("is-reply")
+					.setDescription("default is false")
+					.setRequired(false)
+			)
+			.addStringOption((Option) =>
+				Option.setName("content")
+					.setDescription("message content")
+					.setRequired(false)
+			)
+	},
 	async execute(interaction: ChatInputCommandInteraction) {
 		// interaction.user is the object representing the User who ran the command
 		// interaction.member is the GuildMember object, which represents the user in the specific guild
@@ -48,7 +45,8 @@ export default {
 		);
 
 		const role = interaction.options.getRole("role") as Role;
-		const members = role.members;
+		const channel = messageFromID.channel as TextChannel;
+		const members = role.members.filter(member => channel.members.has(member.id));
 
 		if (!messageFromID) {
 			await interaction.editReply({

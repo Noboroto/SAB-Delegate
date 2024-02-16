@@ -7,8 +7,8 @@ import { getMessageFromOption } from "../../ultils";
 export default {
 	addCommand(builder: SlashCommandSubcommandBuilder) {
 		return builder
-			.setName("edit")
-			.setDescription("Edit a message send by this bot!")
+			.setName("edit-copy")
+			.setDescription("Edit a message sent by this bot!")
 			.addStringOption((Option) =>
 				Option.setName("new-message-link")
 					.setDescription("new message link")

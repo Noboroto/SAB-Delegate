@@ -1,25 +1,23 @@
 import ping from "./ping";
-import bulkRole from "./bulkRole";
 import attandanceByRole from "./attandanceByRole";
+import bulkRole from "./bulkRole";
+import mention from "./mention";
 import addPoll from "./addPoll";
 import getIntroduction from "./getInfo";
 import createActivity from "./createActivity";
-import mentionReactions from "./mentionReactions";
-import notReact from "./mentionNoReact";
 import note from "./note";
 import word from "./word";
-import botMessage from "./bot-message";
+import botMessage from "./botMessage";
 import scheduler from "./scheduler";
 
 const commands = [
 	ping,
-	bulkRole,
 	attandanceByRole,
 	addPoll,
 	getIntroduction,
 	createActivity,
-	mentionReactions,
-	notReact,
+	bulkRole,
+	mention,	
 	note,
 	word,
 	botMessage,

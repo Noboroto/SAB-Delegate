@@ -1,36 +1,34 @@
 import {
-	SlashCommandBuilder,
-	PermissionFlagsBits,
+	SlashCommandSubcommandBuilder,
 	ChatInputCommandInteraction,
 } from "discord.js";
-import { getMessageFromOption } from "../ultils";
+import { getMessageFromOption } from "../../ultils";
 
 export default {
-	data: new SlashCommandBuilder()
-		.setName("mention-reaction")
-		.setDescription("Mention who reacted to a message")
-		.addStringOption((Option) =>
-			Option.setName("message-link")
-				.setDescription("message link")
-				.setRequired(true)
-		)
-		.addStringOption((Option) =>
-			Option.setName("emoji").setDescription("emoji").setRequired(true)
-		)
+	addCommand(builder: SlashCommandSubcommandBuilder) {
+		return builder
+			.setName("by-a-reaction")
+			.setDescription("Mention who reacted to a message")
+			.addStringOption((Option) =>
+				Option.setName("message-link")
+					.setDescription("message link")
+					.setRequired(true)
+			)
+			.addStringOption((Option) =>
+				Option.setName("emoji").setDescription("emoji").setRequired(true)
+			)
 
-		.addStringOption((Option) =>
-			Option.setName("reply-message")
-				.setDescription("reply message link")
-				.setRequired(false)
-		)
-		.addStringOption((Option) =>
-			Option.setName("content")
-				.setDescription("message content")
-				.setRequired(false)
-		)
-
-		.setDefaultMemberPermissions(PermissionFlagsBits.ViewChannel)
-		.setDMPermission(false),
+			.addStringOption((Option) =>
+				Option.setName("reply-message")
+					.setDescription("reply message link")
+					.setRequired(false)
+			)
+			.addStringOption((Option) =>
+				Option.setName("content")
+					.setDescription("message content")
+					.setRequired(false)
+			)
+	},
 
 	async execute(interaction: ChatInputCommandInteraction) {
 		// interaction.user is the object representing the User who ran the command

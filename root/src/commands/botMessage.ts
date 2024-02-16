@@ -1,9 +1,10 @@
 import copyPaste from "./bot-message/copy-paste";
 import scheduleCopy from "./bot-message/schedule-copy";
-import edit from "./bot-message/edit";
+import editCopy from "./bot-message/edit-copy";
+import editSend from "./bot-message/edit-send";
 import react from "./bot-message/react";
 import send from "./bot-message/send";
-import { SlashCommandBuilder } from "discord.js";
+import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 
 export default {
 	data: new SlashCommandBuilder()
@@ -11,9 +12,11 @@ export default {
 		.setDescription("Using bot to send message to channel")
 		.addSubcommand(copyPaste.addCommand)
 		.addSubcommand(scheduleCopy.addCommand)
-		.addSubcommand(edit.addCommand)
+		.addSubcommand(editCopy.addCommand)
+		.addSubcommand(editSend.addCommand)
 		.addSubcommand(react.addCommand)
-		.addSubcommand(send.addCommand),
+		.addSubcommand(send.addCommand)
+		.setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
 		
 	async execute(interaction) {
 		const commands = interaction.options.getSubcommand();
@@ -25,8 +28,11 @@ export default {
 			case "schedule-copy":
 				scheduleCopy.execute(interaction);
 				break;
-			case "edit":
-				edit.execute(interaction);
+			case "edit-copy":
+				editCopy.execute(interaction);
+				break;
+			case "edit-send":
+				editSend.execute(interaction);
 				break;
 			case "react":
 				react.execute(interaction);
