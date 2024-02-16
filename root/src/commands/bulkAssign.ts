@@ -1,10 +1,10 @@
 import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
-import list from "./bulk-assign/list";
-import byReaction from "./bulk-assign/byReaction";
+import list from "./bulkAssign/list";
+import byReaction from "./bulkAssign/byReaction";
 
 export default {
 	data: new SlashCommandBuilder()
-		.setName("bulk-assign-role")
+		.setName("bulk-assign")
 		.setDescription("Assign or remove a role for many members")
 		.addSubcommand(list.addCommand)
 		.addSubcommand(byReaction.addCommand)

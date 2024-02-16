@@ -1,5 +1,5 @@
 import {
-	SlashCommandBuilder,
+	SlashCommandSubcommandBuilder,
 	TextChannel,
 	ChatInputCommandInteraction,
 	FetchMessagesOptions,
@@ -29,8 +29,8 @@ const lots_of_messages_getter = async (channel, limit = 1000) => {
 };
 
 export default {
-	data: new SlashCommandBuilder()
-		.setName("get-intro")
+	addCommand(builder: SlashCommandSubcommandBuilder) {
+		return builder.setName("intro")
 		.setDescription(
 			"get first introduction of a user in intro channels (set by admin)"
 		)
@@ -41,8 +41,7 @@ export default {
 				.setRequired(true)
 		)
 
-		.setDMPermission(false),
-
+	},
 	async execute(interaction: ChatInputCommandInteraction) {
 		// interaction.user is the object representing the User who ran the command
 		// interaction.member is the GuildMember object, which represents the user in the specific guild
