@@ -1,23 +1,22 @@
 import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
-import list from "./privateThread/list";
-import byReaction from "./privateThread/byReaction";
+import removeByPrefix from "./threads/removeByPrefix";
+import editPrefix from "./threads/editPrefix";
 
 export default {
 	data: new SlashCommandBuilder()
-		.setName("private-thread")
-		.setDescription("Manage a private thread for each member by condition")
-		.addSubcommand(list.addCommand)
-		.addSubcommand(byReaction.addCommand)
+		.setName("thread")
+		.setDescription("Manage a thread for each member by condition")
+		.addSubcommand(removeByPrefix.addCommand)
 		.setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
 	async execute(interaction) {
 		const commands = interaction.options.getSubcommand();
 		console.info(`subcommand: ${commands}`)
 		switch (commands) {
-			case "list":
-				list.execute(interaction);
+			case "edit-prefix":
+				editPrefix.execute(interaction);
 				break;
-			case "by-reaction":
-				byReaction.execute(interaction);
+			case "remove-by-prefix":
+				removeByPrefix.execute(interaction);
 				break;
 			default:
 				interaction.reply({

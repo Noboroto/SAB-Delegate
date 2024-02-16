@@ -10,6 +10,7 @@ import word from "./word";
 import botMessage from "./botMessage";
 import scheduler from "./scheduler";
 import privateThread from "./privateThread";
+import thread from "./thread";
 
 const commands = [
 	ping,
@@ -24,6 +25,7 @@ const commands = [
 	scheduler,
 	get,
 	privateThread,
+	thread
 ];
 
 export default commands;
