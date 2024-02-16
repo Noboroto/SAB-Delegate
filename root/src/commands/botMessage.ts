@@ -7,44 +7,44 @@ import send from "./bot-message/send";
 import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 
 export default {
-	data: new SlashCommandBuilder()
-		.setName("bot-message")
-		.setDescription("Using bot to send message to channel")
-		.addSubcommand(copyPaste.addCommand)
-		.addSubcommand(scheduleCopy.addCommand)
-		.addSubcommand(editCopy.addCommand)
-		.addSubcommand(editSend.addCommand)
-		.addSubcommand(react.addCommand)
-		.addSubcommand(send.addCommand)
-		.setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
-		
-	async execute(interaction) {
-		const commands = interaction.options.getSubcommand();
-		console.info(`subcommand: ${commands}`)
-		switch (commands) {
-			case "copy-paste":
-				copyPaste.execute(interaction);
-				break;
-			case "schedule-copy":
-				scheduleCopy.execute(interaction);
-				break;
-			case "edit-copy":
-				editCopy.execute(interaction);
-				break;
-			case "edit-send":
-				editSend.execute(interaction);
-				break;
-			case "react":
-				react.execute(interaction);
-				break;
-			case "send":
-				send.execute(interaction);
-				break;
-			default:
-				interaction.reply({
-					content: `Invalid subcommand ${commands}`,
-					ephemeral: true,
-				});
-		}
-	},
+  data: new SlashCommandBuilder()
+    .setName("bot-message")
+    .setDescription("Using bot to send message to channel")
+    .addSubcommand(copyPaste.addCommand)
+    .addSubcommand(scheduleCopy.addCommand)
+    .addSubcommand(editCopy.addCommand)
+    .addSubcommand(editSend.addCommand)
+    .addSubcommand(react.addCommand)
+    .addSubcommand(send.addCommand)
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
+
+  async execute(interaction) {
+    const commands = interaction.options.getSubcommand();
+    console.info(`subcommand: ${commands}`);
+    switch (commands) {
+      case copyPaste.name:
+        copyPaste.execute(interaction);
+        break;
+      case scheduleCopy.name:
+        scheduleCopy.execute(interaction);
+        break;
+      case editCopy.name:
+        editCopy.execute(interaction);
+        break;
+      case editSend.name:
+        editSend.execute(interaction);
+        break;
+      case react.name:
+        react.execute(interaction);
+        break;
+      case send.name:
+        send.execute(interaction);
+        break;
+      default:
+        interaction.reply({
+          content: `Invalid subcommand ${commands}`,
+          ephemeral: true,
+        });
+    }
+  },
 };

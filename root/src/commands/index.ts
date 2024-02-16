@@ -13,19 +13,19 @@ import privateThread from "./privateThread";
 import thread from "./thread";
 
 const commands = [
-	ping,
-	attandanceByRole,
-	addPoll,
-	createActivity,
-	bulkRole,
-	mention,	
-	note,
-	word,
-	botMessage,
-	scheduler,
-	get,
-	privateThread,
-	thread
+  ping,
+  attandanceByRole,
+  addPoll,
+  createActivity,
+  bulkRole,
+  mention,
+  note,
+  word,
+  botMessage,
+  scheduler,
+  get,
+  privateThread,
+  thread,
 ];
 
 export default commands;

@@ -3,8 +3,7 @@
 	"semi": true,
 	"singleQuote": false,
 	"trailingComma": "es5",
-	"tabWidth": 4,
-	"useTabs": true,
+	"tabWidth": 2,
 	"bracketSameLine": true,
 	"endOfLine": "auto"
 }

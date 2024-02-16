@@ -11,14 +11,14 @@ export const wordDb = new QuickDB({ filePath: wordDbPath });
 export const dictDb = new QuickDB({ filePath: dictDbPath });
 
 (async () => {
-	if (!(await dictDb.get("dict"))) {
-		const dictObj = JSON.parse(readFileSync(dictTemplate, "utf-8"));
-		await dictDb.set("dict", dictObj);
-		console.info("Dictionary initialized");
-	}
-	await dictDb.init();
-	await noteDb.init();
-	await wordDb.init();
+  if (!(await dictDb.get("dict"))) {
+    const dictObj = JSON.parse(readFileSync(dictTemplate, "utf-8"));
+    await dictDb.set("dict", dictObj);
+    console.info("Dictionary initialized");
+  }
+  await dictDb.init();
+  await noteDb.init();
+  await wordDb.init();
 
-	console.info("Database initialized");
+  console.info("Database initialized");
 })();
