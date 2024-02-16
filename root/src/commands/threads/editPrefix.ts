@@ -8,8 +8,8 @@ import {
 export default {
 	addCommand(builder: SlashCommandSubcommandBuilder) {
 		return builder
-			.setName("remove-by-prefix")
-			.setDescription("remove private threads")
+			.setName("edit-by-prefix")
+			.setDescription("edit private threads")
 			.addStringOption((Option) =>
 				Option.setName("old-prefix")
 					.setDescription("The old prefix of the threads")
