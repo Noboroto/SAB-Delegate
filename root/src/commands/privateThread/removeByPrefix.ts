@@ -32,10 +32,10 @@ export default {
 		//const guild = interaction.client.guilds.cache.get('Guild ID');
 		const targetChannel = (interaction.options.getChannel("destination") ??
 			interaction.channel) as TextChannel;
-		const prefix = interaction.options.getString("prefix") ?? "unknown";
+		const prefix = interaction.options.getString("prefix").trimEnd().trimStart() ?? "unknown";
 		let counter = 0;
 		await interaction.deferReply({ ephemeral: true });
-		
+
 		//get all threads by prefix
 		const threads = await targetChannel.threads.fetch();
 		const filteredThreads = threads.threads.filter((thread) => thread.name.startsWith(prefix));

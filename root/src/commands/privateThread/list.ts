@@ -22,8 +22,8 @@ export default {
 			)
 			.addStringOption((Option) =>
 				Option.setName("message")
-				.setDescription("The message to send to each member")
-				.setRequired(false)
+					.setDescription("The message to send to each member")
+					.setRequired(false)
 			)
 			.addChannelOption((Option) =>
 				Option.setName("destination")
@@ -42,7 +42,7 @@ export default {
 		//const guild = interaction.client.guilds.cache.get('Guild ID');
 		const targetChannel = (interaction.options.getChannel("destination") ??
 			interaction.channel) as TextChannel;
-		const prefix = interaction.options.getString("prefix") ?? "unknown";
+		const prefix = interaction.options.getString("prefix").trimEnd().trimStart() ?? "unknown";
 		const msg = interaction.options.getString("message") ?? "";
 
 		await interaction.deferReply({ ephemeral: true });

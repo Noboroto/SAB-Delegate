@@ -47,8 +47,8 @@ export default {
 		//const guild = interaction.client.guilds.cache.get('Guild ID');
 		const targetChannel = (interaction.options.getChannel("destination") ??
 			interaction.channel) as TextChannel;
-		const prefix = interaction.options.getString("prefix") ?? "unknown";
-		
+		const prefix = interaction.options.getString("prefix").trimEnd().trimStart().trimEnd().trimStart() ?? "unknown";
+
 		await interaction.deferReply({ ephemeral: true });
 		const reaction = interaction.options.getString("emoji")?.trim() ?? "";
 		const messageFromID = await getMessageFromOption(
