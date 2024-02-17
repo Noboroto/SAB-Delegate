@@ -15,7 +15,7 @@ export default {
 
     if (!command) {
       console.error(
-        `[${new Date().toLocaleString()} - ${
+        `[${new Date().toLocaleString()}-[${
           interaction.client.user?.username
         }] No command matching ${interaction.commandName} was found.`
       );

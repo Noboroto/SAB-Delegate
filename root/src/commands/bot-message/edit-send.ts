@@ -28,7 +28,7 @@ export default {
       interaction,
       "old-bot-message-link"
     );
-    const response = interaction.options.getString("content");
+    const response = interaction.options.getString("new-content");
 
     const message = {
       content: response,
