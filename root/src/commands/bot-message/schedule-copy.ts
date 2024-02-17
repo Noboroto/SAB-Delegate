@@ -119,12 +119,13 @@ export default {
     // save job to scheduler
     const id = jobScheduler.saveJob(
       gui,
+			interaction.user.username,
       `Copy from message to ${targetChannel}: ${message.content.substring(
         0,
         20
       )}...`,
       scheduleTime.toLocaleString("en-VN"),
-      job
+      job,
     );
 
     interaction.reply({

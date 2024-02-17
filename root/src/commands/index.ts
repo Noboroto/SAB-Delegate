@@ -11,21 +11,31 @@ import botMessage from "./botMessage";
 import scheduler from "./scheduler";
 import privateThread from "./privateThread";
 import thread from "./thread";
+import shutdown from "./shutdown";
 
 const commands = [
-  ping,
-  attandanceByRole,
+  word,
+  thread,
   addPoll,
-  createActivity,
+  attandanceByRole,
+  botMessage,
   bulkRole,
+  createActivity,
+  get,
   mention,
   note,
-  word,
-  botMessage,
-  scheduler,
-  get,
+  ping,
   privateThread,
+  scheduler,
+  shutdown,
   thread,
-];
-
+].sort((a, b) => {
+	if (a.data.name < b.data.name) {
+		return -1;
+	}
+	if (a.data.name > b.data.name) {
+		return 1;
+	}
+	return 0;
+});
 export default commands;
