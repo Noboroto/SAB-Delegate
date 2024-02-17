@@ -18,7 +18,6 @@ RUN yarn --production --network-timeout 100000
 
 # Stage 2
 FROM node:alpine
-WORKDIR /usr/src/bot
-COPY --from=stage1 ./node_modules ./node_modules
+COPY --from=stage1 /usr/src/bot/node_modules ./node_modules
 
 CMD [ "yarn", "start" ]
