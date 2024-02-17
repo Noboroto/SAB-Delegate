@@ -1,4 +1,4 @@
-FROM node:alpine
+FROM node:alpine AS stage1
 
 # Create app directory
 RUN mkdir -p /usr/src/bot
@@ -15,5 +15,10 @@ RUN yarn --production --network-timeout 100000
 # RUN npm --omit=dev
 
 # Bundle app source
+
+# Stage 2
+FROM node:alpine
+WORKDIR /usr/src/bot
+COPY --from=stage1 ./node_modules ./node_modules
 
 CMD [ "yarn", "start" ]
