@@ -36,7 +36,7 @@ export default {
 				reason: `Requested by ${interaction.user.username}`
 			}
 		);
-		interaction.user.send(`Invite link for ${targetChannel.name} is ${invite.url}`);
+		interaction.user.send(`Invite link for \`${targetChannel.name}\` is ${invite.url}`);
 
 		interaction.reply({
 			content : "Check your DM for the invite link",
