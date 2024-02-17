@@ -4,6 +4,7 @@ services:
     build: .
     restart: unless-stopped
     volumes:
+      - ./root/node_modules:/usr/src/bot/node_modules
       - ./root/files:/usr/src/bot/files
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
