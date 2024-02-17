@@ -68,7 +68,7 @@ export default {
       )
 
       .addChannelOption((Option) =>
-        Option.setName("Destination")
+        Option.setName("destination")
           .addChannelTypes(ChannelType.GuildText)
           .addChannelTypes(ChannelType.GuildAnnouncement)
           .addChannelTypes(ChannelType.AnnouncementThread)
