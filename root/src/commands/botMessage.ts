@@ -4,7 +4,9 @@ import editCopy from "./bot-message/edit-copy";
 import editSend from "./bot-message/edit-send";
 import react from "./bot-message/react";
 import send from "./bot-message/send";
+import scheduleSend from "./bot-message/schedule-send";
 import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
+
 
 export default {
   data: new SlashCommandBuilder()
@@ -16,6 +18,7 @@ export default {
     .addSubcommand(editSend.addCommand)
     .addSubcommand(react.addCommand)
     .addSubcommand(send.addCommand)
+		.addSubcommand(scheduleSend.addCommand)
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
 
   async execute(interaction) {
@@ -40,6 +43,9 @@ export default {
       case send.name:
         send.execute(interaction);
         break;
+			case scheduleSend.name:
+				scheduleSend.execute(interaction);
+				break;
       default:
         interaction.reply({
           content: `Invalid subcommand ${commands}`,

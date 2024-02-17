@@ -9,7 +9,7 @@ import {
 const commandName = "id-by-role";
 
 export default {
-	name: commandName,
+  name: commandName,
   addCommand(builder: SlashCommandSubcommandBuilder) {
     return builder
       .setName(commandName)

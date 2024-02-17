@@ -10,7 +10,7 @@ import { getMessageFromOption } from "../../ultils";
 const commandName = "by-reaction";
 
 export default {
-	name: commandName,
+  name: commandName,
   addCommand(builder: SlashCommandSubcommandBuilder) {
     return builder
       .setName(commandName)

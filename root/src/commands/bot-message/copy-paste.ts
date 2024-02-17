@@ -9,7 +9,7 @@ import { getMessageFromOption } from "../../ultils";
 const commandName = "copy-paste";
 
 export default {
-	name: commandName,
+  name: commandName,
   addCommand(builder: SlashCommandSubcommandBuilder) {
     return builder
       .setName(commandName)

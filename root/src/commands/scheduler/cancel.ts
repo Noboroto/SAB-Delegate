@@ -8,7 +8,7 @@ import { jobScheduler } from "../../ultils";
 const commandName = "cancel";
 
 export default {
-	name: commandName,
+  name: commandName,
   addCommand(builder: SlashCommandSubcommandBuilder) {
     return builder
       .setName(commandName)

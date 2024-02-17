@@ -7,7 +7,7 @@ import { getMessageFromOption } from "../../ultils";
 const commandName = "edit-send";
 
 export default {
-	name: commandName,
+  name: commandName,
   addCommand(builder: SlashCommandSubcommandBuilder) {
     return builder
       .setName(commandName)

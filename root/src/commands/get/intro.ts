@@ -31,7 +31,7 @@ const lots_of_messages_getter = async (channel, limit = 1000) => {
 const commandName = "intro";
 
 export default {
-	name: commandName,
+  name: commandName,
   addCommand(builder: SlashCommandSubcommandBuilder) {
     return builder
       .setName(commandName)

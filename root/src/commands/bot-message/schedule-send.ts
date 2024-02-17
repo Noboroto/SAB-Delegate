@@ -4,10 +4,10 @@ import {
   ChatInputCommandInteraction,
   SlashCommandSubcommandBuilder,
 } from "discord.js";
-import { getMessageFromOption, jobScheduler } from "../../ultils";
+import { jobScheduler } from "../../ultils";
 import nodeScheduler from "node-schedule";
 
-const commandName = "schedule-copy";
+const commandName = "schedule-send";
 
 export default {
   name: commandName,
@@ -15,11 +15,11 @@ export default {
     return builder
       .setName(commandName)
       .setDescription(
-        "Schedule to copy a messsage (cannot edit) - UTC+7 timezone"
+        "Schedule to send a messsage (cannot edit) - UTC+7 timezone"
       )
       .addStringOption((Option) =>
-        Option.setName("message-link")
-          .setDescription("message link")
+        Option.setName("message")
+          .setDescription("message content")
           .setRequired(true)
       )
       .addIntegerOption((Option) =>
@@ -120,27 +120,12 @@ export default {
     const targetChannel = (interaction.options.getChannel("destination") ??
       interaction.channel) as TextChannel;
 
-    const messageFromID = await getMessageFromOption(
-      interaction,
-      "message-link"
-    );
+    const msg = interaction.options.getString("message");
 
-    if (!messageFromID) {
-      interaction.editReply({
-        content: "Message not found!",
-      });
-      return;
-    }
-
-    const attachments = messageFromID.attachments.values();
     const message = {
-      content: messageFromID.content,
+      content: msg,
       files: [],
     };
-
-    for (const file of attachments) {
-      message.files.push(file);
-    }
 
     const job = nodeScheduler.scheduleJob(scheduleTime, async () => {
       await targetChannel.send(message);

@@ -36,5 +36,7 @@ export default {
     console.info(
       `${client.user?.username} Successfully registered all application commands`
     );
+
+    client.destroy();
   },
 };

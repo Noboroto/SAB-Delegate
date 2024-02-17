@@ -7,7 +7,7 @@ import { noteUltils } from "../../ultils";
 const commandName = "add";
 
 export default {
-	name: commandName,
+  name: commandName,
   addCommand(builder: SlashCommandSubcommandBuilder) {
     return builder
       .setName(commandName)

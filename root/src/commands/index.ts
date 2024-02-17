@@ -30,12 +30,12 @@ const commands = [
   shutdown,
   thread,
 ].sort((a, b) => {
-	if (a.data.name < b.data.name) {
-		return -1;
-	}
-	if (a.data.name > b.data.name) {
-		return 1;
-	}
-	return 0;
+  if (a.data.name < b.data.name) {
+    return -1;
+  }
+  if (a.data.name > b.data.name) {
+    return 1;
+  }
+  return 0;
 });
 export default commands;

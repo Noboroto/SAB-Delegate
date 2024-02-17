@@ -11,8 +11,8 @@ export default {
     .addSubcommand(intro.addCommand)
     .addSubcommand(idByAReaction.addCommand)
     .addSubcommand(idByRole.addCommand)
-		.addSubcommand(inviteLink.addCommand)
-		.setDMPermission(true)
+    .addSubcommand(inviteLink.addCommand)
+    .setDMPermission(true)
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
   async execute(interaction) {
     const commands = interaction.options.getSubcommand();
@@ -27,9 +27,9 @@ export default {
       case idByRole.name:
         await idByRole.execute(interaction);
         break;
-			case inviteLink.name:
-				await inviteLink.execute(interaction);
-				break;
+      case inviteLink.name:
+        await inviteLink.execute(interaction);
+        break;
       default:
         interaction.reply({
           content: `Invalid subcommand ${commands}`,
