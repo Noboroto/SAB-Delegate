@@ -15,6 +15,5 @@ RUN yarn --production --network-timeout 100000
 # RUN npm --omit=dev
 
 # Bundle app source
-docker cp host-bot:/usr/src/bot/node_modules ./root/node_modules
 
 CMD [ "yarn", "start" ]
