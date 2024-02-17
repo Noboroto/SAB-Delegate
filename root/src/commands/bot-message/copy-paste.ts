@@ -6,11 +6,13 @@ import {
 } from "discord.js";
 import { getMessageFromOption } from "../../ultils";
 
+const commandName = "copy-paste";
+
 export default {
-  name: "copy-paste",
+	name: commandName,
   addCommand(builder: SlashCommandSubcommandBuilder) {
     return builder
-      .setName(this.name)
+      .setName(commandName)
       .setDescription("Copy a messsage to specific channel!")
       .addStringOption((Option) =>
         Option.setName("message-link")

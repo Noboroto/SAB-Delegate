@@ -5,11 +5,13 @@ import {
   TextChannel,
 } from "discord.js";
 
+const commandName = "list";
+
 export default {
-  name: "list",
+	name: commandName,
   addCommand(builder: SlashCommandSubcommandBuilder) {
     return builder
-      .setName(this.name)
+      .setName(commandName)
       .setDescription("Create a private thread for each member in the list")
       .addStringOption((Option) =>
         Option.setName("prefix")

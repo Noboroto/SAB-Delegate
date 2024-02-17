@@ -5,11 +5,13 @@ import {
 
 import { noteUltils } from "../../ultils";
 
+const commandName = "remove";
+
 export default {
-  name: "remove",
+	name: commandName,
   addCommand(builder: SlashCommandSubcommandBuilder) {
     return builder
-      .setName(this.name)
+      .setName(commandName)
       .setDescription("Remove saved-note by role")
 
       .addRoleOption((Option) =>

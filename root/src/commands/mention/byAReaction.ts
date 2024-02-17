@@ -4,11 +4,13 @@ import {
 } from "discord.js";
 import { getMessageFromOption } from "../../ultils";
 
+const commandName = "by-a-reaction";
+
 export default {
-  name: "by-a-reaction",
+	name: commandName,
   addCommand(builder: SlashCommandSubcommandBuilder) {
     return builder
-      .setName(this.name)
+      .setName(commandName)
       .setDescription("Mention who reacted to a message")
       .addStringOption((Option) =>
         Option.setName("message-link")

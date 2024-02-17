@@ -5,10 +5,12 @@ import {
 } from "discord.js";
 import { wordGame } from "../../ultils";
 
+const commandName = "reset";
+
 export default {
-  name: "reset",
+	name: commandName,
   addCommand(builder: SlashCommandSubcommandBuilder) {
-    return builder.setName(this.name).setDescription("Reset nối chữ");
+    return builder.setName(commandName).setDescription("Reset nối chữ");
   },
 
   async execute(interaction: ChatInputCommandInteraction) {

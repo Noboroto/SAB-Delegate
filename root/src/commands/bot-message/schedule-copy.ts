@@ -7,11 +7,13 @@ import {
 import { getMessageFromOption, jobScheduler } from "../../ultils";
 import nodeScheduler from "node-schedule";
 
+const commandName = "schedule-copy";
+
 export default {
-  name: "schedule-copy",
+	name: commandName,
   addCommand(builder: SlashCommandSubcommandBuilder) {
     return builder
-      .setName(this.name)
+      .setName(commandName)
       .setDescription("Schedule to copy a messsage - UTC+7 timezone")
       .addStringOption((Option) =>
         Option.setName("message-link")

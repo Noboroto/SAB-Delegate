@@ -6,11 +6,13 @@ import {
 } from "discord.js";
 import { getMessageFromOption } from "../../ultils";
 
+const commandName = "send";
+
 export default {
-  name: "send",
+	name: commandName,
   addCommand(builder: SlashCommandSubcommandBuilder) {
     return builder
-      .setName(this.name)
+      .setName(commandName)
       .setDescription("Send a messsage to this channel or another")
       .addStringOption((Option) =>
         Option.setName("content")

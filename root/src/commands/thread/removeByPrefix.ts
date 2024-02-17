@@ -5,11 +5,13 @@ import {
   TextChannel,
 } from "discord.js";
 
+const commandName = "remove-by-prefix";
+
 export default {
-  name: "remove-by-prefix",
+	name: commandName,
   addCommand(builder: SlashCommandSubcommandBuilder) {
     return builder
-      .setName(this.name)
+      .setName(commandName)
       .setDescription("remove private threads")
       .addStringOption((Option) =>
         Option.setName("prefix")

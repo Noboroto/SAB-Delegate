@@ -7,11 +7,13 @@ import {
 
 import { getMessageFromOption } from "../../ultils";
 
+const commandName = "by-reaction";
+
 export default {
-  name: "by-reaction",
+	name: commandName,
   addCommand(builder: SlashCommandSubcommandBuilder) {
     return builder
-      .setName(this.name)
+      .setName(commandName)
       .setDescription("Create a private thread for each member in the list")
       .addStringOption((Option) =>
         Option.setName("prefix")

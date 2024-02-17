@@ -6,11 +6,13 @@ import { getMessageFromOption } from "../../ultils";
 
 const emojiPoll = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"];
 
+const commandName = "react";
+
 export default {
-  name: "react",
+	name: commandName,
   addCommand(builder: SlashCommandSubcommandBuilder) {
     return builder
-      .setName(this.name)
+      .setName(commandName)
       .setDescription("react to a messsage!")
 
       .addStringOption((Option) =>

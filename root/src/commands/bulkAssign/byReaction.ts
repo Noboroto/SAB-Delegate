@@ -5,11 +5,13 @@ import {
 } from "discord.js";
 import { getMessageFromOption } from "../../ultils";
 
+const commandName = "by-reaction";
+
 export default {
-  name: "by-reaction",
+	name: commandName,
   addCommand(builder: SlashCommandSubcommandBuilder) {
     return builder
-      .setName(this.name)
+      .setName(commandName)
       .setDescription(
         "Assign or remove a role for many members by a reaction on a message"
       )

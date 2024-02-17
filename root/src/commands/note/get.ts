@@ -4,11 +4,13 @@ import {
 } from "discord.js";
 import { noteUltils } from "../../ultils";
 
+const commandName = "get";
+
 export default {
-  name: "get",
+	name: commandName,
   addCommand(builder: SlashCommandSubcommandBuilder) {
     return builder
-      .setName(this.name)
+      .setName(commandName)
       .setDescription("Note eveything and find by role")
       .addRoleOption((Option) =>
         Option.setName("role").setDescription("role to note").setRequired(true)

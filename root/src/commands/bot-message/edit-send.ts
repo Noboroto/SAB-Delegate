@@ -4,11 +4,13 @@ import {
 } from "discord.js";
 import { getMessageFromOption } from "../../ultils";
 
+const commandName = "edit-send";
+
 export default {
-  name: "edit-send",
+	name: commandName,
   addCommand(builder: SlashCommandSubcommandBuilder) {
     return builder
-      .setName(this.name)
+      .setName(commandName)
       .setDescription("Edit a message sent by this bot!")
       .addStringOption((Option) =>
         Option.setName("new-content")

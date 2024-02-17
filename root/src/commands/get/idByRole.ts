@@ -6,11 +6,13 @@ import {
   PermissionsBitField,
 } from "discord.js";
 
+const commandName = "id-by-role";
+
 export default {
-  name: "id-by-role",
+	name: commandName,
   addCommand(builder: SlashCommandSubcommandBuilder) {
     return builder
-      .setName(this.name)
+      .setName(commandName)
       .setDescription("Get all members who have a specific role")
       .addRoleOption((Option) =>
         Option.setName("role")

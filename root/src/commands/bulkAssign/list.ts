@@ -4,11 +4,13 @@ import {
   Role,
 } from "discord.js";
 
+const commandName = "list";
+
 export default {
-  name: "list",
+	name: commandName,
   addCommand(builder: SlashCommandSubcommandBuilder) {
     return builder
-      .setName(this.name)
+      .setName(commandName)
       .setDescription("Assign or remove a role for many members by list of ID")
       .addStringOption((Option) =>
         Option.setName("ids")

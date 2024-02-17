@@ -6,11 +6,13 @@ import {
 } from "discord.js";
 import { getMessageFromOption } from "../../ultils";
 
+const commandName = "not-react";
+
 export default {
-  name: "not-react",
+	name: commandName,
   addCommand(builder: SlashCommandSubcommandBuilder) {
     return builder
-      .setName(this.name)
+      .setName(commandName)
       .setDescription("Mention who didn't react to a message")
       .addStringOption((Option) =>
         Option.setName("message-link")

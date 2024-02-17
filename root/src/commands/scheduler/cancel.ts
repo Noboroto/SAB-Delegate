@@ -5,11 +5,13 @@ import {
 
 import { jobScheduler } from "../../ultils";
 
+const commandName = "cancel";
+
 export default {
-  name: "cancel",
+	name: commandName,
   addCommand(builder: SlashCommandSubcommandBuilder) {
     return builder
-      .setName(this.name)
+      .setName(commandName)
       .setDescription("Cancel a scheduler job")
       .addIntegerOption((Option) =>
         Option.setName("id")

@@ -28,11 +28,13 @@ const lots_of_messages_getter = async (channel, limit = 1000) => {
   return sum_messages;
 };
 
+const commandName = "intro";
+
 export default {
-  name: "intro",
+	name: commandName,
   addCommand(builder: SlashCommandSubcommandBuilder) {
     return builder
-      .setName(this.name)
+      .setName(commandName)
       .setDescription(
         "get first introduction of a user in intro channels (set by admin)"
       )

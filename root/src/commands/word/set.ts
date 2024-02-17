@@ -8,11 +8,13 @@ import {
 
 import { wordGame } from "../../ultils";
 
+const commandName = "set";
+
 export default {
-  name: "set",
+	name: commandName,
   addCommand(builder: SlashCommandSubcommandBuilder) {
     return builder
-      .setName(this.name)
+      .setName(commandName)
       .setDescription("Chọn phòng để bắt đầu chơi nối chữ")
       .addChannelOption((Option) =>
         Option.setName("channel")

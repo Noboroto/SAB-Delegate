@@ -4,11 +4,13 @@ import {
 } from "discord.js";
 import { noteUltils } from "../../ultils";
 
+const commandName = "add";
+
 export default {
-  name: "add",
+	name: commandName,
   addCommand(builder: SlashCommandSubcommandBuilder) {
     return builder
-      .setName(this.name)
+      .setName(commandName)
       .setDescription("Note eveything and save by role")
 
       .addRoleOption((Option) =>

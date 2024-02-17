@@ -5,11 +5,13 @@ import {
   TextChannel,
 } from "discord.js";
 
+const commandName = "edit-prefix";
+
 export default {
-  name: "edit-prefix",
+	name: commandName,
   addCommand(builder: SlashCommandSubcommandBuilder) {
     return builder
-      .setName(this.name)
+      .setName(commandName)
       .setDescription("edit private threads prefix")
       .addStringOption((Option) =>
         Option.setName("old-prefix")
