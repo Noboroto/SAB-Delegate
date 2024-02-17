@@ -24,7 +24,7 @@ export default {
 
     try {
       console.info(
-        `[${new Date().toLocaleString()} - ${
+        `[${new Date().toLocaleString()}]-[${
           interaction.client.user?.username
         }][Command] ${interaction.commandName}`
       );
