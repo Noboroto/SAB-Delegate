@@ -40,5 +40,7 @@ export default {
 				}
 			}
 		}
+
+		await interaction.followUp("Done!");
 	},
 };
