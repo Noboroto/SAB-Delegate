@@ -3,9 +3,11 @@ import nodeScheduler from "node-schedule";
 const schedulerArr: Map<
   string,
   {
+		cmdName: string;
     id: string;
     description: string;
     time: string;
+		setTime: string;
     authorUsername: string;
     job: nodeScheduler.Job;
     isCancel: boolean;
@@ -13,22 +15,28 @@ const schedulerArr: Map<
 > = new Map();
 
 export const saveJob = (
+	cmdName: string,
   groupID: string,
   authorUsername: string,
   description: string,
   time: string,
+	setTime: string,
   job: nodeScheduler.Job
 ): string => {
   if (!schedulerArr.has(groupID)) {
-    schedulerArr[groupID] = [];
+    schedulerArr.set(groupID, []);
   }
   // get unique id for the job
-  const id = schedulerArr[groupID].length.toString();
+  const id = schedulerArr.get(groupID).length.toString();
+	console.log(schedulerArr)
+	console.log(schedulerArr.has(groupID))
   // save to array
-  schedulerArr[groupID].push({
+  schedulerArr.get(groupID).push({
+		cmdName,
     id,
     description,
     time,
+		setTime,
     authorUsername,
     job,
     isCancel: false,
@@ -36,35 +44,35 @@ export const saveJob = (
   return id;
 };
 
-export const getJobs = (groupID: string): string => {
-  if (!schedulerArr[groupID] || schedulerArr[groupID].length === 0) {
-    return "No job found";
-  }
-  if (schedulerArr[groupID].every((job) => job.isCancel)) {
-    schedulerArr[groupID] = [];
-    return "All jobs have been canceled";
+export const getJobs = (groupID: string): {
+	cmdName: string;
+	id: string;
+	description: string;
+	time: string;
+	setTime: string;
+	authorUsername: string;
+	job: nodeScheduler.Job;
+	isCancel: boolean;
+}[] => {
+  if (!schedulerArr.get(groupID) || schedulerArr.get(groupID).length === 0) {
+    return [];
   }
 
-  return schedulerArr[groupID]
-    .filter((job) => !job.isCancel)
-    .map((job) => {
-      return `ID: ${job.id}\nDescription: ${job.description}\nTime: ${job.time}\nAuthor: ${job.authorUsername}\n\n`;
-    })
-    .join("\n");
+  return schedulerArr.get(groupID);
 };
 
 export const cancelJob = (groupID: string, id: number): string => {
-  if (!schedulerArr[groupID] || schedulerArr[groupID].length === 0) {
+  if (!schedulerArr.get(groupID) || schedulerArr.get(groupID).length === 0) {
     return "No job found";
   }
-  if (id < 0 || id >= schedulerArr[groupID].length) {
+  if (id < 0 || id >= schedulerArr.get(groupID).length) {
     return "Invalid job ID";
   }
-  const job = schedulerArr[groupID][id];
+  const job = schedulerArr.get(groupID)[id];
   job.job.cancel();
   job.isCancel = true;
-  if (schedulerArr[groupID].every((job) => job.isCancel)) {
-    schedulerArr[groupID] = [];
+  if (schedulerArr.get(groupID).every((job) => job.isCancel)) {
+    schedulerArr.set(groupID, []);
   }
   return `Job \`${id}\` has been canceled`;
 };

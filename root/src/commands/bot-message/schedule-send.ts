@@ -102,12 +102,21 @@ export default {
       0
     );
     const currentTime = new Date();
-
-    const scheduleTimeStr = scheduleTime.toLocaleString("en-VN", {
+		const currentTimeStr = currentTime.toLocaleString("vi-VN", {
+			timeZone: "Asia/Ho_Chi_Minh",
+			day: "2-digit",
+			month: "numeric",
+			year: "numeric",
+			hour: "2-digit",
+			minute: "2-digit",
+		});			
+    const scheduleTimeStr = scheduleTime.toLocaleString("vi-VN", {
       timeZone: "Asia/Ho_Chi_Minh",
       day: "2-digit",
-      month: "short",
+      month:  "numeric",
       year: "numeric",
+			hour: "2-digit",
+			minute: "2-digit",
     });
     if (scheduleTime < currentTime) {
       interaction.reply({
@@ -133,20 +142,17 @@ export default {
 
     // save job to scheduler
     const id = jobScheduler.saveJob(
+			commandName,
       gui,
       interaction.user.username,
-      `Copy from message to ${targetChannel}: ${message.content.substring(
-        0,
-        20
-      )}...`,
+      `Send message to ${interaction.channel}: ${message.content}`,
       scheduleTimeStr,
+			currentTimeStr,
       job
     );
 
     interaction.reply({
-      content: `Job has been scheduled with id ${id} at ${scheduleTime.toLocaleString(
-        "en-VN"
-      )}`,
+			content: `Job has been scheduled with id ${id} at ${scheduleTimeStr}`,
       ephemeral: true,
     });
   },

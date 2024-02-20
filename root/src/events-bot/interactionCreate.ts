@@ -26,7 +26,7 @@ export default {
       console.info(
         `[${new Date().toLocaleString()}]-[${
           interaction.client.user?.username
-        }][Command] ${interaction.commandName}`
+        }][Command] ${interaction.user.username} - ${interaction.commandName}`
       );
       await command.execute(interaction);
     } catch (error) {

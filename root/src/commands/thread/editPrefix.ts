@@ -25,11 +25,9 @@ export default {
       )
       .addChannelOption((Option) =>
         Option.setName("destination")
-          .addChannelTypes(ChannelType.GuildText)
-          .addChannelTypes(ChannelType.GuildAnnouncement)
-          .addChannelTypes(ChannelType.AnnouncementThread)
-          .addChannelTypes(ChannelType.PublicThread)
-          .addChannelTypes(ChannelType.PrivateThread)
+					.addChannelTypes(ChannelType.GuildText)
+					.addChannelTypes(ChannelType.GuildAnnouncement)
+					.addChannelTypes(ChannelType.GuildForum)
           .setDescription("destination channel")
           .setRequired(false)
       );

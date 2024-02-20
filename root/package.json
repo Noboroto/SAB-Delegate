@@ -23,6 +23,7 @@
 	"author": "david0403",
 	"license": "ISC",
 	"dependencies": {
+		"@gregoranders/csv": "^0.0.13",
 		"@types/node": "^20.4.6",
 		"@types/node-schedule": "^2.1.6",
 		"better-sqlite3": "^9.3.0",

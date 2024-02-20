@@ -14,7 +14,7 @@ export default {
     const botName = interaction.client.user?.username;
     const author = interaction.user.username;
     await interaction.reply(`I am being shut down by ${author}...`);
-    interaction.client.destroy();
-    console.log(`${botName} is shutting down by ${author}...`);
+    await interaction.client.destroy();
+    console.info(`${botName} is shutting down by ${author}...`);
   },
 };

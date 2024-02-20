@@ -16,10 +16,30 @@ export default {
 
   async execute(interaction: ChatInputCommandInteraction) {
     const groupID = interaction.guildId;
-    interaction.reply({
-      content: jobScheduler.getJobs(groupID),
-      ephemeral: false,
-      embeds: [],
-    });
+		const jobInfos:{
+			cmdName: string,
+			id: string,
+			description: string,
+			time : string,
+			setTime: string,
+			authorUsername: string,
+			job,
+			isCancel: boolean
+		}[] = jobScheduler.getJobs(groupID);
+		if (jobInfos.length === 0) {
+			await interaction.reply("No job found");
+			return;
+		}
+
+		await interaction.reply("List of jobs:");
+		for (const job of jobInfos) {
+			await interaction.followUp(
+				`## ${(job.isCancel) ? "(End) " : ""}[${job.cmdName}] - ${job.id}\n`
+			+ `**Author**: ${job.authorUsername}\n`
+			+ `**Description**: ${job.description}\n`
+			+ `**Time**: ${job.time}\n`
+			+ `**Created time**: ${job.setTime}`
+			)
+		}
   },
 };

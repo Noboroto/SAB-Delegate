@@ -3,9 +3,8 @@
 	"editor.formatOnSave": true,
 	"editor.tabSize": 2,
 	"[typescript]": {
-		"editor.defaultFormatter": "rvest.vs-code-prettier-eslint"
+		"editor.defaultFormatter":  "vscode.typescript-language-features"
 	},
 	"[javascript]": {
-		"editor.defaultFormatter": "rvest.vs-code-prettier-eslint"
 	},
 }
