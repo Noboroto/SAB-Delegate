@@ -28,8 +28,6 @@ export const saveJob = (
   }
   // get unique id for the job
   const id = schedulerArr.get(groupID).length.toString();
-	console.log(schedulerArr)
-	console.log(schedulerArr.has(groupID))
   // save to array
   schedulerArr.get(groupID).push({
 		cmdName,

@@ -8,7 +8,10 @@ const birthdayTask = async (client: Client) => {
 	const keys = await happyBirthday.getServerIDs();
 	const wisthesPath = "./files/birthday.json"
 	const wishes:String[] = JSON.parse(fs.readFileSync(wisthesPath, "utf8"));
+	await happyBirthday.setMaxWishes(wishes.length);
+	
 	for (const guildId of keys) {
+		if (guildId === "max") continue
 		const guild = await client.guilds.fetch(guildId);
 		const channel = await happyBirthday.getChannel(guildId);
 		if (channel === "") {
@@ -23,6 +26,8 @@ const birthdayTask = async (client: Client) => {
 			console.info(`No birthday for guild ${guild.name}`);
 			continue;
 		}
+
+		console.log (`Birthday for guild ${guild.name}`);
 		const channelObj = await guild.channels.fetch(channel) as TextChannel;
 		for (const user of birthdayUser) {
 			const msgID = Number(await happyBirthday.getWishID(guildId));
@@ -34,8 +39,9 @@ const birthdayTask = async (client: Client) => {
 
 const birdaySetup = async (client: Client) => {
 	const cronRule = "0 0 0 * * *";
-	scheduler.scheduleJob(cronRule, () => {
-		birthdayTask(client);
+	scheduler.scheduleJob(cronRule, async() => {
+		console.info("Running birthday task");
+		await birthdayTask(client);
 	});
 }
 

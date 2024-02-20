@@ -5,7 +5,7 @@ export const resetWishes = async (guid: string) => {
 	const wisthesPath = "./files/birthday.json"
 	const wishes: [] = JSON.parse(fs.readFileSync(wisthesPath, "utf8"));
 	await birthdayDb.set(`${guid}.count`, wishes.length);
-	await birthdayDb.set(`${guid}.max`, wishes.length);
+	await birthdayDb.set(`max`, wishes.length);
 	for (let id = 0; id < wishes.length; id++) {
 		await birthdayDb.set(`${guid}.wishes.${id}`, true);
 	}
@@ -31,7 +31,7 @@ export const appendBirthday = async (
 	if (dayObj === undefined || dayObj === null) {
 		await birthdayDb.set(`${guid}.data.${month}.${day}`, []);
 	}
-
+	discordId = discordId.trimEnd().trimStart();
 	await birthdayDb.push(`${guid}.data.${month}.${day}`, { id, name, discordId });
 }
 
@@ -80,14 +80,14 @@ export const getWishID = async (guid: string): Promise<String> => {
 	if (await birthdayDb.get(`${guid}.count`) === 0) {
 		await resetWishes(guid);
 	}
-	let maxMsg = await birthdayDb.get(`${guid}.max`);
+	let maxMsg = await birthdayDb.get(`max`);
 	if (maxMsg === null || maxMsg === undefined || maxMsg === 0) {
 		await resetWishes(guid);
-		maxMsg = await birthdayDb.get(`${guid}.max`);
+		maxMsg = await birthdayDb.get(`max`);
 	}
 
 	do {
-		const randID = Math.floor(Math.random() * await birthdayDb.get(`${guid}.max`));
+		const randID = Math.floor(Math.random() * await birthdayDb.get(`max`));
 		const canWish = await birthdayDb.get(`${guid}.wishes.${randID}`);
 		if (canWish && randID.toString() !== "NaN") {
 			await birthdayDb.set(`${guid}.wishes.${randID}`, false);
@@ -120,4 +120,15 @@ export const setChannel = async (guid: string, channelId: string) => {
 
 export const getChannel = async (guid: string) => {
 	return await birthdayDb.get(`${guid}.channel`) ?? "";
+}
+
+export const setMaxWishes = async (newMax: number) => {
+	const oldMax = await birthdayDb.get(`max`);
+	await birthdayDb.set(`max`, newMax);
+	const keys = await getServerIDs();
+	for (const guids of keys) {
+		for (let id = oldMax; id < newMax; id++) {
+			await birthdayDb.set(`${guids}.wishes.${id}`, true);
+		}
+	}
 }
