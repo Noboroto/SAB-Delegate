@@ -13,7 +13,8 @@ export default {
 		.addSubcommand(setChannel.addCommand),
   async execute(interaction) {
     const commands = interaction.options.getSubcommand();
-    console.info(`subcommand: ${commands}`);
+		console.info(`[[${interaction.client.user?.username
+			}][Subcommad] ${interaction.user.username} - ${commands}`);
     switch (commands) {
 			case setChannel.name:
 				setChannel.execute(interaction);
