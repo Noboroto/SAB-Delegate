@@ -51,7 +51,7 @@ export default {
 		const role = interaction.options.getRole("role") as Role;
 		const channel = messageFromID.channel as TextChannel;
 		const members = role.members.filter((member) =>
-			channel.members.find((channelMem) => channelMem.id === member.id) !== undefined
+			channel.members.find((channelMem) => channelMem.id === member.id) != undefined
 		);
 
 		if (!messageFromID) {

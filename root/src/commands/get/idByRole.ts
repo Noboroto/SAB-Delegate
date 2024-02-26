@@ -47,7 +47,7 @@ export default {
       const channel = interaction.channel as TextChannel;
       const channelMembers = channel.members.map((member) => member.id);
       members = members.filter((member) => {
-        return channelMembers.find((id) => id === member.id) !== undefined;
+        return channelMembers.find((id) => id == member.id) !== undefined;
       });
     }
 
