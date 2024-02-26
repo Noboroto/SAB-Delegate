@@ -11,38 +11,45 @@ const birthdayTask = async (client: Client) => {
 	await happyBirthday.setMaxWishes(wishes.length);
 	
 	for (const guildId of keys) {
-		if (guildId === "max") continue
-		const guild = await client.guilds.fetch(guildId);
-		const channel = await happyBirthday.getChannel(guildId);
-		if (channel === "") {
-			console.info(`No birthday channel set for guild ${guild.name}`);
-			continue;
-		}
-		const currMonth = new Date().getMonth() + 1;
-		const currDay = new Date().getDate();
-		const birthdayUser = await happyBirthday.getDateList(guildId, currMonth, currDay);
+		await client.guilds.fetch(guildId)
+			.then(async (guild) => {
+				const channel = await happyBirthday.getChannel(guildId);
+				if (channel === "") {
+					console.info(`No birthday channel set for guild ${guild.name}`);
+					return;
+				}
+				const currMonth = new Date().getMonth() + 1;
+				const currDay = new Date().getDate();
+				const birthdayUser = await happyBirthday.getDateList(guildId, currMonth, currDay);
 
-		if (birthdayUser.length === 0) {
-			console.info(`No birthday for guild ${guild.name}`);
-			continue;
-		}
+				if (birthdayUser.length === 0) {
+					console.info(`No birthday for guild ${guild.name}`);
+					return;
+				}
 
-		console.log (`Birthday for guild ${guild.name}`);
-		const channelObj = await guild.channels.fetch(channel) as TextChannel;
-		for (const user of birthdayUser) {
-			const msgID = Number(await happyBirthday.getWishID(guildId));
-			const msg = wishes[msgID].replaceAll("${name}", `<@${user.discordId}>`);
-			await channelObj.send(msg);
-		}
+				console.log(`Birthday for guild ${guild.name}`);
+				const channelObj = await guild.channels.fetch(channel) as TextChannel;
+				for (const user of birthdayUser) {
+					const msgID = Number(await happyBirthday.getWishID(guildId));
+					const msg = wishes[msgID].replaceAll("${name}", `<@${user.discordId}>`);
+					await channelObj.send(msg);
+				}
+			}
+			)
+			.catch((error) => {
+				console.error(`Error fetching guild ${guildId}\n${error}`);
+			});
 	}
 }
 
-const birdaySetup = async (client: Client) => {
+const birthdaySetup = async (client: Client) => {
 	const cronRule = "0 0 0 * * *";
 	scheduler.scheduleJob(cronRule, async() => {
-		console.info("Running birthday task");
+		console.info(`${client.user?.username} Running birthday task`);
 		await birthdayTask(client);
 	});
+	const keys = await happyBirthday.getServerIDs();
+	console.log(`Server IDs: ${JSON.stringify(keys)}`);
 }
 
 export default {
@@ -51,7 +58,7 @@ export default {
 	async execute(args: Client[]) {
 		const client = args[0] as Client;
 		console.info(`Ready! Logged in as ${client.user?.username}`);
-		birdaySetup(client);
+		birthdaySetup(client);
 
 		return;
 		await client.application.commands

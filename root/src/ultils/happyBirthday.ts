@@ -64,7 +64,7 @@ export const removeBirthday = async (guid: string, id: string): Promise<String> 
 				}
 			}
 		}
-		await birthdayDb.set(guid, birthdays);
+		await birthdayDb.set(`${guid}`, birthdays);
 
 		return "Birthday removed";
 	}
