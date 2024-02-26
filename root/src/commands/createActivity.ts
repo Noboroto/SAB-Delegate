@@ -193,11 +193,6 @@ export default {
     const createdVoiceChannel = await interaction.guild?.channels.create({
       name: emoji + "┃" + name + " voice",
       parent: "1046973611199697022",
-      topic:
-        "Voice channel for " +
-        `"${name}"` +
-        " with short name " +
-        `"${shortName}"`,
       type: ChannelType.GuildVoice,
       userLimit: 99,
       permissionOverwrites: [
