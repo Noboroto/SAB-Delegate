@@ -11,6 +11,7 @@ const birthdayTask = async (client: Client) => {
 	await happyBirthday.setMaxWishes(wishes.length);
 	
 	for (const guildId of keys) {
+		if (guildId == "max") continue
 		await client.guilds.fetch(guildId)
 			.then(async (guild) => {
 				const channel = await happyBirthday.getChannel(guildId);
@@ -48,8 +49,6 @@ const birthdaySetup = async (client: Client) => {
 		console.info(`${client.user?.username} Running birthday task`);
 		await birthdayTask(client);
 	});
-	const keys = await happyBirthday.getServerIDs();
-	console.log(`Server IDs: ${JSON.stringify(keys)}`);
 }
 
 export default {
