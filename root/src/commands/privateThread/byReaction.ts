@@ -46,6 +46,7 @@ export default {
     // interaction.user is the object representing the User who ran the command
     // interaction.member is the GuildMember object, which represents the user in the specific guild
     //const guild = interaction.client.guilds.cache.get('Guild ID');
+
     const targetChannel = (interaction.options.getChannel("destination") ??
       interaction.channel) as TextChannel;
     const prefix =

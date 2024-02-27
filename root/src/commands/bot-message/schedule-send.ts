@@ -81,6 +81,9 @@ export default {
   async execute(interaction: ChatInputCommandInteraction) {
     // interaction.user is the object representing the User who ran the command
     // interaction.member is the GuildMember object, which represents the user in the specific guild
+
+		await interaction.deferReply({ephemeral: true});
+
     const day = interaction.options.getInteger("day") ?? new Date().getDate();
     const month =
       interaction.options.getInteger("month") ?? new Date().getMonth() + 1;
@@ -119,9 +122,8 @@ export default {
 			minute: "2-digit",
     });
     if (scheduleTime < currentTime) {
-      interaction.reply({
+      interaction.editReply({
         content: `invalid time, user input time is ${scheduleTimeStr}`,
-        ephemeral: true,
       });
       return;
     }
@@ -151,9 +153,8 @@ export default {
       job
     );
 
-    interaction.reply({
+    interaction.editReply({
 			content: `Job has been scheduled with id ${id} at ${scheduleTimeStr}`,
-      ephemeral: true,
     });
   },
 };

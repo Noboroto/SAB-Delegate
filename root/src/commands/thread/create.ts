@@ -43,6 +43,8 @@ export default {
 		// interaction.user is the object representing the User who ran the command
 		// interaction.member is the GuildMember object, which represents the user in the specific guild
 		//const guild = interaction.client.guilds.cache.get('Guild ID');
+		await interaction.deferReply();
+
 		const targetChannel = (interaction.options.getChannel("destination") ??
 			interaction.channel) as ForumChannel | TextChannel ;
 		const name =
@@ -70,6 +72,6 @@ export default {
 			await latestThread.send(`${msg}`);
 		}
 
-		await interaction.reply(`Created thread ${latestThread}`);
+		await interaction.editReply(`Created thread ${latestThread}`);
 	},
 };
