@@ -1,6 +1,5 @@
 import {
   SlashCommandBuilder,
-  PermissionFlagsBits,
   ChatInputCommandInteraction,
 } from "discord.js";
 import { getMessageFromOption } from "../ultils";
@@ -26,7 +25,6 @@ export default {
         .setRequired(false)
     )
 
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
     .setDMPermission(false),
 
   async execute(interaction: ChatInputCommandInteraction) {
