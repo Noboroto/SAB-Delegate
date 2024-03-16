@@ -7,8 +7,7 @@ export default {
 		.setName("mention")
 		.setDescription("Mention many members by condition")
 		.addSubcommand(byAReaction.addCommand)
-		.addSubcommand(notReact.addCommand)
-		.setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
+		.addSubcommand(notReact.addCommand),
 	async execute(interaction) {
 		const commands = interaction.options.getSubcommand();
 		console.info(`[[${interaction.client.user?.username

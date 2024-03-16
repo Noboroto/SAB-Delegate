@@ -1,5 +1,5 @@
 
-import { SlashCommandBuilder } from "discord.js";
+import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import appendList from "./birthday/appendList";
 import getList from "./birthday/getList";
 import setChannel from "./birthday/setChannel";
@@ -10,7 +10,8 @@ export default {
     .setDescription("Manage birthday wishes for users.")
 		.addSubcommand(appendList.addCommand)
 		.addSubcommand(getList.addCommand)
-		.addSubcommand(setChannel.addCommand),
+		.addSubcommand(setChannel.addCommand)
+		.setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
   async execute(interaction) {
     const commands = interaction.options.getSubcommand();
 		console.info(`[[${interaction.client.user?.username

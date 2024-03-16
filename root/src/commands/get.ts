@@ -12,8 +12,7 @@ export default {
 		.addSubcommand(idByAReaction.addCommand)
 		.addSubcommand(idByRole.addCommand)
 		.addSubcommand(inviteLink.addCommand)
-		.setDMPermission(true)
-		.setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
+		.setDMPermission(true),
 	async execute(interaction) {
 		const commands = interaction.options.getSubcommand();
 		console.info(`[[${interaction.client.user?.username
