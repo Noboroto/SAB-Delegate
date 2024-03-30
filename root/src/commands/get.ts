@@ -1,4 +1,4 @@
-import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
+import { SlashCommandBuilder } from "discord.js";
 import intro from "./get/intro";
 import idByAReaction from "./get/idByReaction";
 import idByRole from "./get/idByRole";

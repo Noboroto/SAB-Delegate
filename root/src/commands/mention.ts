@@ -1,4 +1,4 @@
-import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
+import { SlashCommandBuilder } from "discord.js";
 import byAReaction from "./mention/byAReaction";
 import notReact from "./mention/notReact";
 
