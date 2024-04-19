@@ -59,7 +59,7 @@ export default {
 		console.info(`Ready! Logged in as ${client.user?.username}`);
 		birthdaySetup(client);
 
-		//return;
+		return;
 		await client.application.commands
 			.set([])
 			.then(() =>
