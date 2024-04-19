@@ -7,7 +7,7 @@ import scheduler from "node-schedule";
 const birthdayTask = async (client: Client) => {
 	const keys = await happyBirthday.getServerIDs();
 	const wisthesPath = "./files/birthday.json"
-	const wishes:String[] = JSON.parse(fs.readFileSync(wisthesPath, "utf8"));
+	const wishes:string[] = JSON.parse(fs.readFileSync(wisthesPath, "utf8"));
 	await happyBirthday.setMaxWishes(wishes.length);
 	
 	for (const guildId of keys) {
@@ -55,11 +55,11 @@ export default {
 	name: Events.ClientReady,
 	once: true,
 	async execute(args: Client[]) {
-		const client = args[0] as Client;
+		const client = args[0];
 		console.info(`Ready! Logged in as ${client.user?.username}`);
 		birthdaySetup(client);
 
-		return;
+		//return;
 		await client.application.commands
 			.set([])
 			.then(() =>
