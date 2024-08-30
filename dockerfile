@@ -1,4 +1,4 @@
-FROM node:alpine
+FROM node:18-alpine3.20
 
 # Create app directory
 RUN mkdir -p /usr/src/bot
