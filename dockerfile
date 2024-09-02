@@ -10,6 +10,9 @@ WORKDIR /usr/src/bot
 COPY ./root/package*.json ./
 COPY ./root ./
 
+RUN echo $TOKEN
+RUN echo $TOKENS
+
 RUN yarn --production --network-timeout 100000
 # If you are building your code for production
 # RUN npm --omit=dev
