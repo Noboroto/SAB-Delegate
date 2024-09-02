@@ -8,3 +8,4 @@ services:
       - /etc/localtime:/etc/localtime:ro
     environment:
       - TOKEN=your_token
+      - TOKENS=your_tokens
