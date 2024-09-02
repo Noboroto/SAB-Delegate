@@ -6,3 +6,5 @@ services:
       - ./root/files:/usr/src/bot/files
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
+    environment:
+      - TOKEN=your_token
