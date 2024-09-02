@@ -3,6 +3,9 @@ import { errNotice, successNotice, wordGame } from "../ultils";
 import fs from "fs";
 
 const reactionDictPath = "./files/reactionsDict.json";
+if (!fs.existsSync(reactionDictPath)) {
+	fs.writeFileSync(reactionDictPath, "{}");
+}
 const reactionsDict = JSON.parse(fs.readFileSync(reactionDictPath, "utf8"));
 
 const reactToMessage = (message: Message) => {
