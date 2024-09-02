@@ -15,5 +15,5 @@ RUN yarn --production --network-timeout 100000
 # RUN npm --omit=dev
 
 # Bundle app source
-CMD ["ls", "-la"]
-#CMD [ "yarn", "start" ]
+# CMD ["ls", "-la"]
+CMD [ "yarn", "start" ] 
