@@ -10,9 +10,6 @@ WORKDIR /usr/src/bot
 COPY ./root/package*.json ./
 COPY ./root ./
 
-# List all files in the current directory
-RUN ls -la
-
 RUN yarn --production --network-timeout 100000
 # If you are building your code for production
 # RUN npm --omit=dev
