@@ -7,5 +7,4 @@ services:
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
     environment:
-      - TOKEN=your_token
-      - TOKENS=your_tokens
+      - TOKENS=
