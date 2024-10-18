@@ -8,7 +8,7 @@ import {
 
 import { happyBirthday } from "../../ultils";
 
-const commandName = "set-channel";
+const commandName = "birthday-channel";
 
 export default {
   name: commandName,

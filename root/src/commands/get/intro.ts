@@ -3,24 +3,30 @@ import {
   TextChannel,
   ChatInputCommandInteraction,
   FetchMessagesOptions,
+	Collection,
+	Message,
 } from "discord.js";
+import { configManager } from "../../ultils";
 
-const lots_of_messages_getter = async (channel, limit = 1000) => {
-  let sum_messages = [];
-  let last_id;
+const lots_of_messages_getter = async (channel: TextChannel, limit_msg = 1000) => {
+	let sum_messages: Collection<string, Message<true>>[] = [];
+  let last_id = null;
 
   // eslint-disable-next-line no-constant-condition
   while (true) {
-    const options: FetchMessagesOptions = { limit: 100 };
+    let options: FetchMessagesOptions = { 
+			limit: 100, 
+			cache: false 
+		};
     if (last_id) {
       options.before = last_id;
     }
 
     const messages = await channel.messages.fetch(options);
-    sum_messages = sum_messages.concat([messages]);
+		sum_messages = sum_messages.concat([messages]);
     last_id = messages.last().id;
 
-    if (messages.size != 100 || sum_messages.length >= limit) {
+		if (messages.size != 100 || sum_messages.length >= limit_msg) {
       break;
     }
   }
@@ -48,22 +54,23 @@ export default {
   async execute(interaction: ChatInputCommandInteraction) {
     // interaction.user is the object representing the User who ran the command
     // interaction.member is the GuildMember object, which represents the user in the specific guild
+		const channelID = await configManager.getIntroChannelId(interaction.guildId);
     const srcChannel = (await interaction.client.channels.fetch(
-      "1082277720462995566"
+      channelID
     )) as TextChannel;
     const user = interaction.options.getUser("user");
     const messageCollections = await lots_of_messages_getter(srcChannel);
 
-    let message = null;
-    messageCollections.forEach((messages) => {
-      const tempMessage = messages
-        .reverse()
-        .find((msg) => msg.author.id === user.id);
-      if (tempMessage) {
-        message = tempMessage;
-        return;
-      }
-    });
+    let message:Message<true> = null;
+    for (const messages of messageCollections.reverse()) {
+			const tempMessage = messages
+				.reverse()
+				.find((msg) => msg.author.id === user.id);
+			if (tempMessage) {
+				message = tempMessage;
+				break;
+			}
+		}
 
     if (!message) {
       await interaction.reply({
@@ -74,9 +81,10 @@ export default {
     }
 
     const messageContent = message.content;
+		const messageUrl = message.url;
     const replyMessage = {
-      content: `${user}'s introduction: \n${messageContent}`,
+			content: `Jump to message ${user}'s [introduction](${messageUrl}):\n\n${messageContent}`,
     };
-    interaction.reply(replyMessage);
+    await interaction.reply(replyMessage);
   },
 };

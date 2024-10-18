@@ -13,6 +13,7 @@ import privateThread from "./privateThread";
 import thread from "./thread";
 import shutdown from "./shutdown";
 import birthday from "./birthday";
+import set from "./set";
 
 const commands = [
   word,
@@ -30,6 +31,7 @@ const commands = [
   scheduler,
   shutdown,
 	birthday,
+	set
 ].sort((a, b) => {
   if (a.data.name < b.data.name) {
     return -1;

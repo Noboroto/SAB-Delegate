@@ -7,7 +7,7 @@ import inviteLink from "./get/inviteLink";
 export default {
 	data: new SlashCommandBuilder()
 		.setName("get")
-		.setDescription("Get usefull information")
+		.setDescription("Get usefull information and configurations")
 		.addSubcommand(intro.addCommand)
 		.addSubcommand(idByAReaction.addCommand)
 		.addSubcommand(idByRole.addCommand)
