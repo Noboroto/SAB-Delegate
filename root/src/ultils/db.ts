@@ -24,8 +24,8 @@ export const configDb = new QuickDB({ filePath: configDbPath });
   await dictDb.init();
   await noteDb.init();
   await wordDb.init();
-	await birthdayDb.init();
-	await configDb.init();
+  await birthdayDb.init();
+  await configDb.init();
 
   console.info("Database initialized");
 })();
