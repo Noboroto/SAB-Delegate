@@ -55,6 +55,14 @@ export default {
     // interaction.user is the object representing the User who ran the command
     // interaction.member is the GuildMember object, which represents the user in the specific guild
 		const channelID = await configManager.getIntroChannelId(interaction.guildId);
+		if (!channelID) {
+			await interaction.reply({
+				content: "No introduction channel set",
+				ephemeral: true,
+			});
+			return;
+		}
+		
     const srcChannel = (await interaction.client.channels.fetch(
       channelID
     )) as TextChannel;
