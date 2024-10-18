@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import introChannel from "./set/introChannel";
 import birthdayChannel from "./birthday/setChannel";
 
@@ -8,7 +8,8 @@ export default {
 		.setDescription("Set configurations for server")
 		.addSubcommand(introChannel.addCommand)
 		.addSubcommand(birthdayChannel.addCommand)
-		.setDMPermission(true),
+		.setDMPermission(true)
+		.setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
 	async execute(interaction) {
 		const commands = interaction.options.getSubcommand();
 		console.info(`[[${interaction.client.user?.username
