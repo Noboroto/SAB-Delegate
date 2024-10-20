@@ -4,7 +4,10 @@ import fs from "fs";
 
 const reactionDictPath = "./files/reactionsDict.json";
 if (!fs.existsSync(reactionDictPath)) {
-	fs.writeFileSync(reactionDictPath, "{ \"React 👌\": [\"👌\"], \"react ok\": [\"👌\"], \"react error\": [\"❌\"], \"react warning\": [\"⚠️\"], \"react info\": [\"ℹ️\"], \"react debug\": [\"🐛\"], \"react success\": [\"✅\"], \"react fatal\": [\"💀\"], \"react yes no\": [\"yes\", \"no\"], \"react yes\": [\"yes\"], \"react no\": [\"no\"], \"react ok cancel\": [\"ok\", \"❌\"] }");
+  fs.writeFileSync(
+    reactionDictPath,
+    '{ "React 👌": ["👌"], "react ok": ["👌"], "react error": ["❌"], "react warning": ["⚠️"], "react info": ["ℹ️"], "react debug": ["🐛"], "react success": ["✅"], "react fatal": ["💀"], "react yes no": ["yes", "no"], "react yes": ["yes"], "react no": ["no"], "react ok cancel": ["ok", "❌"] }'
+  );
 }
 const reactionsDict = JSON.parse(fs.readFileSync(reactionDictPath, "utf8"));
 

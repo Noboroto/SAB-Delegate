@@ -82,7 +82,7 @@ export default {
     // interaction.user is the object representing the User who ran the command
     // interaction.member is the GuildMember object, which represents the user in the specific guild
 
-		await interaction.deferReply({ephemeral: true});
+    await interaction.deferReply({ ephemeral: true });
 
     const day = interaction.options.getInteger("day") ?? new Date().getDate();
     const month =
@@ -105,21 +105,21 @@ export default {
       0
     );
     const currentTime = new Date();
-		const currentTimeStr = currentTime.toLocaleString("vi-VN", {
-			timeZone: "Asia/Ho_Chi_Minh",
-			day: "2-digit",
-			month: "numeric",
-			year: "numeric",
-			hour: "2-digit",
-			minute: "2-digit",
-		});			
+    const currentTimeStr = currentTime.toLocaleString("vi-VN", {
+      timeZone: "Asia/Ho_Chi_Minh",
+      day: "2-digit",
+      month: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
     const scheduleTimeStr = scheduleTime.toLocaleString("vi-VN", {
       timeZone: "Asia/Ho_Chi_Minh",
       day: "2-digit",
-      month:  "numeric",
+      month: "numeric",
       year: "numeric",
-			hour: "2-digit",
-			minute: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
     });
     if (scheduleTime < currentTime) {
       interaction.editReply({
@@ -144,17 +144,17 @@ export default {
 
     // save job to scheduler
     const id = jobScheduler.saveJob(
-			commandName,
+      commandName,
       gui,
       interaction.user.username,
       `Send message to ${interaction.channel}: ${message.content}`,
       scheduleTimeStr,
-			currentTimeStr,
+      currentTimeStr,
       job
     );
 
     interaction.editReply({
-			content: `Job has been scheduled with id ${id} at ${scheduleTimeStr}`,
+      content: `Job has been scheduled with id ${id} at ${scheduleTimeStr}`,
     });
   },
 };

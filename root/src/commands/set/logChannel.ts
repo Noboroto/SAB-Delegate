@@ -1,21 +1,22 @@
 import {
+  ChannelType,
   SlashCommandSubcommandBuilder,
+  TextChannel,
   ChatInputCommandInteraction,
   PermissionFlagsBits,
-  ChannelType,
-  TextChannel,
 } from "discord.js";
+import { configManager } from "../../ultils";
 
-import { happyBirthday } from "../../ultils";
-
-const commandName = "birthday-channel";
+const commandName = "log-channel";
 
 export default {
   name: commandName,
   addCommand(builder: SlashCommandSubcommandBuilder) {
     return builder
       .setName(commandName)
-      .setDescription("Set channel birthday wishes will be sent to.")
+      .setDescription(
+        "Set the log channel for the bot to log messages and events"
+      )
       .addChannelOption((Option) =>
         Option.setName("channel")
           .addChannelTypes(ChannelType.GuildText)
@@ -27,25 +28,23 @@ export default {
           .setRequired(true)
       );
   },
-
   async execute(interaction: ChatInputCommandInteraction) {
     const gid = interaction.guildId;
     const channel = interaction.options.getChannel("channel") as TextChannel;
 
     if (
       !interaction.guild.members.me.permissions.has([
-        PermissionFlagsBits.SendMessages,
         PermissionFlagsBits.ViewChannel,
+        PermissionFlagsBits.ReadMessageHistory,
       ])
     ) {
       interaction.reply({
-        content: "Bot cannot send message to this channel!",
+        content: "Bot cannot view message in this channel!",
         ephemeral: true,
       });
       return;
     }
-
-    await happyBirthday.setChannel(`${gid}`, channel.id);
-    interaction.reply({ content: `Select channel for birthday: ${channel}` });
+    await configManager.setLogChannelId(gid, channel.id);
+    interaction.reply({ content: `Introduction channel is: ${channel}` });
   },
 };

@@ -5,7 +5,8 @@ const noteDbPath = process.env.NOTE_DB_PATH || "./files/note.sqlite";
 const wordDbPath = process.env.WORD_DB_PATH || "./files/word.sqlite";
 const dictDbPath = process.env.DICT_DB_PATH || "./files/dict.sqlite";
 const configDbPath = process.env.CONFIG_DB_PATH || "./files/config.sqlite";
-const birthdayDbPath = process.env.BIRTHDAY_DB_PATH || "./files/birthday.sqlite";
+const birthdayDbPath =
+  process.env.BIRTHDAY_DB_PATH || "./files/birthday.sqlite";
 
 const dictTemplate = "./files/word-dict.json";
 

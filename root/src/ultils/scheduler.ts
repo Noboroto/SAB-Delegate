@@ -3,11 +3,11 @@ import nodeScheduler from "node-schedule";
 const schedulerArr: Map<
   string,
   {
-		cmdName: string;
+    cmdName: string;
     id: string;
     description: string;
     time: string;
-		setTime: string;
+    setTime: string;
     authorUsername: string;
     job: nodeScheduler.Job;
     isCancel: boolean;
@@ -15,12 +15,12 @@ const schedulerArr: Map<
 > = new Map();
 
 export const saveJob = (
-	cmdName: string,
+  cmdName: string,
   groupID: string,
   authorUsername: string,
   description: string,
   time: string,
-	setTime: string,
+  setTime: string,
   job: nodeScheduler.Job
 ): string => {
   if (!schedulerArr.has(groupID)) {
@@ -30,11 +30,11 @@ export const saveJob = (
   const id = schedulerArr.get(groupID).length.toString();
   // save to array
   schedulerArr.get(groupID).push({
-		cmdName,
+    cmdName,
     id,
     description,
     time,
-		setTime,
+    setTime,
     authorUsername,
     job,
     isCancel: false,
@@ -42,15 +42,17 @@ export const saveJob = (
   return id;
 };
 
-export const getJobs = (groupID: string): {
-	cmdName: string;
-	id: string;
-	description: string;
-	time: string;
-	setTime: string;
-	authorUsername: string;
-	job: nodeScheduler.Job;
-	isCancel: boolean;
+export const getJobs = (
+  groupID: string
+): {
+  cmdName: string;
+  id: string;
+  description: string;
+  time: string;
+  setTime: string;
+  authorUsername: string;
+  job: nodeScheduler.Job;
+  isCancel: boolean;
 }[] => {
   if (!schedulerArr.get(groupID) || schedulerArr.get(groupID).length === 0) {
     return [];

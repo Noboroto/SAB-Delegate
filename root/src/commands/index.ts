@@ -1,44 +1,21 @@
-import ping from "./ping";
-import attandanceByRole from "./attandanceByRole";
-import bulkRole from "./bulkAssign";
-import mention from "./mention";
-import addPoll from "./addPoll";
-import get from "./get";
-import createActivity from "./createActivity";
-import note from "./note";
-import word from "./word";
-import botMessage from "./botMessage";
-import scheduler from "./scheduler";
-import privateThread from "./privateThread";
-import thread from "./thread";
-import shutdown from "./shutdown";
-import birthday from "./birthday";
-import set from "./set";
+import * as fs from "fs";
+import * as path from "path";
 
-const commands = [
-  word,
-  thread,
-  addPoll,
-  attandanceByRole,
-  botMessage,
-  bulkRole,
-  createActivity,
-  get,
-  mention,
-  note,
-  ping,
-  privateThread,
-  scheduler,
-  shutdown,
-	birthday,
-	set
-].sort((a, b) => {
-  if (a.data.name < b.data.name) {
-    return -1;
+const commandsDir = path.join(__dirname);
+
+const commands = [];
+
+async function loadCommands() {
+  const files = fs.readdirSync(commandsDir);
+  for (const file of files) {
+    if (file == "index.ts") continue;
+    if (file.endsWith(".ts")) {
+      const command = await import(path.join(commandsDir, file));
+      commands.push(command.default);
+    }
   }
-  if (a.data.name > b.data.name) {
-    return 1;
-  }
-  return 0;
-});
+}
+
+loadCommands();
+
 export default commands;
