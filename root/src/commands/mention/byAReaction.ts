@@ -68,7 +68,7 @@ export default {
       });
     }
     const msgUrl = messageFromID.url;
-    let replyMsg = `Reply to ${interaction.user}, there are ${reactMemberListID.length} user(s) who [reacted the message]{${msgUrl}} with ${reaction}: \n`;
+    let replyMsg = `Reply to ${interaction.user}, there are ${reactMemberListID.length} user(s) who [reacted the message}(${msgUrl}) with ${reaction}: \n`;
     for (const userID of reactMemberListID) {
       replyMsg += `<@${userID}>`;
       if (userID === interaction.user.id) replyMsg += " (author)";
