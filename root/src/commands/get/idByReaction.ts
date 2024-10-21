@@ -73,7 +73,9 @@ export default {
       });
     }
 
-    let replyMsg = `There are ${reactMemberListID.length} user(s) who reacted with ${reaction}: \n`;
+		const msgUrl = `https://discord.com/channels/${messageFromID.guild.id}/${messageFromID.channel.id}/${messageFromID.id}`;
+
+		let replyMsg = `There are ${reactMemberListID.length} user(s) who [reacted the message](${msgUrl}) with ${reaction}: \n`;
     for (const userID of reactMemberListID) {
       if (needMention) {
         replyMsg += `<@${userID}>`;

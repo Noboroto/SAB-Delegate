@@ -18,7 +18,7 @@ export default {
     .addSubcommand(react.addCommand)
     .addSubcommand(send.addCommand)
     .addSubcommand(scheduleSend.addCommand)
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   async execute(interaction) {
     const commands = interaction.options.getSubcommand();

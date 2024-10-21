@@ -8,7 +8,7 @@ export default {
   data: new SlashCommandBuilder()
     .setName("shutdown")
     .setDescription("Shutdown the bot")
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   async execute(interaction: ChatInputCommandInteraction) {
     const botName = interaction.client.user?.username;

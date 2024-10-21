@@ -10,7 +10,7 @@ export default {
     .addSubcommand(appendList.addCommand)
     .addSubcommand(getList.addCommand)
     .addSubcommand(setChannel.addCommand)
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
   async execute(interaction) {
     const commands = interaction.options.getSubcommand();
     console.info(
