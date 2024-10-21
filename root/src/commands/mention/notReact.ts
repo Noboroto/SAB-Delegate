@@ -2,9 +2,12 @@ import {
   SlashCommandSubcommandBuilder,
   Role,
   ChatInputCommandInteraction,
-  TextChannel,
   PermissionFlagsBits,
   Channel,
+	Collection,
+	GuildMember,
+	ChannelType,
+	ThreadChannel,
 } from "discord.js";
 import { getMessageFromOption } from "../../ultils";
 
@@ -63,22 +66,45 @@ export default {
     const inputRole = interaction.options.getRole("role") as Role;
     const msgChannel = (await interaction.client.channels.fetch(
       (messageFromID.channel as Channel).id
-    )) as TextChannel;
-    let membersChannel = msgChannel.members.filter((member) => {
-      if (includeBots)
-        return member.permissions.has(PermissionFlagsBits.ViewChannel);
-      return (
-        !member.user.bot &&
-        member.permissions.has(PermissionFlagsBits.ViewChannel)
-      );
-    });
+    ));
+
+		let membersChannel: GuildMember[];
+		if (msgChannel.type == ChannelType.GuildText)
+		{
+			membersChannel = Array.from(msgChannel.members.filter((member) => {
+				if (includeBots)
+					return member.permissions.has(PermissionFlagsBits.ViewChannel);
+				return (
+					!member.user.bot &&
+					member.permissions.has(PermissionFlagsBits.ViewChannel)
+				);
+			}).values());
+		}
+		else
+		{
+			const threadMembers = await (msgChannel as ThreadChannel).members.fetch({
+				withMember : true
+			});
+			membersChannel = threadMembers.filter((member) => {
+				if (includeBots)
+					return true;
+				return (
+					!member.user.bot
+				);
+			}).map((member) => 
+			{
+				const memberData = interaction.guild.members.cache.get(member.id)
+				return memberData;
+			});
+		}
+
     if (inputRole) {
       if (onlyInChannel) {
-        membersChannel = (await interaction.guild.members.fetch()).filter(
-          (member) => member.roles.cache.has(inputRole.id)
-        );
+				membersChannel = Array.from((await interaction.guild.members.fetch()).filter(
+					(member) => member.roles.cache.has(inputRole.id)
+				).values());
       } else {
-        membersChannel = msgChannel.members.filter((member) =>
+				membersChannel = membersChannel.filter((member) =>
           member.roles.cache.has(inputRole.id)
         );
       }
@@ -111,9 +137,12 @@ export default {
         return true;
       }
     });
-    let replyMsg = `Reply to ${interaction.user}, there are ${absent.size} user(s) who didn't reacted are: \n`;
 
-    if (absent.size === 0) {
+		const msgUrl = `https://discord.com/channels/${interaction.guild.id}/${messageFromID.channel.id}/${messageFromID.id}`;
+
+		let replyMsg = `Reply to ${interaction.user}, there are ${absent.length} user(s) [who didn't reacted at message](${msgUrl}) are: \n`;
+
+    if (absent.length === 0) {
       interaction.reply({
         content: "Everyone in role reacted to the message",
         ephemeral: true,
