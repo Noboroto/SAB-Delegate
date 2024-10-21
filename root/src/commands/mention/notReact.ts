@@ -68,8 +68,13 @@ export default {
       (messageFromID.channel as Channel).id
     );
 
+    console.log(msgChannel.type);
+
     let membersChannel: GuildMember[];
-    if (msgChannel.type == ChannelType.GuildText) {
+    if (
+      msgChannel.type == ChannelType.GuildText ||
+      msgChannel.type == ChannelType.GuildAnnouncement
+    ) {
       membersChannel = Array.from(
         msgChannel.members
           .filter((member) => {
@@ -82,7 +87,11 @@ export default {
           })
           .values()
       );
-    } else {
+    } else if (
+      msgChannel.type == ChannelType.PublicThread ||
+      msgChannel.type == ChannelType.PrivateThread ||
+      msgChannel.type == ChannelType.AnnouncementThread
+    ) {
       const threadMembers = await (msgChannel as ThreadChannel).members.fetch({
         withMember: true,
       });
@@ -95,8 +104,16 @@ export default {
           const memberData = interaction.guild.members.cache.get(member.id);
           return memberData;
         });
+    } else if (
+      msgChannel.type == ChannelType.GuildVoice ||
+      msgChannel.type == ChannelType.GuildStageVoice
+    ) {
+      interaction.reply({
+        content: "This command is not supported in voice channel",
+        ephemeral: true,
+      });
+      return;
     }
-
     if (inputRole) {
       if (onlyInChannel) {
         membersChannel = Array.from(

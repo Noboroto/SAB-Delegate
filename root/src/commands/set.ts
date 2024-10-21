@@ -11,7 +11,7 @@ export default {
     .addSubcommand(birthdayChannel.addCommand)
     .addSubcommand(logChannel.addCommand)
     .setDMPermission(true)
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
   async execute(interaction) {
     const commands = interaction.options.getSubcommand();
     console.info(
