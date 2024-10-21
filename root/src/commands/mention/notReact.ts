@@ -113,6 +113,14 @@ export default {
         ephemeral: true,
       });
       return;
+    } else {
+      interaction.reply({
+        content:
+          "This command is not supported in this channel. Type value is " +
+          msgChannel.type,
+        ephemeral: true,
+      });
+      return;
     }
     if (inputRole) {
       if (onlyInChannel) {
