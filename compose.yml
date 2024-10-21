@@ -3,7 +3,6 @@ services:
     build: .
     restart: always
     volumes:
-      - ./root:/usr/src/bot
       - ./root/files:/usr/src/bot/files
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
