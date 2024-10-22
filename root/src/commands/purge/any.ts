@@ -88,7 +88,9 @@ export default {
     });
 
     const tasks = deleteMessages.map((msg) =>
-      thisChannel.messages.delete(msg.id)
+      thisChannel.messages.delete(msg.id).catch((e) => {
+				console.error(`Failed to delete message ${msg.id}`, e);
+			})
     );
     await Promise.all(tasks);
     await interaction.followUp({
