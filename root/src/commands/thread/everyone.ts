@@ -18,18 +18,6 @@ export default {
           .setDescription("message content")
           .setRequired(false)
       )
-
-      .addChannelOption((Option) =>
-        Option.setName("destination")
-          .addChannelTypes(ChannelType.GuildText)
-          .addChannelTypes(ChannelType.GuildAnnouncement)
-          .addChannelTypes(ChannelType.AnnouncementThread)
-          .addChannelTypes(ChannelType.PublicThread)
-          .addChannelTypes(ChannelType.PrivateThread)
-          .setDescription("destination channel")
-          .setRequired(false)
-      )
-
       .addStringOption((Option) =>
         Option.setName("reply-message")
           .setDescription("reply message link")
@@ -50,7 +38,7 @@ export default {
       return;
     }
     const response =
-      "@everyone\n" + (interaction.options.getString("content") || "");
+      `${interaction.user} mentioned @everyone\n` + (interaction.options.getString("content") || "");
     const messageFromID = await getMessageFromOption(
       interaction,
       "reply-message"
