@@ -5,17 +5,14 @@ import {
 } from "discord.js";
 import { getMessageFromOption } from "../../ultils";
 
-let commandName = "thread-everyone";
+const commandName = "everyone";
 
 export default {
-  name: () => commandName,
-  changeName(newName: string) {
-    commandName = newName;
-  },
+  name: commandName,
   addCommand(builder: SlashCommandSubcommandBuilder) {
     return builder
       .setName(commandName)
-      .setDescription("Send a messsage to this thread")
+      .setDescription("Send a messsage to current THREAD with @everyone")
       .addStringOption((Option) =>
         Option.setName("content")
           .setDescription("message content")

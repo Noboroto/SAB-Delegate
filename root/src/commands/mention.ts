@@ -3,8 +3,6 @@ import byAReaction from "./mention/byAReaction";
 import notReact from "./mention/notReact";
 import thread_everyone from "./thread/everyone";
 
-thread_everyone.changeName("thread-everyone");
-
 export default {
   data: new SlashCommandBuilder()
     .setName("mention")
@@ -18,7 +16,7 @@ export default {
       `[${interaction.client.user?.username}][Subcommad] ${interaction.user.username} - ${commands}`
     );
     switch (commands) {
-      case thread_everyone.name():
+      case thread_everyone.name:
         thread_everyone.execute(interaction);
         break;
       case byAReaction.name:
@@ -28,6 +26,7 @@ export default {
         notReact.execute(interaction);
         break;
       default:
+        console.error("Invalid subcommand");
         interaction.reply({
           content: `Invalid subcommand ${commands}`,
           ephemeral: true,

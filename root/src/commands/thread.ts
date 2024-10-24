@@ -4,8 +4,6 @@ import editPrefix from "./thread/editPrefix";
 import create from "./thread/create";
 import everyone from "./thread/everyone";
 
-everyone.changeName("mention-everyone");
-
 export default {
   data: new SlashCommandBuilder()
     .setName("thread")
@@ -21,7 +19,7 @@ export default {
       `[${interaction.client.user?.username}][Subcommad] ${interaction.user.username} - ${commands}`
     );
     switch (commands) {
-      case everyone.name():
+      case everyone.name:
         everyone.execute(interaction);
         break;
       case editPrefix.name:
