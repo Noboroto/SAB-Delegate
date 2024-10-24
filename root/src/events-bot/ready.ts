@@ -66,7 +66,9 @@ export default {
     console.info(`Ready! Logged in as ${client.user?.username}`);
     birthdaySetup(client);
 
-    return;
+    if (!process.env.CREATE_CMD || process.env.CREATE_CMD == "0") {
+      return;
+    }
     await client.application.commands
       .set([])
       .then(() =>

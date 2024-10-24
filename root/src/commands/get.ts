@@ -16,7 +16,7 @@ export default {
   async execute(interaction) {
     const commands = interaction.options.getSubcommand();
     console.info(
-      `[[${interaction.client.user?.username}][Subcommad] ${interaction.user.username} - ${commands}`
+      `[${interaction.client.user?.username}][Subcommad] ${interaction.user.username} - ${commands}`
     );
     switch (commands) {
       case intro.name:
