@@ -4,7 +4,6 @@ import {
   ChatInputCommandInteraction,
   PermissionFlagsBits,
   Channel,
-  Collection,
   GuildMember,
   ChannelType,
   ThreadChannel,

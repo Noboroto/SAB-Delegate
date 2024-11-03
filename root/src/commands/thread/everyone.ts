@@ -38,7 +38,8 @@ export default {
       return;
     }
     const response =
-      `${interaction.user} mentioned @everyone\n` + (interaction.options.getString("content") || "");
+      `${interaction.user} mentioned @everyone\n` +
+      (interaction.options.getString("content") || "");
     const messageFromID = await getMessageFromOption(
       interaction,
       "reply-message"

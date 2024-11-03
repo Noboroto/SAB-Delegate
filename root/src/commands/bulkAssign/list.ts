@@ -50,16 +50,29 @@ export default {
 
     let counter = 0;
 
-    await unique_ids.forEach(async (id) => {
+    for (const id of unique_ids) {
       const member = await members.get(id);
       if (!member) return;
       counter++;
-      if (!isRemove) await member.roles.add(role);
-      else await member.roles.remove(role);
-    });
+      try {
+        if (!isRemove) {
+          await member.roles.add(role);
+        } else {
+          await member.roles.remove(role);
+        }
+      } catch (error) {
+        console.error(
+          `Error modifying role to ${member.user.username}: ${error}`
+        );
+        await interaction.editReply(
+          `Completed ${counter} members(s)!\nError modifying role to ${member.user.username}: ${error}`
+        );
+        return;
+      }
+    }
 
     const message = {
-      content: `Done ${counter} member(s)!`,
+      content: `Done modifying ${counter} member(s)!`,
     };
 
     await interaction.editReply(message);
