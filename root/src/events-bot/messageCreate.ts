@@ -38,7 +38,9 @@ const reactToMessage = (message: Message) => {
       });
     }
   }
-  emojisStr.forEach((emoji: string) => {
+  emojisStr.forEach((str: string) => {
+    const emoji =
+      message.guild?.emojis.cache.find((emo) => emo.name === str) ?? str;
     message.react(emoji);
   });
 };
