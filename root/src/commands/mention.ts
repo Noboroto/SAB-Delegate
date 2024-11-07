@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import byAReaction from "./mention/byAReaction";
 import notReact from "./mention/notReact";
 import thread_everyone from "./thread/everyone";
@@ -9,7 +9,8 @@ export default {
     .setDescription("Mention many members by condition")
     .addSubcommand(byAReaction.addCommand)
     .addSubcommand(notReact.addCommand)
-    .addSubcommand(thread_everyone.addCommand),
+    .addSubcommand(thread_everyone.addCommand)
+    .setDefaultMemberPermissions(PermissionFlagsBits.UseApplicationCommands),
   async execute(interaction) {
     const commands = interaction.options.getSubcommand();
     console.info(
