@@ -1,19 +1,36 @@
-FROM node:18-alpine3.20
-
-# Create app directory
-RUN mkdir -p /usr/src/bot
+# Build stage
+FROM node:18-alpine3.20 AS builder
 WORKDIR /usr/src/bot
 
-# Install app dependencies
-# A wildcard is used to ensure both package.json AND package-lock.json are copied
-# where available (npm@5+)
-COPY ./root/package*.json ./
+# Copy package files first for better caching
+COPY ./root/package.json ./root/yarn.lock ./
+
+# Install dependencies
+RUN yarn install --frozen-lockfile --production=false --network-timeout 100000
+
+# Copy source code
 COPY ./root ./
 
-RUN yarn --production --network-timeout 100000
-# If you are building your code for production
-# RUN npm --omit=dev
+# Build if needed (uncomment if you have a build step)
+# RUN yarn build
 
-# Bundle app source
-# CMD ["ls", "-la"]
-CMD [ "yarn", "start" ] 
+# Production stage
+FROM node:18-alpine3.20
+WORKDIR /usr/src/bot
+
+# Add non-root user for security
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+# Copy only production dependencies and built files
+COPY --from=builder /usr/src/bot/node_modules ./node_modules
+COPY --from=builder /usr/src/bot/dist ./dist
+COPY --from=builder /usr/src/bot/package.json ./
+
+# Set production environment
+ENV NODE_ENV=production
+
+# Use non-root user
+USER appuser
+
+# Start the application
+CMD ["yarn", "start"]
