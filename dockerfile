@@ -8,9 +8,6 @@ COPY ./root/package.json ./root/yarn.lock ./
 # Install dependencies
 RUN yarn install --frozen-lockfile --production=false --network-timeout 100000
 
-# Copy source code
-COPY ./root ./
-
 # Build if needed (uncomment if you have a build step)
 # RUN yarn build
 
@@ -23,7 +20,7 @@ RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 # Copy only production dependencies and built files
 COPY --from=builder /usr/src/bot/node_modules ./node_modules
-COPY --from=builder /usr/src/bot/dist ./dist
+COPY ./root .
 COPY --from=builder /usr/src/bot/package.json ./
 
 # Set production environment
