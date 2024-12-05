@@ -3,7 +3,7 @@ services:
     build: .
     restart: always
     volumes:
-      - ./root/files:/usr/src/bot/files:rw
+      - ./root/files:/usr/files
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
     deploy:
@@ -15,4 +15,9 @@ services:
           cpus: '0.25'
           memory: 256M
     environment:
+      - NOTE_DB_PATH=/usr/files/note.sqlite
+      - WORD_DB_PATH=/usr/files/word.sqlite
+      - DICT_DB_PATH=/usr/files/dict.sqlite
+      - CONFIG_DB_PATH=/usr/files/config.sqlite
+      - BIRTHDAY_DB_PATH=/usr/files/birthday.sqlite
       - TOKENS=
