@@ -25,6 +25,7 @@ COPY --from=builder /usr/src/bot/package.json ./
 
 # Set production environment
 ENV NODE_ENV=production
+RUN chmod -R 777 /usr/src/bot
 
 # Use non-root user
 USER appuser
