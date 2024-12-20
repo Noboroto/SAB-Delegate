@@ -3,7 +3,7 @@ services:
     build: .
     restart: always
     volumes:
-      - ./root/files:/usr/files
+      - ./root/files:/usr/files:rw
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
     deploy:
