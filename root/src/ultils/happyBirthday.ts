@@ -2,7 +2,7 @@ import { birthdayDb } from "./db";
 import * as fs from "fs";
 
 export const resetWishes = async (guid: string) => {
-  const wisthesPath = "./files/birthday.json";
+  const wisthesPath = "./constants/birthday.json";
   const wishes: [] = JSON.parse(fs.readFileSync(wisthesPath, "utf8"));
   await birthdayDb.set(`${guid}.count`, wishes.length);
   await birthdayDb.set(`max`, wishes.length);

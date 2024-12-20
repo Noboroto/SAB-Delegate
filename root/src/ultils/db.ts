@@ -8,7 +8,7 @@ const configDbPath = process.env.CONFIG_DB_PATH || "./files/config.sqlite";
 const birthdayDbPath =
   process.env.BIRTHDAY_DB_PATH || "./files/birthday.sqlite";
 
-const dictTemplate = "./files/word-dict.json";
+const dictTemplate = "./constants/word-dict.json";
 
 export const noteDb = new QuickDB({ filePath: noteDbPath });
 export const wordDb = new QuickDB({ filePath: wordDbPath });

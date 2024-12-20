@@ -1,7 +1,7 @@
 import { Events, Message } from "discord.js";
 import fs from "fs";
 
-const reactionDictPath = "./files/reactionsDict.json";
+const reactionDictPath = "./constants/reactionsDict.json";
 const reactionsDict = JSON.parse(fs.readFileSync(reactionDictPath, "utf8"));
 
 const extractReactEmojis = (text: string) => {

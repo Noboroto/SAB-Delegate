@@ -2,7 +2,7 @@ import { Events, Message } from "discord.js";
 import { errNotice, successNotice, wordGame } from "../ultils";
 import fs from "fs";
 
-const reactionDictPath = "./files/reactionsDict.json";
+const reactionDictPath = "./constants/reactionsDict.json";
 if (!fs.existsSync(reactionDictPath)) {
   fs.writeFileSync(
     reactionDictPath,

@@ -6,7 +6,7 @@ import scheduler from "node-schedule";
 
 const birthdayTask = async (client: Client) => {
   const keys = await happyBirthday.getServerIDs();
-  const wisthesPath = "./files/birthday.json";
+  const wisthesPath = "./constants/birthday.json";
   const wishes: string[] = JSON.parse(fs.readFileSync(wisthesPath, "utf8"));
   await happyBirthday.setMaxWishes(wishes.length);
 
