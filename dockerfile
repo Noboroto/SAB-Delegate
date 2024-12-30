@@ -26,11 +26,6 @@ COPY --from=builder /usr/src/bot/package.json ./
 # Set production environment
 ENV NODE_ENV=production
 RUN chmod -R 777 /usr/src/bot
-COPY ./files /usr/files
-RUN chmod -R 777 /usr/files
-
-# Use non-root user
-USER appuser
 
 # Start the application
 CMD ["yarn", "start"]
