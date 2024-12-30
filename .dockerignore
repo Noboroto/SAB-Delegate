@@ -5,5 +5,4 @@ yarn-error.log
 .git
 .env
 .DS_Store
-constants
 files
