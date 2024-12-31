@@ -55,7 +55,9 @@ export default {
         .trimEnd()
         .trimStart() ?? "unknown";
 
-    const msg = `${interaction.user} created this thread.\n\n${interaction.options.getString("message")}`;
+    const msg = `${
+      interaction.user
+    } created this thread.\n\n${interaction.options.getString("message")}`;
     const isPrivate =
       (interaction.options.getBoolean("is-private") ?? false) &&
       (targetChannel as GuildChannel).type !== ChannelType.GuildForum;
