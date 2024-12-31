@@ -4,7 +4,6 @@ import events from "./events-bot/index";
 import * as dotenv from "dotenv";
 
 // Create a new client instance
-
 if (!process.env.TOKENS) {
   dotenv.config();
 }

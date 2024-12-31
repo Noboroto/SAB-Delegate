@@ -48,15 +48,15 @@ const birthdayTask = async (client: Client) => {
 
         console.log(`Birthday for guild ${guild.name}`);
         const channelObj = (await guild.channels.fetch(channel)) as TextChannel;
-				console.info(`Today has total ${birthdayUser.length} birthday user`);
-				console.info(`Send to channel ${channelObj.name}`);
+        console.info(`Today has total ${birthdayUser.length} birthday user`);
+        console.info(`Send to channel ${channelObj.name}`);
         for (const user of birthdayUser) {
           const msgID = Number(await happyBirthday.getWishID(guildId));
           const msg = wishes[msgID].replaceAll(
             "${name}",
             `<@${user.discordId}>`
           );
-					console.info(`Send wish to ${user.name} with id ${user.discordId}`);
+          console.info(`Send wish to ${user.name} with id ${user.discordId}`);
           await channelObj.send(msg);
         }
         await happyBirthday.setIsCompleteDate(
@@ -90,7 +90,7 @@ export default {
     await birthdayTask(client);
 
     if (!process.env.CREATE_CMD || process.env.CREATE_CMD == "0") {
-			console.info("Production Mode")
+      console.info("Production Mode");
       return;
     }
     await client.application.commands

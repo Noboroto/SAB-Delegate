@@ -103,16 +103,16 @@ export const getWishID = async (guid: string): Promise<String> => {
   const guildObj = await birthdayDb.get(guid);
 
   if (guildObj === undefined || guildObj === null) {
-		console.info("Reset wishes because guildObj is null");
+    console.info("Reset wishes because guildObj is null");
     await resetWishes(guid);
   }
   if ((await birthdayDb.get(`${guid}.count`)) === 0) {
-		console.info("Reset wishes because count is 0");
+    console.info("Reset wishes because count is 0");
     await resetWishes(guid);
   }
   let maxMsg = await birthdayDb.get(`max`);
   if (maxMsg === null || maxMsg === undefined || maxMsg === 0) {
-		console.info("Reset wishes because maxMsg is 0");
+    console.info("Reset wishes because maxMsg is 0");
     await resetWishes(guid);
     maxMsg = await birthdayDb.get(`max`);
   }
@@ -120,6 +120,9 @@ export const getWishID = async (guid: string): Promise<String> => {
   do {
     const randID = Math.floor(Math.random() * (await birthdayDb.get(`max`)));
     const canWish = await birthdayDb.get(`${guid}.wishes.${randID}`);
+    if (canWish == undefined) {
+      await resetWishes(guid);
+    }
     if (canWish && randID.toString() !== "NaN") {
       await birthdayDb.set(`${guid}.wishes.${randID}`, false);
       await birthdayDb.sub(`${guid}.count`, 1);

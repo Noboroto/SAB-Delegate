@@ -1,5 +1,11 @@
 import { QuickDB } from "quick.db";
 import { readFileSync } from "fs";
+import dotenv from "dotenv";
+
+// Create a new client instance
+if (!process.env.TOKENS) {
+  dotenv.config();
+}
 
 const noteDbPath = process.env.NOTE_DB_PATH || "./files/note.sqlite";
 const wordDbPath = process.env.WORD_DB_PATH || "./files/word.sqlite";
