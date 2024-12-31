@@ -90,6 +90,7 @@ export default {
     await birthdayTask(client);
 
     if (!process.env.CREATE_CMD || process.env.CREATE_CMD == "0") {
+			console.info("Production Mode")
       return;
     }
     await client.application.commands
