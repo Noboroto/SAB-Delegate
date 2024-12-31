@@ -1,6 +1,15 @@
 import { birthdayDb } from "./db";
 import * as fs from "fs";
 
+export const setIsCompleteDate = async (guid: string, month: number, day: number, status: Boolean = true ) => {
+	birthdayDb.set(`${guid}.data.${month}.${day}.isCompleted`, status);
+}
+
+export const getIsCompleteDate = async (guid: string, month: number, day: number) => {
+	const data = await birthdayDb.get(`${guid}.data.${month}.${day}.isCompleted`);
+	return data;
+}
+
 export const resetWishes = async (guid: string) => {
   const wisthesPath = "./constants/birthday.json";
   const wishes: [] = JSON.parse(fs.readFileSync(wisthesPath, "utf8"));

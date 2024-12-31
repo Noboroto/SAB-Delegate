@@ -22,6 +22,15 @@ const birthdayTask = async (client: Client) => {
         }
         const currMonth = new Date().getMonth() + 1;
         const currDay = new Date().getDate();
+
+				console.log(`Current date: ${currMonth}/${currDay}`);
+				const isComplete = await happyBirthday.getIsCompleteDate(guildId, currMonth, currDay);
+
+				if (isComplete) {
+					console.info(`Birthday for guild ${guild.name} is already complete`);
+					return;
+				}
+
         const birthdayUser = await happyBirthday.getDateList(
           guildId,
           currMonth,
@@ -43,6 +52,7 @@ const birthdayTask = async (client: Client) => {
           );
           await channelObj.send(msg);
         }
+				await happyBirthday.setIsCompleteDate(guildId, currMonth, currDay, true);
       })
       .catch((error) => {
         console.error(`Error fetching guild ${guildId}\n${error}`);
@@ -65,6 +75,7 @@ export default {
     const client = args[0];
     console.info(`Ready! Logged in as ${client.user?.username}`);
     birthdaySetup(client);
+		await birthdayTask(client);
 
     if (!process.env.CREATE_CMD || process.env.CREATE_CMD == "0") {
       return;
