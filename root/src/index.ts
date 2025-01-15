@@ -49,12 +49,15 @@ for (const event of events) {
 
         if (!channel) return;
 
-        channel.send({
-          content: `Error executing ${event.name}`,
-        });
-        channel.send({
-          content: "```json\n" + JSON.stringify(error, null, 4) + "\n```",
-        });
+        channel
+          .send({
+            content: `Error executing ${event.name}`,
+          })
+          .then(() =>
+            channel.send({
+              content: "```json\n" + JSON.stringify(error, null, 4) + "\n```",
+            })
+          );
 
         console.error(`Error executing ${event.name}`);
         console.error(error);

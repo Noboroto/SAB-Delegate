@@ -6,7 +6,7 @@ import {
   PermissionsBitField,
 } from "discord.js";
 
-const denyEveryone = [
+const rejectEveryone = [
   PermissionFlagsBits.ViewChannel,
   PermissionFlagsBits.CreatePrivateThreads,
   PermissionFlagsBits.SendMessages,
@@ -90,6 +90,26 @@ export default {
 
     await interaction.deferReply();
 
+    const technicianRole =
+      interaction.guild?.roles.cache.find((role) =>
+        role.name.toLocaleLowerCase().startsWith("technician")
+      ) ??
+      (await interaction.guild.roles
+        .fetch()
+        .then((roles) =>
+          roles.find((role) =>
+            role.name.toLocaleLowerCase().startsWith("technician")
+          )
+        )) ??
+      undefined;
+
+    const mutedRole =
+      interaction.guild?.roles.cache.find((role) => role.name === "Muted") ??
+      (await interaction.guild.roles
+        .fetch()
+        .then((roles) => roles.find((role) => role.name === "Muted"))) ??
+      undefined;
+
     const createdRole = await interaction.guild?.roles.create({
       name: name + "-Event",
     });
@@ -104,6 +124,42 @@ export default {
 
     const channelName = (emoji + "┃" + name).toLowerCase().replace(" ", "-");
 
+    let perrmissionArr: {
+      id: string;
+      allow?: PermissionsBitField | bigint | bigint[] | undefined;
+      deny?: PermissionsBitField | bigint | bigint[] | undefined;
+    }[] = [
+      {
+        id: technicianRole?.id ?? "",
+        allow: PermissionsBitField.All,
+      },
+      {
+        id: interaction.guild?.roles.everyone?.id ?? "",
+        deny: rejectEveryone,
+      },
+      {
+        id: createdRole?.id ?? "",
+        allow: textPermissions,
+      },
+      {
+        id: createMultiRole?.id ?? "",
+        allow: textPermissions,
+      },
+      {
+        id: createMCRole?.id ?? "",
+        allow: textPermissions,
+      },
+      {
+        id: mutedRole?.id ?? "",
+        allow: muteTextPermissions,
+        deny: willBeMutePermit,
+      },
+    ];
+
+    let validPermission = perrmissionArr.filter(
+      (permission) => permission.id !== ""
+    );
+
     const createdGeneralChannel = await interaction.guild?.channels.create({
       name: channelName + "-general",
       parent: "1046973611199697022",
@@ -113,39 +169,40 @@ export default {
         " with short name " +
         `"${shortName}"`,
       type: ChannelType.GuildText,
-      permissionOverwrites: [
-        {
-          id:
-            interaction.guild?.roles.cache.find(
-              (role) => role.name === "Technician"
-            ).id ?? "",
-          allow: PermissionsBitField.All,
-        },
-        {
-          id: interaction.guild?.roles.everyone.id ?? "",
-          deny: denyEveryone,
-        },
-        {
-          id: createdRole?.id ?? "",
-          allow: textPermissions,
-        },
-        {
-          id: createMultiRole?.id ?? "",
-          allow: textPermissions,
-        },
-        {
-          id: createMCRole?.id ?? "",
-          allow: textPermissions,
-        },
-        {
-          id:
-            interaction.guild?.roles.cache.find((role) => role.name === "Muted")
-              .id ?? "",
-          allow: muteTextPermissions,
-          deny: willBeMutePermit,
-        },
-      ],
+      permissionOverwrites: validPermission,
     });
+
+    perrmissionArr = [
+      {
+        id: technicianRole?.id ?? "",
+        allow: PermissionsBitField.All,
+      },
+      {
+        id: interaction.guild?.roles.everyone.id ?? "",
+        deny: rejectEveryone,
+      },
+      {
+        id: createdRole?.id ?? "",
+        allow: threadOnlyPermissions,
+      },
+      {
+        id: createMultiRole?.id ?? "",
+        allow: threadOnlyPermissions,
+      },
+      {
+        id: createMCRole?.id ?? "",
+        allow: threadOnlyPermissions,
+      },
+      {
+        id: mutedRole?.id ?? "",
+        allow: muteTextPermissions,
+        deny: willBeMutePermit,
+      },
+    ];
+
+    validPermission = perrmissionArr.filter(
+      (permission) => permission.id !== ""
+    );
 
     const createdThreadOnlyChannel = await interaction.guild?.channels.create({
       name: channelName + "-thread-only",
@@ -156,77 +213,47 @@ export default {
         `"${shortName}"`,
       parent: "1046973611199697022",
       type: ChannelType.GuildText,
-      permissionOverwrites: [
-        {
-          id:
-            interaction.guild?.roles.cache.find(
-              (role) => role.name === "Technician"
-            ).id ?? "",
-          allow: PermissionsBitField.All,
-        },
-        {
-          id: interaction.guild?.roles.everyone.id ?? "",
-          deny: denyEveryone,
-        },
-        {
-          id: createdRole?.id ?? "",
-          allow: threadOnlyPermissions,
-        },
-        {
-          id: createMultiRole?.id ?? "",
-          allow: threadOnlyPermissions,
-        },
-        {
-          id: createMCRole?.id ?? "",
-          allow: threadOnlyPermissions,
-        },
-        {
-          id:
-            interaction.guild?.roles.cache.find((role) => role.name === "Muted")
-              .id ?? "",
-          allow: muteTextPermissions,
-          deny: willBeMutePermit,
-        },
-      ],
+      permissionOverwrites: validPermission,
     });
+
+    perrmissionArr = [
+      {
+        id: technicianRole?.id ?? "",
+        allow: PermissionsBitField.All,
+      },
+      {
+        id: interaction.guild?.roles.everyone.id ?? "",
+        deny: rejectEveryone,
+      },
+      {
+        id: createdRole?.id ?? "",
+        allow: voicePermissions,
+      },
+      {
+        id: createMultiRole?.id ?? "",
+        allow: voicePermissions,
+      },
+      {
+        id: createMCRole?.id ?? "",
+        allow: voicePermissions,
+      },
+      {
+        id: mutedRole?.id ?? "",
+        allow: muteVoicePermissions,
+        deny: willBeMutePermit,
+      },
+    ];
+
+    validPermission = perrmissionArr.filter(
+      (permission) => permission.id !== ""
+    );
 
     const createdVoiceChannel = await interaction.guild?.channels.create({
       name: emoji + "┃" + name + " voice",
       parent: "1046973611199697022",
       type: ChannelType.GuildVoice,
       userLimit: 99,
-      permissionOverwrites: [
-        {
-          id:
-            interaction.guild?.roles.cache.find(
-              (role) => role.name === "Technician"
-            ).id ?? "",
-          allow: PermissionsBitField.All,
-        },
-        {
-          id: interaction.guild?.roles.everyone.id ?? "",
-          deny: denyEveryone,
-        },
-        {
-          id: createdRole?.id ?? "",
-          allow: voicePermissions,
-        },
-        {
-          id: createMultiRole?.id ?? "",
-          allow: voicePermissions,
-        },
-        {
-          id: createMCRole?.id ?? "",
-          allow: voicePermissions,
-        },
-        {
-          id:
-            interaction.guild?.roles.cache.find((role) => role.name === "Muted")
-              .id ?? "",
-          allow: muteVoicePermissions,
-          deny: willBeMutePermit,
-        },
-      ],
+      permissionOverwrites: validPermission,
     });
 
     await interaction.editReply(
