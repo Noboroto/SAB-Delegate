@@ -15,6 +15,28 @@ const birthdayTask = async (client: Client) => {
     await client.guilds
       .fetch(guildId)
       .then(async (guild) => {
+        const currMonth = new Date().getMonth() + 1;
+        const currDay = new Date().getDate();
+        const currYear = new Date().getFullYear();
+
+        console.log(`Current date: ${currDay}/${currMonth}/${currYear}`);
+        const isComplete = await happyBirthday
+          .getIsCompleteDate(guild.id, currMonth, currDay)
+          .then((value) => {
+            console.info(
+              `Birthday for guild ${guild.name} is complete: ${value}`
+            );
+            return value;
+          });
+
+        if (isComplete) {
+          return Promise.reject(
+            `Birthday for guild ${guild.name} is already complete`
+          );
+        }
+        return guild;
+      })
+      .then(async (guild) => {
         const channel = await happyBirthday.getChannel(guildId);
         if (channel === "") {
           console.info(`No birthday channel set for guild ${guild.name}`);
@@ -60,12 +82,11 @@ const birthdayTask = async (client: Client) => {
           console.info(`Send wish to ${user.name} with id ${user.discordId}`);
           await channelObj.send(msg);
         }
-        await happyBirthday.setIsCompleteDate(
-          guildId,
-          currMonth,
-          currDay,
-          true
-        );
+        await happyBirthday
+          .setIsCompleteDate(guildId, currMonth, currDay, true)
+          .then(() =>
+            console.info(`Set birthday complete for guild ${guild.name}`)
+          );
       })
       .catch((error) => {
         console.error(`Error fetching guild ${guildId}\n${error}`);
