@@ -88,17 +88,15 @@ export default {
     const guild = await interaction.guild.fetch();
     const members = await guild.members.cache;
 
-    let counter = 0;
-
-    await unique_ids.forEach(async (id) => {
+    const tasks = unique_ids.map(async (id) => {
       const member = await members.get(id);
-      if (!member) return;
-      counter++;
+      if (!member) return Promise.reject(`Member ${id} not found`);
       const latestThread = await targetChannel.threads.create({
         type: ChannelType.PrivateThread,
         name: `${prefix}-${member.user.username}`,
         autoArchiveDuration: 10080,
         reason: `Create thread for ${prefix}`,
+        invitable: false,
       });
       await latestThread.members.add(member);
       await latestThread.members.add(interaction.user);
@@ -107,10 +105,25 @@ export default {
       });
     });
 
-    const message = {
-      content: `Done ${counter} thread(s)!`,
-    };
+    await Promise.allSettled(tasks).then(async (results) => {
+      const completed = results.filter(
+        (result) => result.status === "fulfilled"
+      );
+      const total = results.length;
+      const errorMsg =
+        completed.length === total
+          ? ""
+          : "Errors: " +
+            results
+              .filter((result) => result.status === "rejected")
+              .map((result) => result.reason)
+              .join(", ");
+      const message = {
+        content: `Done ${completed}/${total} thread(s)!${errorMsg}`,
+      };
 
-    await interaction.editReply(message);
+      console.info(message.content);
+      await interaction.editReply(message);
+    });
   },
 };
