@@ -1,5 +1,5 @@
 import { QuickDB } from "quick.db";
-import { readFileSync } from "fs";
+import { readFileSync, existsSync, mkdirSync } from "fs";
 import dotenv from "dotenv";
 
 // Create a new client instance
@@ -15,6 +15,10 @@ const birthdayDbPath =
   process.env.BIRTHDAY_DB_PATH || "./files/birthday.sqlite";
 
 const dictTemplate = "./constants/word-dict.json";
+
+if (!existsSync("./files")) {
+  mkdirSync("./files", { recursive: true });
+}
 
 export const noteDb = new QuickDB({ filePath: noteDbPath });
 export const wordDb = new QuickDB({ filePath: wordDbPath });
