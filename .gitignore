@@ -82,3 +82,4 @@ configValues.ts
 root/files/notes.json
 root/files/words_dictionary.json
 **/**.sqlite
+root/yarn.lock
