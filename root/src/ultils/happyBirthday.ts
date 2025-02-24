@@ -7,7 +7,7 @@ export const setIsCompleteDate = async (
   day: number,
   status: Boolean = true
 ) => {
-  birthdayDb.set(`${guid}.isCompleted.${month}.${day}.isCompleted`, status);
+  await birthdayDb.set(`${guid}.isCompleted.${month}.${day}`, status);
 };
 
 export const getIsCompleteDate = async (
