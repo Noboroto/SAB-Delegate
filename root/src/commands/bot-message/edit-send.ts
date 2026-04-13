@@ -30,13 +30,21 @@ export default {
       interaction,
       "old-bot-message-link"
     );
+
+    if (!botMessageFromID) {
+      await interaction.editReply({
+        content: "Message not found!",
+      });
+      return;
+    }
+
     const response = interaction.options.getString("new-content");
 
     const message = {
       content: response,
     };
 
-    botMessageFromID.edit(message);
+    await botMessageFromID.edit(message);
 
     await interaction.editReply({
       content: "Done!",

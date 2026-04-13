@@ -52,9 +52,8 @@ export default {
     const fromChannel = fromMessage?.channel as TextChannel;
     const untilChannel = untilMessage?.channel as TextChannel;
     if (fromChannel && untilChannel && fromChannel.id !== untilChannel.id) {
-      interaction.reply({
+      await interaction.editReply({
         content: "Messages must be in the same channel",
-        ephemeral: true,
       });
       return;
     }

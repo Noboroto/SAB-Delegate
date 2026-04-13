@@ -23,7 +23,7 @@ export default {
     await interaction.deferReply({ ephemeral: true });
     const file = interaction.options.getAttachment("file");
     // check if file is csv
-    if (!file.contentType.includes("csv")) {
+    if (!file.contentType?.includes("csv")) {
       interaction.editReply("File must be a csv");
       return;
     }

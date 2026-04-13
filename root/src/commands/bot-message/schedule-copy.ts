@@ -112,7 +112,7 @@ export default {
       hour: "2-digit",
       minute: "2-digit",
     });
-    const scheduleTimeStr = scheduleTime.toLocaleString("en-VN", {
+    const scheduleTimeStr = scheduleTime.toLocaleString("vi-VN", {
       timeZone: "Asia/Ho_Chi_Minh",
       day: "2-digit",
       month: "numeric",

@@ -93,6 +93,6 @@ export default {
     const message = args[0] as Message;
 
     reactToMessage(message);
-    handleWordGame(message);
+    await handleWordGame(message);
   },
 };

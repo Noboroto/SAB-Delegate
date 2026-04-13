@@ -62,20 +62,25 @@ export default {
       (interaction.options.getBoolean("is-private") ?? false) &&
       (targetChannel as GuildChannel).type !== ChannelType.GuildForum;
 
-    const latestThread = await targetChannel.threads.create({
-      type: isPrivate ? ChannelType.PrivateThread : ChannelType.PublicThread,
-      name: `${name}`,
-      autoArchiveDuration: 10080,
-      reason: `Create thread by ${interaction.user.username}`,
-      message: {
-        content: `${msg}`,
-      },
-    });
-
-    if (targetChannel instanceof TextChannel) {
+    if ((targetChannel as any).type === ChannelType.GuildForum) {
+      const latestThread = await (targetChannel as ForumChannel).threads.create({
+        name: `${name}`,
+        autoArchiveDuration: 10080,
+        reason: `Create thread by ${interaction.user.username}`,
+        message: {
+          content: `${msg}`,
+        },
+      });
+      await interaction.editReply(`Created thread ${latestThread}`);
+    } else {
+      const latestThread = await (targetChannel as TextChannel).threads.create({
+        type: isPrivate ? ChannelType.PrivateThread : ChannelType.PublicThread,
+        name: `${name}`,
+        autoArchiveDuration: 10080,
+        reason: `Create thread by ${interaction.user.username}`,
+      });
       await latestThread.send(`${msg}`);
+      await interaction.editReply(`Created thread ${latestThread}`);
     }
-
-    await interaction.editReply(`Created thread ${latestThread}`);
   },
 };

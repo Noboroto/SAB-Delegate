@@ -62,6 +62,14 @@ export default {
       "message-link"
     );
 
+    if (!messageFromID) {
+      interaction.reply({
+        content: "Please provide a valid message link",
+        ephemeral: true,
+      });
+      return;
+    }
+
     const inputRole = interaction.options.getRole("role") as Role;
     const msgChannel = await interaction.client.channels.fetch(
       (messageFromID.channel as Channel).id
@@ -100,9 +108,9 @@ export default {
           return !member.user.bot;
         })
         .map((member) => {
-          const memberData = interaction.guild.members.cache.get(member.id);
-          return memberData;
-        });
+          return interaction.guild.members.cache.get(member.id);
+        })
+        .filter((member): member is GuildMember => member !== undefined);
     } else if (
       msgChannel.type == ChannelType.GuildVoice ||
       msgChannel.type == ChannelType.GuildStageVoice
@@ -122,7 +130,7 @@ export default {
       return;
     }
     if (inputRole) {
-      if (onlyInChannel) {
+      if (onlyInChannel === false) {
         membersChannel = Array.from(
           (await interaction.guild.members.fetch())
             .filter((member) => member.roles.cache.has(inputRole.id))
@@ -133,13 +141,6 @@ export default {
           member.roles.cache.has(inputRole.id)
         );
       }
-    }
-
-    if (!messageFromID) {
-      await interaction.editReply({
-        content: "Please provide a valid message link",
-      });
-      return;
     }
 
     const reactMemberListID: string[] = [];

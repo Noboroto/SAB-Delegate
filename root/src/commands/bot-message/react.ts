@@ -46,6 +46,13 @@ export default {
       "message-link"
     );
 
+    if (!messageFromID) {
+      interaction.editReply({
+        content: "Message not found!",
+      });
+      return;
+    }
+
     await messageFromID.react(reaction);
 
     for (let i = 0; i < pollChoiceCount; i++) {

@@ -38,11 +38,16 @@ export default {
         await interaction.followUp(`## Month ${m}:\n ${monthList}`);
       } else {
         const monthListArr = monthList.split("###");
+        let msg = `## Month ${m} - partial\n`;
         for (let idx = 0; idx < monthListArr.length; idx++) {
-          let msg = `## Month ${m} - partial\n###` + monthListArr[idx];
-          while (msg.length < limit) {
-            msg += "###" + monthListArr[++idx];
+          const part = "###" + monthListArr[idx];
+          if (msg.length + part.length > limit && msg.length > 0) {
+            await interaction.followUp(msg);
+            msg = `## Month ${m} - partial\n`;
           }
+          msg += part;
+        }
+        if (msg.length > 0) {
           await interaction.followUp(msg);
         }
       }

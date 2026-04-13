@@ -35,7 +35,14 @@ export default {
       "new-message-link"
     );
 
-    const attachments = await newMessageFromID.attachments.values();
+    if (!botMessageFromID || !newMessageFromID) {
+      await interaction.editReply({
+        content: "Message not found!",
+      });
+      return;
+    }
+
+    const attachments = newMessageFromID.attachments.values();
     const message = {
       content: newMessageFromID.content,
       files: [],

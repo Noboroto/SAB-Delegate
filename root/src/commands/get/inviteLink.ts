@@ -25,7 +25,7 @@ export default {
       );
   },
   async execute(interaction: ChatInputCommandInteraction) {
-    const targetChannel = (interaction.options.getChannel("destination") ??
+    const targetChannel = (interaction.options.getChannel("channel") ??
       interaction.channel) as TextChannel;
     const invite = await targetChannel.createInvite({
       maxAge: 0,

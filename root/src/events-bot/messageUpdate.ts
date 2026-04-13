@@ -43,6 +43,7 @@ export default {
   once: false,
   async execute(args: Message[]) {
     const message = args[1] as Message;
+    if (!message?.content) return;
     reactToMessage(message);
   },
 };

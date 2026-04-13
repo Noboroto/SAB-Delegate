@@ -54,8 +54,9 @@ export default {
     );
 
     if (!messageFromID) {
-      await interaction.editReply({
+      await interaction.reply({
         content: "Please provide a valid message link",
+        ephemeral: true,
       });
       return;
     }

@@ -122,7 +122,7 @@ export default {
       name: name + "-MC",
     });
 
-    const channelName = (emoji + "┃" + name).toLowerCase().replace(" ", "-");
+    const channelName = (emoji + "┃" + name).toLowerCase().replaceAll(" ", "-");
 
     let perrmissionArr: {
       id: string;

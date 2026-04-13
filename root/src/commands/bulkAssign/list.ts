@@ -51,8 +51,8 @@ export default {
     let counter = 0;
 
     for (const id of unique_ids) {
-      const member = await members.get(id);
-      if (!member) return;
+      const member = members.get(id);
+      if (!member) continue;
       counter++;
       try {
         if (!isRemove) {

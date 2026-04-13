@@ -75,13 +75,13 @@ export default {
 
     let counter = 0;
 
-    await unique_ids.forEach(async (id) => {
-      const member = await members.get(id);
+    await Promise.all(unique_ids.map(async (id) => {
+      const member = members.get(id);
       if (!member) return;
       counter++;
       if (!isRemove) await member.roles.add(role);
       else await member.roles.remove(role);
-    });
+    }));
 
     const message = {
       content: `Done ${counter} member(s)!`,

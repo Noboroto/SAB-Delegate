@@ -108,7 +108,7 @@ export default {
   async execute(args: Client[]) {
     const client = args[0];
     console.info(`Ready! Logged in as ${client.user?.username}`);
-    birthdaySetup(client);
+    await birthdaySetup(client);
     await birthdayTask(client);
 
     if (!process.env.CREATE_CMD || process.env.CREATE_CMD == "0") {
@@ -123,7 +123,6 @@ export default {
         )
       );
 
-    console.info();
     const registeredCommands = [];
     for (const command of commands) {
       registeredCommands.push(
@@ -142,17 +141,17 @@ export default {
       );
     }
 
-    await Promise.all(registeredCommands)
-      .then(() => {
-        console.info(
-          `${client.user?.username} Successfully registered all application commands`
-        );
-      })
-      .catch((error) =>
-        console.error(
-          `${client.user?.username} Error registering application commands\n${error}`
-        )
-      )
-      .then(() => client.destroy());
+    try {
+      await Promise.all(registeredCommands);
+      console.info(
+        `${client.user?.username} Successfully registered all application commands`
+      );
+    } catch (error) {
+      console.error(
+        `${client.user?.username} Error registering application commands\n${error}`
+      );
+    } finally {
+      client.destroy();
+    }
   },
 };

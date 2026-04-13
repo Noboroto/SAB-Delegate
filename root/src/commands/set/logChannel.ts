@@ -45,6 +45,6 @@ export default {
       return;
     }
     await configManager.setLogChannelId(gid, channel.id);
-    interaction.reply({ content: `Introduction channel is: ${channel}` });
+    interaction.reply({ content: `Log channel is: ${channel}` });
   },
 };

@@ -30,31 +30,38 @@ export default {
       );
       await command.execute(interaction);
     } catch (error) {
-      const channel = interaction.client.guilds.cache
-        .get("713025650176294945")
-        .channels.cache.find(
+      console.error(`Error executing ${interaction.commandName}`);
+      console.error(error);
+
+      const guild = interaction.client.guilds.cache.get("713025650176294945");
+      if (guild) {
+        const channel = guild.channels.cache.find(
           (channel) => channel.name === "bot-log"
         ) as TextChannel;
 
-      if (!channel) return;
-
-      channel.send({
-        content: `Error executing ${interaction.commandName}`,
-      });
-      channel.send({
-        content: "```json\n" + JSON.stringify(error, null, 4) + "\n```",
-      });
-
-      console.error(`Error executing ${interaction.commandName}`);
+        if (channel) {
+          const errorStr = error instanceof Error
+            ? `${error.name}: ${error.message}\n${error.stack}`
+            : JSON.stringify(error, null, 4);
+          channel.send({
+            content: `Error executing ${interaction.commandName}`,
+          }).catch(() => {});
+          channel.send({
+            content: "```\n" + errorStr + "\n```",
+          }).catch(() => {});
+        }
+      }
 
       const errorMessage = {
         content: "There was an error while executing this command!",
         ephemeral: true,
       };
 
-      interaction.followUp(errorMessage);
-
-      console.error(error);
+      if (interaction.replied || interaction.deferred) {
+        interaction.followUp(errorMessage).catch(() => {});
+      } else {
+        interaction.reply(errorMessage).catch(() => {});
+      }
     }
   },
 };

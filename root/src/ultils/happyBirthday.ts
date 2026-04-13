@@ -83,20 +83,25 @@ export const removeBirthday = async (
   guid: string,
   id: string
 ): Promise<String> => {
-  const birthdays = await birthdayDb.get(guid);
-  if (birthdays) {
-    for (const month in birthdays) {
-      for (const day in birthdays[month]) {
-        if (birthdays[month][day].id === id) {
-          delete birthdays[month][day];
-        }
+  const data = await birthdayDb.get(`${guid}.data`);
+  if (!data) return "No birthday found";
+
+  let found = false;
+  for (const month in data) {
+    for (const day in data[month]) {
+      if (!Array.isArray(data[month][day])) continue;
+      const filtered = data[month][day].filter((person) => person.id !== id);
+      if (filtered.length !== data[month][day].length) {
+        found = true;
+        data[month][day] = filtered;
       }
     }
-    await birthdayDb.set(`${guid}`, birthdays);
-
-    return "Birthday removed";
   }
-  return "No birthday found";
+
+  if (!found) return "No birthday found";
+
+  await birthdayDb.set(`${guid}.data`, data);
+  return "Birthday removed";
 };
 
 export const getWishID = async (guid: string): Promise<String> => {
@@ -117,18 +122,30 @@ export const getWishID = async (guid: string): Promise<String> => {
     maxMsg = await birthdayDb.get(`max`);
   }
 
-  do {
-    const randID = Math.floor(Math.random() * (await birthdayDb.get(`max`)));
-    const canWish = await birthdayDb.get(`${guid}.wishes.${randID}`);
-    if (canWish == undefined) {
+  const maxRetries = 1000;
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const max = await birthdayDb.get(`max`);
+    if (!max || max === 0) {
+      await resetWishes(guid);
+      continue;
+    }
+    const count = await birthdayDb.get(`${guid}.count`);
+    if (count === 0) {
       await resetWishes(guid);
     }
-    if (canWish && randID.toString() !== "NaN") {
+    const randID = Math.floor(Math.random() * max);
+    const canWish = await birthdayDb.get(`${guid}.wishes.${randID}`);
+    if (canWish === true) {
       await birthdayDb.set(`${guid}.wishes.${randID}`, false);
       await birthdayDb.sub(`${guid}.count`, 1);
       return randID.toString();
     }
-  } while (true);
+  }
+  // Fallback: reset and return first wish
+  await resetWishes(guid);
+  await birthdayDb.set(`${guid}.wishes.0`, false);
+  await birthdayDb.sub(`${guid}.count`, 1);
+  return "0";
 };
 
 export const getDateList = async (guid: string, month: number, day: number) => {

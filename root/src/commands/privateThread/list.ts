@@ -38,9 +38,6 @@ export default {
       );
   },
   async execute(interaction: ChatInputCommandInteraction) {
-    // interaction.user is the object representing the User who ran the command
-    // interaction.member is the GuildMember object, which represents the user in the specific guild
-    //const guild = interaction.client.guilds.cache.get('Guild ID');
     const targetChannel = (interaction.options.getChannel("destination") ??
       interaction.channel) as TextChannel;
     const prefix =
@@ -59,10 +56,10 @@ export default {
     const unique_ids = [...new Set(ids)];
 
     const guild = await interaction.guild.fetch();
-    const members = await guild.members.cache;
+    const members = guild.members.cache;
 
     const tasks = unique_ids.map(async (id) => {
-      const member = await members.get(id);
+      const member = members.get(id);
       if (!member) return Promise.reject(`Member ${id} not found`);
       const latestThread = await targetChannel.threads.create({
         type: ChannelType.PrivateThread,
@@ -89,10 +86,10 @@ export default {
           : "Errors: " +
             results
               .filter((result) => result.status === "rejected")
-              .map((result) => result.reason)
+              .map((result) => (result as PromiseRejectedResult).reason)
               .join(", ");
       const message = {
-        content: `Done ${completed}/${total} thread(s)!${errorMsg}`,
+        content: `Done ${completed.length}/${total} thread(s)!${errorMsg}`,
       };
 
       console.info(message.content);
