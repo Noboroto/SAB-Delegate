@@ -104,6 +104,33 @@ export const removeBirthday = async (
   return "Birthday removed";
 };
 
+export const removeBirthdayByDiscord = async (
+  guid: string,
+  discordId: string
+): Promise<String> => {
+  const data = await birthdayDb.get(`${guid}.data`);
+  if (!data) return "No birthday found";
+
+  let found = false;
+  for (const month in data) {
+    for (const day in data[month]) {
+      if (!Array.isArray(data[month][day])) continue;
+      const filtered = data[month][day].filter(
+        (person) => person.discordId !== discordId
+      );
+      if (filtered.length !== data[month][day].length) {
+        found = true;
+        data[month][day] = filtered;
+      }
+    }
+  }
+
+  if (!found) return "No birthday found for this user";
+
+  await birthdayDb.set(`${guid}.data`, data);
+  return "Birthday removed";
+};
+
 export const getWishID = async (guid: string): Promise<String> => {
   const guildObj = await birthdayDb.get(guid);
 

@@ -1,6 +1,7 @@
 import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import appendList from "./birthday/appendList";
 import getList from "./birthday/getList";
+import removeCmd from "./birthday/remove";
 import setChannel from "./birthday/setChannel";
 
 export default {
@@ -9,6 +10,7 @@ export default {
     .setDescription("Manage birthday wishes for users.")
     .addSubcommand(appendList.addCommand)
     .addSubcommand(getList.addCommand)
+    .addSubcommand(removeCmd.addCommand)
     .addSubcommand(setChannel.addCommand)
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
   async execute(interaction) {
@@ -25,6 +27,9 @@ export default {
         break;
       case appendList.name:
         appendList.execute(interaction);
+        break;
+      case removeCmd.name:
+        removeCmd.execute(interaction);
         break;
       default:
         interaction.reply({
