@@ -25,3 +25,10 @@ services:
       - CONFIG_DB_PATH=/usr/files/config.sqlite
       - BIRTHDAY_DB_PATH=/usr/files/birthday.sqlite
       - TOKENS=${TOKENS}
+    networks:
+      - multi-domain
+
+networks:
+  multi-domain:
+    external: true
+    name: multi-domain
