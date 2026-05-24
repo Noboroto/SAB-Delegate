@@ -1,0 +1,13 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "npm",
+			"script": "pretty-fix",
+			"path": "root",
+			"problemMatcher": [],
+			"label": "npm: pretty-fix - root",
+			"detail": "prettier --write \"./**/*.{ts,js,json}\""
+		}
+	]
+}

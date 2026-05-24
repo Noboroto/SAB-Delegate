@@ -3,6 +3,7 @@ import {
   Role,
   ChatInputCommandInteraction,
   PermissionFlagsBits,
+  MessageFlags,
   Channel,
   GuildMember,
   ChannelType,
@@ -65,7 +66,7 @@ export default {
     if (!messageFromID) {
       interaction.reply({
         content: "Please provide a valid message link",
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -117,7 +118,7 @@ export default {
     ) {
       interaction.reply({
         content: "This command is not supported in voice channel",
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     } else {
@@ -125,7 +126,7 @@ export default {
         content:
           "This command is not supported in this channel. Type value is " +
           msgChannel.type,
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -171,22 +172,47 @@ export default {
     if (absent.length === 0) {
       interaction.reply({
         content: "Everyone in role reacted to the message",
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
-    } else {
-      for (const member of absent.values()) {
-        replyMsg += `${member}`;
-        if (member.id === interaction.user.id) {
-          replyMsg += " (author)";
-        }
-        replyMsg += ",\n";
+    }
+
+    const memberMentions: string[] = [];
+    for (const member of absent.values()) {
+      let mention = `${member}`;
+      if (member.id === interaction.user.id) mention += " (author)";
+      memberMentions.push(mention);
+    }
+
+    const header = `Reply to ${interaction.user}, there are ${absent.length} user(s) [who didn't reacted at message](${msgUrl}) are: \n`;
+    const footer = response ? `\n${response}` : "";
+
+    const chunks: string[] = [];
+    let current = header;
+    for (let i = 0; i < memberMentions.length; i++) {
+      const line = memberMentions[i] + ",\n";
+      const isLast = i === memberMentions.length - 1;
+      const suffix = isLast ? footer : "";
+      if ((current + line + suffix).length > 2000) {
+        chunks.push(current);
+        current = line;
+      } else {
+        current += line;
       }
-      replyMsg += response ? `\n${response}` : "";
-      if (!isReply) {
-        interaction.reply(replyMsg);
-        return;
-      } else messageFromID.reply(replyMsg);
+      if (isLast) current += footer;
+    }
+    chunks.push(current);
+
+    if (!isReply) {
+      await interaction.reply(chunks[0]);
+      for (let i = 1; i < chunks.length; i++) {
+        await interaction.followUp(chunks[i]);
+      }
+    } else {
+      await messageFromID.reply(chunks[0]);
+      for (let i = 1; i < chunks.length; i++) {
+        await messageFromID.channel.send(chunks[i]);
+      }
     }
   },
 };

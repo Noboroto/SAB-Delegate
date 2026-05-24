@@ -4,6 +4,7 @@ import {
   Role,
   TextChannel,
   PermissionsBitField,
+  MessageFlags,
 } from "discord.js";
 
 const commandName = "id-by-role";
@@ -35,7 +36,7 @@ export default {
     ) {
       interaction.reply({
         content: "You don't have permission to use this command",
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
@@ -51,10 +52,25 @@ export default {
       });
     }
 
-    let replyMsg = `There are ${members.size} user(s) in ${
-      role.name
-    }: \n${members.map((member) => `${member.user.id}`).join(",\n")}\n`;
+    const memberLines = members.map((member) => member.user.id);
+    const header = `There are ${members.size} user(s) in ${role.name}: \n`;
 
-    interaction.reply(replyMsg);
+    const chunks: string[] = [];
+    let current = header;
+    for (let i = 0; i < memberLines.length; i++) {
+      const line = memberLines[i] + ",\n";
+      if ((current + line).length > 2000) {
+        chunks.push(current);
+        current = line;
+      } else {
+        current += line;
+      }
+    }
+    chunks.push(current);
+
+    await interaction.reply(chunks[0]);
+    for (let i = 1; i < chunks.length; i++) {
+      await interaction.followUp(chunks[i]);
+    }
   },
 };

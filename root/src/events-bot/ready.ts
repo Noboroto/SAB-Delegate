@@ -14,7 +14,12 @@ const birthdayTask = async (client: Client) => {
     if (guildId == "max") continue;
     await client.guilds
       .fetch(guildId)
+      .catch((error) => {
+        console.warn(`Skipping guild ${guildId}: ${error.message}`);
+        return null;
+      })
       .then(async (guild) => {
+        if (!guild) return;
         const currMonth = new Date().getMonth() + 1;
         const currDay = new Date().getDate();
         const currYear = new Date().getFullYear();
@@ -37,6 +42,7 @@ const birthdayTask = async (client: Client) => {
         return guild;
       })
       .then(async (guild) => {
+        if (!guild) return;
         const channel = await happyBirthday.getChannel(guildId);
         if (channel === "") {
           console.info(`No birthday channel set for guild ${guild.name}`);

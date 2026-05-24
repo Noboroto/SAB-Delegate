@@ -6,10 +6,11 @@ export default {
     .setDescription("Replies with Pong!"),
 
   async execute(interaction: ChatInputCommandInteraction) {
-    const sent = await interaction.reply({
+    const { resource } = await interaction.reply({
       content: "Pinging...",
-      fetchReply: true,
+      withResponse: true,
     });
+    const sent = resource.message;
     await interaction.editReply(
       `:ping_pong: Pong!\n:stopwatch: Uptime: ${Math.round(
         interaction.client.uptime / 60000
