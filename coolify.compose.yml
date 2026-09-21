@@ -16,9 +16,14 @@
 # the Dockerfile pins node 18 - dependency drift, not a change in this repo. This
 # image is what production has been running; restoring a working source build is
 # follow-up work.
+# The image is served from a local registry on 127.0.0.1:5000 rather than referenced
+# as a bare local tag, because the deployment platform runs `compose pull` before
+# `up` and a tag that exists only in the local image store fails with
+# `pull access denied`. The registry container is `migration-registry`
+# (restart=always, data under /srv/appdata/registry).
 services:
   bot:
-    image: sab-delegate-bot:migrated-260921
+    image: 127.0.0.1:5000/sab-delegate-bot:migrated-260921
     restart: always
     env_file:
       - .env
