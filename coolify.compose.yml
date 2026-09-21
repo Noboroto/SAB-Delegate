@@ -1,0 +1,35 @@
+# Coolify-native variant of prod.compose.yml.
+#
+# The bot has no public domain, which Coolify supports as-is.
+#
+# `./root/files` held the live SQLite databases inside the git working tree. Coolify
+# clones the repo fresh, so that path would have come up empty and the bot would have
+# started with blank databases. The data now lives at /srv/appdata/sab-delegate/files
+# and is bound by absolute path.
+services:
+  bot:
+    build:
+      context: .
+      dockerfile: dockerfile
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - /srv/appdata/sab-delegate/files:/usr/files:rw
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    environment:
+      - NOTE_DB_PATH=/usr/files/note.sqlite
+      - WORD_DB_PATH=/usr/files/word.sqlite
+      - DICT_DB_PATH=/usr/files/dict.sqlite
+      - CONFIG_DB_PATH=/usr/files/config.sqlite
+      - BIRTHDAY_DB_PATH=/usr/files/birthday.sqlite
+      - TOKENS=${TOKENS}
