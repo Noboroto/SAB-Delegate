@@ -1,21 +1,29 @@
 # Coolify-native variant of prod.compose.yml.
 #
-# The bot has no public domain, which Coolify supports as-is.
+# prod.compose.yml is kept unchanged as the rollback artefact.
 #
-# `./root/files` held the live SQLite databases inside the git working tree. Coolify
-# clones the repo fresh, so that path would have come up empty and the bot would have
-# started with blank databases. The data now lives at /srv/appdata/sab-delegate/files
-# and is bound by absolute path.
+# What differs and why:
+#   * No `networks:` block. Coolify gives each resource its own network and registers
+#     every compose SERVICE name as an alias there, so intra-stack lookups keep
+#     working. The shared `multi-domain` network only ever existed so the external
+#     proxy could reach containers by name; Traefik routes by label now.
+#   * No `container_name:`. Coolify overrides it with `<service>-<uuid>`, so leaving
+#     it would only mislead.
+#
+#
+# NOTE: runs a PRE-BUILT image rather than building from source. A fresh build fails
+# today because a transitive package published a release requiring node >= 20 while
+# the Dockerfile pins node 18 - dependency drift, not a change in this repo. This
+# image is what production has been running; restoring a working source build is
+# follow-up work.
 services:
   bot:
-    build:
-      context: .
-      dockerfile: dockerfile
+    image: sab-delegate-bot:migrated-260921
     restart: always
     env_file:
       - .env
     volumes:
-      - /srv/appdata/sab-delegate/files:/usr/files:rw
+      - ./root/files:/usr/files:rw
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
     deploy:
