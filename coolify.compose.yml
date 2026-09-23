@@ -24,6 +24,7 @@
 services:
   bot:
     image: 127.0.0.1:5000/sab-delegate-bot:migrated-260921
+    cpus: 2
     restart: always
     env_file:
       - .env
