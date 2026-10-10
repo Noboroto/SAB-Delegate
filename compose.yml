@@ -1,27 +1,21 @@
+# Local development: `docker compose up --build` from the repo root.
+# Production runs from coolify.compose.yml.
+#
+# Uses a TZ variable instead of mounting /etc/timezone, which macOS does not
+# have; Node reads TZ through its bundled ICU data.
 services:
   bot:
     build:
       context: .
       dockerfile: dockerfile
-    restart: always
     env_file:
       - .env
     volumes:
       - ./root/files:/usr/files:rw
-      - /etc/timezone:/etc/timezone:ro
-      - /etc/localtime:/etc/localtime:ro
-    deploy:
-      resources:
-        limits:
-          cpus: '0.50'
-          memory: 512M
-        reservations:
-          cpus: '0.25'
-          memory: 256M
     environment:
+      - TZ=Asia/Ho_Chi_Minh
       - NOTE_DB_PATH=/usr/files/note.sqlite
       - WORD_DB_PATH=/usr/files/word.sqlite
       - DICT_DB_PATH=/usr/files/dict.sqlite
       - CONFIG_DB_PATH=/usr/files/config.sqlite
       - BIRTHDAY_DB_PATH=/usr/files/birthday.sqlite
-      - TOKENS=${TOKENS}

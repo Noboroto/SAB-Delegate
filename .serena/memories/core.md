@@ -21,10 +21,10 @@ root/                      package `sab-delegate` (cwd khi chạy bot)
   src/ultils/              (sic) db.ts (5 QuickDB), configManager, scheduler (in-memory),
                            happyBirthday, wordGame, noteUltils, messageReaction
   constants/               birthday.json (lời chúc), word-dict.json (seed từ điển), reactionsDict.json
-  files/                   sqlite runtime (gitignored) — prod mount ./root/files → /usr/files
+  files/                   sqlite runtime local (gitignored); prod: /srv/appdata/sab-delegate/files → /usr/files
 dockerfile                 2 stage, cài từ lockfile frozen
 coolify.compose.yml        PROD (Coolify, build từ source)
-prod.compose.yml, compose.yml   thiết lập cũ Portainer/NPM, giữ làm phương án lùi
+compose.yml                chạy local; dữ liệu ./root/files, TZ qua env
 ```
 
 ## Bất biến hay bị làm sai

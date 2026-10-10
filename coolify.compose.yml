@@ -1,18 +1,19 @@
-# Coolify-native variant of prod.compose.yml.
+# Production stack, deployed by Coolify on every push to main.
 #
-# prod.compose.yml is kept unchanged as the rollback artefact.
+# Coolify specifics:
+#   * No `networks:` block. Coolify gives each resource its own network and
+#     registers every compose service name as an alias there.
+#   * No `container_name:`, named volumes or `${VAR:?}`: Coolify 4.3 overrides or
+#     mangles all three.
+#   * CPU is bounded only through deploy.resources; a service-level `cpus:` with
+#     a different value makes compose reject the whole file.
 #
-# What differs and why:
-#   * No `networks:` block. Coolify gives each resource its own network and registers
-#     every compose SERVICE name as an alias there, so intra-stack lookups keep
-#     working. The shared `multi-domain` network only ever existed so the external
-#     proxy could reach containers by name; Traefik routes by label now.
-#   * No `container_name:`. Coolify overrides it with `<service>-<uuid>`, so leaving
-#     it would only mislead.
+# Builds from source. root/pnpm-lock.yaml is committed and installed with
+# --frozen-lockfile, so every build installs exactly the locked versions.
 #
-#   * Builds from source. root/pnpm-lock.yaml is committed and installed with
-#     --frozen-lockfile, so every build installs exactly the locked dependency
-#     versions instead of resolving newer releases.
+# Data: the sqlite files are an absolute bind mount under /srv/appdata, the
+# host's location for persistent data, so they survive redeploys and do not
+# depend on Coolify's per-application directory.
 services:
   bot:
     build:
@@ -22,7 +23,7 @@ services:
     env_file:
       - .env
     volumes:
-      - ./root/files:/usr/files:rw
+      - /srv/appdata/sab-delegate/files:/usr/files:rw
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
     deploy:

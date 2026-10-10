@@ -9,9 +9,12 @@
   trước build. Chỉ dùng `deploy.resources.limits.cpus` (hiện 0.5).
 - Coolify làm hỏng `${VAR:?}`, named volume, `container_name` → không dùng trong `coolify.compose.yml`.
   Coolify tự đặt alias theo tên service, không cần block `networks:`.
-- Dữ liệu prod: mount tương đối `./root/files` → nằm dưới thư mục ứng dụng Coolify trên host (5 file sqlite).
-  Luật host: dữ liệu bền phải là bind mount tuyệt đối dưới `/srv/appdata` → việc còn tồn: chuyển sang
-  `/srv/appdata/sab-delegate/files` (dừng bot, `cp -a`, so checksum, đổi compose, deploy, verify).
+- Dữ liệu prod: bind mount tuyệt đối `/srv/appdata/sab-delegate/files` (luật host: dữ liệu bền chỉ ở `/srv/appdata`).
+  Đo 2026-10-10: từ lúc chuyển sang Coolify (21/9) tới 10/10 bot chạy trên mount tương đối `./root/files`
+  = thư mục ứng dụng Coolify chứa DB RỖNG (birthday chỉ có `max`, config/note/word 0 dòng) — không chúc
+  sinh nhật, mất cấu hình kênh. Dữ liệu thật vẫn nằm ở `/srv/appdata/sab-delegate/files`.
+  **How to apply**: sau mọi lần đổi mount, đếm số dòng từng bảng `json` (python3 sqlite3, `mode=ro`) ở cả nguồn
+  và đích; "file còn đủ" không có nghĩa là dữ liệu còn. Bản sao lưu: `/srv/appdata/_archive/sab-delegate-files-*-261010.tar.gz`.
 - Verify sau deploy: container 0 restart, log có `Ready! Logged in as Sabi` và `... as Alohomora`.
 - Node 18 EOL → chuyển Node 24 + pnpm (2026-10-10). Base image: `mem:lessons/deploy/base-image-reuse`.
 - Đăng ký lại slash command trên prod (đo 2026-10-10): chạy trong container đang sống để dùng chung env,

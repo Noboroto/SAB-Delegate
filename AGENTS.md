@@ -83,12 +83,13 @@ Phiên bản đọc ở `root/package.json`, `dockerfile`, `*.compose.yml` — k
   Thêm/nâng gói → cập nhật lockfile trong cùng commit. Gói cần install script (native addon,
   esbuild) phải khai trong `allowBuilds` của `root/pnpm-workspace.yaml`.
 - **Dữ liệu**: `quick.db` (SQLite qua `better-sqlite3`, native addon — đổi bản Node phải rebuild).
-  Đường dẫn DB lấy từ env `*_DB_PATH` (xem `compose.yml`), mặc định `./files/*.sqlite`. Không đổi
+  Đường dẫn DB lấy từ env `*_DB_PATH` (xem `coolify.compose.yml`), mặc định `./files/*.sqlite`.
+  Prod: bind mount tuyệt đối `/srv/appdata/sab-delegate/files` (luật host: dữ liệu bền chỉ ở `/srv/appdata`). Không đổi
   key schema của DB mà không có bước chuyển đổi dữ liệu cũ.
 - **Đăng ký slash command**: chỉ khi env `CREATE_CMD` ≠ `0` — bot xoá toàn bộ command cũ, đăng ký
   lại rồi `client.destroy()`. Prod chạy không có `CREATE_CMD`.
 - **Deploy prod = Coolify**, file `coolify.compose.yml`, build từ source. Push `main` → webhook tự
-  deploy. `prod.compose.yml`/`compose.yml` là thiết lập cũ (Portainer/NPM), giữ làm phương án lùi.
+  deploy. `compose.yml` chỉ để chạy local (`docker compose up --build`).
   - Không `${VAR:?}`, named volume, `container_name` trong `coolify.compose.yml`.
   - Giới hạn CPU chỉ qua `deploy.resources.limits.cpus`.
   - Chi tiết đã đo: `mem:lessons/deploy/coolify-build-from-source`.
