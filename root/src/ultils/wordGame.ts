@@ -64,7 +64,7 @@ export const getWordStatus = async (
     if (wordCounter || wordCounter > 0) return WordGameStatus.SAME_WORD;
     if (!word.startsWith(lastWord.slice(-1))) return WordGameStatus.NOT_LINK;
   }
-  if (!(await dictDb.get(`dict.${query}`))) return WordGameStatus.NOT_EXIST;
+  if (!(await getDictionary()).has(query)) return WordGameStatus.NOT_EXIST;
 
   return WordGameStatus.SUCCESS;
 };
@@ -79,6 +79,25 @@ export const setWord = async (
   await wordDb.set(`${guildID}.lastWord`, word.toLowerCase());
   await wordDb.set(`${guildID}.start`, false);
   await wordDb.add(`${guildID}.count`, 1);
+};
+
+export const getCount = async (guildID: string): Promise<number> => {
+  return Number(await wordDb.get(`${guildID}.count`)) || 0;
+};
+
+// The dictionary is one multi-megabyte row; parse it once instead of on every
+// message. A Set also avoids lodash path lookups matching prototype keys such
+// as "constructor".
+let dictionary: Promise<Set<string>> | undefined;
+const getDictionary = () => {
+  dictionary ??= dictDb
+    .get("dict")
+    .then((dict) => new Set(Object.keys(dict ?? {})))
+    .catch((error) => {
+      dictionary = undefined;
+      throw error;
+    });
+  return dictionary;
 };
 
 export const getStarter = async (guildID: string): Promise<string> => {

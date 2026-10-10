@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 
 // Create a new client instance
 if (!process.env.TOKENS) {
-  dotenv.config();
+  dotenv.config({ quiet: true });
 }
 
 const noteDbPath = process.env.NOTE_DB_PATH || "./files/note.sqlite";
@@ -26,17 +26,17 @@ export const dictDb = new QuickDB({ filePath: dictDbPath });
 export const birthdayDb = new QuickDB({ filePath: birthdayDbPath });
 export const configDb = new QuickDB({ filePath: configDbPath });
 
-(async () => {
+// Resolves once every database is ready and the dictionary is seeded; the
+// bots must not log in before that or the first words are judged missing.
+export const dbReady = (async () => {
+  await Promise.all(
+    [dictDb, noteDb, wordDb, birthdayDb, configDb].map((db) => db.init())
+  );
   if (!(await dictDb.get("dict"))) {
     const dictObj = JSON.parse(readFileSync(dictTemplate, "utf-8"));
     await dictDb.set("dict", dictObj);
     console.info("Dictionary initialized");
   }
-  await dictDb.init();
-  await noteDb.init();
-  await wordDb.init();
-  await birthdayDb.init();
-  await configDb.init();
 
   console.info("Database initialized");
 })();

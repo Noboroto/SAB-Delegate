@@ -2,8 +2,10 @@ import {
   ChatInputCommandInteraction,
   ChannelType,
   SlashCommandSubcommandBuilder,
+  MessageFlags,
 } from "discord.js";
 import { getMessageFromOption } from "../../ultils";
+import { errorMessage } from "../_shared/errorMessage";
 
 const commandName = "everyone";
 
@@ -16,6 +18,7 @@ export default {
       .addStringOption((Option) =>
         Option.setName("content")
           .setDescription("message content")
+          .setMaxLength(1900)
           .setRequired(false)
       )
       .addStringOption((Option) =>
@@ -25,14 +28,14 @@ export default {
       );
   },
   async execute(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const targetChannel = interaction.channel;
     if (
       targetChannel.type !== ChannelType.PublicThread &&
       targetChannel.type !== ChannelType.PrivateThread
     ) {
-      interaction.editReply({
+      await interaction.editReply({
         content: "This command can only be used in a thread",
       });
       return;
@@ -49,13 +52,21 @@ export default {
       content: response,
     };
 
-    if (messageFromID) {
-      messageFromID.reply(message);
-    } else {
-      targetChannel.send(message);
+    try {
+      if (messageFromID) {
+        await messageFromID.reply(message);
+      } else {
+        await targetChannel.send(message);
+      }
+    } catch (error) {
+      console.error("thread everyone failed", error);
+      await interaction.editReply({
+        content: `Cannot send: ${errorMessage(error)}`,
+      });
+      return;
     }
 
-    interaction.editReply({
+    await interaction.editReply({
       content: "Sent!",
     });
   },

@@ -3,8 +3,11 @@ import {
   TextChannel,
   ChatInputCommandInteraction,
   SlashCommandSubcommandBuilder,
+  MessageFlags,
 } from "discord.js";
 import { getMessageFromOption } from "../../ultils";
+import { buildMessageCopy } from "../_shared/copyMessage";
+import { errorMessage } from "../_shared/errorMessage";
 
 const commandName = "copy-paste";
 
@@ -36,8 +39,7 @@ export default {
     const targetChannel = (interaction.options.getChannel("destination") ??
       interaction.channel) as TextChannel;
 
-    targetChannel.sendTyping();
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const messageFromID = await getMessageFromOption(
       interaction,
@@ -45,25 +47,32 @@ export default {
     );
 
     if (!messageFromID) {
-      interaction.editReply({
+      await interaction.editReply({
         content: "Message not found!",
       });
       return;
     }
 
-    const attachments = messageFromID.attachments.values();
-    const message = {
-      content: messageFromID.content,
-      files: [],
-    };
-
-    for (const file of attachments) {
-      message.files.push(file);
+    const message = buildMessageCopy(messageFromID);
+    if (!message) {
+      await interaction.editReply({
+        content: "The source message has no text or attachment to copy!",
+      });
+      return;
     }
 
-    await targetChannel.send(message);
+    try {
+      await targetChannel.sendTyping();
+      await targetChannel.send(message);
+    } catch (error) {
+      console.error("bot-message copy-paste failed", error);
+      await interaction.editReply({
+        content: `Cannot send to ${targetChannel}: ${errorMessage(error)}`,
+      });
+      return;
+    }
 
-    interaction.editReply({
+    await interaction.editReply({
       content: "Done!",
     });
   },

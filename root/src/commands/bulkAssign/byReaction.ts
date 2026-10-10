@@ -2,8 +2,12 @@ import {
   SlashCommandSubcommandBuilder,
   ChatInputCommandInteraction,
   Role,
+  MessageFlags,
 } from "discord.js";
 import { getMessageFromOption } from "../../ultils";
+import { replyInChunks } from "../_shared/chunkedReply";
+import { fetchReactorIds } from "../_shared/fetchAllReactors";
+import { applyRoleToMembers, describeFailures } from "../_shared/applyRole";
 
 const commandName = "by-reaction";
 
@@ -40,9 +44,9 @@ export default {
     // interaction.member is the GuildMember object, which represents the user in the specific guild
     //const guild = interaction.client.guilds.cache.get('Guild ID');
 
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     const role = interaction.options.getRole("role") as Role;
-    const isRemove = interaction.options.getBoolean("is-remove");
+    const isRemove = interaction.options.getBoolean("is-remove") ?? false;
 
     const reaction = interaction.options.getString("emoji")?.trim() ?? "";
     const messageFromID = await getMessageFromOption(
@@ -57,36 +61,18 @@ export default {
       return;
     }
 
-    const unique_ids: string[] = [];
-    const reactionList = await messageFromID.reactions.cache;
+    const unique_ids = await fetchReactorIds(messageFromID, reaction);
+    const { done, failures } = await applyRoleToMembers(
+      interaction,
+      unique_ids,
+      role,
+      isRemove
+    );
 
-    for (const reactionFromMessage of reactionList.values()) {
-      if (reactionFromMessage.emoji.toString() !== reaction) continue;
-      await reactionFromMessage.users.fetch().then((users) => {
-        users.forEach((user) => {
-          if (user.bot) return;
-          unique_ids.push(user.id);
-        });
-      });
-    }
-
-    const guild = await interaction.guild.fetch();
-    const members = await guild.members.cache;
-
-    let counter = 0;
-
-    await Promise.all(unique_ids.map(async (id) => {
-      const member = members.get(id);
-      if (!member) return;
-      counter++;
-      if (!isRemove) await member.roles.add(role);
-      else await member.roles.remove(role);
-    }));
-
-    const message = {
-      content: `Done ${counter} member(s)!`,
-    };
-
-    await interaction.editReply(message);
+    await replyInChunks(
+      interaction,
+      `Done ${done} member(s)!${describeFailures(failures)}`,
+      { ephemeral: true }
+    );
   },
 };

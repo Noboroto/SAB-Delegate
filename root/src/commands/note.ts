@@ -1,7 +1,7 @@
 import addCmd from "./note/add";
 import getCmd from "./note/get";
 import removeCmd from "./note/remove";
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandBuilder, MessageFlags } from "discord.js";
 
 export default {
   data: new SlashCommandBuilder()
@@ -17,18 +17,18 @@ export default {
     );
     switch (commands) {
       case addCmd.name:
-        addCmd.execute(interaction);
+        await addCmd.execute(interaction);
         break;
       case getCmd.name:
-        getCmd.execute(interaction);
+        await getCmd.execute(interaction);
         break;
       case removeCmd.name:
-        removeCmd.execute(interaction);
+        await removeCmd.execute(interaction);
         break;
       default:
-        interaction.reply({
+        await interaction.reply({
           content: `Invalid subcommand ${commands}`,
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
     }
   },

@@ -1,4 +1,8 @@
-import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
+import {
+  PermissionFlagsBits,
+  SlashCommandBuilder,
+  MessageFlags,
+} from "discord.js";
 import byAReaction from "./mention/byAReaction";
 import notReact from "./mention/notReact";
 import thread_everyone from "./thread/everyone";
@@ -18,19 +22,19 @@ export default {
     );
     switch (commands) {
       case thread_everyone.name:
-        thread_everyone.execute(interaction);
+        await thread_everyone.execute(interaction);
         break;
       case byAReaction.name:
-        byAReaction.execute(interaction);
+        await byAReaction.execute(interaction);
         break;
       case notReact.name:
-        notReact.execute(interaction);
+        await notReact.execute(interaction);
         break;
       default:
         console.error("Invalid subcommand");
-        interaction.reply({
+        await interaction.reply({
           content: `Invalid subcommand ${commands}`,
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
     }
   },

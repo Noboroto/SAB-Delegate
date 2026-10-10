@@ -1,4 +1,8 @@
-import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
+import {
+  PermissionFlagsBits,
+  SlashCommandBuilder,
+  MessageFlags,
+} from "discord.js";
 import anyCmd from "./purge/any";
 
 export default {
@@ -7,7 +11,6 @@ export default {
     .setDescription("Purge messages in this channel.")
 
     .addSubcommand(anyCmd.addCommand)
-    .setDMPermission(true)
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
   async execute(interaction) {
     const commands = interaction.options.getSubcommand();
@@ -19,9 +22,9 @@ export default {
         await anyCmd.execute(interaction);
         break;
       default:
-        interaction.reply({
+        await interaction.reply({
           content: `Invalid subcommand ${commands}`,
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
     }
   },

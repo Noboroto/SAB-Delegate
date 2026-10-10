@@ -3,7 +3,13 @@ import {
   ChatInputCommandInteraction,
   ChannelType,
   TextChannel,
+  MessageFlags,
 } from "discord.js";
+import { replyInChunks } from "../_shared/chunkedReply";
+import {
+  createPrivateThreads,
+  MAX_THREAD_PREFIX_LENGTH,
+} from "../_shared/privateThreads";
 
 const commandName = "list";
 
@@ -16,6 +22,7 @@ export default {
       .addStringOption((Option) =>
         Option.setName("prefix")
           .setDescription("The prefix of the threads")
+          .setMaxLength(MAX_THREAD_PREFIX_LENGTH)
           .setRequired(true)
       )
       .addStringOption((Option) =>
@@ -26,13 +33,12 @@ export default {
       .addStringOption((Option) =>
         Option.setName("message")
           .setDescription("The message to send to each member")
+          .setMaxLength(2000)
           .setRequired(false)
       )
       .addChannelOption((Option) =>
         Option.setName("destination")
           .addChannelTypes(ChannelType.GuildText)
-          .addChannelTypes(ChannelType.GuildAnnouncement)
-          .addChannelTypes(ChannelType.GuildForum)
           .setDescription("destination channel")
           .setRequired(false)
       );
@@ -40,13 +46,11 @@ export default {
   async execute(interaction: ChatInputCommandInteraction) {
     const targetChannel = (interaction.options.getChannel("destination") ??
       interaction.channel) as TextChannel;
-    const prefix =
-      interaction.options.getString("prefix").trimEnd().trimStart() ??
-      "unknown";
+    const prefix = interaction.options.getString("prefix").trim();
     const msg =
       interaction.options.getString("message") ?? "New thread is created";
 
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     const ids = interaction.options
       .getString("ids")
       .replaceAll(">", "")
@@ -55,45 +59,16 @@ export default {
       .split(/[\s,]+/);
     const unique_ids = [...new Set(ids)];
 
-    const guild = await interaction.guild.fetch();
-    const members = guild.members.cache;
-
-    const tasks = unique_ids.map(async (id) => {
-      const member = members.get(id);
-      if (!member) return Promise.reject(`Member ${id} not found`);
-      const latestThread = await targetChannel.threads.create({
-        type: ChannelType.PrivateThread,
-        name: `${prefix}-${member.user.username}`,
-        autoArchiveDuration: 10080,
-        reason: `Create thread for ${prefix}`,
-        invitable: false,
-      });
-      await latestThread.members.add(member);
-      await latestThread.members.add(interaction.user);
-      await latestThread.send({
-        content: `${msg}`,
-      });
-    });
-
-    await Promise.allSettled(tasks).then(async (results) => {
-      const completed = results.filter(
-        (result) => result.status === "fulfilled"
-      );
-      const total = results.length;
-      const errorMsg =
-        completed.length === total
-          ? ""
-          : "Errors: " +
-            results
-              .filter((result) => result.status === "rejected")
-              .map((result) => (result as PromiseRejectedResult).reason)
-              .join(", ");
-      const message = {
-        content: `Done ${completed.length}/${total} thread(s)!${errorMsg}`,
-      };
-
-      console.info(message.content);
-      await interaction.editReply(message);
-    });
+    await replyInChunks(
+      interaction,
+      await createPrivateThreads(
+        interaction,
+        targetChannel,
+        prefix,
+        msg,
+        unique_ids
+      ),
+      { ephemeral: true }
+    );
   },
 };

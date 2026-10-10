@@ -3,9 +3,16 @@ import {
   ChatInputCommandInteraction,
   ChannelType,
   TextChannel,
+  MessageFlags,
 } from "discord.js";
 
 import { getMessageFromOption } from "../../ultils";
+import { replyInChunks } from "../_shared/chunkedReply";
+import { fetchReactorIds } from "../_shared/fetchAllReactors";
+import {
+  createPrivateThreads,
+  MAX_THREAD_PREFIX_LENGTH,
+} from "../_shared/privateThreads";
 
 const commandName = "by-reaction";
 
@@ -18,6 +25,7 @@ export default {
       .addStringOption((Option) =>
         Option.setName("prefix")
           .setDescription("The prefix of the threads")
+          .setMaxLength(MAX_THREAD_PREFIX_LENGTH)
           .setRequired(true)
       )
       .addStringOption((Option) =>
@@ -31,13 +39,12 @@ export default {
       .addStringOption((Option) =>
         Option.setName("message")
           .setDescription("The message to send to each member")
+          .setMaxLength(2000)
           .setRequired(false)
       )
       .addChannelOption((Option) =>
         Option.setName("destination")
           .addChannelTypes(ChannelType.GuildText)
-          .addChannelTypes(ChannelType.GuildAnnouncement)
-          .addChannelTypes(ChannelType.GuildForum)
           .setDescription("destination channel")
           .setRequired(false)
       );
@@ -45,21 +52,16 @@ export default {
   async execute(interaction: ChatInputCommandInteraction) {
     const targetChannel = (interaction.options.getChannel("destination") ??
       interaction.channel) as TextChannel;
-    const prefix =
-      interaction.options
-        .getString("prefix")
-        .trimEnd()
-        .trimStart()
-        .trimEnd()
-        .trimStart() ?? "unknown";
+    const prefix = interaction.options.getString("prefix").trim();
 
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     const reaction = interaction.options.getString("emoji")?.trim() ?? "";
     const messageFromID = await getMessageFromOption(
       interaction,
       "message-link"
     );
-    const msg = interaction.options.getString("message") ?? "";
+    const msg =
+      interaction.options.getString("message") ?? "New thread is created";
 
     if (!messageFromID) {
       await interaction.editReply({
@@ -68,58 +70,18 @@ export default {
       return;
     }
 
-    const unique_ids: string[] = [];
-    const reactionList = await messageFromID.reactions.cache;
+    const unique_ids = await fetchReactorIds(messageFromID, reaction);
 
-    for (const reactionFromMessage of reactionList.values()) {
-      if (reactionFromMessage.emoji.toString() !== reaction) continue;
-      await reactionFromMessage.users.fetch().then((users) => {
-        users.forEach((user) => {
-          if (user.bot) return;
-          unique_ids.push(user.id);
-        });
-      });
-    }
-
-    const guild = await interaction.guild.fetch();
-    const members = guild.members.cache;
-
-    const tasks = unique_ids.map(async (id) => {
-      const member = members.get(id);
-      if (!member) return Promise.reject(`Member ${id} not found`);
-      const latestThread = await targetChannel.threads.create({
-        type: ChannelType.PrivateThread,
-        name: `${prefix}-${member.user.username}`,
-        autoArchiveDuration: 10080,
-        reason: `Create thread for ${prefix}`,
-        invitable: false,
-      });
-      await latestThread.members.add(member);
-      await latestThread.members.add(interaction.user);
-      await latestThread.send({
-        content: `${msg}`,
-      });
-    });
-
-    await Promise.allSettled(tasks).then(async (results) => {
-      const completed = results.filter(
-        (result) => result.status === "fulfilled"
-      );
-      const total = results.length;
-      const errorMsg =
-        completed.length === total
-          ? ""
-          : "Errors: " +
-            results
-              .filter((result) => result.status === "rejected")
-              .map((result) => (result as PromiseRejectedResult).reason)
-              .join(", ");
-      const message = {
-        content: `Done ${completed.length}/${total} thread(s)!${errorMsg}`,
-      };
-
-      console.info(message.content);
-      await interaction.editReply(message);
-    });
+    await replyInChunks(
+      interaction,
+      await createPrivateThreads(
+        interaction,
+        targetChannel,
+        prefix,
+        msg,
+        unique_ids
+      ),
+      { ephemeral: true }
+    );
   },
 };

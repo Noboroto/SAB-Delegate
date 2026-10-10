@@ -1,6 +1,7 @@
 import {
   SlashCommandSubcommandBuilder,
   ChatInputCommandInteraction,
+  MessageFlags,
 } from "discord.js";
 
 import { jobScheduler } from "../../ultils";
@@ -24,9 +25,9 @@ export default {
     const groupID = interaction.guildId;
     const id = interaction.options.getInteger("id");
     const msg = jobScheduler.cancelJob(groupID, id);
-    interaction.reply({
+    await interaction.reply({
       content: `${msg}`,
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   },
 };

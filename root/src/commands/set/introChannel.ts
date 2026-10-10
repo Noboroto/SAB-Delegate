@@ -1,11 +1,11 @@
 import {
   ChannelType,
   SlashCommandSubcommandBuilder,
-  TextChannel,
   ChatInputCommandInteraction,
-  PermissionFlagsBits,
+  MessageFlags,
 } from "discord.js";
 import { configManager } from "../../ultils";
+import { botLacksChannelAccess } from "../_shared/botChannelAccess";
 
 const commandName = "intro-channel";
 
@@ -30,21 +30,16 @@ export default {
   },
   async execute(interaction: ChatInputCommandInteraction) {
     const gid = interaction.guildId;
-    const channel = interaction.options.getChannel("channel") as TextChannel;
+    const channel = interaction.options.getChannel("channel", true);
 
-    if (
-      !interaction.guild.members.me.permissions.has([
-        PermissionFlagsBits.ViewChannel,
-        PermissionFlagsBits.ReadMessageHistory,
-      ])
-    ) {
-      interaction.reply({
+    if (await botLacksChannelAccess(interaction, channel.id, "read")) {
+      await interaction.reply({
         content: "Bot cannot view message in this channel!",
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
     await configManager.setIntroChannelId(gid, channel.id);
-    interaction.reply({ content: `Introduction channel is: ${channel}` });
+    await interaction.reply({ content: `Introduction channel is: ${channel}` });
   },
 };

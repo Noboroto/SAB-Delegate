@@ -3,6 +3,7 @@ import {
   ChatInputCommandInteraction,
 } from "discord.js";
 import { noteUltils } from "../../ultils";
+import { replyInChunks } from "../_shared/chunkedReply";
 
 const commandName = "get";
 
@@ -20,10 +21,9 @@ export default {
   async execute(interaction: ChatInputCommandInteraction) {
     const role = interaction.options.getRole("role");
 
-    interaction.reply({
-      content: `Note for @${role.name}:\n${await noteUltils.getNote(role.id)}`,
-      ephemeral: false,
-      embeds: [],
-    });
+    await replyInChunks(
+      interaction,
+      `Note for @${role.name}:\n${await noteUltils.getNote(role.id)}`
+    );
   },
 };

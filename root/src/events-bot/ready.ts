@@ -1,110 +1,117 @@
-import { Client, Events, TextChannel } from "discord.js";
+import { Client, Events, Guild, TextChannel } from "discord.js";
 import commands from "../commands";
-import { happyBirthday } from "../ultils";
+import { claimOnce, happyBirthday, releaseClaim, reportError } from "../ultils";
 import * as fs from "fs";
 import scheduler from "node-schedule";
 
-const birthdayTask = async (client: Client) => {
-  const keys = await happyBirthday.getServerIDs();
-  const wisthesPath = "./constants/birthday.json";
-  const wishes: string[] = JSON.parse(fs.readFileSync(wisthesPath, "utf8"));
-  await happyBirthday.setMaxWishes(wishes.length);
+const wishesPath = "./constants/birthday.json";
 
-  for (const guildId of keys) {
-    if (guildId == "max") continue;
-    await client.guilds
-      .fetch(guildId)
-      .catch((error) => {
-        console.warn(`Skipping guild ${guildId}: ${error.message}`);
-        return null;
-      })
-      .then(async (guild) => {
-        if (!guild) return;
-        const currMonth = new Date().getMonth() + 1;
-        const currDay = new Date().getDate();
-        const currYear = new Date().getFullYear();
+const isLeapYear = (year: number) =>
+  (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
 
-        console.log(`Current date: ${currDay}/${currMonth}/${currYear}`);
-        const isComplete = await happyBirthday
-          .getIsCompleteDate(guild.id, currMonth, currDay)
-          .then((value) => {
-            console.info(
-              `Birthday for guild ${guild.name} is complete: ${value}`
-            );
-            return value;
-          });
+// Birthdays on 29 Feb are wished on 28 Feb in non-leap years.
+const getTodayBirthdays = async (guildId: string, now: Date) => {
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+  const day = now.getDate();
+  const users = [...(await happyBirthday.getDateList(guildId, month, day))];
+  if (month === 2 && day === 28 && !isLeapYear(year)) {
+    users.push(...(await happyBirthday.getDateList(guildId, 2, 29)));
+  }
+  return users;
+};
 
-        if (isComplete) {
-          return Promise.reject(
-            `Birthday for guild ${guild.name} is already complete`
-          );
-        }
-        return guild;
-      })
-      .then(async (guild) => {
-        if (!guild) return;
-        const channel = await happyBirthday.getChannel(guildId);
-        if (channel === "") {
-          console.info(`No birthday channel set for guild ${guild.name}`);
-          return;
-        }
-        const currMonth = new Date().getMonth() + 1;
-        const currDay = new Date().getDate();
-        const currYear = new Date().getFullYear();
+const wishGuild = async (client: Client, guildId: string, wishes: string[]) => {
+  const guild = await client.guilds.fetch(guildId).catch(() => null);
+  // Guild rows belong to whichever bot is in that guild; others skip it.
+  if (!guild) return;
 
-        console.log(`Current date: ${currDay}/${currMonth}/${currYear}`);
-        const isComplete = await happyBirthday.getIsCompleteDate(
-          guildId,
-          currMonth,
-          currDay
-        );
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+  const day = now.getDate();
 
-        if (isComplete) {
-          console.info(`Birthday for guild ${guild.name} is already complete`);
-          return;
-        }
-
-        const birthdayUser = await happyBirthday.getDateList(
-          guildId,
-          currMonth,
-          currDay
-        );
-
-        if (birthdayUser.length === 0) {
-          console.info(`No birthday for guild ${guild.name}`);
-          return;
-        }
-
-        console.log(`Birthday for guild ${guild.name}`);
-        const channelObj = (await guild.channels.fetch(channel)) as TextChannel;
-        console.info(`Today has total ${birthdayUser.length} birthday user`);
-        console.info(`Send to channel ${channelObj.name}`);
-        for (const user of birthdayUser) {
-          const msgID = Number(await happyBirthday.getWishID(guildId));
-          const msg = wishes[msgID].replaceAll(
-            "${name}",
-            `<@${user.discordId}>`
-          );
-          console.info(`Send wish to ${user.name} with id ${user.discordId}`);
-          await channelObj.send(msg);
-        }
-        await happyBirthday
-          .setIsCompleteDate(guildId, currMonth, currDay, true)
-          .then(() =>
-            console.info(`Set birthday complete for guild ${guild.name}`)
-          );
-      })
-      .catch((error) => {
-        console.error(`Error fetching guild ${guildId}\n${error}`);
-      });
+  // Every bot client runs this task; only one may wish a guild per day.
+  const claim = `birthday:${guildId}:${year}-${month}-${day}`;
+  if (!claimOnce(claim)) return;
+  try {
+    await wishGuildToday(guild, now, wishes);
+  } catch (error) {
+    releaseClaim(claim);
+    throw error;
   }
 };
 
-const birthdaySetup = async (client: Client) => {
-  const cronRule = "0 0 0 * * *";
-  scheduler.scheduleJob(cronRule, async () => {
-    console.info(`${client.user?.username} Running birthday task`);
-    await birthdayTask(client);
+const wishGuildToday = async (guild: Guild, now: Date, wishes: string[]) => {
+  const guildId = guild.id;
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+  const day = now.getDate();
+  if (await happyBirthday.getIsCompleteDate(guildId, year, month, day)) {
+    console.info(`Birthday for guild ${guild.name} is already complete`);
+    return;
+  }
+
+  const channelId = await happyBirthday.getChannel(guildId);
+  if (channelId === "") {
+    console.info(`No birthday channel set for guild ${guild.name}`);
+    return;
+  }
+
+  const birthdayUsers = await getTodayBirthdays(guildId, now);
+  if (birthdayUsers.length === 0) {
+    console.info(`No birthday for guild ${guild.name}`);
+    return;
+  }
+
+  const channel = (await guild.channels.fetch(channelId)) as TextChannel;
+  console.info(
+    `Sending ${birthdayUsers.length} birthday wish(es) to ${channel.name}`
+  );
+  for (const user of birthdayUsers) {
+    const msgID = Number(await happyBirthday.getWishID(guildId));
+    const msg = wishes[msgID].replaceAll("${name}", `<@${user.discordId}>`);
+    await channel.send(msg);
+  }
+  await happyBirthday.setIsCompleteDate(guildId, year, month, day, true);
+  console.info(`Set birthday complete for guild ${guild.name}`);
+};
+
+const birthdayTask = async (client: Client) => {
+  try {
+    const wishes: string[] = JSON.parse(fs.readFileSync(wishesPath, "utf8"));
+    await happyBirthday.setMaxWishes(wishes.length);
+
+    for (const guildId of await happyBirthday.getServerIDs()) {
+      await wishGuild(client, guildId, wishes).catch((error) =>
+        reportError(client, `Birthday task failed for guild ${guildId}`, error)
+      );
+    }
+  } catch (error) {
+    await reportError(client, "Birthday task failed", error);
+  }
+};
+
+const registerCommands = async (client: Client) => {
+  await client.application.commands.set([]);
+  console.info(
+    `${client.user?.username} Successfully deleted application command`
+  );
+
+  const results = await Promise.allSettled(
+    commands.map((command) => client.application.commands.create(command.data))
+  );
+  results.forEach((result, index) => {
+    const name = commands[index].data.name;
+    if (result.status === "fulfilled") {
+      console.info(
+        `${client.user?.username} Successfully registered application command "${name}"`
+      );
+    } else {
+      console.error(
+        `${client.user?.username} Error registering application command "${name}"\n${result.reason}`
+      );
+    }
   });
 };
 
@@ -114,50 +121,23 @@ export default {
   async execute(args: Client[]) {
     const client = args[0];
     console.info(`Ready! Logged in as ${client.user?.username}`);
-    await birthdaySetup(client);
-    await birthdayTask(client);
 
-    if (!process.env.CREATE_CMD || process.env.CREATE_CMD == "0") {
-      console.info("Production Mode");
+    // Registration-only run: re-register slash commands and disconnect without
+    // starting the birthday cron (it would keep the process alive and post wishes).
+    if (process.env.CREATE_CMD && process.env.CREATE_CMD !== "0") {
+      try {
+        await registerCommands(client);
+      } finally {
+        await client.destroy();
+      }
       return;
     }
-    await client.application.commands
-      .set([])
-      .then(() =>
-        console.info(
-          `${client.user?.username} Successfully deleted application command`
-        )
-      );
 
-    const registeredCommands = [];
-    for (const command of commands) {
-      registeredCommands.push(
-        client.application.commands
-          .create(command.data)
-          .then(() =>
-            console.info(
-              `${client.user?.username} Successfully registered application command "${command.data.name}"`
-            )
-          )
-          .catch((error) =>
-            console.error(
-              `${client.user?.username} Error registering application command "${command.data.name}"\n${error}`
-            )
-          )
-      );
-    }
-
-    try {
-      await Promise.all(registeredCommands);
-      console.info(
-        `${client.user?.username} Successfully registered all application commands`
-      );
-    } catch (error) {
-      console.error(
-        `${client.user?.username} Error registering application commands\n${error}`
-      );
-    } finally {
-      client.destroy();
-    }
+    console.info("Production Mode");
+    scheduler.scheduleJob("0 0 0 * * *", async () => {
+      console.info(`${client.user?.username} Running birthday task`);
+      await birthdayTask(client);
+    });
+    await birthdayTask(client);
   },
 };

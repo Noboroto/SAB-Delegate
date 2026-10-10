@@ -1,4 +1,8 @@
-import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
+import {
+  PermissionFlagsBits,
+  SlashCommandBuilder,
+  MessageFlags,
+} from "discord.js";
 import getCmd from "./scheduler/get";
 import cancelCmd from "./scheduler/cancel";
 
@@ -16,15 +20,15 @@ export default {
     );
     switch (commands) {
       case getCmd.name:
-        getCmd.execute(interaction);
+        await getCmd.execute(interaction);
         break;
       case cancelCmd.name:
-        cancelCmd.execute(interaction);
+        await cancelCmd.execute(interaction);
         break;
       default:
-        interaction.reply({
+        await interaction.reply({
           content: `Invalid subcommand ${commands}`,
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
     }
   },

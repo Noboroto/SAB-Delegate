@@ -1,8 +1,10 @@
 import {
   SlashCommandSubcommandBuilder,
   ChatInputCommandInteraction,
+  MessageFlags,
 } from "discord.js";
 import { getMessageFromOption } from "../../ultils";
+import { errorMessage } from "../_shared/errorMessage";
 
 const emojiPoll = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"];
 
@@ -36,7 +38,7 @@ export default {
   async execute(interaction: ChatInputCommandInteraction) {
     // interaction.user is the object representing the User who ran the command
     // interaction.member is the GuildMember object, which represents the user in the specific guild
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const pollChoiceCount =
       interaction.options.getInteger("poll-choice-count") ?? 0;
@@ -47,19 +49,27 @@ export default {
     );
 
     if (!messageFromID) {
-      interaction.editReply({
+      await interaction.editReply({
         content: "Message not found!",
       });
       return;
     }
 
-    await messageFromID.react(reaction);
+    try {
+      await messageFromID.react(reaction);
 
-    for (let i = 0; i < pollChoiceCount; i++) {
-      await messageFromID.react(emojiPoll[i]);
+      for (let i = 0; i < pollChoiceCount; i++) {
+        await messageFromID.react(emojiPoll[i]);
+      }
+    } catch (error) {
+      console.error("bot-message react failed", error);
+      await interaction.editReply({
+        content: `Cannot react: ${errorMessage(error)}`,
+      });
+      return;
     }
 
-    interaction.editReply({
+    await interaction.editReply({
       content: "Done!",
     });
   },

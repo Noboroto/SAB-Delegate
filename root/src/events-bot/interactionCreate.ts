@@ -1,5 +1,6 @@
-import { Events, Interaction, TextChannel } from "discord.js";
+import { Events, Interaction, MessageFlags } from "discord.js";
 import commands from "../commands";
+import { reportError } from "../ultils";
 
 export default {
   name: Events.InteractionCreate,
@@ -30,38 +31,22 @@ export default {
       );
       await command.execute(interaction);
     } catch (error) {
-      console.error(`Error executing ${interaction.commandName}`);
-      console.error(error);
-
-      const guild = interaction.client.guilds.cache.get("713025650176294945");
-      if (guild) {
-        const channel = guild.channels.cache.find(
-          (channel) => channel.name === "bot-log"
-        ) as TextChannel;
-
-        if (channel) {
-          const errorStr = error instanceof Error
-            ? `${error.name}: ${error.message}\n${error.stack}`
-            : JSON.stringify(error, null, 4);
-          channel.send({
-            content: `Error executing ${interaction.commandName}`,
-          }).catch(() => {});
-          channel.send({
-            content: "```\n" + errorStr + "\n```",
-          }).catch(() => {});
-        }
-      }
+      await reportError(
+        interaction.client,
+        `Error executing ${interaction.commandName}`,
+        error
+      );
 
       const errorMessage = {
         content: "There was an error while executing this command!",
-        ephemeral: true,
-      };
+        flags: MessageFlags.Ephemeral,
+      } as const;
 
-      if (interaction.replied || interaction.deferred) {
-        interaction.followUp(errorMessage).catch(() => {});
-      } else {
-        interaction.reply(errorMessage).catch(() => {});
-      }
+      const respond =
+        interaction.replied || interaction.deferred
+          ? interaction.followUp(errorMessage)
+          : interaction.reply(errorMessage);
+      await respond.catch(() => {});
     }
   },
 };

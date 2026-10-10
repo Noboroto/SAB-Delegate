@@ -20,7 +20,10 @@ export const getMessageFromOption = async (
     const messageFromID = await channel.messages.fetch(messageId);
     return messageFromID as Message;
   } catch (error) {
-    console.error(`Failed to fetch message from option "${optionName}":`, error);
+    console.error(
+      `Failed to fetch message from option "${optionName}":`,
+      error
+    );
     return null;
   }
 };

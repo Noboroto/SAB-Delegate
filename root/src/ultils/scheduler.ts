@@ -68,11 +68,11 @@ export const cancelJob = (groupID: string, id: number): string => {
   if (id < 0 || id >= schedulerArr.get(groupID).length) {
     return "Invalid job ID";
   }
+  // Ids are array indexes and are shown to users, so entries are never
+  // removed: reusing an id would cancel a different job than the one listed.
   const job = schedulerArr.get(groupID)[id];
-  job.job.cancel();
+  if (job.isCancel) return `Job \`${id}\` was already canceled`;
+  job.job?.cancel();
   job.isCancel = true;
-  if (schedulerArr.get(groupID).every((job) => job.isCancel)) {
-    schedulerArr.set(groupID, []);
-  }
   return `Job \`${id}\` has been canceled`;
 };

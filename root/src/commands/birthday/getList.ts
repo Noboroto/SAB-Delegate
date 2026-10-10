@@ -4,6 +4,7 @@ import {
 } from "discord.js";
 
 import { happyBirthday } from "../../ultils";
+import { sendInChunks } from "../_shared/chunkedReply";
 
 const commandName = "get-list";
 
@@ -26,31 +27,15 @@ export default {
     await interaction.reply("Getting list of users in the birthday list");
     const guid = interaction.guildId;
 
-    const limit = 1500;
-
     for (let m = 1; m <= 12; m++) {
       if (month !== 0 && month !== m) continue;
       const monthList = await happyBirthday.getMonthList(guid, m);
       if (monthList === "No birthdays found") {
         continue;
       }
-      if (monthList.length <= limit) {
-        await interaction.followUp(`## Month ${m}:\n ${monthList}`);
-      } else {
-        const monthListArr = monthList.split("###");
-        let msg = `## Month ${m} - partial\n`;
-        for (let idx = 0; idx < monthListArr.length; idx++) {
-          const part = "###" + monthListArr[idx];
-          if (msg.length + part.length > limit && msg.length > 0) {
-            await interaction.followUp(msg);
-            msg = `## Month ${m} - partial\n`;
-          }
-          msg += part;
-        }
-        if (msg.length > 0) {
-          await interaction.followUp(msg);
-        }
-      }
+      await sendInChunks(`## Month ${m}:\n${monthList}`, (content) =>
+        interaction.followUp(content)
+      );
     }
 
     await interaction.followUp("Done!");

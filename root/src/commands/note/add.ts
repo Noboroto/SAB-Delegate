@@ -1,8 +1,10 @@
 import {
   SlashCommandSubcommandBuilder,
   ChatInputCommandInteraction,
+  MessageFlags,
 } from "discord.js";
 import { noteUltils } from "../../ultils";
+import { errorMessage } from "../_shared/errorMessage";
 
 const commandName = "add";
 
@@ -33,11 +35,19 @@ export default {
     const topic = interaction.options.getString("topic");
     const note = interaction.options.getString("note");
 
-    await noteUltils.saveNote(role.id, topic, note);
+    try {
+      await noteUltils.saveNote(role.id, topic, note);
+    } catch (error) {
+      console.error("note add failed", error);
+      await interaction.reply({
+        content: `Cannot save the note: ${errorMessage(error)}`,
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
 
-    interaction.reply({
+    await interaction.reply({
       content: `Note saved for @${role.name} with topic ${topic}`,
-      ephemeral: false,
     });
   },
 };

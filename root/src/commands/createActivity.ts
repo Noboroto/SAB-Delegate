@@ -4,6 +4,7 @@ import {
   ChatInputCommandInteraction,
   ChannelType,
   PermissionsBitField,
+  InteractionContextType,
 } from "discord.js";
 
 const rejectEveryone = [
@@ -60,6 +61,7 @@ const willBeMutePermit = [
 export default {
   data: new SlashCommandBuilder()
     .setName("create-activity")
+    .setContexts(InteractionContextType.Guild)
     .setDescription("create activity neccessary")
 
     .addStringOption((Option) =>
@@ -77,8 +79,7 @@ export default {
         .setMinLength(3)
     )
 
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels)
-    .setDMPermission(false),
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
 
   async execute(interaction: ChatInputCommandInteraction) {
     // interaction.user is the object representing the User who ran the command

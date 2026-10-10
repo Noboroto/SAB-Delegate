@@ -1,8 +1,13 @@
 import {
   SlashCommandSubcommandBuilder,
   ChatInputCommandInteraction,
+  MessageFlags,
+  GuildTextBasedChannel,
 } from "discord.js";
 import { getMessageFromOption } from "../../ultils";
+import { replyInChunks, sendInChunks } from "../_shared/chunkedReply";
+import { errorMessage } from "../_shared/errorMessage";
+import { fetchReactorIds, hasReaction } from "../_shared/fetchAllReactors";
 
 const commandName = "id-by-reaction";
 
@@ -33,6 +38,7 @@ export default {
       .addStringOption((Option) =>
         Option.setName("content")
           .setDescription("message content")
+          .setMaxLength(2000)
           .setRequired(false)
       );
   },
@@ -56,27 +62,42 @@ export default {
     if (!messageFromID) {
       await interaction.reply({
         content: "Please provide a valid message link",
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
 
-    const reactMemberListID: string[] = [];
-    const reactionList = await messageFromID.reactions.cache;
-
-    for (const reactionFromMessage of reactionList.values()) {
-      if (reactionFromMessage.emoji.toString() !== reaction) continue;
-      await reactionFromMessage.users.fetch().then((users) => {
-        users.forEach((user) => {
-          if (user.bot) return;
-          reactMemberListID.push(user.id);
-        });
+    if (interaction.options.getString("reply-message") && !needReplyMessage) {
+      await interaction.reply({
+        content: "Reply message not found!",
+        flags: MessageFlags.Ephemeral,
       });
+      return;
     }
 
-    const msgUrl = `https://discord.com/channels/${messageFromID.guild.id}/${messageFromID.channel.id}/${messageFromID.id}`;
+    if (!hasReaction(messageFromID, reaction)) {
+      await interaction.reply({
+        content: "No one reacted with that emoji",
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
 
-    let replyMsg = `There are ${reactMemberListID.length} user(s) who [reacted the message](${msgUrl}) with ${reaction}: \n`;
+    // Paging through thousands of reactors outlives the 3s reply window. The
+    // list itself goes to a channel message when replying elsewhere, so the
+    // interaction answer is then private.
+    await interaction.deferReply(
+      needReplyMessage ? { flags: MessageFlags.Ephemeral } : {}
+    );
+
+    const reactMemberListID = await fetchReactorIds(messageFromID, reaction);
+
+    if (!reactMemberListID.length) {
+      await interaction.editReply("No one reacted with that emoji");
+      return;
+    }
+
+    let replyMsg = `There are ${reactMemberListID.length} user(s) who [reacted the message](${messageFromID.url}) with ${reaction}: \n`;
     for (const userID of reactMemberListID) {
       if (needMention) {
         replyMsg += `<@${userID}>`;
@@ -89,17 +110,23 @@ export default {
 
     replyMsg += response ? `\n${response}` : "";
 
-    if (!reactMemberListID.length) {
-      interaction.reply({
-        content: "No one reacted with that emoji",
-        ephemeral: true,
-      });
+    if (!needReplyMessage) {
+      await replyInChunks(interaction, replyMsg);
       return;
     }
 
-    if (needReplyMessage) {
-      needReplyMessage.reply(replyMsg);
+    try {
+      await sendInChunks(
+        replyMsg,
+        (content) => needReplyMessage.reply(content),
+        (content) =>
+          (needReplyMessage.channel as GuildTextBasedChannel).send(content)
+      );
+    } catch (error) {
+      console.error("get id-by-reaction reply failed", error);
+      await interaction.editReply(`Cannot reply: ${errorMessage(error)}`);
       return;
-    } else interaction.reply(replyMsg);
+    }
+    await interaction.editReply("Sent!");
   },
 };

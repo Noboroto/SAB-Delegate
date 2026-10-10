@@ -5,36 +5,42 @@ import {
   FetchMessagesOptions,
   Collection,
   Message,
+  MessageFlags,
 } from "discord.js";
 import { configManager } from "../../ultils";
+import { replyInChunks } from "../_shared/chunkedReply";
 
+const BATCH_SIZE = 100;
+
+// Deferred reply removes the 3s limit, so the scan can cover a long intro channel.
+const INTRO_SCAN_LIMIT = 10000;
+
+// Newest batch first; stops after `limit` messages in total.
 const lots_of_messages_getter = async (
   channel: TextChannel,
-  limit_msg = 1000
+  limit_msg = INTRO_SCAN_LIMIT
 ) => {
-  let sum_messages: Collection<string, Message<true>>[] = [];
-  let last_id = null;
+  const batches: Collection<string, Message<true>>[] = [];
+  let total = 0;
+  let before: string | undefined;
 
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
-    let options: FetchMessagesOptions = {
-      limit: 100,
-      cache: false,
-    };
-    if (last_id) {
-      options.before = last_id;
+  while (total < limit_msg) {
+    const requested = Math.min(BATCH_SIZE, limit_msg - total);
+    const options: FetchMessagesOptions = { limit: requested, cache: false };
+    if (before) {
+      options.before = before;
     }
 
     const messages = await channel.messages.fetch(options);
-    sum_messages = sum_messages.concat([messages]);
-    last_id = messages.last().id;
+    if (messages.size === 0) break;
+    batches.push(messages);
+    total += messages.size;
+    before = messages.last().id;
 
-    if (messages.size != 100 || sum_messages.length >= limit_msg) {
-      break;
-    }
+    if (messages.size < requested) break;
   }
 
-  return sum_messages;
+  return batches;
 };
 
 const commandName = "intro";
@@ -63,41 +69,50 @@ export default {
     if (!channelID) {
       await interaction.reply({
         content: "No introduction channel set",
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
 
-    const srcChannel = (await interaction.client.channels.fetch(
-      channelID
-    )) as TextChannel;
-    const user = interaction.options.getUser("user");
-    const messageCollections = await lots_of_messages_getter(srcChannel);
+    // Scanning the intro channel outlives the 3s reply window.
+    await interaction.deferReply();
 
+    const user = interaction.options.getUser("user");
     let message: Message<true> = null;
-    for (const messages of messageCollections.reverse()) {
-      const tempMessage = messages
-        .reverse()
-        .find((msg) => msg.author.id === user.id);
-      if (tempMessage) {
-        message = tempMessage;
-        break;
+    try {
+      const srcChannel = (await interaction.client.channels.fetch(
+        channelID
+      )) as TextChannel;
+      const batches = await lots_of_messages_getter(srcChannel);
+
+      // Oldest batch first, oldest message first: the user's first introduction.
+      for (const messages of batches.reverse()) {
+        const found = [...messages.values()]
+          .reverse()
+          .find((msg) => msg.author.id === user.id);
+        if (found) {
+          message = found;
+          break;
+        }
       }
+    } catch (error) {
+      console.error("get intro failed to read the introduction channel", error);
+      await interaction.editReply(
+        "Cannot read the introduction channel, check the bot's permissions."
+      );
+      return;
     }
 
     if (!message) {
-      await interaction.reply({
-        content: "User has no introduction",
-        ephemeral: true,
-      });
+      await interaction.editReply(
+        `User has no introduction in the last ${INTRO_SCAN_LIMIT} messages`
+      );
       return;
     }
 
-    const messageContent = message.content;
-    const messageUrl = message.url;
-    const replyMessage = {
-      content: `Jump to message ${user}'s [introduction](${messageUrl}):\n\n${messageContent}`,
-    };
-    await interaction.reply(replyMessage);
+    await replyInChunks(
+      interaction,
+      `Jump to message ${user}'s [introduction](${message.url}):\n\n${message.content}`
+    );
   },
 };

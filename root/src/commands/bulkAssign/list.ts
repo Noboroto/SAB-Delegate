@@ -2,7 +2,10 @@ import {
   SlashCommandSubcommandBuilder,
   ChatInputCommandInteraction,
   Role,
+  MessageFlags,
 } from "discord.js";
+import { replyInChunks } from "../_shared/chunkedReply";
+import { applyRoleToMembers, describeFailures } from "../_shared/applyRole";
 
 const commandName = "list";
 
@@ -34,9 +37,9 @@ export default {
     // interaction.member is the GuildMember object, which represents the user in the specific guild
     //const guild = interaction.client.guilds.cache.get('Guild ID');
 
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     const role = interaction.options.getRole("role") as Role;
-    const isRemove = interaction.options.getBoolean("is-remove");
+    const isRemove = interaction.options.getBoolean("is-remove") ?? false;
     const ids = interaction.options
       .getString("ids")
       .replaceAll(">", "")
@@ -45,36 +48,17 @@ export default {
       .split(/[\s,]+/);
     const unique_ids = [...new Set(ids)];
 
-    const guild = await interaction.guild.fetch();
-    const members = await guild.members.cache;
+    const { done, failures } = await applyRoleToMembers(
+      interaction,
+      unique_ids,
+      role,
+      isRemove
+    );
 
-    let counter = 0;
-
-    for (const id of unique_ids) {
-      const member = members.get(id);
-      if (!member) continue;
-      counter++;
-      try {
-        if (!isRemove) {
-          await member.roles.add(role);
-        } else {
-          await member.roles.remove(role);
-        }
-      } catch (error) {
-        console.error(
-          `Error modifying role to ${member.user.username}: ${error}`
-        );
-        await interaction.editReply(
-          `Completed ${counter} members(s)!\nError modifying role to ${member.user.username}: ${error}`
-        );
-        return;
-      }
-    }
-
-    const message = {
-      content: `Done modifying ${counter} member(s)!`,
-    };
-
-    await interaction.editReply(message);
+    await replyInChunks(
+      interaction,
+      `Done modifying ${done} member(s)!${describeFailures(failures)}`,
+      { ephemeral: true }
+    );
   },
 };

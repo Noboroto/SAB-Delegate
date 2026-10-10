@@ -1,4 +1,8 @@
-import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
+import {
+  PermissionFlagsBits,
+  SlashCommandBuilder,
+  MessageFlags,
+} from "discord.js";
 import setCmd from "./word/set";
 import resetCmd from "./word/reset";
 
@@ -16,15 +20,15 @@ export default {
     );
     switch (commands) {
       case setCmd.name:
-        setCmd.execute(interaction);
+        await setCmd.execute(interaction);
         break;
       case resetCmd.name:
-        resetCmd.execute(interaction);
+        await resetCmd.execute(interaction);
         break;
       default:
-        interaction.reply({
+        await interaction.reply({
           content: `Invalid subcommand ${commands}`,
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
     }
   },

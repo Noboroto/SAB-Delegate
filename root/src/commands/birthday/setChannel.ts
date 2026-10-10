@@ -1,12 +1,12 @@
 import {
   SlashCommandSubcommandBuilder,
   ChatInputCommandInteraction,
-  PermissionFlagsBits,
   ChannelType,
-  TextChannel,
+  MessageFlags,
 } from "discord.js";
 
 import { happyBirthday } from "../../ultils";
+import { botLacksChannelAccess } from "../_shared/botChannelAccess";
 
 const commandName = "birthday-channel";
 
@@ -30,22 +30,19 @@ export default {
 
   async execute(interaction: ChatInputCommandInteraction) {
     const gid = interaction.guildId;
-    const channel = interaction.options.getChannel("channel") as TextChannel;
+    const channel = interaction.options.getChannel("channel", true);
 
-    if (
-      !interaction.guild.members.me.permissions.has([
-        PermissionFlagsBits.SendMessages,
-        PermissionFlagsBits.ViewChannel,
-      ])
-    ) {
-      interaction.reply({
+    if (await botLacksChannelAccess(interaction, channel.id, "send")) {
+      await interaction.reply({
         content: "Bot cannot send message to this channel!",
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
 
     await happyBirthday.setChannel(`${gid}`, channel.id);
-    interaction.reply({ content: `Select channel for birthday: ${channel}` });
+    await interaction.reply({
+      content: `Select channel for birthday: ${channel}`,
+    });
   },
 };

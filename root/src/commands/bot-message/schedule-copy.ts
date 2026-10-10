@@ -3,11 +3,15 @@ import {
   TextChannel,
   ChatInputCommandInteraction,
   SlashCommandSubcommandBuilder,
+  MessageFlags,
 } from "discord.js";
 import { getMessageFromOption, jobScheduler } from "../../ultils";
+import { buildMessageCopy } from "../_shared/copyMessage";
+import { readScheduleTime } from "../_shared/scheduleTime";
 import nodeScheduler from "node-schedule";
 
 const commandName = "schedule-copy";
+const MAX_DESCRIPTION_LENGTH = 200;
 
 export default {
   name: commandName,
@@ -79,50 +83,23 @@ export default {
       );
   },
   async execute(interaction: ChatInputCommandInteraction) {
-    // interaction.user is the object representing the User who ran the command
-    // interaction.member is the GuildMember object, which represents the user in the specific guild
-    await interaction.deferReply({ ephemeral: true });
-
-    const day = interaction.options.getInteger("day") ?? new Date().getDate();
-    const month =
-      interaction.options.getInteger("month") ?? new Date().getMonth() + 1;
-    const year =
-      interaction.options.getInteger("year") ?? new Date().getFullYear();
-    const hour = interaction.options.getInteger("hour");
-    const minute = interaction.options.getInteger("minute");
-    const second = interaction.options.getInteger("second") ?? 0;
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const gui = interaction.guildId;
+    const {
+      date: scheduleTime,
+      dateStr: scheduleTimeStr,
+      nowStr: currentTimeStr,
+    } = readScheduleTime(interaction);
 
-    const scheduleTime = new Date(
-      year,
-      month - 1,
-      day,
-      hour,
-      minute,
-      second,
-      0
-    );
-    const currentTime = new Date();
-    const currentTimeStr = currentTime.toLocaleString("vi-VN", {
-      timeZone: "Asia/Ho_Chi_Minh",
-      day: "2-digit",
-      month: "numeric",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-    const scheduleTimeStr = scheduleTime.toLocaleString("vi-VN", {
-      timeZone: "Asia/Ho_Chi_Minh",
-      day: "2-digit",
-      month: "numeric",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-
-    if (scheduleTime < currentTime) {
-      interaction.editReply({
+    if (!scheduleTime) {
+      await interaction.editReply({
+        content: `invalid date, user input is ${scheduleTimeStr}`,
+      });
+      return;
+    }
+    if (scheduleTime <= new Date()) {
+      await interaction.editReply({
         content: `invalid time, user input time is ${scheduleTimeStr}`,
       });
       return;
@@ -134,39 +111,44 @@ export default {
     const srcMsgLink = interaction.options.getString("message-link");
 
     const job = nodeScheduler.scheduleJob(scheduleTime, async () => {
-      const messageFromID = await getMessageFromOption(
-        interaction,
-        "message-link"
-      );
+      try {
+        const messageFromID = await getMessageFromOption(
+          interaction,
+          "message-link"
+        );
+        if (!messageFromID) return;
 
-      if (!messageFromID) {
-        return;
+        const message = buildMessageCopy(messageFromID);
+        if (!message) return;
+
+        await targetChannel.send(message);
+      } catch (error) {
+        console.error("Scheduled bot-message copy failed", error);
       }
-
-      const attachments = messageFromID.attachments.values();
-      const message = {
-        content: messageFromID.content,
-        files: [],
-      };
-
-      for (const file of attachments) {
-        message.files.push(file);
-      }
-      await targetChannel.send(message);
     });
+
+    if (!job) {
+      await interaction.editReply({
+        content: `invalid time, user input time is ${scheduleTimeStr}`,
+      });
+      return;
+    }
 
     // save job to scheduler
     const id = jobScheduler.saveJob(
       commandName,
       gui,
       interaction.user.username,
-      `Copy from message to ${srcMsgLink}`,
+      `Copy from ${srcMsgLink} to ${targetChannel}`.slice(
+        0,
+        MAX_DESCRIPTION_LENGTH
+      ),
       scheduleTimeStr,
       currentTimeStr,
       job
     );
 
-    interaction.editReply({
+    await interaction.editReply({
       content: `Job has been scheduled with id ${id} at ${scheduleTimeStr}`,
     });
   },

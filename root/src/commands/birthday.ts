@@ -1,4 +1,8 @@
-import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
+import {
+  PermissionFlagsBits,
+  SlashCommandBuilder,
+  MessageFlags,
+} from "discord.js";
 import appendList from "./birthday/appendList";
 import getList from "./birthday/getList";
 import removeCmd from "./birthday/remove";
@@ -20,21 +24,21 @@ export default {
     );
     switch (commands) {
       case setChannel.name:
-        setChannel.execute(interaction);
+        await setChannel.execute(interaction);
         break;
       case getList.name:
-        getList.execute(interaction);
+        await getList.execute(interaction);
         break;
       case appendList.name:
-        appendList.execute(interaction);
+        await appendList.execute(interaction);
         break;
       case removeCmd.name:
-        removeCmd.execute(interaction);
+        await removeCmd.execute(interaction);
         break;
       default:
-        interaction.reply({
+        await interaction.reply({
           content: `Invalid subcommand ${commands}`,
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
     }
   },

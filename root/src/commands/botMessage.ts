@@ -5,7 +5,11 @@ import editSend from "./bot-message/edit-send";
 import react from "./bot-message/react";
 import send from "./bot-message/send";
 import scheduleSend from "./bot-message/schedule-send";
-import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
+import {
+  PermissionFlagsBits,
+  SlashCommandBuilder,
+  MessageFlags,
+} from "discord.js";
 
 export default {
   data: new SlashCommandBuilder()
@@ -27,30 +31,30 @@ export default {
     );
     switch (commands) {
       case copyPaste.name:
-        copyPaste.execute(interaction);
+        await copyPaste.execute(interaction);
         break;
       case scheduleCopy.name:
-        scheduleCopy.execute(interaction);
+        await scheduleCopy.execute(interaction);
         break;
       case editCopy.name:
-        editCopy.execute(interaction);
+        await editCopy.execute(interaction);
         break;
       case editSend.name:
-        editSend.execute(interaction);
+        await editSend.execute(interaction);
         break;
       case react.name:
-        react.execute(interaction);
+        await react.execute(interaction);
         break;
       case send.name:
-        send.execute(interaction);
+        await send.execute(interaction);
         break;
       case scheduleSend.name:
-        scheduleSend.execute(interaction);
+        await scheduleSend.execute(interaction);
         break;
       default:
-        interaction.reply({
+        await interaction.reply({
           content: `Invalid subcommand ${commands}`,
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
     }
   },

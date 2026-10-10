@@ -8,8 +8,14 @@ import {
   GuildMember,
   ChannelType,
   ThreadChannel,
+  TextChannel,
+  NewsChannel,
+  GuildTextBasedChannel,
 } from "discord.js";
 import { getMessageFromOption } from "../../ultils";
+import { replyInChunks, sendInChunks } from "../_shared/chunkedReply";
+import { errorMessage } from "../_shared/errorMessage";
+import { fetchReactorIds } from "../_shared/fetchAllReactors";
 
 const commandName = "not-react";
 
@@ -27,6 +33,7 @@ export default {
       .addStringOption((Option) =>
         Option.setName("content")
           .setDescription("message content")
+          .setMaxLength(2000)
           .setRequired(false)
       )
       .addRoleOption((Option) =>
@@ -64,7 +71,7 @@ export default {
     );
 
     if (!messageFromID) {
-      interaction.reply({
+      await interaction.reply({
         content: "Please provide a valid message link",
         flags: MessageFlags.Ephemeral,
       });
@@ -76,15 +83,46 @@ export default {
       (messageFromID.channel as Channel).id
     );
 
-    console.log(msgChannel.type);
+    if (
+      msgChannel.type == ChannelType.GuildVoice ||
+      msgChannel.type == ChannelType.GuildStageVoice
+    ) {
+      await interaction.reply({
+        content: "This command is not supported in voice channel",
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+    const isTextChannel =
+      msgChannel.type == ChannelType.GuildText ||
+      msgChannel.type == ChannelType.GuildAnnouncement;
+    const isThread =
+      msgChannel.type == ChannelType.PublicThread ||
+      msgChannel.type == ChannelType.PrivateThread ||
+      msgChannel.type == ChannelType.AnnouncementThread;
+    if (!isTextChannel && !isThread) {
+      await interaction.reply({
+        content:
+          "This command is not supported in this channel. Type value is " +
+          msgChannel.type,
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    // Fetching every member and reactor outlives the 3s reply window. With
+    // is-reply the list goes to a channel message, so the answer is private.
+    await interaction.deferReply(
+      isReply ? { flags: MessageFlags.Ephemeral } : {}
+    );
+
+    // Channel and role member lists are built from the cache; fill it first.
+    const guildMembers = await interaction.guild.members.fetch();
 
     let membersChannel: GuildMember[];
-    if (
-      msgChannel.type == ChannelType.GuildText ||
-      msgChannel.type == ChannelType.GuildAnnouncement
-    ) {
+    if (isTextChannel) {
       membersChannel = Array.from(
-        msgChannel.members
+        (msgChannel as TextChannel | NewsChannel).members
           .filter((member) => {
             if (includeBots)
               return member.permissions.has(PermissionFlagsBits.ViewChannel);
@@ -95,11 +133,7 @@ export default {
           })
           .values()
       );
-    } else if (
-      msgChannel.type == ChannelType.PublicThread ||
-      msgChannel.type == ChannelType.PrivateThread ||
-      msgChannel.type == ChannelType.AnnouncementThread
-    ) {
+    } else {
       const threadMembers = await (msgChannel as ThreadChannel).members.fetch({
         withMember: true,
       });
@@ -108,32 +142,13 @@ export default {
           if (includeBots) return true;
           return !member.user.bot;
         })
-        .map((member) => {
-          return interaction.guild.members.cache.get(member.id);
-        })
+        .map((member) => guildMembers.get(member.id))
         .filter((member): member is GuildMember => member !== undefined);
-    } else if (
-      msgChannel.type == ChannelType.GuildVoice ||
-      msgChannel.type == ChannelType.GuildStageVoice
-    ) {
-      interaction.reply({
-        content: "This command is not supported in voice channel",
-        flags: MessageFlags.Ephemeral,
-      });
-      return;
-    } else {
-      interaction.reply({
-        content:
-          "This command is not supported in this channel. Type value is " +
-          msgChannel.type,
-        flags: MessageFlags.Ephemeral,
-      });
-      return;
     }
     if (inputRole) {
       if (onlyInChannel === false) {
         membersChannel = Array.from(
-          (await interaction.guild.members.fetch())
+          guildMembers
             .filter((member) => member.roles.cache.has(inputRole.id))
             .values()
         );
@@ -144,75 +159,45 @@ export default {
       }
     }
 
-    const reactMemberListID: string[] = [];
-    const reactionList = await messageFromID.reactions.cache;
-
-    for (const reactionFromMessage of reactionList.values()) {
-      await reactionFromMessage.users.fetch().then((users) => {
-        users.forEach((user) => {
-          if (user.bot) return;
-          reactMemberListID.push(user.id);
-        });
-      });
-    }
-
-    const absent = membersChannel.filter((member) => {
-      try {
-        return !reactMemberListID.includes(member.id);
-      } catch (error) {
-        console.error(error);
-        return true;
-      }
-    });
-
-    const msgUrl = `https://discord.com/channels/${interaction.guild.id}/${messageFromID.channel.id}/${messageFromID.id}`;
-
-    let replyMsg = `Reply to ${interaction.user}, there are ${absent.length} user(s) [who didn't reacted at message](${msgUrl}) are: \n`;
+    const reactMemberListID = new Set(await fetchReactorIds(messageFromID));
+    const absent = membersChannel.filter(
+      (member) => !reactMemberListID.has(member.id)
+    );
 
     if (absent.length === 0) {
-      interaction.reply({
-        content: "Everyone in role reacted to the message",
-        flags: MessageFlags.Ephemeral,
-      });
+      await interaction.editReply("Everyone in role reacted to the message");
       return;
     }
 
-    const memberMentions: string[] = [];
-    for (const member of absent.values()) {
-      let mention = `${member}`;
-      if (member.id === interaction.user.id) mention += " (author)";
-      memberMentions.push(mention);
-    }
+    const memberMentions = absent.map(
+      (member) =>
+        `${member}${member.id === interaction.user.id ? " (author)" : ""}`
+    );
 
-    const header = `Reply to ${interaction.user}, there are ${absent.length} user(s) [who didn't reacted at message](${msgUrl}) are: \n`;
+    const header = `Reply to ${interaction.user}, there are ${absent.length} user(s) [who didn't reacted at message](${messageFromID.url}) are: \n`;
     const footer = response ? `\n${response}` : "";
-
-    const chunks: string[] = [];
-    let current = header;
-    for (let i = 0; i < memberMentions.length; i++) {
-      const line = memberMentions[i] + ",\n";
-      const isLast = i === memberMentions.length - 1;
-      const suffix = isLast ? footer : "";
-      if ((current + line + suffix).length > 2000) {
-        chunks.push(current);
-        current = line;
-      } else {
-        current += line;
-      }
-      if (isLast) current += footer;
-    }
-    chunks.push(current);
+    const text =
+      header +
+      memberMentions.map((mention) => mention + ",\n").join("") +
+      footer;
 
     if (!isReply) {
-      await interaction.reply(chunks[0]);
-      for (let i = 1; i < chunks.length; i++) {
-        await interaction.followUp(chunks[i]);
-      }
-    } else {
-      await messageFromID.reply(chunks[0]);
-      for (let i = 1; i < chunks.length; i++) {
-        await messageFromID.channel.send(chunks[i]);
-      }
+      await replyInChunks(interaction, text);
+      return;
     }
+
+    try {
+      await sendInChunks(
+        text,
+        (content) => messageFromID.reply(content),
+        (content) =>
+          (messageFromID.channel as GuildTextBasedChannel).send(content)
+      );
+    } catch (error) {
+      console.error("mention not-react reply failed", error);
+      await interaction.editReply(`Cannot reply: ${errorMessage(error)}`);
+      return;
+    }
+    await interaction.editReply("Sent!");
   },
 };

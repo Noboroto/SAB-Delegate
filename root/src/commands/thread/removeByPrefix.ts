@@ -3,7 +3,10 @@ import {
   ChatInputCommandInteraction,
   ChannelType,
   TextChannel,
+  MessageFlags,
 } from "discord.js";
+import { replyInChunks } from "../_shared/chunkedReply";
+import { errorMessage } from "../_shared/errorMessage";
 
 const commandName = "remove-by-prefix";
 
@@ -33,28 +36,48 @@ export default {
     //const guild = interaction.client.guilds.cache.get('Guild ID');
     const targetChannel = (interaction.options.getChannel("destination") ??
       interaction.channel) as TextChannel;
-    const prefix =
-      interaction.options.getString("prefix").trimEnd().trimStart() ??
-      "unknown";
-    let counter = 0;
-    await interaction.deferReply({ ephemeral: true });
+    const prefix = interaction.options.getString("prefix").trim();
+    if (!prefix) {
+      await interaction.reply({
+        content: "Prefix must not be empty!",
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+    if (!("threads" in targetChannel)) {
+      await interaction.reply({
+        content: "Threads cannot be listed in this channel!",
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-    //get all threads by prefix
-    const threads = await targetChannel.threads.fetch();
-    const filteredThreads = threads.threads.filter((thread) =>
+    // Active threads only: archived ones are usually history people want kept.
+    const threads = (await targetChannel.threads.fetch()).threads;
+    const filteredThreads = threads.filter((thread) =>
       thread.name.startsWith(prefix)
     );
 
-    //delete all threads
+    let counter = 0;
+    const failures: string[] = [];
     for (const thread of filteredThreads.values()) {
-      await thread.delete();
-      counter++;
+      try {
+        await thread.delete();
+        counter++;
+      } catch (error) {
+        console.error(`Failed to delete thread ${thread.id}`, error);
+        failures.push(`${thread.name}: ${errorMessage(error)}`);
+      }
     }
 
-    const message = {
-      content: `Done ${counter} thread(s)!`,
-    };
-
-    await interaction.editReply(message);
+    await replyInChunks(
+      interaction,
+      `Done ${counter} thread(s)!` +
+        (failures.length
+          ? `\nFailed ${failures.length}:\n${failures.join("\n")}`
+          : ""),
+      { ephemeral: true }
+    );
   },
 };

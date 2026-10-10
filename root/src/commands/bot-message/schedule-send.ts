@@ -3,11 +3,14 @@ import {
   TextChannel,
   ChatInputCommandInteraction,
   SlashCommandSubcommandBuilder,
+  MessageFlags,
 } from "discord.js";
 import { jobScheduler } from "../../ultils";
+import { readScheduleTime } from "../_shared/scheduleTime";
 import nodeScheduler from "node-schedule";
 
 const commandName = "schedule-send";
+const MAX_DESCRIPTION_LENGTH = 200;
 
 export default {
   name: commandName,
@@ -20,6 +23,7 @@ export default {
       .addStringOption((Option) =>
         Option.setName("message")
           .setDescription("message content")
+          .setMaxLength(2000)
           .setRequired(true)
       )
       .addIntegerOption((Option) =>
@@ -79,50 +83,23 @@ export default {
       );
   },
   async execute(interaction: ChatInputCommandInteraction) {
-    // interaction.user is the object representing the User who ran the command
-    // interaction.member is the GuildMember object, which represents the user in the specific guild
-
-    await interaction.deferReply({ ephemeral: true });
-
-    const day = interaction.options.getInteger("day") ?? new Date().getDate();
-    const month =
-      interaction.options.getInteger("month") ?? new Date().getMonth() + 1;
-    const year =
-      interaction.options.getInteger("year") ?? new Date().getFullYear();
-    const hour = interaction.options.getInteger("hour");
-    const minute = interaction.options.getInteger("minute");
-    const second = interaction.options.getInteger("second") ?? 0;
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const gui = interaction.guildId;
+    const {
+      date: scheduleTime,
+      dateStr: scheduleTimeStr,
+      nowStr: currentTimeStr,
+    } = readScheduleTime(interaction);
 
-    const scheduleTime = new Date(
-      year,
-      month - 1,
-      day,
-      hour,
-      minute,
-      second,
-      0
-    );
-    const currentTime = new Date();
-    const currentTimeStr = currentTime.toLocaleString("vi-VN", {
-      timeZone: "Asia/Ho_Chi_Minh",
-      day: "2-digit",
-      month: "numeric",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-    const scheduleTimeStr = scheduleTime.toLocaleString("vi-VN", {
-      timeZone: "Asia/Ho_Chi_Minh",
-      day: "2-digit",
-      month: "numeric",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-    if (scheduleTime < currentTime) {
-      interaction.editReply({
+    if (!scheduleTime) {
+      await interaction.editReply({
+        content: `invalid date, user input is ${scheduleTimeStr}`,
+      });
+      return;
+    }
+    if (scheduleTime <= new Date()) {
+      await interaction.editReply({
         content: `invalid time, user input time is ${scheduleTimeStr}`,
       });
       return;
@@ -139,21 +116,35 @@ export default {
     };
 
     const job = nodeScheduler.scheduleJob(scheduleTime, async () => {
-      await targetChannel.send(message);
+      try {
+        await targetChannel.send(message);
+      } catch (error) {
+        console.error("Scheduled bot-message send failed", error);
+      }
     });
+
+    if (!job) {
+      await interaction.editReply({
+        content: `invalid time, user input time is ${scheduleTimeStr}`,
+      });
+      return;
+    }
 
     // save job to scheduler
     const id = jobScheduler.saveJob(
       commandName,
       gui,
       interaction.user.username,
-      `Send message to ${interaction.channel}: ${message.content}`,
+      `Send message to ${targetChannel}: ${message.content}`.slice(
+        0,
+        MAX_DESCRIPTION_LENGTH
+      ),
       scheduleTimeStr,
       currentTimeStr,
       job
     );
 
-    interaction.editReply({
+    await interaction.editReply({
       content: `Job has been scheduled with id ${id} at ${scheduleTimeStr}`,
     });
   },

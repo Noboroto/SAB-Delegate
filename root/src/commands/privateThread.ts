@@ -1,4 +1,8 @@
-import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
+import {
+  PermissionFlagsBits,
+  SlashCommandBuilder,
+  MessageFlags,
+} from "discord.js";
 import list from "./privateThread/list";
 import byReaction from "./privateThread/byReaction";
 
@@ -16,15 +20,15 @@ export default {
     );
     switch (commands) {
       case list.name:
-        list.execute(interaction);
+        await list.execute(interaction);
         break;
       case byReaction.name:
-        byReaction.execute(interaction);
+        await byReaction.execute(interaction);
         break;
       default:
-        interaction.reply({
+        await interaction.reply({
           content: `Invalid subcommand ${commands}`,
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
     }
   },

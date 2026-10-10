@@ -1,22 +1,35 @@
 import { birthdayDb } from "./db";
 import * as fs from "fs";
 
+// The legacy `isCompleted.<month>.<day>` flag had no year and suppressed a date
+// forever. A single "YYYY-M-D" key also avoids lodash turning the numeric path
+// into a huge sparse array (the old field already is an array).
+const completedDateKey = (
+  guid: string,
+  year: number,
+  month: number,
+  day: number
+) => `${guid}.completedDates.${year}-${month}-${day}`;
+
 export const setIsCompleteDate = async (
   guid: string,
+  year: number,
   month: number,
   day: number,
-  status: Boolean = true
+  status: boolean = true
 ) => {
-  await birthdayDb.set(`${guid}.isCompleted.${month}.${day}`, status);
+  await birthdayDb.set(completedDateKey(guid, year, month, day), status);
 };
 
 export const getIsCompleteDate = async (
   guid: string,
+  year: number,
   month: number,
   day: number
-) => {
-  const data = await birthdayDb.get(`${guid}.isCompleted.${month}.${day}`);
-  return data;
+): Promise<boolean> => {
+  return Boolean(
+    await birthdayDb.get(completedDateKey(guid, year, month, day))
+  );
 };
 
 export const resetWishes = async (guid: string) => {
@@ -82,7 +95,7 @@ export const getMonthList = async (
 export const removeBirthday = async (
   guid: string,
   id: string
-): Promise<String> => {
+): Promise<string> => {
   const data = await birthdayDb.get(`${guid}.data`);
   if (!data) return "No birthday found";
 
@@ -107,7 +120,7 @@ export const removeBirthday = async (
 export const removeBirthdayByDiscord = async (
   guid: string,
   discordId: string
-): Promise<String> => {
+): Promise<string> => {
   const data = await birthdayDb.get(`${guid}.data`);
   if (!data) return "No birthday found";
 
@@ -131,7 +144,7 @@ export const removeBirthdayByDiscord = async (
   return "Birthday removed";
 };
 
-export const getWishID = async (guid: string): Promise<String> => {
+export const getWishID = async (guid: string): Promise<string> => {
   const guildObj = await birthdayDb.get(guid);
 
   if (guildObj === undefined || guildObj === null) {
@@ -142,11 +155,10 @@ export const getWishID = async (guid: string): Promise<String> => {
     console.info("Reset wishes because count is 0");
     await resetWishes(guid);
   }
-  let maxMsg = await birthdayDb.get(`max`);
+  const maxMsg = await birthdayDb.get(`max`);
   if (maxMsg === null || maxMsg === undefined || maxMsg === 0) {
     console.info("Reset wishes because maxMsg is 0");
     await resetWishes(guid);
-    maxMsg = await birthdayDb.get(`max`);
   }
 
   const maxRetries = 1000;
@@ -187,9 +199,11 @@ export const getDateList = async (guid: string, month: number, day: number) => {
   return dayList;
 };
 
+// Guild rows only; the top-level "max" row holds the wish count.
 export const getServerIDs = async () => {
-  const keys = (await birthdayDb.all()).map((key) => key.id);
-  return keys;
+  return (await birthdayDb.all())
+    .map((row) => row.id)
+    .filter((id) => id !== "max");
 };
 
 export const setChannel = async (guid: string, channelId: string) => {
@@ -201,7 +215,7 @@ export const getChannel = async (guid: string) => {
 };
 
 export const setMaxWishes = async (newMax: number) => {
-  const oldMax = await birthdayDb.get(`max`);
+  const oldMax = Number(await birthdayDb.get(`max`)) || 0;
   await birthdayDb.set(`max`, newMax);
   const keys = await getServerIDs();
   for (const guids of keys) {

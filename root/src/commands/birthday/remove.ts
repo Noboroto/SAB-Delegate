@@ -1,6 +1,7 @@
 import {
   ChatInputCommandInteraction,
   SlashCommandSubcommandBuilder,
+  MessageFlags,
 } from "discord.js";
 import { happyBirthday } from "../../ultils";
 
@@ -26,7 +27,7 @@ export default {
       );
   },
   async execute(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     const guid = interaction.guildId;
     const studentId = interaction.options.getString("student-id")?.trim();
     const user = interaction.options.getUser("user");
@@ -38,7 +39,7 @@ export default {
       return;
     }
 
-    let result: String;
+    let result: string;
     if (studentId) {
       result = await happyBirthday.removeBirthday(guid, studentId);
     } else {

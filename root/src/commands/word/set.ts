@@ -1,12 +1,14 @@
 import {
   SlashCommandSubcommandBuilder,
   ChatInputCommandInteraction,
-  PermissionFlagsBits,
   ChannelType,
   TextChannel,
+  MessageFlags,
 } from "discord.js";
 
 import { wordGame } from "../../ultils";
+import { botLacksChannelAccess } from "../_shared/botChannelAccess";
+import { errorMessage } from "../_shared/errorMessage";
 
 const commandName = "set";
 
@@ -38,24 +40,31 @@ export default {
 
   async execute(interaction: ChatInputCommandInteraction) {
     const gid = interaction.guildId;
-    const channel = interaction.options.getChannel("channel") as TextChannel;
+    const channel = interaction.options.getChannel(
+      "channel",
+      true
+    ) as TextChannel;
     const maxWords = interaction.options.getInteger("max-words") ?? 1500;
 
-    if (
-      !interaction.guild.members.me.permissions.has([
-        PermissionFlagsBits.SendMessages,
-        PermissionFlagsBits.ViewChannel,
-      ])
-    ) {
-      interaction.reply({
+    if (await botLacksChannelAccess(interaction, channel.id, "send")) {
+      await interaction.reply({
         content: "Bot không có quyền gửi tin nhắn trong kênh này!",
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
 
-    wordGame.setWordGame(`${gid}`, channel.id, maxWords);
-    channel.send("Trò chơi bắt đầu! Vui lòng nhập 1 từ bất kỳ!");
-    interaction.reply({ content: `Đã chọn phòng chơi: ${channel}` });
+    try {
+      await wordGame.setWordGame(`${gid}`, channel.id, maxWords);
+      await channel.send("Trò chơi bắt đầu! Vui lòng nhập 1 từ bất kỳ!");
+    } catch (error) {
+      console.error("word set failed", error);
+      await interaction.reply({
+        content: `Không thể bắt đầu trò chơi: ${errorMessage(error)}`,
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+    await interaction.reply({ content: `Đã chọn phòng chơi: ${channel}` });
   },
 };

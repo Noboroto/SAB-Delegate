@@ -1,8 +1,10 @@
 import {
   ChatInputCommandInteraction,
   SlashCommandSubcommandBuilder,
+  MessageFlags,
 } from "discord.js";
 import { getMessageFromOption } from "../../ultils";
+import { errorMessage } from "../_shared/errorMessage";
 
 const commandName = "edit-send";
 
@@ -15,6 +17,7 @@ export default {
       .addStringOption((Option) =>
         Option.setName("new-content")
           .setDescription("new content")
+          .setMaxLength(2000)
           .setRequired(true)
       )
       .addStringOption((Option) =>
@@ -24,7 +27,7 @@ export default {
       );
   },
   async execute(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const botMessageFromID = await getMessageFromOption(
       interaction,
@@ -38,13 +41,30 @@ export default {
       return;
     }
 
+    if (botMessageFromID.author.id !== interaction.client.user.id) {
+      await interaction.editReply({
+        content: "The old message was not sent by this bot!",
+      });
+      return;
+    }
+
     const response = interaction.options.getString("new-content");
+    if (!response?.trim()) {
+      await interaction.editReply({
+        content: "New content must not be empty!",
+      });
+      return;
+    }
 
-    const message = {
-      content: response,
-    };
-
-    await botMessageFromID.edit(message);
+    try {
+      await botMessageFromID.edit({ content: response });
+    } catch (error) {
+      console.error("bot-message edit-send failed", error);
+      await interaction.editReply({
+        content: `Cannot edit the message: ${errorMessage(error)}`,
+      });
+      return;
+    }
 
     await interaction.editReply({
       content: "Done!",

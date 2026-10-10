@@ -1,4 +1,8 @@
-import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
+import {
+  PermissionFlagsBits,
+  SlashCommandBuilder,
+  MessageFlags,
+} from "discord.js";
 import introChannel from "./set/introChannel";
 import birthdayChannel from "./birthday/setChannel";
 import logChannel from "./set/logChannel";
@@ -10,7 +14,6 @@ export default {
     .addSubcommand(introChannel.addCommand)
     .addSubcommand(birthdayChannel.addCommand)
     .addSubcommand(logChannel.addCommand)
-    .setDMPermission(true)
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
   async execute(interaction) {
     const commands = interaction.options.getSubcommand();
@@ -28,9 +31,9 @@ export default {
         await logChannel.execute(interaction);
         break;
       default:
-        interaction.reply({
+        await interaction.reply({
           content: `Invalid subcommand ${commands}`,
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
     }
   },

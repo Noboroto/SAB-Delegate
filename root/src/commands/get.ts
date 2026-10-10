@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandBuilder, MessageFlags } from "discord.js";
 import intro from "./get/intro";
 import idByAReaction from "./get/idByReaction";
 import idByRole from "./get/idByRole";
@@ -11,8 +11,7 @@ export default {
     .addSubcommand(intro.addCommand)
     .addSubcommand(idByAReaction.addCommand)
     .addSubcommand(idByRole.addCommand)
-    .addSubcommand(inviteLink.addCommand)
-    .setDMPermission(true),
+    .addSubcommand(inviteLink.addCommand),
   async execute(interaction) {
     const commands = interaction.options.getSubcommand();
     console.info(
@@ -32,9 +31,9 @@ export default {
         await inviteLink.execute(interaction);
         break;
       default:
-        interaction.reply({
+        await interaction.reply({
           content: `Invalid subcommand ${commands}`,
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
     }
   },

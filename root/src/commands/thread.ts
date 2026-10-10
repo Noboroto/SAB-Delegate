@@ -1,4 +1,8 @@
-import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
+import {
+  PermissionFlagsBits,
+  SlashCommandBuilder,
+  MessageFlags,
+} from "discord.js";
 import removeByPrefix from "./thread/removeByPrefix";
 import editPrefix from "./thread/editPrefix";
 import create from "./thread/create";
@@ -20,21 +24,21 @@ export default {
     );
     switch (commands) {
       case everyone.name:
-        everyone.execute(interaction);
+        await everyone.execute(interaction);
         break;
       case editPrefix.name:
-        editPrefix.execute(interaction);
+        await editPrefix.execute(interaction);
         break;
       case removeByPrefix.name:
-        removeByPrefix.execute(interaction);
+        await removeByPrefix.execute(interaction);
         break;
       case create.name:
-        create.execute(interaction);
+        await create.execute(interaction);
         break;
       default:
-        interaction.reply({
+        await interaction.reply({
           content: `Invalid subcommand ${commands}`,
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
     }
   },

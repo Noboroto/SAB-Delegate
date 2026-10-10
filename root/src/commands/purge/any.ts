@@ -4,6 +4,7 @@ import {
   ChatInputCommandInteraction,
   Message,
   Collection,
+  MessageFlags,
 } from "discord.js";
 import { getMessageFromOption } from "../../ultils";
 
@@ -30,9 +31,16 @@ export default {
       );
   },
   async execute(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-    const thisChannel = interaction.channel as TextChannel;
+    const thisChannel = interaction.channel as TextChannel | null;
+    if (!thisChannel) {
+      await interaction.editReply({
+        content: "Cannot purge: this channel is not available",
+      });
+      return;
+    }
+
     let fromMessage = await getMessageFromOption(interaction, "from-link");
     const untilMessage = await getMessageFromOption(interaction, "until-link");
 
@@ -43,60 +51,95 @@ export default {
       return;
     }
 
+    if (interaction.options.getString("from-link") && !fromMessage) {
+      await interaction.editReply({
+        content: "Invalid from message",
+      });
+      return;
+    }
+
+    // Deleting is destructive and the links are user input: only touch this channel.
+    if (untilMessage.channelId !== interaction.channelId) {
+      await interaction.editReply({
+        content: "Messages must be in the channel where you run this command",
+      });
+      return;
+    }
+    if (fromMessage && fromMessage.channelId !== interaction.channelId) {
+      await interaction.editReply({
+        content: "Messages must be in the channel where you run this command",
+      });
+      return;
+    }
+
     if (!fromMessage) {
       fromMessage = (
         await thisChannel.messages.fetch({ cache: true, limit: 1 })
       ).first();
     }
+    if (!fromMessage) {
+      await interaction.editReply({ content: "No message to purge" });
+      return;
+    }
 
-    const fromChannel = fromMessage?.channel as TextChannel;
-    const untilChannel = untilMessage?.channel as TextChannel;
-    if (fromChannel && untilChannel && fromChannel.id !== untilChannel.id) {
+    if (untilMessage.createdTimestamp >= fromMessage.createdTimestamp) {
       await interaction.editReply({
-        content: "Messages must be in the same channel",
+        content: "The until message must be older than the from message",
       });
       return;
     }
+
     const initMsg = fromMessage;
     let deleteMessages: Collection<string, Message> = new Collection();
+    let cursor = initMsg;
     do {
-      let messages = await thisChannel.messages.fetch({
-        cache: false,
-        limit: FETCH_LIMIT,
-        before: fromMessage.id,
-      });
-      messages = messages.sort(
-        (a, b) => a.createdTimestamp - b.createdTimestamp
-      );
-      fromMessage = messages.last();
-      deleteMessages = deleteMessages.concat(messages);
-      if (messages.has(untilMessage.id) || messages.size < FETCH_LIMIT) {
+      const batch = (
+        await thisChannel.messages.fetch({
+          cache: false,
+          limit: FETCH_LIMIT,
+          before: cursor.id,
+        })
+      ).sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+      if (batch.size === 0) break;
+      deleteMessages = deleteMessages.concat(batch);
+      // Ascending order: the oldest message of the batch is the next page's cursor.
+      cursor = batch.first();
+      if (
+        batch.has(untilMessage.id) ||
+        cursor.createdTimestamp <= untilMessage.createdTimestamp ||
+        batch.size < FETCH_LIMIT
+      ) {
         break;
       }
+      // eslint-disable-next-line no-constant-condition -- exits via the break conditions above
     } while (true);
-    deleteMessages = deleteMessages.sort(
-      (a, b) => a.createdTimestamp - b.createdTimestamp
-    );
-    fromMessage = initMsg;
-    deleteMessages.set(fromMessage.id, fromMessage);
+    deleteMessages.set(initMsg.id, initMsg);
     deleteMessages = deleteMessages.filter((msg) => {
       return (
         untilMessage.createdTimestamp < msg.createdTimestamp &&
-        msg.createdTimestamp <= fromMessage.createdTimestamp &&
+        msg.createdTimestamp <= initMsg.createdTimestamp &&
         !msg.system
       );
     });
 
-    const tasks = deleteMessages.map((msg) =>
-      thisChannel.messages.delete(msg.id).catch((e) => {
-        console.error(`Failed to delete message ${msg.id}---------`, e);
-        console.info(JSON.stringify(msg, null, 2));
-        console.info("-----------------------------------");
-      })
+    const results = await Promise.all(
+      deleteMessages.map((msg) =>
+        thisChannel.messages
+          .delete(msg.id)
+          .then(() => true)
+          .catch((e) => {
+            console.error(`Failed to delete message ${msg.id}`, e);
+            return false;
+          })
+      )
     );
-    await Promise.all(tasks);
-    await interaction.followUp({
-      content: `Deleted ${deleteMessages.size} messages.`,
+    const deleted = results.filter(Boolean).length;
+    await interaction.editReply({
+      content:
+        `Deleted ${deleted} messages.` +
+        (deleted < deleteMessages.size
+          ? ` Failed to delete ${deleteMessages.size - deleted}.`
+          : ""),
     });
   },
 };

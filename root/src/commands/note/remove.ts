@@ -1,9 +1,11 @@
 import {
   SlashCommandSubcommandBuilder,
   ChatInputCommandInteraction,
+  MessageFlags,
 } from "discord.js";
 
 import { noteUltils } from "../../ultils";
+import { errorMessage } from "../_shared/errorMessage";
 
 const commandName = "remove";
 
@@ -28,11 +30,19 @@ export default {
     const role = interaction.options.getRole("role");
     const topic = interaction.options.getString("topic");
 
-    noteUltils.removeNote(role.id, topic);
+    try {
+      await noteUltils.removeNote(role.id, topic);
+    } catch (error) {
+      console.error("note remove failed", error);
+      await interaction.reply({
+        content: `Cannot remove the note: ${errorMessage(error)}`,
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
 
-    interaction.reply({
+    await interaction.reply({
       content: `Note removed for @${role.name} with topic ${topic}`,
-      ephemeral: false,
     });
   },
 };
