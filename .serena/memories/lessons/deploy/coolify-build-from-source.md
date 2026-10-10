@@ -14,3 +14,7 @@
   `/srv/appdata/sab-delegate/files` (dừng bot, `cp -a`, so checksum, đổi compose, deploy, verify).
 - Verify sau deploy: container 0 restart, log có `Ready! Logged in as Sabi` và `... as Alohomora`.
 - Node 18 EOL → chuyển Node 24 + pnpm (2026-10-10). Base image: `mem:lessons/deploy/base-image-reuse`.
+- Đăng ký lại slash command trên prod (đo 2026-10-10): chạy trong container đang sống để dùng chung env,
+  `docker exec -e CREATE_CMD=1 <container> node --import tsx ./src/index.ts` → mỗi bot log 17 dòng
+  `Successfully registered application command`, tiến trình tự thoát 0; bot chính không restart.
+- Mọi push lên `main` (kể cả chỉ sửa .md) đều kích hoạt deploy lại.
