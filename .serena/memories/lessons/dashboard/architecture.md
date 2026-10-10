@@ -13,3 +13,9 @@
 - Song ngữ vi/en: next-intl (web) + `use-intl/core` `createTranslator` (bot) cùng `messages/{vi,en}.json`; mô tả lệnh qua `setDescriptionLocalizations`, tên lệnh giữ nguyên.
 - Cấu trúc: `packages/shared` (Zod + messages), `apps/server` (module = service + HTTP controller + Necord commands), `apps/web`. Lệnh slash không kiểm quyền; HTTP có guard Manage Server.
 - Postgres: image `postgres:17.10-alpine3.23` (có sẵn trên host), bind mount `/srv/appdata/sab-delegate/postgres`; từ điển trò nối từ để ở file JSON, không đưa vào DB.
+
+## Lập lịch: pg-boss, không Redis/BullMQ/node-cron (chủ repo xác nhận 22:14 10/10)
+- node-schedule/node-cron chỉ là bộ đếm giờ trong RAM → mất lịch mỗi lần restart (mỗi deploy web là restart).
+- pg-boss: `send(queue, data, { startAfter })` cho hẹn một lần, `schedule(name, cron, data, { tz: 'Asia/Ho_Chi_Minh' })` cho cron, retry, huỷ theo job id cố định; worker poll mặc định 2s.
+- Chưa kiểm chứng: cron lỡ giờ khi bot tắt có được bù không (sinh nhật đã tự chạy lại lúc ready + cờ theo ngày nên không phụ thuộc).
+- Cần Redis khi: nhiều tiến trình bot (sharding ≥2.500 guild), pub/sub giữa tiến trình, cache đọc nhiều.
