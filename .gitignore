@@ -82,3 +82,6 @@ configValues.ts
 root/files/notes.json
 root/files/words_dictionary.json
 **/**.sqlite
+
+# Agent plans and local reports
+plans/
