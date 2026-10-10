@@ -9,3 +9,5 @@
 - `mem:lessons/discord/multi-client-dedupe` — mọi event chạy một lần cho mỗi bot: `claimOnce` trước khi ghi DB/gửi tin; cờ sinh nhật phải có năm; unhandledRejection không làm chết tiến trình.
 - `mem:lessons/deploy/base-image-reuse` — base `node:24.21.0-alpine3.23@sha256:9ec4…` đã có layer trên host (QR-Production-Manager) → tái dùng; cách so diffIDs; tránh `chmod -R` nhân đôi layer.
 - `mem:lessons/discord/bypass-by-design` — bot CỐ Ý vượt giới hạn Discord: không thêm chặn DM, chặn link guild khác, kiểm thứ bậc role, kiểm quyền invite của người gọi.
+- `mem:lessons/dashboard/access-rule` — dashboard chỉ cho người có Manage Server (ManageGuild/Admin/owner) ở guild có bot; kiểm phía bot mỗi request. Ngoại lệ có chủ đích của bypass-by-design.
+- `mem:lessons/process/package-first` — luật chủ repo: tìm package chuyên dụng trước khi tự viết; tự viết phải ghi lý do loại từng package (AGENTS.md §9).
