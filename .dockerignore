@@ -6,3 +6,7 @@ yarn-error.log
 .env
 .DS_Store
 files
+root/files
+plans
+.serena
+.vscode

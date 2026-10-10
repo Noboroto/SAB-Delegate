@@ -1,0 +1,6 @@
+# Native addon (better-sqlite3) and the tsx runtime's esbuild binary need their install scripts.
+allowBuilds:
+  better-sqlite3: true
+  esbuild: true
+minimumReleaseAgeExclude:
+  - dotenv@18.0.7

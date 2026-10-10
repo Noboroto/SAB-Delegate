@@ -10,9 +10,9 @@
 #   * No `container_name:`. Coolify overrides it with `<service>-<uuid>`, so leaving
 #     it would only mislead.
 #
-#   * Builds from source. root/yarn.lock is committed and installed with
-#     --frozen-lockfile, so a fresh clone reproduces the dependency versions
-#     production was already running instead of resolving newer releases.
+#   * Builds from source. root/pnpm-lock.yaml is committed and installed with
+#     --frozen-lockfile, so every build installs exactly the locked dependency
+#     versions instead of resolving newer releases.
 services:
   bot:
     build:
