@@ -1,6 +1,6 @@
 # Deploy Coolify — sự thật đã đo (2026-10-10)
 
-- Prod = Coolify 4.3.23, file `coolify.compose.yml`, `build:` từ source. Push `main` → webhook tự deploy NGAY.
+- Prod = Coolify 4.3.23, file `coolify.compose.yml`, `build:` từ source. Push `main` → webhook tự deploy NGAY; mỗi deploy tạo lại MỌI container của app (xem `mem:lessons/dashboard/deploy-topology`).
 - Lockfile từng bị gitignore → clone mới resolve bản mới nhất, một gói transitive đòi node ≥ 20
   trong khi image node 18 → build vỡ. Sửa: commit lockfile, `dockerfile` cài frozen.
   **How to apply**: lockfile luôn tracked; đổi gói/đổi Node = đổi lockfile cùng commit + build docker thử local.

@@ -11,3 +11,4 @@
 - `mem:lessons/discord/bypass-by-design` — bot CỐ Ý vượt giới hạn Discord: không thêm chặn DM, chặn link guild khác, kiểm thứ bậc role, kiểm quyền invite của người gọi.
 - `mem:lessons/dashboard/access-rule` — dashboard chỉ cho người có Manage Server (ManageGuild/Admin/owner) ở guild có bot; kiểm phía bot mỗi request. Ngoại lệ có chủ đích của bypass-by-design.
 - `mem:lessons/process/package-first` — luật chủ repo: tìm package chuyên dụng trước khi tự viết; tự viết phải ghi lý do loại từng package (AGENTS.md §9).
+- `mem:lessons/dashboard/deploy-topology` — dashboard CHUNG stack Coolify với bot (chủ repo chấp nhận bot restart mỗi deploy); Coolify recreate MỌI container mỗi deploy (đo); điều kiện: lịch hẹn lưu DB, `[skip cd]` cho commit tài liệu.
