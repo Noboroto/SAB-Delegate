@@ -3,10 +3,11 @@ FROM node:18-alpine3.20 AS builder
 WORKDIR /usr/src/bot
 
 # Copy package files first for better caching
-COPY ./root/package.json ./
+COPY ./root/package.json ./root/yarn.lock ./
 
-# Install dependencies
-RUN yarn install --production=false --network-timeout 100000
+# Install exactly the locked versions. Without the lockfile every build resolved
+# the newest releases, and one transitive package started requiring node >= 20.
+RUN yarn install --frozen-lockfile --production=false --network-timeout 100000
 
 # Build if needed (uncomment if you have a build step)
 # RUN yarn build

@@ -10,20 +10,14 @@
 #   * No `container_name:`. Coolify overrides it with `<service>-<uuid>`, so leaving
 #     it would only mislead.
 #
-#
-# NOTE: runs a PRE-BUILT image rather than building from source. A fresh build fails
-# today because a transitive package published a release requiring node >= 20 while
-# the Dockerfile pins node 18 - dependency drift, not a change in this repo. This
-# image is what production has been running; restoring a working source build is
-# follow-up work.
-# The image is served from a local registry on 127.0.0.1:5000 rather than referenced
-# as a bare local tag, because the deployment platform runs `compose pull` before
-# `up` and a tag that exists only in the local image store fails with
-# `pull access denied`. The registry container is `migration-registry`
-# (restart=always, data under /srv/appdata/registry).
+#   * Builds from source. root/yarn.lock is committed and installed with
+#     --frozen-lockfile, so a fresh clone reproduces the dependency versions
+#     production was already running instead of resolving newer releases.
 services:
   bot:
-    image: 127.0.0.1:5000/sab-delegate-bot:migrated-260921
+    build:
+      context: .
+      dockerfile: dockerfile
     cpus: 2
     restart: always
     env_file:
