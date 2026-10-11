@@ -10,3 +10,4 @@
   local `docker buildx imagetools inspect <ref@digest> --format '{{json (index .Image "linux/amd64").RootFS.DiffIDs}}'`.
 - `RUN chmod -R` sau `COPY` nhân đôi toàn bộ file sang layer mới → không dùng.
 - Đổi bản Node: ưu tiên digest mà repo khác trên host đang ghim (QR-Production-Manager `api/Dockerfile` `NODE_VERSION`).
+- Postgres: tag `postgres:*` trên host chỉ có 15/17, nhưng image `qp-postgres` của QR-Production-Manager build từ `postgres:18.6-alpine@sha256:77f58511…` → layer PG18.6 đã có sẵn; dùng đúng digest đó. Kiểm bằng so diffID như trên, đừng kết luận từ danh sách tag.
