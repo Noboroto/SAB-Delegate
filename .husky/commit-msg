@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+
+# Swaps the interpreter when husky started this hook under `sh`; must run
+# before anything bash-4-only is parsed.
+. "$(dirname "$0")/lib/require-bash.sh"
+# shellcheck source=lib/hook-env.sh
+. "$(dirname "$0")/lib/hook-env.sh"
+
+# Not inherited: husky starts hooks with `sh -e`, but the re-exec above cannot
+# carry `-e` across (bash does not export SHELLOPTS). Without it a failing `cat`
+# or `sed` below leaves the message empty, every grep misses, and the hook exits
+# 0 having checked nothing.
+set -euo pipefail
+
+# Block "Claude"/"Anthropic"/"Codex"/"ChatGPT" mentions in commit messages
+# (exception: bare "CLAUDE.md" references — this repo has no CLAUDE.md, but a
+# line explaining that still has to be committable).
+MSG_FILE="$1"
+MSG=$(cat "$MSG_FILE")
+
+# Remove the CLAUDE.md token itself (not the whole line) so a line like
+# "see CLAUDE.md" still exposes any OTHER remaining "Claude" mention.
+STRIPPED=$(echo "$MSG" | sed -E 's/CLAUDE\.md//Ig')
+
+if echo "$STRIPPED" | grep -iq 'claude'; then
+  echo "ERROR: Commit message contains 'Claude'. Remove it before committing."
+  echo "       (References to CLAUDE.md are allowed.)"
+  exit 1
+fi
+
+if echo "$STRIPPED" | grep -iq 'anthropic'; then
+  echo "ERROR: Commit message contains 'Anthropic'. Remove it before committing."
+  exit 1
+fi
+
+if echo "$STRIPPED" | grep -iq 'codex'; then
+  echo "ERROR: Commit message contains 'Codex'. Remove it before committing."
+  exit 1
+fi
+
+if echo "$STRIPPED" | grep -iq 'chatgpt'; then
+  echo "ERROR: Commit message contains 'ChatGPT'. Remove it before committing."
+  exit 1
+fi

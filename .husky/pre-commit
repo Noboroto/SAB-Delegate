@@ -1,0 +1,141 @@
+#!/usr/bin/env bash
+
+# Swaps the interpreter when husky started this hook under `sh`; must run
+# before anything bash-4-only is parsed.
+. "$(dirname "$0")/lib/require-bash.sh"
+# shellcheck source=lib/hook-env.sh
+. "$(dirname "$0")/lib/hook-env.sh"
+
+# `-E` so the ERR trap below is inherited by functions and subshells.
+set -Eeuo pipefail
+
+HOOK_NAME="PRE-COMMIT"
+# shellcheck source=lib/step-runner.sh
+source "$(dirname "${BASH_SOURCE[0]}")/lib/step-runner.sh"
+# shellcheck source=lib/gate-stamp.sh
+source "$(dirname "${BASH_SOURCE[0]}")/lib/gate-stamp.sh"
+# shellcheck source=lib/compose-check.sh
+source "$(dirname "${BASH_SOURCE[0]}")/lib/compose-check.sh"
+trap on_hook_failure ERR
+
+mapfile -d '' STAGED_FILES < <(
+  git diff --cached --name-only --diff-filter=ACMRD -z
+)
+
+STAGED_COUNT=$(
+  git diff --cached --name-only -z |
+    tr -cd '\0' |
+    wc -c |
+    tr -d ' '
+)
+
+if ((STAGED_COUNT > 29)); then
+  echo "ERROR: $STAGED_COUNT staged files exceeds the 29-file limit. Split the commit."
+  echo "Split into the FEWEST commits that fit: ceil(total/29), not one per concern."
+  exit 1
+fi
+
+if ((${#STAGED_FILES[@]} == 0)); then
+  exit 0
+fi
+
+# A file may sit above LINE_LIMIT, but this commit may not push it higher: the
+# count is compared against HEAD, so the debt can only shrink.
+LINE_LIMIT=1000
+OVERSIZE_GREW=()
+while IFS= read -r file; do
+  case "$file" in
+    *.ts | *.tsx | *.js | *.jsx | *.mjs | *.cjs | *.css | *.scss) ;;
+    *) continue ;;
+  esac
+  staged_lines=$(git show ":$file" 2>/dev/null | wc -l | tr -d ' ')
+  ((staged_lines > LINE_LIMIT)) || continue
+  head_lines=$(git show "HEAD:$file" 2>/dev/null | wc -l | tr -d ' ')
+  if ((staged_lines > ${head_lines:-0})); then
+    OVERSIZE_GREW+=("$file (${head_lines:-0} -> $staged_lines)")
+  fi
+done < <(git diff --cached --name-only --diff-filter=d)
+
+if ((${#OVERSIZE_GREW[@]} > 0)); then
+  echo "ERROR: these files pass $LINE_LIMIT lines and this commit makes them longer:"
+  printf '  %s\n' "${OVERSIZE_GREW[@]}"
+  exit 1
+fi
+
+# Docs and memory commits skip the code gates and never wait on the heavy lock.
+MARKDOWN_ONLY=true
+for file in "${STAGED_FILES[@]}"; do
+  case "$file" in
+    *.md) ;;
+    *)
+      MARKDOWN_ONLY=false
+      break
+      ;;
+  esac
+done
+
+if [[ "$MARKDOWN_ONLY" == true ]]; then
+  echo "markdown-only commit: skip code checks"
+  exit 0
+fi
+
+# shellcheck source=lib/heavy-lock.sh
+source "$(dirname "${BASH_SOURCE[0]}")/lib/heavy-lock.sh"
+heavy_lock_hook SAB-Delegate pre-commit "$0" "$@"
+
+# The bot package lives in root/; prettier runs there, so only files under it
+# are re-staged after formatting.
+FORMATTABLE_FILES=()
+RUN_COMPOSE_CHECK=false
+for file in "${STAGED_FILES[@]}"; do
+  case "$file" in
+    root/*.ts | root/*.js | root/*.mjs | root/*.json | root/**/*.ts | root/**/*.js | \
+      root/**/*.mjs | root/**/*.json)
+      # A deleted file is in the staged set but cannot be formatted or re-added.
+      if [[ -e "$file" ]]; then
+        FORMATTABLE_FILES+=("$file")
+      fi
+      ;;
+  esac
+  case "$file" in
+    compose.yml | coolify.compose.yml | dockerfile | .dockerignore) RUN_COMPOSE_CHECK=true ;;
+  esac
+done
+
+# Classify BEFORE prettier rewrites anything: `git add` on a partially staged
+# file would sweep the unstaged work-in-progress into the commit.
+PARTIALLY_STAGED=()
+FULLY_STAGED=()
+for file in "${FORMATTABLE_FILES[@]}"; do
+  if git diff --quiet -- "$file"; then
+    FULLY_STAGED+=("$file")
+  else
+    PARTIALLY_STAGED+=("$file")
+  fi
+done
+
+run_step "typecheck (root)" pnpm --dir root typecheck
+
+run_step "prettier (root, write)" pnpm --dir root pretty-fix
+
+if ((${#FULLY_STAGED[@]} > 0)); then
+  git add -- "${FULLY_STAGED[@]}"
+fi
+
+if ((${#PARTIALLY_STAGED[@]} > 0)); then
+  echo "⚠ Only PART of these files is staged, so the hook did not 'git add' them."
+  echo "  Prettier formatted them on disk; stage the hunks you want yourself:"
+  printf '    %s\n' "${PARTIALLY_STAGED[@]}"
+fi
+
+run_step "eslint (root, --max-warnings 0)" pnpm --dir root lint
+
+run_step "typecheck (after prettier + eslint)" pnpm --dir root typecheck
+
+# Recorded after prettier --write so pre-push can skip the same three gates on
+# byte-identical content (see lib/gate-stamp.sh).
+gate_stamp_write
+
+if [[ "$RUN_COMPOSE_CHECK" == true ]]; then
+  run_step "docker compose config (compose files)" compose_check
+fi

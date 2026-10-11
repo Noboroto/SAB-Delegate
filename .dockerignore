@@ -10,3 +10,4 @@ root/files
 plans
 .serena
 .vscode
+**/configValues.ts

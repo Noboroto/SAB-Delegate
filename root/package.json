@@ -11,7 +11,7 @@
     "start": "tsx ./src/index.ts",
     "dev": "nodemon",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings 0",
     "lint-fix": "eslint --fix .",
     "pretty": "prettier --check \"./**/*.{ts,js,mjs,json}\"",
     "pretty-fix": "prettier --write \"./**/*.{ts,js,mjs,json}\""
