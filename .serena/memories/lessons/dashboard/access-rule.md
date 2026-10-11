@@ -11,3 +11,6 @@ Chủ bot quyết (2026-10-10): "Dashboard == check permission manage bot của 
 ## Domain (chủ bot chốt 2026-10-10)
 - Dashboard ở `https://bot.sabies.vn`. Discord OAuth redirect: `https://bot.sabies.vn/api/auth/callback/discord`.
 - Đo 2026-10-10: `bot.sabies.vn` CHƯA có bản ghi DNS; `sabies.vn` và host Coolify cùng IP 103.82.192.210 → cần thêm A record `bot` → IP đó trước khi gắn domain trong Coolify (Let's Encrypt chỉ cấp khi DNS đã trỏ đúng).
+
+## Bổ sung từ bài học các repo khác (11/10/2026)
+- Cổng quyền là MỘT hàm `canManageGuild` trong `packages/shared` dùng cho UI/API/job; chỉ guard Nest enforce quyền, `proxy.ts` Next chỉ redirect lạc quan theo cookie; client mutation qua một wrapper fetch xử lý 401/403. Chi tiết: `mem:lessons/nestjs/di-and-build`.

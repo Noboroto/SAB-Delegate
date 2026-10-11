@@ -14,3 +14,6 @@ Chủ repo chấp nhận bot restart vài giây mỗi lần deploy web (21:50 10
 - Mỗi push (bot hoặc web) restart cả hai → bắt buộc: lịch hẹn lưu DB (không RAM), tác vụ sinh nhật lúc ready an toàn khi chạy lại (đã có cờ ngày + claim), web hiển thị "bot đang khởi động" khi API chưa sẵn.
 - Commit chỉ đổi tài liệu (.md, memory) có thể thêm `[skip cd]` để khỏi restart bot vô ích.
 - Giới hạn CPU/RAM riêng cho `web` trong `deploy.resources`.
+
+## Bổ sung từ bài học các repo khác (11/10/2026)
+- SỬA: Chủ repo từng chấp nhận bot restart 'vài giây' — số đo thật là ~60 s mỗi deploy bot+web (SAB-Store, probe 1 req/s: 57–100 s, ổn định ~60 s sau tối ưu `pull_policy: never`/`stop_signal`/`start_interval`). Coolify xoá + tạo lại cả stack kể cả service không đổi. KHUYẾN NGHỊ (chờ chủ repo xác nhận): Postgres là resource Coolify riêng, không nằm trong compose bot/web, vì DB restart + migration mỗi deploy code là không chấp nhận. Chi tiết: `mem:lessons/deploy/coolify-compose-lifecycle`.

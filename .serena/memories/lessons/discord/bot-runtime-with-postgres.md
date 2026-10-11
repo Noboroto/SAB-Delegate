@@ -1,0 +1,8 @@
+# Bot Discord (một bot, Necord + Prisma + pg-boss) — lưu ý runtime
+
+- Không gọi Discord API (gửi tin, tạo thread, editMe) BÊN TRONG `prisma.$transaction`: transaction có thể thử lại/huỷ còn tác dụng phụ ngoài thì không. **How**: ghi DB trong transaction → sau commit đẩy pg-boss job (hoặc gọi) → ghi nhận "đã gửi" để idempotent; lệnh Discord có thể bị gửi lặp → idempotency key / UNIQUE. (nguồn: SAB-Store, Leaderboard, QR-Production-Manager)
+- Mỗi deploy bot+web recreate cả stack (~60 s đo trên SAB-Store, không phải vài giây): gateway reconnect, job pg-boss đang chạy bị dừng. **How**: `boss.stop({ graceful: true })` trước `$disconnect`; `stop_grace_period` đủ cho job đang chạy; lịch hẹn lưu DB (pg-boss), tác vụ sinh nhật lúc ready an toàn khi chạy lại; web hiển thị "bot đang khởi động"; đặt Postgres ở resource Coolify riêng (xem `coolify-compose-lifecycle`). (nguồn: SAB-Store, Leaderboard, coolify)
+- Ngay cả sau `docker restart` hoặc dockerd restart, đảm bảo không còn bản bot cũ (`restart: always` thời Portainer) chạy trùng token. (nguồn: coolify)
+- Client discord.js, pg-boss, Prisma pool đều gắn handler `error`; discord.js 14 phụ thuộc `undici` → sau nâng đo `fetch` toàn cục và gọi REST thật (xem `mem:lessons/nestjs/http-and-runtime`). (nguồn: Leaderboard, attendance-hcmus)
+- Dev worker: dev server dùng chung Postgres với container cũng consume job pg-boss (double-consume) → chỉ MỘT worker dev, kill khi xong; không seed khi `dev:api` đang chạy. (nguồn: JudgeHub)
+- Slash command KHÔNG kiểm quyền người gọi (bypass-by-design); chỉ HTTP API/web có guard Manage Server; validate input vẫn để tránh crash. Một predicate `canManageGuild` trong shared cho UI/API/job. (nguồn: JudgeHub, attendance-hcmus)

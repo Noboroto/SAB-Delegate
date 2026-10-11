@@ -21,3 +21,6 @@
   `docker exec -e CREATE_CMD=1 <container> node --import tsx ./src/index.ts` → mỗi bot log 17 dòng
   `Successfully registered application command`, tiến trình tự thoát 0; bot chính không restart.
 - Mọi push lên `main` (kể cả chỉ sửa .md) đều kích hoạt deploy lại.
+
+## Bổ sung từ bài học các repo khác (11/10/2026)
+- Coolify bơm MỌI env thành ARG vào MỌI stage Dockerfile → `pnpm install` phải ghi `--prod`/`--prod=false`, biến secret `is_buildtime=false`. Trước push `main`: `docker compose -f coolify.compose.yml config -q`; sau push: deployment tạo trong < 10 s (webhook có thể không bắn), `docker exec coolify-db psql ... select status from application_deployment_queues`. Chi tiết: `mem:lessons/deploy/coolify-compose-lifecycle`. Cập nhật: dữ liệu sqlite ở mount tương đối đã chuyển `/srv/appdata` (xem mục dữ liệu) — xoá chữ 'việc tồn' trong index.

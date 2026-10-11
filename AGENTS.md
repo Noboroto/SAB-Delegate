@@ -26,6 +26,20 @@ Code nằm trong `root/` (package `sab-delegate`); file deploy (`dockerfile`, `*
 | Commit code chưa qua ≥2 agent review                                                                  | Một góc nhìn bỏ sót cả lớp lỗi (§7)                                                               |
 | Chạy nhiều việc nặng song song (install + docker build + test)                                        | Máy dùng chung với repo khác, đã bị watchdog reset (§5)                                           |
 | Để lại nợ kỹ thuật                                                                                    | Concern agent báo phải xử lý xong trong cùng wave (§5)                                            |
+| `prisma migrate dev` / `migrate reset` / `db push` trên DB không phải máy dev | Agent chỉ chạy `migrate deploy`; migration tay khi Prisma không diễn đạt được (§10) |
+| `.strict()` / `.passthrough()` trên Zod; hand-write Zod cho model DB; `export interface` cho dữ liệu request/response | Field thừa phải bị strip; Zod là nguồn duy nhất, sinh từ Prisma (§10) |
+| `findMany` rồi `.filter/.sort/.slice` làm giảm số dòng; spread nguyên row Prisma ra response | Đẩy xuống DB; response dùng `select`/`.pick()` (cột mới tự rò, §10) |
+| `crypto.randomUUID()` hoặc sinh PK ở app | PK = `uuidv7()` do Postgres sinh; snowflake Discord là cột `@unique` riêng (§10) |
+| `Modal.confirm` / `message.*` / `notification.*` tĩnh của AntD; dùng thành viên ghép AntD trong server component | Dùng `App.useApp()`; file dùng thành viên ghép phải `'use client'` (§10) |
+| Tạo `middleware.ts` trong `apps/web` | Next 16 dùng `proxy.ts`; có cả hai → crash, mọi route 404 (§10) |
+| Gọi Discord API / dịch vụ ngoài bên trong `prisma.$transaction` | Chỉ sau commit (pg-boss job), ghi nhận "đã gửi" để idempotent (§10) |
+| `pnpm install` trong Dockerfile thiếu `--prod`/`--prod=false`; secret làm build arg | Coolify bơm `NODE_ENV` + mọi env thành ARG vào mọi stage (§2, §10) |
+| `ports:` cho Postgres trong compose prod; image DB `:latest`; bấm "Convert to directory"; `docker compose down -v` | Docker bỏ qua ufw; major mới nâng data dir; nút kia xoá dữ liệu bind mount; `-v` mất volume |
+| In giá trị secret: env container, `docker compose config` đã nội suy, `source` file secret | Chỉ in TÊN biến (`cut -d= -f1`); lộ → rotate ngay (§4) |
+| Cài/viết script `playwright`/`puppeteer` | Verify trình duyệt chỉ qua MCP (§5) |
+| Subagent `kill`/`pkill`/`docker compose down\|restart\|up` | Chỉ orchestrator; nghi hạ tầng hỏng thì BÁO (§7) |
+| Viết "Xóa/khóa/Hủy" trong chuỗi vi | Chính tả thống nhất: Xoá, khoá, Huỷ, hoà, thoả, tuỳ (§10) |
+| Chạy lint/test/typecheck "lần cuối" ngay trước commit; chạy `pnpm test -- <spec>` | Hook đã chạy đúng bộ đó; có `--` thì vitest chạy CẢ suite (§5) |
 
 ## 1. Tool policy — serena memory trước, MCP trước built-in
 
@@ -38,6 +52,7 @@ Code nằm trong `root/` (package `sab-delegate`); file deploy (`dockerfile`, `*
    rồi thêm một dòng vào `mem:lessons/index`. Sửa memory sai thay vì tạo bản trùng.
 4. Mọi prompt giao cho subagent phải nhắc: đọc `mem:core` trước, và không ghi memory (chỉ
    orchestrator ghi).
+5. Cuối phiên tự hỏi: "đã đo được gì mà phiên sau phải dò lại?" → ghi memory.
 
 Cách bảo trì memory: `mem:memory_maintenance`.
 
@@ -118,6 +133,9 @@ Phiên bản đọc ở `root/package.json`, `dockerfile`, `*.compose.yml` — k
 ## 4. Bảo mật & dữ liệu
 
 - `TOKENS` chỉ ở `.env` (gitignored) / biến môi trường Coolify. Không log token.
+- Không in/ghi giá trị secret (env container, `docker compose config` đã nội suy, file secret) vào
+  terminal, plan, report, memory — chỉ TÊN biến (`cut -d= -f1`). Lộ → rotate/revoke ngay. Fixture
+  token giả khai theo từng file trong `.gitguardian.yaml`. Chi tiết: `mem:lessons/security/secrets-and-logging`.
 - Dữ liệu sqlite prod là dữ liệu thật của thành viên (sinh nhật, ghi chú…) — không copy ra ngoài,
   thao tác trên prod phải dừng bot trước, `cp -a` + so checksum, rồi mới đổi.
 
@@ -144,6 +162,11 @@ Context: the Mac was watchdog-reset at 22:59 with load around 55. A JudgeHub com
 4. Long-lived dev servers and compose stacks count against the budget: stop them when the work pauses; don't leave them idle for hours.
    --- end ---
 
+Bổ sung riêng repo này: dev server/compose stack trên Mac được phép dưới khoá heavy, chỉ
+orchestrator bật/tắt, PHẢI dừng khi tạm nghỉ; sau phiên dọn tiến trình mồ côi (PPID=1). Giữ khoá
+thì poll foreground, nhả trước khi chờ. Cổng bận → dừng chủ cũ, không nhảy cổng; ghi cổng vào
+`/tmp/cc-ports.registry`. Chi tiết: `mem:lessons/process/heavy-work-additions`.
+
 ### Soi comment TRƯỚC KHI commit (bắt buộc)
 
 Xoá: work log / lịch sử ("bản trước dùng X"), diễn giải lại code, nhãn plan/phase/audit, comment
@@ -159,11 +182,18 @@ Giữ: **vì sao** chọn cách này, invariant và hậu quả nếu vi phạm,
 - **Push `main` = deploy prod** (webhook Coolify). Chỉ push khi user đồng ý; sau push phải kiểm
   container lên, 0 restart, log có `Ready! Logged in as …` cho mọi bot.
 - Trước mỗi commit: `git diff --cached --name-only` để chắc chỉ stage đúng file định commit.
+- Không dòng attribution AI trong commit (không `Co-Authored-By` AI, không tên công cụ).
+- Commit chỉ đổi tài liệu/memory thêm `[skip cd]` để Coolify bỏ qua deploy.
 
 ## 7. Chạy agent
 
-- **Subagent tối đa `sonnet`** — truyền `model: "sonnet"` tường minh; `opus` chỉ cho `kongming`,
-  tối đa 1 cùng lúc; không bao giờ `fable`. Chi tiết: `mem:lessons/process/subagent-model-cap`.
+- **Subagent tối đa `sonnet`** — truyền `model: "sonnet"` tường minh; `opus` chỉ cho `kongming`
+  hoặc MỘT vòng nâng cấp sau 3 vòng sonnet hỏng cùng task (brief nêu vì sao 3 vòng hỏng; không có
+  vòng sonnet thứ tư); tối đa 1 `opus` cùng lúc; không bao giờ `fable`.
+  Chi tiết: `mem:lessons/process/subagent-model-cap`.
+- Mẫu prompt subagent: "file được sửa: …; no test runs — typecheck + eslint file đã chạm bắt buộc;
+  không commit/ghi memory; CẤM kill/pkill/docker compose down|restart|up; mở đầu đọc `mem:core`".
+  Chi tiết: `mem:lessons/process/agent-orchestration`.
 - Giao **danh sách file được sửa** tường minh; subagent gặp lỗi ngoài danh sách thì báo, không tự sửa.
 - Chỉ orchestrator chạy git ghi và ghi serena memory.
 - **≥2 agent review đọc-thuần, mỗi agent một góc nhìn** trước mỗi commit có code: (1) hồi quy hành
@@ -187,3 +217,34 @@ Luật của chủ repo (10/10/2026), áp cho mọi phiên agent và mọi repo 
 - Chọn theo: còn bảo trì (có bản phát hành gần đây), giấy phép phù hợp, hợp stack hiện có, mức độ phổ biến.
 - Khi buộc phải tự viết: ghi lý do vào docs hoặc serena memory — đã xét package nào, vì sao loại từng cái.
 - Báo cáo/plan so sánh phương án phải liệt kê cả các package chuyên dụng có sẵn (ví dụ package dashboard dành riêng cho bot Discord), không chỉ framework chung.
+
+## 10. Stack server/web — luật (áp dụng khi viết monorepo mới)
+
+Phiên bản đọc ở `package.json`/Dockerfile/compose — không chép ra đây. Chi tiết đã đo: `mem:lessons/index`.
+
+**Zod / dữ liệu**
+- `packages/shared` là nguồn duy nhất: schema + `z.infer` (không `interface` song song); model DB sinh từ Prisma rồi `.pick/.omit/.extend`; response dùng `.pick()`; schema/hằng dùng ≥ 2 file đặt một chỗ. Consumer lấy `z` từ shared, không `import 'zod'`.
+- Field thừa = strip. PATCH dùng `partialWithoutDefaults` (`.partial()` giữ `.default()` → xoá dữ liệu). Cột Json từ DB luôn Zod-parse ở biên service, không cast. Env validate bằng Zod lúc boot (fail-fast), thay cho `${VAR:?}`.
+- Sau `prisma generate`: build `packages/shared` rồi mới typecheck/test (`predev`/`pretest`/`prebuild`).
+
+**Prisma / Postgres**
+- Chỉ `prisma migrate deploy`; migration commit + push TRƯỚC deploy; sau deploy kiểm `_prisma_migrations` + đếm row; migration additive, xoá/đổi tên cột = expand → contract; `pg_dump -Fc` trước thay đổi DB rủi ro.
+- PK `@id @default(dbgenerated("uuidv7()")) @db.Uuid`; session Postgres `-c timezone=UTC`; mốc thời gian so với cột Prisma ghi cũng phải ghi qua Prisma; hiển thị qua MỘT formatter timezone cố định.
+- Lọc/sắp/gộp/đếm ở DB (Prisma API → `$queryRaw` tham số hoá → JS), tiêu chí "có GIẢM số dòng không"; tìm kiếm `contains`/`equals insensitive` bọc `escapeLike`/helper chung (LIKE/ILIKE không escape); màn hình và export dùng chung một service.
+- Gọi Discord API chỉ sau commit; `$transaction` ngắn; chặn tranh chấp bằng `updateMany` có điều kiện/UNIQUE; pool `max` đặt ở adapter-pg (tính cả pg-boss); image DB pin digest.
+
+**NestJS / Necord / pg-boss**
+- Authorization chỉ ở guard server (`canManageGuild` một hàm trong shared); `proxy.ts` Next chỉ redirect lạc quan. Slash command KHÔNG kiểm quyền (§3). Handler chọn field tường minh, mã lỗi là `ErrorCode` dùng chung.
+- Mỗi service/module mới có boot spec dựng qua `Test.createTestingModule(...).compile()`; `@Optional()` cho tham số tuỳ chọn. Build server bằng `tsc`/`nest build` (tsx không emit decorator metadata); `tsBuildInfoFile` trong outDir.
+- `boss.stop({ graceful: true })` trước `$disconnect`; handler `error` cho mọi client mạng; `trustProxy` Fastify và Better Auth `trustedProxies` khớp chuỗi Traefik thật; pino `redact` liệt kê từng cấp (không `**`).
+
+**Web (Next + AntD + next-intl + Better Auth)**
+- `apps/web/proxy.ts`; AntD chỉ trong file `'use client'`; `App.useApp()`; `loading.tsx` ở leaf cho route động có Link; redirect = `redirects()` 308 trong `next.config`; trang chia sẻ có `generateMetadata`; markdown không raw HTML.
+- Better Auth ghim version CHÍNH XÁC (+ override `@better-auth/core`); hook `databaseHooks.*` fail-closed (log, không throw); `admin({ defaultRole })` tường minh; chặn ghi `image`/`name` từ client; `BETTER_AUTH_URL`/trustedOrigins/redirect URI Discord khớp cổng và domain.
+- i18n: mọi chuỗi vi + en, test parity + test đọc file locale thật (không mock `t()` trả key); server trả mã lỗi, web dịch.
+- UX: mọi thao tác async có trạng thái + chống bấm đúp; không hiện `err.message` thô; kiểm 390/768/1440 × sáng/tối × vi/en bằng MCP có ảnh chụp; control cùng hàng cùng `--control-h`.
+
+**Test & verify**
+- Spec cần DB thiếu DB thì FAIL (`TEST_REQUIRE_DB=1`); có integration test Postgres thật cho search/PATCH/transaction; test xanh không phải bằng chứng — xoá đấu dây production mà test vẫn xanh thì đó không phải test; `done` phải có caller; live-verify cả đường THẤT BẠI và đọc lại trạng thái đích.
+- Đổi dependency/override/đường import/tên file: build image Linux (`--target runner`) và `require` thử TRONG image trước khi push `main` (macOS không phân biệt hoa/thường).
+- `mem:lessons/index` là nơi tra đo đạc (Coolify ARG, recreate stack, undici, v.v.); AGENTS.md không chép số đo.

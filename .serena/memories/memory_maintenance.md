@@ -10,3 +10,6 @@
 - Không tham chiếu path git không track hay path máy cá nhân.
 - Đổi tên bằng tool rename của serena để tham chiếu tự cập nhật. Sai thì sửa/xoá, không tạo bản trùng.
 - Chỉ orchestrator ghi memory; subagent chỉ đọc.
+
+## Bổ sung từ bài học các repo khác (11/10/2026)
+- Gợi ý: gộp bài học theo chủ đề (một file nhiều bullet Why/How) khi chúng liên quan chặt; vẫn mỗi bullet một sự thật. Số đo thay đổi theo thời gian ghi kèm ngày; bài học bị bỏ thành lỗi thời (xem multi-client-dedupe) thì xoá.

@@ -26,3 +26,6 @@
 - pg-boss: `send(queue, data, { startAfter })` cho hẹn một lần, `schedule(name, cron, data, { tz: 'Asia/Ho_Chi_Minh' })` cho cron, retry, huỷ theo job id cố định; worker poll mặc định 2s.
 - Chưa kiểm chứng: cron lỡ giờ khi bot tắt có được bù không (sinh nhật đã tự chạy lại lúc ready + cờ theo ngày nên không phụ thuộc).
 - Cần Redis khi: nhiều tiến trình bot (sharding ≥2.500 guild), pub/sub giữa tiến trình, cache đọc nhiều.
+
+## Bổ sung từ bài học các repo khác (11/10/2026)
+- Bổ sung stack: Prisma 7 + `@prisma/adapter-pg` — pool là option `max` của adapter (tính cả pg-boss), session Postgres UTC (`-c timezone=UTC`), `@default(now())` lấy giờ app; `boss.stop({ graceful: true })` trước `$disconnect`; Nest 12 dùng Standard Schema gốc (nestjs-zod peer ≤ Nest 11); Better Auth ghim chính xác. Chi tiết: `mem:lessons/postgres-prisma/*`, `mem:lessons/nestjs/*`, `mem:lessons/auth/better-auth-discord`.

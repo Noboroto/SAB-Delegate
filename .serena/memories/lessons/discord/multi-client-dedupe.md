@@ -8,3 +8,6 @@
 - Cờ hoàn thành sinh nhật là `<guild>.completedDates.<YYYY-M-D>` (một key chuỗi: path số làm lodash tạo mảng thưa; field cũ `isCompleted` là mảng, bỏ). Bản cũ không có năm
   khiến ngày đó bị bỏ qua vĩnh viễn từ năm thứ hai.
 - Tiến trình có `process.on("unhandledRejection")` ghi log thay vì chết; handler event được `.catch` → `reportError`.
+
+## Bổ sung từ bài học các repo khác (11/10/2026)
+- Lỗi thời sau khi gộp còn một bot (xem `mem:lessons/dashboard/architecture`): `claimOnce` không còn cần; giữ lại chỉ để tham khảo cho tới cutover, rồi xoá memory này (sửa/xoá thay vì để sai).

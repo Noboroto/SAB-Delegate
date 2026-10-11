@@ -11,3 +11,6 @@
 - Runtime `tsx` thay `ts-node` (ts-node không theo kịp TS mới). Loader command dùng `require()` file `.ts` — tsx hỗ trợ.
 - dotenv ≥17 in log mặc định → gọi `dotenv.config({ quiet: true })`.
 - ESLint 10 chỉ nhận flat config (`root/eslint.config.mjs`); `.eslintrc.json` đã xoá.
+
+## Bổ sung từ bài học các repo khác (11/10/2026)
+- Monorepo: `pnpm add <pkg>` không ghim version; `@types/node` cùng major với runtime image; `@nestjs/platform-fastify` ghim cứng fastify (override); `pnpm.patchedDependencies` cho `@rc-component/util@1.13.0`; `pnpm deploy --prod --config.inject-workspace-packages=true` không `--legacy`; `.pnpmfile.cjs` cắt optional peer. Chi tiết: `mem:lessons/tooling/dependencies-and-syncthing`, `mem:lessons/deploy/docker-image-build`.

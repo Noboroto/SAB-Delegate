@@ -18,3 +18,6 @@ Máy Mac 16 GB dùng chung với JudgeHub, Leaderboard, QR-Production-Manager…
 - Release: `grep -qxF "$OWNER" /tmp/cc-heavy.lock/owner && rm -rf /tmp/cc-heavy.lock` — không bao giờ xoá vô điều kiện.
 - Bash tool không giữ biến → gán lại literal `OWNER='SAB-Delegate <job> <epoch>'` ở đầu mỗi lệnh.
 - Khoá stale chỉ sau 45 phút và sau khi đã nhắn chủ sở hữu.
+
+## Bổ sung từ bài học các repo khác (11/10/2026)
+- Bổ sung: poll foreground khi giữ khoá, nhả trước khi chờ; orchestrator kiểm owner line + `uptime` load ≤ ~8; dev server/compose stack được phép dưới khoá nhưng chỉ orchestrator bật/tắt và PHẢI dừng khi nghỉ, dọn tiến trình mồ côi PPID=1; eslint trong hook một luồng; cổng bận → dừng chủ cũ, ghi `/tmp/cc-ports.registry`. Chi tiết: `mem:lessons/process/heavy-work-additions`.

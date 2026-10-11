@@ -35,3 +35,6 @@ compose.yml                chạy local; dữ liệu ./root/files, TZ qua env
 
 ## Tham chiếu
 - Cách bảo trì memory: `mem:memory_maintenance`
+
+## Bổ sung từ bài học các repo khác (11/10/2026)
+- Stack mới (sau cutover): monorepo `packages/shared` + `apps/server` (NestJS/Fastify/Necord/Prisma/Postgres 18/pg-boss) + `apps/web` (Next/AntD/next-intl/Better Auth). Luật stack: AGENTS.md §10; tra đo đạc ở `mem:lessons/index`. Cập nhật Source map và 'Bất biến' khi cutover (thay mô tả `quick.db`/nhiều token).
