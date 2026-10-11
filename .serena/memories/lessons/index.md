@@ -12,4 +12,4 @@
 - `mem:lessons/dashboard/access-rule` — dashboard chỉ cho người có Manage Server (ManageGuild/Admin/owner) ở guild có bot; kiểm phía bot mỗi request. Ngoại lệ có chủ đích của bypass-by-design.
 - `mem:lessons/process/package-first` — luật chủ repo: tìm package chuyên dụng trước khi tự viết; tự viết phải ghi lý do loại từng package (AGENTS.md §9).
 - `mem:lessons/dashboard/deploy-topology` — dashboard CHUNG stack Coolify với bot (chủ repo chấp nhận bot restart mỗi deploy); Coolify recreate MỌI container mỗi deploy (đo); điều kiện: lịch hẹn lưu DB, `[skip cd]` cho commit tài liệu.
-- `mem:lessons/dashboard/architecture` — chốt 10/10: gộp còn 1 bot (nick/avatar theo server), NestJS+Necord+Prisma/Postgres+pg-boss, không Redis/BullMQ/SeaweedFS (avatar lưu ở CDN Discord), vi/en dùng chung messages.
+- `mem:lessons/dashboard/architecture` — chốt 10-11/10: PK = UUIDv7 do Postgres 18 sinh (snowflake Discord là cột unique, không phải PK); gộp còn 1 bot (nick/avatar theo server), NestJS+Necord+Prisma/Postgres+pg-boss, không Redis/BullMQ/SeaweedFS (avatar lưu ở CDN Discord), vi/en dùng chung messages.
