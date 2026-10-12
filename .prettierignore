@@ -1,0 +1,16 @@
+# Prettier skips only node_modules by default; the `**/*.{ts,tsx,mjs,cjs}`
+# glob would otherwise also format build output and generated code, which
+# every build rewrites anyway.
+node_modules
+.next
+dist
+**/src/generated/**
+
+# The legacy bot formats itself with its own prettier setup.
+root
+
+# Hand-run tooling, not shipped source. `scripts/*.mjs` only: `scripts/**` also
+# holds TypeScript specs and guard tests, which ARE shipped test code and must
+# stay formatted.
+scripts/*.mjs
+apps/*/scripts

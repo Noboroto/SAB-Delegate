@@ -1,0 +1,5 @@
+# The legacy bot in root/ keeps its own workspace file and lockfile; it must
+# stay outside these globs so installing here never touches root/pnpm-lock.yaml.
+packages:
+  - 'apps/*'
+  - 'packages/*'

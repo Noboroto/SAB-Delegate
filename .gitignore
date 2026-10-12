@@ -85,3 +85,8 @@ root/files/words_dictionary.json
 
 # Agent plans and local reports
 plans/
+
+# Workspace compiled output and generated code
+dist/
+*.tsbuildinfo
+**/src/generated/

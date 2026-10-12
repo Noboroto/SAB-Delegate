@@ -1,0 +1,18 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    // Bundler resolution (not nodenext): these files are never `node`-run
+    // directly, only transformed by Vitest (real ESM, `import.meta` included)
+    // regardless of any package.json "type" field.
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "noEmit": true,
+    // Sibling `.mjs` helpers (vitest-workers.mjs) are imported by these
+    // configs; allowJs lets tsc read their JSDoc types instead of falling
+    // back to implicit `any`.
+    "allowJs": true,
+    "checkJs": false,
+    "types": ["node"]
+  },
+  "include": ["*.ts"]
+}

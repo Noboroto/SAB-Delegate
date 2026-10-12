@@ -1,0 +1,10 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignoreBinaries": ["gitleaks"],
+  "workspaces": {
+    ".": {
+      "entry": ["knip.json", "scripts/*.test.ts"],
+      "project": ["*.{ts,mjs}", "scripts/**/*.{ts,mjs}"]
+    }
+  }
+}

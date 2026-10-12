@@ -50,15 +50,32 @@ while IFS= read -r file; do
   esac
   staged_lines=$(git show ":$file" 2>/dev/null | wc -l | tr -d ' ')
   ((staged_lines > LINE_LIMIT)) || continue
-  head_lines=$(git show "HEAD:$file" 2>/dev/null | wc -l | tr -d ' ')
-  if ((staged_lines > ${head_lines:-0})); then
-    OVERSIZE_GREW+=("$file (${head_lines:-0} -> $staged_lines)")
+  # A file new in this commit has no HEAD version; `git show` failing under
+  # pipefail would trip the ERR trap and exit 128 without this message.
+  head_lines=0
+  if git cat-file -e "HEAD:$file" 2>/dev/null; then
+    head_lines=$(git show "HEAD:$file" | wc -l | tr -d ' ')
+  fi
+  if ((staged_lines > head_lines)); then
+    OVERSIZE_GREW+=("$file ($head_lines -> $staged_lines)")
   fi
 done < <(git diff --cached --name-only --diff-filter=d)
 
 if ((${#OVERSIZE_GREW[@]} > 0)); then
   echo "ERROR: these files pass $LINE_LIMIT lines and this commit makes them longer:"
   printf '  %s\n' "${OVERSIZE_GREW[@]}"
+  exit 1
+fi
+
+# Every commit, markdown included, is scanned: a token pasted into a doc or a
+# memory leaks as surely as one in code. Fails closed when gitleaks is missing.
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "ERROR: gitleaks is not installed (brew install gitleaks); the staged secret scan cannot run."
+  exit 1
+fi
+if ! gitleaks git --staged --redact --no-banner --config .gitleaks.toml >/dev/null 2>&1; then
+  echo "ERROR: gitleaks found a secret in the staged changes. Values are redacted:"
+  gitleaks git --staged --redact --no-banner --config .gitleaks.toml 2>&1 | grep -vE '^\s*$' || true
   exit 1
 fi
 
@@ -79,62 +96,143 @@ if [[ "$MARKDOWN_ONLY" == true ]]; then
   exit 0
 fi
 
-# shellcheck source=lib/heavy-lock.sh
-source "$(dirname "${BASH_SOURCE[0]}")/lib/heavy-lock.sh"
-heavy_lock_hook SAB-Delegate pre-commit "$0" "$@"
-
-# The bot package lives in root/; prettier runs there, so only files under it
-# are re-staged after formatting.
-FORMATTABLE_FILES=()
+# What the staged files require. Markdown never gates code. Root-level infra
+# (compose files, the legacy image file, .dockerignore) and hook scripts have
+# their own cheap checks below instead of the code gates. Anything else outside
+# root/ belongs to the pnpm workspace; root/ is the legacy bot and keeps its own
+# gates until cutover. Deletions count: removing a workspace file can break it.
+ROOT_GATED=false
+WORKSPACE_GATED=false
 RUN_COMPOSE_CHECK=false
+HOOK_FILES=()
 for file in "${STAGED_FILES[@]}"; do
   case "$file" in
-    root/*.ts | root/*.js | root/*.mjs | root/*.json | root/**/*.ts | root/**/*.js | \
-      root/**/*.mjs | root/**/*.json)
-      # A deleted file is in the staged set but cannot be formatted or re-added.
-      if [[ -e "$file" ]]; then
-        FORMATTABLE_FILES+=("$file")
-      fi
-      ;;
-  esac
-  case "$file" in
+    *.md) ;;
+    root/*) ROOT_GATED=true ;;
     compose.yml | coolify.compose.yml | dockerfile | .dockerignore) RUN_COMPOSE_CHECK=true ;;
+    .husky/*) HOOK_FILES+=("$file") ;;
+    *) WORKSPACE_GATED=true ;;
   esac
 done
 
-# Classify BEFORE prettier rewrites anything: `git add` on a partially staged
-# file would sweep the unstaged work-in-progress into the commit.
+if [[ "$ROOT_GATED" == true || "$WORKSPACE_GATED" == true ]]; then
+  # shellcheck source=lib/heavy-lock.sh
+  source "$(dirname "${BASH_SOURCE[0]}")/lib/heavy-lock.sh"
+  heavy_lock_hook SAB-Delegate pre-commit "$0" "$@"
+fi
+
+# A hook that fails to parse silently disables the only quality gate.
+hooks_syntax_check() {
+  local file
+  for file in "$@"; do
+    # A deleted hook is in the staged set but has nothing left to parse.
+    if [[ -f "$file" ]]; then
+      bash -n "$file"
+    fi
+  done
+}
+
+if ((${#HOOK_FILES[@]} > 0)); then
+  run_step "bash syntax (hooks)" hooks_syntax_check "${HOOK_FILES[@]}"
+fi
+
+# prettier --write must only re-stage files that are fully staged: `git add` on
+# a partially staged file would sweep the unstaged work-in-progress into the
+# commit. Classified BEFORE prettier rewrites anything.
 PARTIALLY_STAGED=()
 FULLY_STAGED=()
-for file in "${FORMATTABLE_FILES[@]}"; do
-  if git diff --quiet -- "$file"; then
-    FULLY_STAGED+=("$file")
-  else
-    PARTIALLY_STAGED+=("$file")
+restage_after_prettier() {
+  if ((${#FULLY_STAGED[@]} > 0)); then
+    git add -- "${FULLY_STAGED[@]}"
   fi
-done
+  if ((${#PARTIALLY_STAGED[@]} > 0)); then
+    echo "⚠ Only PART of these files is staged, so the hook did not 'git add' them."
+    echo "  Prettier formatted them on disk; stage the hunks you want yourself:"
+    printf '    %s\n' "${PARTIALLY_STAGED[@]}"
+  fi
+}
 
-run_step "typecheck (root)" pnpm --dir root typecheck
+classify_staged() {
+  local file
+  PARTIALLY_STAGED=()
+  FULLY_STAGED=()
+  for file in "$@"; do
+    if git diff --quiet -- "$file"; then
+      FULLY_STAGED+=("$file")
+    else
+      PARTIALLY_STAGED+=("$file")
+    fi
+  done
+}
 
-run_step "prettier (root, write)" pnpm --dir root pretty-fix
+# Workspace gates, cheapest to most expensive: prettier -> eslint -> typecheck
+# -> knip -> vitest. knip runs before the suite so an unused export fails in
+# seconds, not after the full run.
+if [[ "$WORKSPACE_GATED" == true ]]; then
+  WORKSPACE_FORMATTABLE=()
+  for file in "${STAGED_FILES[@]}"; do
+    case "$file" in
+      root/*) ;;
+      *.ts | *.tsx | *.mjs | *.cjs)
+        # A deleted file is in the staged set but cannot be formatted or re-added.
+        if [[ -e "$file" ]]; then
+          WORKSPACE_FORMATTABLE+=("$file")
+        fi
+        ;;
+    esac
+  done
 
-if ((${#FULLY_STAGED[@]} > 0)); then
-  git add -- "${FULLY_STAGED[@]}"
+  if ((${#WORKSPACE_FORMATTABLE[@]} > 0)); then
+    classify_staged "${WORKSPACE_FORMATTABLE[@]}"
+    # Explicit file list: only staged files are rewritten, and .prettierignore
+    # still applies to them.
+    run_step "prettier (workspace, write)" \
+      pnpm exec prettier --write --ignore-unknown --log-level warn "${WORKSPACE_FORMATTABLE[@]}"
+    restage_after_prettier
+  fi
+
+  # Generated once here; the flag makes every nested pnpm call skip it.
+  run_step "generate deps" pnpm generate:deps
+  export SAB_DEPS_READY=1
+
+  run_step "eslint (workspace, --max-warnings 0)" pnpm lint
+  run_step "typecheck (workspace)" pnpm typecheck
+  run_step "knip (unused files, exports, dependencies)" pnpm knip
+  run_step "vitest (workspace)" pnpm test
+  suite_stamp_write
+  # Recorded after prettier --write so pre-push can skip the same gates on
+  # byte-identical content (see lib/gate-stamp.sh). The legacy gates depend only
+  # on root/** and run in the block below whenever that tree changes, so a
+  # workspace run may vouch for the whole tree.
+  gate_stamp_write
 fi
 
-if ((${#PARTIALLY_STAGED[@]} > 0)); then
-  echo "⚠ Only PART of these files is staged, so the hook did not 'git add' them."
-  echo "  Prettier formatted them on disk; stage the hunks you want yourself:"
-  printf '    %s\n' "${PARTIALLY_STAGED[@]}"
+# The legacy bot's own gates, only when its files are staged.
+if [[ "$ROOT_GATED" == true ]]; then
+  ROOT_FORMATTABLE=()
+  for file in "${STAGED_FILES[@]}"; do
+    case "$file" in
+      root/*.ts | root/*.js | root/*.mjs | root/*.json)
+        if [[ -e "$file" ]]; then
+          ROOT_FORMATTABLE+=("$file")
+        fi
+        ;;
+    esac
+  done
+
+  classify_staged "${ROOT_FORMATTABLE[@]}"
+
+  run_step "typecheck (root)" pnpm --dir root typecheck
+  run_step "prettier (root, write)" pnpm --dir root pretty-fix
+  restage_after_prettier
+  run_step "eslint (root, --max-warnings 0)" pnpm --dir root lint
+  run_step "typecheck (root, after prettier + eslint)" pnpm --dir root typecheck
+  # Production installs from root/pnpm-lock.yaml with --frozen-lockfile, so a
+  # change to it (or to root/package.json) must fail here, not only when a
+  # workspace file happens to be staged too.
+  run_step "vitest (legacy manifests guard)" \
+    pnpm exec vitest run scripts/legacy-lockfile.guard.test.ts
 fi
-
-run_step "eslint (root, --max-warnings 0)" pnpm --dir root lint
-
-run_step "typecheck (after prettier + eslint)" pnpm --dir root typecheck
-
-# Recorded after prettier --write so pre-push can skip the same three gates on
-# byte-identical content (see lib/gate-stamp.sh).
-gate_stamp_write
 
 if [[ "$RUN_COMPOSE_CHECK" == true ]]; then
   run_step "docker compose config (compose files)" compose_check

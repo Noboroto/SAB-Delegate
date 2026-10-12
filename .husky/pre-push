@@ -66,16 +66,48 @@ fi
 source "$(dirname "${BASH_SOURCE[0]}")/lib/heavy-lock.sh"
 heavy_lock_hook SAB-Delegate pre-push "$0" "$@" <<<"$REFS"
 
+# What the pushed range requires; same split as pre-commit. The legacy gates
+# depend only on root/**, so they run when the range touches it.
+ROOT_TOUCHED=false
+WORKSPACE_TOUCHED=false
+for file in "${PUSHED_FILES[@]}"; do
+  case "$file" in
+    *.md) ;;
+    root/*) ROOT_TOUCHED=true ;;
+    compose.yml | coolify.compose.yml | dockerfile | .dockerignore | .husky/*) ;;
+    *) WORKSPACE_TOUCHED=true ;;
+  esac
+done
+
 # Pushing main deploys production, so the gates re-run unless pre-commit
 # already cleared these exact bytes. Prettier only checks here: a push has
 # nothing to re-stage into.
 if gate_stamp_is_current; then
-  echo "✓ prettier + typecheck + eslint: skipped — working tree is byte-identical to what pre-commit already cleared (lib/gate-stamp.sh)"
+  echo "✓ workspace + legacy gates: skipped - working tree is byte-identical to what pre-commit already cleared (lib/gate-stamp.sh)"
 else
-  run_step "prettier (root, check only)" pnpm --dir root pretty
-  run_step "typecheck (root)" pnpm --dir root typecheck
-  run_step "eslint (root, --max-warnings 0)" pnpm --dir root lint
-  gate_stamp_write
+  if [[ "$WORKSPACE_TOUCHED" == true ]]; then
+    run_step "prettier (workspace, check only)" pnpm formatter:check
+    # Generated once here; the flag makes every nested pnpm call skip it.
+    run_step "generate deps" pnpm generate:deps
+    export SAB_DEPS_READY=1
+    run_step "eslint (workspace, --max-warnings 0)" pnpm lint
+    run_step "typecheck (workspace)" pnpm typecheck
+    run_step "knip (unused files, exports, dependencies)" pnpm knip
+    if suite_stamp_is_current; then
+      echo "✓ vitest (workspace): skipped - the full suite already passed on these exact bytes"
+    else
+      run_step "vitest (workspace)" pnpm test
+      suite_stamp_write
+    fi
+    gate_stamp_write
+  fi
+  if [[ "$ROOT_TOUCHED" == true ]]; then
+    run_step "prettier (root, check only)" pnpm --dir root pretty
+    run_step "typecheck (root)" pnpm --dir root typecheck
+    run_step "eslint (root, --max-warnings 0)" pnpm --dir root lint
+    run_step "vitest (legacy manifests guard)" \
+      pnpm exec vitest run scripts/legacy-lockfile.guard.test.ts
+  fi
 fi
 
 # Cheap and catches the compose errors that only surface as a failed Coolify

@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    // `pnpm -r typecheck` runs on every hook; incremental buildinfo means a
+    // re-run after an unrelated edit only re-checks projects whose real
+    // dependency graph the change touched.
+    "incremental": true,
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "forceConsistentCasingInFileNames": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true
+  }
+}

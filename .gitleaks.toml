@@ -1,0 +1,35 @@
+title = "SAB-Delegate secret scan"
+
+[extend]
+useDefault = true
+
+# Every entry below must keep a non-empty `description`: scripts/secrets-history.mjs
+# refuses to run when one is missing, so an allowlisted finding can never lose
+# its explanation silently. Entries match on commit AND path and carry no
+# secret value (commit hashes and file paths only).
+#
+# Token-shaped strings were committed in August 2023. Resetting them is blocked
+# until each one is mapped to its Discord app; remove these entries once the
+# reset is done. Each entry is pinned to the rule the first real scan reported
+# (`targetRules`), so a different rule firing on the same commit and file is
+# still a finding.
+
+[[allowlists]]
+description = "chưa ánh xạ, xử lý trước khi cutover (đổi token P1) - root/src/config.ts"
+condition = "AND"
+targetRules = ["generic-api-key"]
+commits = [
+  "861ae6362ae82c50f101c5f4fc30b434405d6dbb",
+  "0669823b93250e1ec728936ace65e6e80d468705",
+]
+paths = ['''^root/src/config\.ts$''']
+
+[[allowlists]]
+description = "chưa ánh xạ, xử lý trước khi cutover (đổi token P1) - root/bin/config.js"
+condition = "AND"
+targetRules = ["generic-api-key"]
+commits = [
+  "f2656bcbd1ce7ce34a42b4ab581b4583d2c740c6",
+  "74409da669181ce715512157e03c5c712ba4372e",
+]
+paths = ['''^root/bin/config\.js$''']

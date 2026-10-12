@@ -1,15 +1,35 @@
 {
   "name": "sab-delegate-workspace",
   "private": true,
-  "description": "Repo-level tooling (git hooks). The bot package lives in root/.",
+  "description": "Workspace root: shared tooling and git hooks. The legacy bot package lives in root/ and stays outside the workspace until cutover.",
   "packageManager": "pnpm@12.3.4",
   "engines": {
     "node": ">=24.0.0"
   },
   "scripts": {
+    "generate:deps": "node scripts/generate-deps.mjs",
+    "prelint": "pnpm generate:deps",
+    "lint": "node --max-old-space-size=6144 node_modules/eslint/bin/eslint.js . --max-warnings 0",
+    "lint:fix": "node --max-old-space-size=6144 node_modules/eslint/bin/eslint.js . --fix",
+    "pretypecheck": "pnpm generate:deps",
+    "typecheck": "pnpm -r --if-present typecheck && tsc -p scripts/tsconfig.json",
+    "test": "vitest run",
+    "formatter:fix": "prettier --write \"**/*.{ts,tsx,mjs,cjs}\" --log-level warn --cache --cache-location node_modules/.cache/prettier-fix",
+    "formatter:check": "prettier --check \"**/*.{ts,tsx,mjs,cjs}\" --log-level warn --cache --cache-location node_modules/.cache/prettier-check",
+    "knip": "knip",
+    "secrets:history": "node scripts/secrets-history.mjs",
     "prepare": "husky && node scripts/fix-hook-perms.mjs"
   },
   "devDependencies": {
-    "husky": "9.1.7"
+    "@eslint-community/eslint-plugin-eslint-comments": "4.8.1",
+    "@types/node": "24.12.0",
+    "eslint": "10.12.0",
+    "eslint-config-prettier": "10.1.8",
+    "husky": "9.1.7",
+    "knip": "6.41.0",
+    "prettier": "3.9.10",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.71.1",
+    "vitest": "5.0.3"
   }
 }

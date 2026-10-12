@@ -11,3 +11,8 @@ plans
 .serena
 .vscode
 **/configValues.ts
+**/dist
+**/*.tsbuildinfo
+**/src/generated/
+docs
+*.md
