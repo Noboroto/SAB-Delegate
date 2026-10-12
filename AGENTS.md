@@ -33,7 +33,7 @@ Code nằm trong `root/` (package `sab-delegate`); file deploy (`dockerfile`, `*
 | `Modal.confirm` / `message.*` / `notification.*` tĩnh của AntD; dùng thành viên ghép AntD trong server component | Dùng `App.useApp()`; file dùng thành viên ghép phải `'use client'` (§10) |
 | Tạo `middleware.ts` trong `apps/web` | Next 16 dùng `proxy.ts`; có cả hai → crash, mọi route 404 (§10) |
 | Gọi Discord API / dịch vụ ngoài bên trong `prisma.$transaction` | Chỉ sau commit (pg-boss job), ghi nhận "đã gửi" để idempotent (§10) |
-| `pnpm install` trong Dockerfile thiếu `--prod`/`--prod=false`; secret làm build arg | Coolify bơm `NODE_ENV` + mọi env thành ARG vào mọi stage (§2, §10) |
+| `pnpm install` trong Dockerfile thiếu `--prod`/`--no-prod` (pnpm 12 từ chối `--prod=false`); secret làm build arg | Coolify bơm `NODE_ENV` + mọi env thành ARG vào mọi stage (§2, §10) |
 | `ports:` cho Postgres trong compose prod; image DB `:latest`; bấm "Convert to directory"; `docker compose down -v` | Docker bỏ qua ufw; major mới nâng data dir; nút kia xoá dữ liệu bind mount; `-v` mất volume |
 | In giá trị secret: env container, `docker compose config` đã nội suy, `source` file secret | Chỉ in TÊN biến (`cut -d= -f1`); lộ → rotate ngay (§4) |
 | Cài/viết script `playwright`/`puppeteer` | Verify trình duyệt chỉ qua MCP (§5) |
