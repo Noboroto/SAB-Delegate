@@ -60,7 +60,7 @@ export default [
     languageOptions: {
       parserOptions: {
         projectService: {
-          allowDefaultProject: ['*.mjs', 'vitest.config.mts'],
+          allowDefaultProject: ['*.mjs', 'vitest.config.mts', 'vitest.db.config.mts'],
           maximumDefaultProjectFileMatchCount_THIS_WILL_SLOW_DOWN_LINTING: 20,
         },
         tsconfigRootDir: import.meta.dirname ?? process.cwd(),

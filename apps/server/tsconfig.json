@@ -19,5 +19,5 @@
     "checkJs": false,
     "types": ["node"]
   },
-  "include": ["src", "vitest.config.mts"]
+  "include": ["src", "vitest.config.mts", "prisma.config.ts"]
 }

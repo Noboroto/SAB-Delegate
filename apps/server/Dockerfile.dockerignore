@@ -1,0 +1,32 @@
+# BuildKit reads this file instead of the root .dockerignore for
+# apps/server/Dockerfile. Patterns start with `**/` so they also match nested
+# directories; a bare name only matches at the context root.
+**/node_modules
+**/dist
+**/*.tsbuildinfo
+# Regenerated inside the image from a clean tree; a host copy would go stale.
+**/src/generated/
+**/.next
+**/.env
+**/.env.*
+**/*.sqlite
+.git
+.husky
+.vscode
+.claude
+.serena
+.code-review-graph
+plans
+docs
+files
+**/*.md
+# Not part of this image.
+root
+apps/web
+docker
+compose.yml
+coolify.compose.yml
+dockerfile
+**/Dockerfile*
+**/*.spec.ts
+**/*.test.ts

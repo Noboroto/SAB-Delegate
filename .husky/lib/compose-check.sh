@@ -10,10 +10,12 @@ compose_check() {
   tmp=$(mktemp -d)
   trap 'rm -rf "$tmp"' RETURN
   : >"$tmp/.env"
-  for file in compose.yml coolify.compose.yml; do
+  for file in compose.yml coolify.compose.yml docker/test-db.compose.yml; do
     [[ -f "$root/$file" ]] || continue
-    cp "$root/$file" "$tmp/$file"
-    (cd "$tmp" && TOKENS=placeholder docker compose -f "$file" config -q)
+    # Flattened: the copy sits next to the empty .env, not in a docker/ subtree.
+    name=$(basename "$file")
+    cp "$root/$file" "$tmp/$name"
+    (cd "$tmp" && TOKENS=placeholder docker compose -f "$name" config -q)
     echo "  $file: valid"
   done
 }

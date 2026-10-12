@@ -3,13 +3,14 @@
   "ignoreBinaries": ["gitleaks"],
   "workspaces": {
     ".": {
-      "entry": ["knip.json", "scripts/*.test.ts"],
+      "entry": ["knip.json", "scripts/*.test.ts", "scripts/*.db.spec.ts"],
       "project": ["*.{ts,mjs}", "scripts/**/*.{ts,mjs}"]
     },
     "apps/server": {
       "entry": ["src/main.ts"],
       "project": ["src/**/*.ts"],
-      "ignoreDependencies": ["rxjs", "@swc/core"]
+      "ignoreDependencies": ["@prisma/client", "prisma-zod-generator"],
+      "prisma": false
     },
     "packages/shared": {
       "entry": ["src/index.ts"],

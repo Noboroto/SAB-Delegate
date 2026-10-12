@@ -6,7 +6,7 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     projects: [
-      'scripts/vitest.config.ts',
+      'scripts/vitest.config.mts',
       'packages/shared/vitest.config.mts',
       'apps/server/vitest.config.mts',
     ],

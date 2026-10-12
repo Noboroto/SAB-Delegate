@@ -1,0 +1,22 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+// `output` is resolved from this file's directory (prisma/schema), but `config`
+// from its parent (prisma): the generator treats the schema directory as a path.
+generator zod {
+  provider              = "prisma-zod-generator"
+  output                = "../../../../packages/shared/src/generated/zod"
+  config                = "./zod-generator.config.json"
+  exportTypedSchemas    = "true"
+  exportZodSchemas      = "true"
+  modelCase             = "PascalCase"
+  modelSuffix           = "Model"
+  prismaJsonNullability = "true"
+  relationModel         = "true"
+}
+
+// The connection URL lives in prisma.config.ts (Prisma 7).
+datasource db {
+  provider = "postgresql"
+}

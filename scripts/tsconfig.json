@@ -14,5 +14,5 @@
     "checkJs": false,
     "types": ["node"]
   },
-  "include": ["*.ts"]
+  "include": ["*.ts", "*.mts"]
 }

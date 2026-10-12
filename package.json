@@ -8,17 +8,23 @@
   },
   "scripts": {
     "generate:deps": "node scripts/generate-deps.mjs",
+    "db:generate": "pnpm --filter ./apps/server run db:generate",
+    "db:migrate": "pnpm --filter ./apps/server run db:migrate",
     "prelint": "pnpm generate:deps",
     "lint": "node --max-old-space-size=6144 node_modules/eslint/bin/eslint.js . --max-warnings 0",
     "lint:fix": "node --max-old-space-size=6144 node_modules/eslint/bin/eslint.js . --fix",
     "pretypecheck": "pnpm generate:deps",
     "typecheck": "pnpm -r --if-present typecheck && tsc -p scripts/tsconfig.json",
     "test": "vitest run",
+    "pretest:db": "pnpm generate:deps",
+    "test:db": "vitest run --config vitest.db.config.mts",
+    "test-db:start": "node scripts/test-db.mjs start",
+    "test-db:stop": "node scripts/test-db.mjs stop",
     "formatter:fix": "prettier --write \"**/*.{ts,tsx,mjs,cjs}\" --log-level warn --cache --cache-location node_modules/.cache/prettier-fix",
     "formatter:check": "prettier --check \"**/*.{ts,tsx,mjs,cjs}\" --log-level warn --cache --cache-location node_modules/.cache/prettier-check",
     "knip": "knip",
     "secrets:history": "node scripts/secrets-history.mjs",
-    "prepare": "husky && node scripts/fix-hook-perms.mjs"
+    "prepare": "if command -v husky >/dev/null; then husky; fi && node scripts/fix-hook-perms.mjs"
   },
   "devDependencies": {
     "@eslint-community/eslint-plugin-eslint-comments": "4.8.1",

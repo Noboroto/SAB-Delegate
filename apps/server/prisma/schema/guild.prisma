@@ -1,0 +1,12 @@
+model Guild {
+  id                 String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  /// Discord snowflake; the internal key above never leaves the database.
+  discordId          String   @unique
+  locale             String   @default("vi")
+  introChannelId     String?
+  logChannelId       String?
+  birthdayChannelId  String?
+  activityCategoryId String?
+  createdAt          DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime @updatedAt @db.Timestamptz(3)
+}

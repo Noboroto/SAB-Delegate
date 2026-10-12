@@ -9,3 +9,8 @@ packages:
 # Vitest setup; its script only fetches the platform binary.
 allowBuilds:
   '@swc/core': true
+  # Prisma downloads its engines; the Zod generator only prints a notice in
+  # postinstall, but pnpm 12 refuses the install while any build is undecided.
+  prisma: true
+  '@prisma/engines': true
+  prisma-zod-generator: true
