@@ -1,0 +1,21 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "outDir": "dist",
+    // Inside outDir so wiping the output also wipes the cache; a cache that
+    // outlives its output makes tsc skip the emit and leave an empty package.
+    "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo",
+    "declaration": true,
+    "declarationMap": true,
+    // Typecheck-only root: vitest.config.mts imports the worker-count helper at
+    // the repo root, outside this package. tsconfig.build.json narrows it to src.
+    "rootDir": "../..",
+    // vitest.config.mts imports the repo's shared .mjs worker-count helper.
+    "allowJs": true,
+    "checkJs": false,
+    "types": ["node"]
+  },
+  "include": ["src", "vitest.config.mts"]
+}

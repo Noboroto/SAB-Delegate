@@ -3,3 +3,9 @@
 packages:
   - 'apps/*'
   - 'packages/*'
+
+# pnpm 12 refuses to install while any dependency with an install script is
+# undecided. @swc/core is the decorator-metadata transform behind the server's
+# Vitest setup; its script only fetches the platform binary.
+allowBuilds:
+  '@swc/core': true

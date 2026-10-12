@@ -5,6 +5,15 @@
     ".": {
       "entry": ["knip.json", "scripts/*.test.ts"],
       "project": ["*.{ts,mjs}", "scripts/**/*.{ts,mjs}"]
+    },
+    "apps/server": {
+      "entry": ["src/main.ts"],
+      "project": ["src/**/*.ts"],
+      "ignoreDependencies": ["rxjs", "@swc/core"]
+    },
+    "packages/shared": {
+      "entry": ["src/index.ts"],
+      "project": ["src/**/*.ts"]
     }
   }
 }

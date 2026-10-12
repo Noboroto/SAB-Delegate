@@ -5,6 +5,10 @@ import { defineConfig } from 'vitest/config';
 // would cause by spawning a separate Vitest per package.
 export default defineConfig({
   test: {
-    projects: ['scripts/vitest.config.ts'],
+    projects: [
+      'scripts/vitest.config.ts',
+      'packages/shared/vitest.config.mts',
+      'apps/server/vitest.config.mts',
+    ],
   },
 });

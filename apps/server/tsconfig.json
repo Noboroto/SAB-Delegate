@@ -1,0 +1,23 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // CommonJS output: Nest 12 is ESM-only and loads through require(esm) on
+    // Node 24, which `nodenext` types correctly for a package without "type".
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "outDir": "dist",
+    // Inside outDir so `nest build`'s deleteOutDir also deletes the cache; a
+    // cache that outlives its output makes tsc report success and emit nothing.
+    "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    // Typecheck-only root: vitest.config.mts imports the worker-count helper at
+    // the repo root, outside this package. tsconfig.build.json narrows it to src.
+    "rootDir": "../..",
+    // vitest.config.mts imports the repo's shared .mjs worker-count helper.
+    "allowJs": true,
+    "checkJs": false,
+    "types": ["node"]
+  },
+  "include": ["src", "vitest.config.mts"]
+}

@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "allowJs": false,
+    // A different file from the typecheck cache: sharing one lets a --noEmit
+    // run mark the emit as already done.
+    "tsBuildInfoFile": "./dist/tsconfig.build.tsbuildinfo"
+  },
+  "include": ["src"],
+  "exclude": ["dist", "src/**/*.test.ts"]
+}
