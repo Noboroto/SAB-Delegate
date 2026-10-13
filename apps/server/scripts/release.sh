@@ -89,4 +89,9 @@ ALTER DEFAULT PRIVILEGES FOR ROLE :"migrate" IN SCHEMA public
 	GRANT USAGE, SELECT ON SEQUENCES TO :"runtime";
 SQL
 
+# pg-boss keeps its own schema, outside Prisma's migrations. The runtime role
+# cannot create it, so it is installed (or upgraded) here and then granted.
+echo "release: installing pg-boss schema"
+node ./scripts/install-pgboss.mjs
+
 echo "release: done"

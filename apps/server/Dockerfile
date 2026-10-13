@@ -54,7 +54,7 @@ FROM gen AS release
 # major as the postgres image the stack runs.
 RUN apk add --no-cache postgresql18-client
 WORKDIR /app/apps/server
-COPY apps/server/scripts/release.sh ./scripts/release.sh
+COPY apps/server/scripts/release.sh apps/server/scripts/install-pgboss.mjs ./scripts/
 ENTRYPOINT ["/bin/sh", "/app/apps/server/scripts/release.sh"]
 
 # ── deploy: compiled server plus its production dependencies only ────────────

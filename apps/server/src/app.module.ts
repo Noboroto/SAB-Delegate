@@ -3,6 +3,7 @@ import { LoggerModule } from 'nestjs-pino';
 import { AppStateModule } from './app-state/app-state.service.js';
 import { loadEnv } from './config/env.js';
 import { HealthModule } from './health/health.module.js';
+import { PgBossModule } from './jobs/pg-boss.module.js';
 import { buildPinoParams } from './logger/pino.config.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 
@@ -14,6 +15,7 @@ import { PrismaModule } from './prisma/prisma.module.js';
       useFactory: () => buildPinoParams(loadEnv().LOG_LEVEL),
     }),
     PrismaModule,
+    PgBossModule,
     AppStateModule,
     HealthModule,
   ],
