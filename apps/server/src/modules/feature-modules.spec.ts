@@ -6,6 +6,7 @@ import { GuildConfigModule } from './guild-config/guild-config.module.js';
 import { NoteModule } from './note/note.module.js';
 import { ReactionsModule } from './reactions/reactions.module.js';
 import { SystemModule } from './system/system.module.js';
+import { WordGameModule } from './word-game/word-game.module.js';
 
 describe('featureModules', () => {
   it('lists every module that needs the Discord client', () => {
@@ -16,6 +17,7 @@ describe('featureModules', () => {
       BirthdayModule,
       NoteModule,
       ReactionsModule,
+      WordGameModule,
     ]);
     expect(featureModules({})).toEqual(DISCORD_FEATURE_MODULES);
     expect(featureModules({ MIGRATION_PENDING: '' })).toEqual(DISCORD_FEATURE_MODULES);

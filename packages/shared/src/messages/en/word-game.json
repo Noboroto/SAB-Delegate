@@ -1,0 +1,26 @@
+{
+  "commands": {
+    "set": {
+      "description": "Pick the channel and start a word-chain round"
+    },
+    "reset": {
+      "description": "Start the word-chain round over, keeping the channel and the limit"
+    },
+    "channelOption": {
+      "description": "The channel you want to play in"
+    },
+    "maxWordsOption": {
+      "description": "Most words in a round, at least 200. Defaults to 1500."
+    }
+  },
+  "start": "The game has started! Send any single word to begin.",
+  "confirmation": "The game channel is now {channel}.",
+  "notConfigured": "No game channel has been chosen yet!",
+  "reply": {
+    "NOT_EXIST": "This word is not in the dictionary",
+    "NOT_LINK": "The next word has to start with `{starter}`",
+    "SAME_AUTHOR": "You played the previous word",
+    "SAME_WORD": "This word has already been played",
+    "finished": "The game is over: {maxWords} words reached. Reset it to play again"
+  }
+}

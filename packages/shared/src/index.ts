@@ -44,6 +44,7 @@ export {
   GuildSettingsDryRunSchema,
   GuildSettingsPatchSchema,
   GuildSettingsSchema,
+  WORD_MAX_WORDS_DEFAULT,
   WORD_MAX_WORDS_MAX,
   WORD_MAX_WORDS_MIN,
   type GuildSettings,
@@ -88,6 +89,32 @@ export {
   type NoteRemoveResult,
   type NoteUpsert,
 } from './schemas/note.js';
+export {
+  WordGameConfigResultSchema,
+  WordGameConfigSchema,
+  WordGameInfoSchema,
+  WordGameResetResultSchema,
+  WordGameResetStatusSchema,
+  WordGameSettingsSchema,
+  WordGameWordSchema,
+  WordGameWordsPageSchema,
+  WordGameWordsQuerySchema,
+  WordStatus,
+  WordStatusSchema,
+  WordSubmitInputSchema,
+  WordSubmitResultSchema,
+  type WordGameConfig,
+  type WordGameConfigResult,
+  type WordGameInfo,
+  type WordGameResetResult,
+  type WordGameResetStatus,
+  type WordGameSettings,
+  type WordGameWord,
+  type WordGameWordsPage,
+  type WordGameWordsQuery,
+  type WordSubmitInput,
+  type WordSubmitResult,
+} from './schemas/word-game.js';
 export { splitMessage } from './utils/split-message.js';
 export { parseSnowflakes } from './utils/snowflakes.js';
 export {

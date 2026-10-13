@@ -7,6 +7,7 @@ import enErrors from './en/errors.json';
 import enGuildConfig from './en/guild-config.json';
 import enNote from './en/note.json';
 import enSystem from './en/system.json';
+import enWordGame from './en/word-game.json';
 import viBirthday from './vi/birthday.json';
 import viCommands from './vi/commands.json';
 import viCommon from './vi/common.json';
@@ -14,6 +15,7 @@ import viErrors from './vi/errors.json';
 import viGuildConfig from './vi/guild-config.json';
 import viNote from './vi/note.json';
 import viSystem from './vi/system.json';
+import viWordGame from './vi/word-game.json';
 
 /** Discord rejects a command or option description longer than this. */
 export const COMMAND_DESCRIPTION_MAX_LENGTH = 100;
@@ -27,6 +29,7 @@ export const MessageNamespaceSchema = z.enum([
   'guild-config',
   'birthday',
   'note',
+  'word-game',
 ]);
 
 export type MessageNamespace = z.infer<typeof MessageNamespaceSchema>;
@@ -44,6 +47,7 @@ export const MESSAGES = {
     'guild-config': viGuildConfig,
     birthday: viBirthday,
     note: viNote,
+    'word-game': viWordGame,
   },
   en: {
     common: enCommon,
@@ -53,5 +57,6 @@ export const MESSAGES = {
     'guild-config': enGuildConfig,
     birthday: enBirthday,
     note: enNote,
+    'word-game': enWordGame,
   },
 } satisfies Record<Locale, Record<MessageNamespace, object>>;

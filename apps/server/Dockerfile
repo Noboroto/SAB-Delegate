@@ -64,6 +64,8 @@ ENTRYPOINT ["/bin/sh", "/app/apps/server/scripts/release.sh"]
 FROM gen AS deploy
 COPY apps/server/tsconfig.json apps/server/tsconfig.build.json apps/server/nest-cli.json ./apps/server/
 COPY apps/server/src ./apps/server/src
+# The word dictionary the server reads at runtime; `nest build` copies it to the output assets folder.
+COPY apps/server/assets ./apps/server/assets
 # `nest build` directly: the package's `prebuild` regenerates artifacts through
 # root scripts this stage does not carry, and gen already produced them.
 RUN cd apps/server && pnpm exec nest build

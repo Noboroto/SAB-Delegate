@@ -14,6 +14,7 @@ import { GuildConfigService } from './modules/guild-config/guild-config.service.
 import { NoteService } from './modules/note/note.service.js';
 import { AutoReactListener } from './modules/reactions/auto-react.listener.js';
 import { SystemService } from './modules/system/system.service.js';
+import { WordGameService } from './modules/word-game/word-game.service.js';
 import { HealthController } from './health/health.controller.js';
 
 const marker = (label: string) => `marker-${label}-${randomBytes(6).toString('hex')}`;
@@ -86,6 +87,7 @@ describe('AppModule', () => {
       BirthdayCron,
       NoteService,
       AutoReactListener,
+      WordGameService,
     ]) {
       expect(moduleRef.get(provider, { strict: false }), provider.name).toBeDefined();
     }
@@ -148,7 +150,7 @@ describe('AppModule while a migration is pending', () => {
     // imported again under the pending environment; classes from the top-level
     // imports would be different identities and prove nothing.
     vi.resetModules();
-    const [{ AppModule: PendingAppModule }, config, system, access, health, birthday, note] =
+    const [{ AppModule: PendingAppModule }, config, system, access, health, birthday, note, word] =
       await Promise.all([
         import('./app.module.js'),
         import('./modules/guild-config/guild-config.service.js'),
@@ -157,6 +159,7 @@ describe('AppModule while a migration is pending', () => {
         import('./health/health.controller.js'),
         import('./modules/birthday/birthday.service.js'),
         import('./modules/note/note.service.js'),
+        import('./modules/word-game/word-game.service.js'),
       ]);
     moduleRef = await Test.createTestingModule({ imports: [PendingAppModule] }).compile();
 
@@ -166,6 +169,7 @@ describe('AppModule while a migration is pending', () => {
       access.GuildAccessService,
       birthday.BirthdayService,
       note.NoteService,
+      word.WordGameService,
     ]) {
       expect(() => moduleRef?.get(provider, { strict: false }), provider.name).toThrow();
     }

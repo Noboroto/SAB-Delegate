@@ -1,0 +1,26 @@
+{
+  "commands": {
+    "set": {
+      "description": "Chọn phòng để bắt đầu chơi nối chữ"
+    },
+    "reset": {
+      "description": "Đặt lại ván nối chữ, giữ nguyên phòng chơi và giới hạn"
+    },
+    "channelOption": {
+      "description": "Kênh bạn muốn chọn"
+    },
+    "maxWordsOption": {
+      "description": "Số từ tối đa, không ít hơn 200 từ! Mặc định là 1500 từ."
+    }
+  },
+  "start": "Trò chơi bắt đầu! Vui lòng nhập 1 từ bất kỳ!",
+  "confirmation": "Đã chọn phòng chơi: {channel}",
+  "notConfigured": "Chưa chọn phòng chơi!",
+  "reply": {
+    "NOT_EXIST": "Từ này không tồn tại trong từ điển",
+    "NOT_LINK": "Từ mới phải bắt đầu bằng `{starter}`",
+    "SAME_AUTHOR": "Bạn đã nối từ trước đó",
+    "SAME_WORD": "Từ này đã được nối",
+    "finished": "Trò chơi kết thúc do đã đạt {maxWords} từ. Hãy reset nếu muốn chơi tiếp nhé"
+  }
+}

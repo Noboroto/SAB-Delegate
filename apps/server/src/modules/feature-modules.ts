@@ -6,6 +6,7 @@ import { GuildConfigModule } from './guild-config/guild-config.module.js';
 import { NoteModule } from './note/note.module.js';
 import { ReactionsModule } from './reactions/reactions.module.js';
 import { SystemModule } from './system/system.module.js';
+import { WordGameModule } from './word-game/word-game.module.js';
 
 /**
  * Every module that needs the Discord client or its command registry. With
@@ -21,6 +22,7 @@ export const DISCORD_FEATURE_MODULES: readonly Type[] = [
   BirthdayModule,
   NoteModule,
   ReactionsModule,
+  WordGameModule,
 ];
 
 /** Reads the raw environment like `DiscordModule.forRoot`: Nest builds the module graph before anything is parsed. */
