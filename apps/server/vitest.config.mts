@@ -1,5 +1,5 @@
 import swc from 'unplugin-swc';
-import { defineConfig } from 'vitest/config';
+import { configDefaults, defineConfig } from 'vitest/config';
 import { vitestMaxWorkers } from '../../vitest-workers.mjs';
 
 export default defineConfig({
@@ -18,6 +18,9 @@ export default defineConfig({
     root: import.meta.dirname,
     environment: 'node',
     include: ['src/**/*.spec.ts'],
+    // Database specs need the schema-per-run setup of the DB config and fail
+    // closed without it.
+    exclude: ['**/*.db.spec.ts', ...configDefaults.exclude],
     pool: 'threads',
     hookTimeout: 30_000,
     testTimeout: 20_000,

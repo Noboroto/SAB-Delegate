@@ -3,6 +3,7 @@ import { connect } from 'node:net';
 // Loopback only, a fixed port (never "the next free one") and a name ending in
 // `_test`: the harness creates and drops schemas here, so it must never be
 // pointed at a database that holds real data.
+const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
 const DEFAULT_TEST_DATABASE_URL = 'postgresql://sab_test@127.0.0.1:5451/sab_test';
 
 /** Set by the global setup for the specs of ONE run; DATABASE_URL is never read. */
@@ -17,7 +18,14 @@ export const RUN_SCHEMA_VARIABLE = 'SAB_TEST_DATABASE_SCHEMA';
  */
 export function testDatabaseBaseUrl(env = process.env) {
   const url = env.TEST_DATABASE_URL || DEFAULT_TEST_DATABASE_URL;
-  const database = new URL(url).pathname.replace(/^\//, '');
+  const { hostname, pathname } = new URL(url);
+  if (!LOOPBACK_HOSTS.has(hostname)) {
+    // The host only, never the URL: it can carry a password.
+    throw new Error(
+      `TEST_DATABASE_URL must point at this machine (localhost, 127.0.0.1 or ::1), not "${hostname}".`,
+    );
+  }
+  const database = pathname.replace(/^\//, '');
   if (!database.endsWith('_test')) {
     throw new Error('TEST_DATABASE_URL must name a database ending in "_test".');
   }

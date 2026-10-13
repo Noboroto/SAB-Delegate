@@ -12,17 +12,25 @@ export const FASTIFY_OPTIONS = {
   // Request logging belongs to nestjs-pino; Fastify's own logger would emit a
   // second, unredacted line per request.
   logger: false,
-  // Keep-alive sockets would otherwise hold a graceful shutdown open until the
-  // orchestrator's kill timeout.
-  forceCloseConnections: true,
+  // Idle keep-alive sockets would otherwise hold a graceful shutdown open until
+  // the orchestrator's kill timeout; 'idle' closes only those, so a request that
+  // is still being answered finishes instead of being cut off.
+  forceCloseConnections: 'idle',
 } satisfies FastifyServerOptions;
 
-// The server returns JSON and never markup, so the page-level policy can be
-// closed completely instead of inheriting helmet's default allowances.
+// The server returns JSON and never markup, so the page-level policy is closed
+// completely. `useDefaults: false` is what makes that true: with the default
+// (true) helmet merges these directives INTO its own policy, which keeps
+// `script-src 'self'`, `img-src 'self' data:` and the rest alongside
+// `default-src 'none'`. `base-uri` and `form-action` do not fall back to
+// `default-src`, so they are listed explicitly.
 export const HELMET_OPTIONS = {
   contentSecurityPolicy: {
+    useDefaults: false,
     directives: {
       defaultSrc: ["'none'"],
+      baseUri: ["'none'"],
+      formAction: ["'none'"],
       frameAncestors: ["'none'"],
     },
   },

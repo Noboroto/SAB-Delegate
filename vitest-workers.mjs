@@ -5,9 +5,9 @@ import os from 'node:os';
  * start when projects sharing a `groupOrder` disagree on it, so no config may
  * hardcode its own value.
  *
- * Sized per machine rather than a single constant (copied reasoning from
- * JudgeHub, where an unsized worker count drove a loaded dev machine's free
- * RAM to ~0.1 GB mid-suite and produced load-only failures):
+ * Sized per machine rather than a single constant, because an unsized worker
+ * count can drive a loaded dev machine's free RAM to near zero mid-suite and
+ * produce failures that only appear under load:
  * - macOS: half the logical cores (Apple silicon splits performance/efficiency
  *   cores, so the logical count overstates usable capacity).
  * - other OSes: capped at 8.

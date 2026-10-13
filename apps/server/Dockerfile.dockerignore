@@ -16,9 +16,9 @@
 .claude
 .serena
 .code-review-graph
-plans
+**/plans
 docs
-files
+**/files
 **/*.md
 # Not part of this image.
 root

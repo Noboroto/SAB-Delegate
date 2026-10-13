@@ -1,13 +1,16 @@
+# Patterns start with `**/` because a bare name only matches at the context
+# root: `root/.env` (bot tokens) must never reach an image layer.
 **/node_modules
 npm-debug.log
 yarn-debug.log
 yarn-error.log
 .git
-.env
-.DS_Store
-files
-root/files
-plans
+**/.env
+**/.env.*
+**/.DS_Store
+**/files
+**/plans
+**/*.sqlite
 .serena
 .vscode
 **/configValues.ts
@@ -15,4 +18,4 @@ plans
 **/*.tsbuildinfo
 **/src/generated/
 docs
-*.md
+**/*.md

@@ -20,7 +20,9 @@ const csvOfSnowflakes = z
 export const envSchema = z
   .object({
     APP_ENV: z.enum(['development', 'production']),
-    DISCORD_TOKEN: z.string().min(1),
+    // Trimmed: a token pasted with a trailing newline would fail the gateway
+    // login with an error that looks like a bad token.
+    DISCORD_TOKEN: z.string().trim().min(1),
     DISCORD_CLIENT_ID: snowflake,
     DISCORD_ALLOWED_APP_IDS: csvOfSnowflakes,
     DISCORD_DEV_GUILD_ID: snowflake.optional(),
@@ -61,6 +63,22 @@ export class InvalidEnvError extends Error {
 }
 
 /**
+ * An issue without a variable in its path comes from a root-level refinement;
+ * it is reported as `(root)` instead of being dropped, so the error is never
+ * empty.
+ */
+export function variableNames(
+  issues: ReadonlyArray<{ path: ReadonlyArray<PropertyKey> }>,
+): string[] {
+  const names = new Set<string>();
+  for (const issue of issues) {
+    const name = issue.path[0];
+    names.add(typeof name === 'string' ? name : '(root)');
+  }
+  return [...names];
+}
+
+/**
  * Validates the process environment once at boot. An unset variable and an
  * empty one (`NAME=` in a compose file) are the same thing, so the schema sees
  * both as absent. Unknown variables are dropped.
@@ -72,10 +90,5 @@ export function loadEnv(source: Readonly<Record<string, string | undefined>> = p
   const result = envSchema.safeParse(present);
   if (result.success) return result.data;
 
-  const names = new Set<string>();
-  for (const issue of result.error.issues) {
-    const name = issue.path[0];
-    if (typeof name === 'string') names.add(name);
-  }
-  throw new InvalidEnvError([...names]);
+  throw new InvalidEnvError(variableNames(result.error.issues));
 }

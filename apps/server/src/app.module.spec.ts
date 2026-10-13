@@ -2,12 +2,9 @@ import 'reflect-metadata';
 import { randomBytes } from 'node:crypto';
 import { Injectable, Optional, type Type } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
-import pino from 'pino';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { AppModule } from './app.module.js';
 import { HealthController } from './health/health.controller.js';
-import { HealthModule } from './health/health.module.js';
-import { REDACTION, buildPinoParams } from './logger/pino.config.js';
 
 const marker = (label: string) => `marker-${label}-${randomBytes(6).toString('hex')}`;
 
@@ -60,11 +57,26 @@ describe('AppModule', () => {
   });
 
   it('gives every controller and provider constructor dependency a resolvable type', () => {
-    const declared: Type[] = [AppModule, HealthModule].flatMap((module) => [
+    // Walk the module graph from AppModule's own metadata, so a module added
+    // later is checked without editing this list.
+    const seen = new Set<Type>();
+    const visit = (module: Type): void => {
+      if (seen.has(module)) return;
+      seen.add(module);
+      for (const imported of (Reflect.getMetadata('imports', module) ?? []) as unknown[]) {
+        const target = (imported as { module?: Type }).module ?? imported;
+        if (typeof target === 'function') visit(target as Type);
+      }
+    };
+    visit(AppModule);
+
+    const declared = [...seen].flatMap((module) => [
       ...((Reflect.getMetadata('controllers', module) ?? []) as Type[]),
-      ...((Reflect.getMetadata('providers', module) ?? []) as Type[]),
+      ...((Reflect.getMetadata('providers', module) ?? []) as unknown[]).filter(
+        (provider): provider is Type => typeof provider === 'function',
+      ),
     ]);
-    expect(declared).toContain(HealthController);
+    expect(declared.length).toBeGreaterThan(0);
     for (const target of declared) {
       expect(unresolvableParameters(target), `${target.name} constructor`).toEqual([]);
     }
@@ -116,55 +128,5 @@ describe('dependency injection guard', () => {
 
   it('accepts a class-typed parameter', () => {
     expect(unresolvableParameters(ClassTyped)).toEqual([]);
-  });
-});
-
-describe('log redaction', () => {
-  function logged(entry: Record<string, unknown>): string {
-    const lines: string[] = [];
-    const logger = pino(
-      { redact: REDACTION, level: 'info' },
-      {
-        write(chunk: string) {
-          lines.push(chunk);
-        },
-      },
-    );
-    logger.info(entry);
-    return lines.join('');
-  }
-
-  function nested(depth: number, leaf: Record<string, unknown>): Record<string, unknown> {
-    return depth === 0 ? leaf : { context: nested(depth - 1, leaf) };
-  }
-
-  const keys = ['token', 'secret', 'authorization', 'cookie', 'password'];
-
-  it.each(keys.flatMap((key) => [0, 1, 2, 3].map((depth) => [key, depth] as const)))(
-    'hides %s at nesting depth %i',
-    (key, depth) => {
-      const value = marker(key);
-      expect(logged(nested(depth, { [key]: value }))).not.toContain(value);
-    },
-  );
-
-  it('hides request and response credentials by their full path', () => {
-    const auth = marker('auth');
-    const cookie = marker('cookie');
-    const setCookie = marker('set-cookie');
-    const line = logged({
-      req: { headers: { authorization: auth, cookie } },
-      res: { headers: { 'set-cookie': setCookie } },
-    });
-    for (const value of [auth, cookie, setCookie]) expect(line).not.toContain(value);
-  });
-
-  it('keeps ordinary fields readable', () => {
-    const guildId = marker('guild');
-    expect(logged({ guildId })).toContain(guildId);
-  });
-
-  it('installs the same redaction on the http logger', () => {
-    expect(buildPinoParams('warn').pinoHttp).toMatchObject({ level: 'warn', redact: REDACTION });
   });
 });

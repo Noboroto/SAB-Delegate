@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { envSchema, InvalidEnvError, loadEnv } from './env.js';
+import { envSchema, InvalidEnvError, loadEnv, variableNames } from './env.js';
 
 // Generated per run: the values only need to be present and non-trivial.
 const token = `tok-${randomBytes(8).toString('hex')}`;
@@ -83,6 +83,17 @@ describe('loadEnv', () => {
     expect(env.DISCORD_DEV_GUILD_ID).toBeUndefined();
     expect(env.MIGRATION_PENDING).toBe(false);
     expect(failureOf({ ...productionEnv, DISCORD_TOKEN: '' }).names).toEqual(['DISCORD_TOKEN']);
+  });
+
+  it('trims the Discord token', () => {
+    expect(loadEnv({ ...productionEnv, DISCORD_TOKEN: `  ${token}\n` }).DISCORD_TOKEN).toBe(token);
+  });
+
+  it('names an issue with an empty path as (root) instead of dropping it', () => {
+    expect(variableNames([{ path: [] }, { path: ['LOG_LEVEL'] }, { path: [] }])).toEqual([
+      '(root)',
+      'LOG_LEVEL',
+    ]);
   });
 
   it('lists every missing required variable by name', () => {

@@ -9,6 +9,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { testDatabaseBaseUrl } from '../vitest-test-database.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const COMPOSE_FILE = join(ROOT, 'docker', 'test-db.compose.yml');
@@ -45,6 +46,9 @@ function compose(args) {
 const command = process.argv[2];
 
 if (command === 'start') {
+  // Throws unless the configured test database is a loopback `*_test` database,
+  // so this script can never be aimed at, or advertise, a remote server.
+  testDatabaseBaseUrl();
   const holder = registryLines().find(
     (line) => line.split(' ')[0] === PORT && line.split(' ')[1] !== OWNER,
   );
