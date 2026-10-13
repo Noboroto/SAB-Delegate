@@ -152,7 +152,9 @@ export class RoleAssignCommands {
       { roleId: role.id, userIds, membersOfRoleId: membersOfRole?.id, remove: isRemove ?? false },
       actorOf(interaction),
     );
-    await replyInChunks(interaction, render(t, result), { ephemeral: true });
+    await replyInChunks(interaction, render(t, result, 'role-assign.doneList'), {
+      ephemeral: true,
+    });
   }
 
   @UseInterceptors(ReactionAutocompleteInterceptor)
@@ -197,7 +199,7 @@ export class RoleAssignCommands {
       actorOf(interaction),
       { crossGuild: true },
     );
-    await replyInChunks(interaction, render(t, result), { ephemeral: true });
+    await replyInChunks(interaction, render(t, result, 'role-assign.done'), { ephemeral: true });
   }
 }
 
@@ -211,11 +213,19 @@ function actorOf(interaction: { readonly user: { readonly id: string } }): Actor
   return { source: 'DISCORD', userId: interaction.user.id };
 }
 
-/** "Done N", then what was left out and who failed; nobody reacting is said so instead of "Done 0". */
-function render(t: ReturnType<typeof translatorFor>, result: RoleAssignResult): string {
+/**
+ * "Done N member(s)!" and then who failed, nothing about ids that are not
+ * members of the server (the old commands skipped them in silence); nobody
+ * reacting is said so instead of "Done 0". `done` is the sentence for the
+ * command that was run: the two commands always worded it differently.
+ */
+function render(
+  t: ReturnType<typeof translatorFor>,
+  result: RoleAssignResult,
+  done: 'role-assign.done' | 'role-assign.doneList',
+): string {
   if (result.status === 'NO_REACTORS') return t('role-assign.noReactors');
-  const parts = [t('role-assign.done', { count: result.done })];
-  if (result.skipped > 0) parts.push(t('role-assign.skipped', { count: result.skipped }));
+  const parts = [t(done, { count: result.done })];
   if (result.failures.length > 0) {
     parts.push(
       t('role-assign.failed', {

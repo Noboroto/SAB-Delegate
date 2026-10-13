@@ -9,9 +9,9 @@
     "messageLinkOption": { "description": "Link of the message (right-click, Copy Message Link)" },
     "emojiOption": { "description": "The emoji to look for; pick one from the suggestions" }
   },
-  "done": "Done: changed the role for {count} member(s).",
-  "skipped": "{count} id(s) are not members of this server and were left out.",
-  "failed": "Failed for {count}:\n{lines}",
+  "done": "Done {count} member(s)!",
+  "doneList": "Done modifying {count} member(s)!",
+  "failed": "Failed {count}:\n{lines}",
   "noReactors": "No one reacted with that emoji.",
   "noTargets": "Give at least one member id, or a role to take the members from."
 }

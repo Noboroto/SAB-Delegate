@@ -1,31 +1,6 @@
 import { splitMessage } from '@sab/shared';
 import type { Message, MessageMentionOptions } from 'discord.js';
 
-const USER_MENTION = /<@!?(\d{17,20})>/g;
-const ROLE_MENTION = /<@&(\d{17,20})>/g;
-
-/** Discord rejects an `allowedMentions` list longer than this. */
-const ALLOWED_MENTIONS_MAX = 100;
-
-/**
- * The client pings nobody by default, so a message that is meant to ping says
- * whom. A mention list pings exactly the users and roles it names: the members
- * listed, the person who asked, and whoever they typed into the free text.
- * `@everyone` and `@here` stay text; `/thread everyone` is the way to use them.
- * A chunk never names more than 100 (a 2000-character message cannot hold more
- * mentions), but the cap keeps Discord from rejecting the request regardless.
- */
-export function allowedMentionsFor(text: string): MessageMentionOptions {
-  const users = new Set<string>();
-  for (const [, id] of text.matchAll(USER_MENTION)) if (id !== undefined) users.add(id);
-  const roles = new Set<string>();
-  for (const [, id] of text.matchAll(ROLE_MENTION)) if (id !== undefined) roles.add(id);
-  return {
-    users: [...users].slice(0, ALLOWED_MENTIONS_MAX),
-    roles: [...roles].slice(0, ALLOWED_MENTIONS_MAX),
-  };
-}
-
 type ListText = {
   header: string;
   userIds: readonly string[];
@@ -48,23 +23,46 @@ export function renderMentionList({
   return splitMessage(`${header}\n${lines.join('\n')}${footer}`);
 }
 
+/** How a list is posted: whom each piece may notify, and whether the reply notifies the target's author. */
+type PostPolicy = {
+  readonly mentions: MessageMentionOptions;
+  readonly pingAuthor: boolean;
+};
+
+/**
+ * What went out before `error` stopped the post: pieces already sent stay
+ * sent, so the caller reports how far it got rather than "not delivered".
+ */
+type PostOutcome = { readonly posted: number; readonly error?: unknown };
+
 /**
  * Posts `chunks` as a reply to `target` (the first) followed by plain messages
- * in the same channel. Each piece pings only whom it names, and the reply
- * pings the author of `target` as a reply always has.
+ * in the same channel, stopping at the first piece Discord refuses.
  */
-export async function postAsReply(target: Message, chunks: readonly string[]): Promise<void> {
+export async function postAsReply(
+  target: Message,
+  chunks: readonly string[],
+  policy: PostPolicy,
+): Promise<PostOutcome> {
   const [first, ...rest] = chunks;
-  if (first === undefined) return;
-  await target.reply({
-    content: first,
-    allowedMentions: { ...allowedMentionsFor(first), repliedUser: true },
-  });
-  if (rest.length === 0) return;
-  const { channel } = target;
-  // A channel that took the reply takes plain messages too; this is a guard for the type.
-  if (!channel.isSendable()) throw new RangeError('The channel does not accept messages');
-  for (const chunk of rest) {
-    await channel.send({ content: chunk, allowedMentions: allowedMentionsFor(chunk) });
+  if (first === undefined) return { posted: 0 };
+  let posted = 0;
+  try {
+    await target.reply({
+      content: first,
+      allowedMentions: { ...policy.mentions, repliedUser: policy.pingAuthor },
+    });
+    posted = 1;
+    if (rest.length === 0) return { posted };
+    const { channel } = target;
+    // A channel that took the reply takes plain messages too; this is a guard for the type.
+    if (!channel.isSendable()) throw new RangeError('The channel does not accept messages');
+    for (const chunk of rest) {
+      await channel.send({ content: chunk, allowedMentions: policy.mentions });
+      posted += 1;
+    }
+  } catch (error) {
+    return { posted, error };
   }
+  return { posted };
 }

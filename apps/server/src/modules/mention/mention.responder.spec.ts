@@ -38,6 +38,7 @@ const okResult = (over: Partial<MentionResult> = {}): MentionResult => ({
   sample: [],
   chunks: ['<@100000000000000099>,'],
   delivered: false,
+  postedChunks: 0,
   ...over,
 });
 
@@ -105,6 +106,7 @@ function build(over: { resolve?: Record<string, MessageResolution>; hasReaction?
 }
 
 const ephemeral = { flags: MessageFlags.Ephemeral };
+const pingEverything = { parse: ['users', 'roles', 'everyone'] };
 
 describe('MentionResponder.byReaction', () => {
   const args = { messageLink: LINK, emoji: ' 👍 ' };
@@ -130,11 +132,23 @@ describe('MentionResponder.byReaction', () => {
     );
     expect(target.editReply).toHaveBeenCalledWith({
       content: '<@100000000000000099>,',
-      allowedMentions: { users: ['100000000000000099'], roles: [] },
+      allowedMentions: pingEverything,
     });
   });
 
-  it('puts the pieces of a long list after the first, each pinging only whom it names', async () => {
+  it('defers before it reads either link, which can outlast the 3 s window', async () => {
+    const { responder, resolver, interaction } = build();
+    const target = interaction();
+    await responder.byReaction(target, { ...args, replyMessage: REPLY_LINK });
+
+    expect(resolver.fetch).toHaveBeenCalledTimes(2);
+    const deferredAt = target.deferReply.mock.invocationCallOrder[0] ?? Infinity;
+    for (const read of resolver.fetch.mock.invocationCallOrder) {
+      expect(deferredAt).toBeLessThan(read);
+    }
+  });
+
+  it('puts the pieces of a long list after the first, pinging what they name as the old bot did', async () => {
     const { responder, mentions, interaction } = build();
     mentions.mentionReactors.mockResolvedValue(
       okResult({ chunks: ['<@100000000000000001>', '<@100000000000000002>'] }),
@@ -144,7 +158,7 @@ describe('MentionResponder.byReaction', () => {
 
     expect(target.followUp).toHaveBeenCalledWith({
       content: '<@100000000000000002>',
-      allowedMentions: { users: ['100000000000000002'], roles: [] },
+      allowedMentions: pingEverything,
     });
   });
 
@@ -164,13 +178,13 @@ describe('MentionResponder.byReaction', () => {
     expect(target.editReply).toHaveBeenCalledWith({ content: t('mention.sent') });
   });
 
-  it('answers a link that is not a link with the reason, before deferring', async () => {
+  it('answers a link that is not a link with the reason, privately', async () => {
     const { responder, interaction, calls, mentions } = build();
     const target = interaction();
     await responder.byReaction(target, { ...args, messageLink: 'nonsense' });
 
-    expect(calls).toEqual(['reply']);
-    expect(target.reply).toHaveBeenCalledWith({
+    expect(calls).toEqual(['deferReply', 'deleteReply', 'followUp']);
+    expect(target.followUp).toHaveBeenCalledWith({
       content: t('errors.invalidLink.MALFORMED'),
       ...ephemeral,
     });
@@ -178,22 +192,21 @@ describe('MentionResponder.byReaction', () => {
   });
 
   it('says the reply message is missing instead of posting to the wrong place', async () => {
-    const { responder, interaction, mentions } = build();
+    const { responder, interaction, mentions, calls } = build();
     const target = interaction();
     await responder.byReaction(target, { ...args, replyMessage: 'nonsense' });
 
-    expect(target.reply).toHaveBeenCalledWith({
-      content: t('mention.replyNotFound'),
-      ...ephemeral,
-    });
+    expect(calls).toEqual(['deferReply', 'editReply']);
+    expect(target.deferReply).toHaveBeenCalledWith(ephemeral);
+    expect(target.editReply).toHaveBeenCalledWith({ content: t('mention.replyNotFound') });
     expect(mentions.mentionReactors).not.toHaveBeenCalled();
   });
 
-  it('refuses privately, before deferring, when the emoji is not on the message', async () => {
+  it('refuses privately when the emoji is not on the message', async () => {
     const { responder, interaction, calls, mentions } = build({ hasReaction: false });
     await responder.byReaction(interaction(), args);
 
-    expect(calls).toEqual(['reply']);
+    expect(calls).toEqual(['deferReply', 'deleteReply', 'followUp']);
     expect(mentions.mentionReactors).not.toHaveBeenCalled();
   });
 
@@ -226,6 +239,23 @@ describe('MentionResponder.byReaction', () => {
     await responder.byReaction(target, { ...args, replyMessage: REPLY_LINK });
     expect(target.editReply).toHaveBeenCalledWith({
       content: t('mention.sendFailed', { reason: 'Missing Permissions' }),
+    });
+  });
+
+  it('says how many pieces went out when Discord refused a later one', async () => {
+    const { responder, mentions, interaction } = build();
+    mentions.mentionReactors.mockResolvedValue(
+      okResult({
+        status: 'SEND_FAILED',
+        failure: 'Missing Permissions',
+        chunks: ['a', 'b', 'c'],
+        postedChunks: 2,
+      }),
+    );
+    const target = interaction();
+    await responder.byReaction(target, { ...args, replyMessage: REPLY_LINK });
+    expect(target.editReply).toHaveBeenCalledWith({
+      content: t('mention.sendPartial', { sent: 2, total: 3, reason: 'Missing Permissions' }),
     });
   });
 
@@ -282,6 +312,23 @@ describe('MentionResponder.notReact', () => {
     expect(target.editReply).toHaveBeenCalledWith({ content: t('mention.sent') });
   });
 
+  it('defers before it reads the message', async () => {
+    const { responder, resolver, interaction } = build();
+    const target = interaction();
+    await responder.notReact(target, args);
+
+    const deferredAt = target.deferReply.mock.invocationCallOrder[0] ?? Infinity;
+    expect(deferredAt).toBeLessThan(resolver.fetch.mock.invocationCallOrder[0] ?? 0);
+  });
+
+  it('removes the public placeholder when the link cannot be read', async () => {
+    const { responder, interaction, calls, mentions } = build();
+    await responder.notReact(interaction(), { messageLink: 'nonsense' });
+
+    expect(calls).toEqual(['deferReply', 'deleteReply', 'followUp']);
+    expect(mentions.mentionNonReactors).not.toHaveBeenCalled();
+  });
+
   it('leaves the good news public', async () => {
     const { responder, mentions, interaction, calls } = build();
     mentions.mentionNonReactors.mockResolvedValue(
@@ -317,7 +364,7 @@ describe('MentionResponder.notReactOf (context menu)', () => {
     await responder.notReactOf(target, { guildId: GUILD, channelId: CHANNEL, id: MESSAGE });
 
     expect(resolver.fetch).not.toHaveBeenCalled();
-    expect(target.deferReply).toHaveBeenCalledWith(undefined);
+    expect(target.deferReply).toHaveBeenCalledWith();
     expect(mentions.mentionNonReactors).toHaveBeenCalledWith(
       GUILD,
       {
@@ -365,15 +412,31 @@ describe('MentionResponder.everyone', () => {
     expect(target.editReply).toHaveBeenCalledWith({ content: t('mention.notAThread') });
   });
 
-  it('does not post to the thread when the message to reply to cannot be found', async () => {
+  it('posts in the thread when the message to reply to cannot be found', async () => {
     const { responder, mentions, interaction } = build();
     const target = interaction();
-    await responder.everyone(target, { replyMessage: 'nonsense' });
+    await responder.everyone(target, { content: 'Meeting', replyMessage: 'nonsense' });
 
-    expect(target.reply).toHaveBeenCalledWith({
-      content: t('mention.replyNotFound'),
-      ...ephemeral,
-    });
-    expect(mentions.mentionEveryoneInThread).not.toHaveBeenCalled();
+    expect(mentions.mentionEveryoneInThread).toHaveBeenCalledWith(
+      GUILD,
+      { threadId: CHANNEL, content: 'Meeting', replyTo: undefined, locale: 'en' },
+      expect.anything(),
+      expect.anything(),
+    );
+    expect(target.editReply).toHaveBeenCalledWith({ content: t('mention.sent') });
+  });
+
+  it('replies to the message when it can be read', async () => {
+    const { responder, mentions, interaction } = build();
+    await responder.everyone(interaction(), { replyMessage: REPLY_LINK });
+
+    expect(mentions.mentionEveryoneInThread).toHaveBeenCalledWith(
+      GUILD,
+      expect.objectContaining({
+        replyTo: { channelId: REPLY_CHANNEL, messageId: REPLY_MESSAGE },
+      }),
+      expect.anything(),
+      expect.anything(),
+    );
   });
 });

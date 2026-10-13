@@ -183,6 +183,13 @@ describe('applyToMembers', () => {
     );
   });
 
+  it('pages through the member list once, not once for the holders and again for the edit', async () => {
+    const a = fakeMember(user(1), { roles: [SOURCE_ROLE] });
+    const { service, guild } = build({ members: [a] });
+    await service.applyToMembers(GUILD, { roleId: ROLE, membersOfRoleId: SOURCE_ROLE }, ACTOR);
+    expect(guild.members.fetch).toHaveBeenCalledTimes(1);
+  });
+
   it('works from the role alone', async () => {
     const a = fakeMember(user(1), { roles: [SOURCE_ROLE] });
     const { service } = build({ members: [a] });

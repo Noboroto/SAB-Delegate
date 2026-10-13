@@ -43,8 +43,9 @@ export type MentionReactorsInput = z.infer<typeof MentionReactorsInputSchema>;
 /**
  * Mention the members who did not react to a message. `roleId` narrows who is
  * expected to react; `onlyInChannel: false` then takes every member of the role
- * instead of those who can see the channel. `reply` posts the list as a reply
- * to the message itself, else it is handed back.
+ * (bots in it included) instead of those who can see the channel. `includeBots`
+ * applies to the latter. `reply` posts the list as a reply to the message
+ * itself, else it is handed back.
  */
 export const MentionNonReactorsInputSchema = MentionMessageRefSchema.extend({
   content: ContentSchema.optional(),
@@ -91,8 +92,13 @@ export const MentionResultSchema = z.object({
   sample: z.array(SnowflakeSchema).max(MENTION_SAMPLE_SIZE),
   /** The messages to post, each within Discord's limit; empty when there was nobody to list. */
   chunks: z.array(z.string().min(1).max(MESSAGE_MAX_LENGTH)),
-  /** True once the service itself posted `chunks` (a reply target was given). */
+  /** True once the service itself posted every piece of `chunks` (a reply target was given). */
   delivered: z.boolean(),
+  /**
+   * How many pieces of `chunks` the service posted. Below `chunks.length` with
+   * `SEND_FAILED` means the first pieces went out before Discord refused one.
+   */
+  postedChunks: z.number().int().min(0),
   failure: z.string().max(200).optional(),
 });
 

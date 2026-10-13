@@ -8,6 +8,7 @@ import {
 } from '@sab/shared';
 import { MessageFlags, type MessageMentionOptions } from 'discord.js';
 import { ServiceError } from '../../common/errors/service-error.js';
+import { mentionsForActor } from '../../discord/helpers/allowed-mentions.js';
 import { replyInChunks } from '../../discord/helpers/reply.js';
 import { DiscordReactionService } from '../../discord/services/discord-reaction.service.js';
 import {
@@ -16,7 +17,6 @@ import {
 } from '../../discord/services/message-resolver.service.js';
 import { GuildLocaleService } from '../../i18n/guild-locale.service.js';
 import { translatorFor } from '../../i18n/translator.js';
-import { allowedMentionsFor } from './mention.format.js';
 import { MentionService } from './mention.service.js';
 
 /**
@@ -66,6 +66,9 @@ type NonReactorOptions = Omit<NotReactArgs, 'messageLink'>;
 
 const ephemeral = { flags: MessageFlags.Ephemeral } as const;
 
+const hasText = (value: string | undefined): value is string =>
+  value !== undefined && value.trim() !== '';
+
 function actorOf(interaction: MentionInteraction): ActorContext {
   return { source: 'DISCORD', userId: interaction.user.id };
 }
@@ -92,22 +95,23 @@ export class MentionResponder {
 
   async byReaction(interaction: MentionInteraction, args: ByReactionArgs): Promise<void> {
     const guildId = this.guildOf(interaction);
+    // With a reply target the list goes to that message and the answer is only
+    // "Sent!". The option says so up front, so the placeholder is made before
+    // the two links are read: reading them can outlast the 3 s window.
+    const privateAnswer = hasText(args.replyMessage);
+    await interaction.deferReply(privateAnswer ? ephemeral : undefined);
     const { t, locale } = await this.speech(interaction, guildId);
 
     const found = await this.resolver.fetch(args.messageLink, this.defaults(interaction));
-    if (found.status !== 'OK') return this.refuseUnresolved(interaction, t, found);
-    const reply = await this.resolveReplyTarget(interaction, t, args.replyMessage);
+    if (found.status !== 'OK') return this.refuseUnresolved(interaction, t, found, privateAnswer);
+    const reply = await this.requireReplyTarget(interaction, t, args.replyMessage, privateAnswer);
     if (reply === 'REFUSED') return;
 
     const emoji = args.emoji.trim();
     if (!this.reactions.hasReaction(found.message, emoji)) {
-      await interaction.reply({ content: t('mention.noReactors'), ...ephemeral });
+      await this.refuse(interaction, t('mention.noReactors'), !privateAnswer);
       return;
     }
-
-    // Paging through thousands of reactors outlives the 3 s window.
-    const privateAnswer = reply !== undefined;
-    await interaction.deferReply(privateAnswer ? ephemeral : undefined);
 
     const result = await this.mentions.mentionReactors(
       found.message.guildId ?? guildId,
@@ -127,10 +131,16 @@ export class MentionResponder {
 
   async notReact(interaction: MentionInteraction, args: NotReactArgs): Promise<void> {
     const guildId = this.guildOf(interaction);
+    // With a reply the list goes to the message and the answer is only "Sent!".
+    const privateAnswer = args.isReply === true;
+    // Reading the message, every member and every reactor outlasts the 3 s window.
+    await interaction.deferReply(privateAnswer ? ephemeral : undefined);
     const speech = await this.speech(interaction, guildId);
 
     const found = await this.resolver.fetch(args.messageLink, this.defaults(interaction));
-    if (found.status !== 'OK') return this.refuseUnresolved(interaction, speech.t, found);
+    if (found.status !== 'OK') {
+      return this.refuseUnresolved(interaction, speech.t, found, privateAnswer);
+    }
 
     await this.nonReactors(
       interaction,
@@ -147,6 +157,7 @@ export class MentionResponder {
     message: { guildId: string | null; channelId: string; id: string },
   ): Promise<void> {
     const guildId = this.guildOf(interaction);
+    await interaction.deferReply();
     const speech = await this.speech(interaction, guildId);
     await this.nonReactors(
       interaction,
@@ -161,12 +172,14 @@ export class MentionResponder {
     const guildId = this.guildOf(interaction);
     const channelId = interaction.channelId;
     if (channelId === null) throw new ServiceError(ErrorCode.DISCORD_CHANNEL_NOT_FOUND);
+    await interaction.deferReply(ephemeral);
     const { t, locale } = await this.speech(interaction, guildId);
 
-    const reply = await this.resolveReplyTarget(interaction, t, args.replyMessage);
-    if (reply === 'REFUSED') return;
-
-    await interaction.deferReply(ephemeral);
+    // A reply target that cannot be read is not an error: the message goes into
+    // the thread instead, as it always did.
+    const reply = hasText(args.replyMessage)
+      ? await this.findReplyTarget(interaction, args.replyMessage)
+      : undefined;
     const result: MentionEveryoneResult = await this.mentions.mentionEveryoneInThread(
       guildId,
       { threadId: channelId, content: args.content, replyTo: reply, locale },
@@ -196,11 +209,7 @@ export class MentionResponder {
     message: { channelId: string; messageId: string },
     options: NonReactorOptions,
   ): Promise<void> {
-    // With a reply the list goes to the message and the answer is only "Sent!".
     const privateAnswer = options.isReply === true;
-    // Reading every member and reactor outlives the 3 s window.
-    await interaction.deferReply(privateAnswer ? ephemeral : undefined);
-
     const result = await this.mentions.mentionNonReactors(
       guildId,
       {
@@ -244,20 +253,30 @@ export class MentionResponder {
         await this.refuse(interaction, t('mention.unsupportedChannel'), !privateAnswer);
         return;
       case 'SEND_FAILED':
+        // Pieces that went out stay out; saying "cannot send" would invite a repeat of them.
         await interaction.editReply({
-          content: t('mention.sendFailed', { reason: result.failure ?? '' }),
+          content:
+            result.postedChunks > 0
+              ? t('mention.sendPartial', {
+                  sent: result.postedChunks,
+                  total: result.chunks.length,
+                  reason: result.failure ?? '',
+                })
+              : t('mention.sendFailed', { reason: result.failure ?? '' }),
         });
         return;
     }
   }
 
-  /** The first piece fills the deferred reply, the rest follow it; each pings only whom it names. */
+  /** The first piece fills the deferred reply, the rest follow it; what they name pings, as it always did. */
   private async postChunks(
     interaction: MentionInteraction,
     chunks: readonly string[],
   ): Promise<void> {
     if (chunks.length === 0) return;
-    await replyInChunks(interaction, chunks, { allowedMentions: allowedMentionsFor });
+    await replyInChunks(interaction, chunks, {
+      allowedMentions: mentionsForActor(actorOf(interaction), ['users', 'roles', 'everyone']),
+    });
   }
 
   /** A problem is for the person who ran the command, not for the room. */
@@ -278,6 +297,7 @@ export class MentionResponder {
     interaction: MentionInteraction,
     t: Translator,
     found: Exclude<MessageResolution, { status: 'OK' }>,
+    privateAnswer: boolean,
   ): Promise<void> {
     let content: string;
     switch (found.status) {
@@ -291,22 +311,31 @@ export class MentionResponder {
         content = t('errors.DISCORD_MESSAGE_NOT_FOUND');
         break;
     }
-    await interaction.reply({ content, ...ephemeral });
+    await this.refuse(interaction, content, !privateAnswer);
   }
 
   /** `undefined`: no reply target was asked for. `REFUSED`: it was, and the person has been told it is missing. */
-  private async resolveReplyTarget(
+  private async requireReplyTarget(
     interaction: MentionInteraction,
     t: Translator,
     link: string | undefined,
+    privateAnswer: boolean,
   ): Promise<{ channelId: string; messageId: string } | undefined | 'REFUSED'> {
-    if (link === undefined || link.trim() === '') return undefined;
-    const found = await this.resolver.fetch(link, this.defaults(interaction));
-    if (found.status === 'OK') {
-      return { channelId: found.message.channelId, messageId: found.message.id };
-    }
-    await interaction.reply({ content: t('mention.replyNotFound'), ...ephemeral });
+    if (!hasText(link)) return undefined;
+    const target = await this.findReplyTarget(interaction, link);
+    if (target !== undefined) return target;
+    await this.refuse(interaction, t('mention.replyNotFound'), !privateAnswer);
     return 'REFUSED';
+  }
+
+  private async findReplyTarget(
+    interaction: MentionInteraction,
+    link: string,
+  ): Promise<{ channelId: string; messageId: string } | undefined> {
+    const found = await this.resolver.fetch(link, this.defaults(interaction));
+    return found.status === 'OK'
+      ? { channelId: found.message.channelId, messageId: found.message.id }
+      : undefined;
   }
 
   private defaults(interaction: MentionInteraction): { channelId?: string } {

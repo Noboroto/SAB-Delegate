@@ -11,6 +11,7 @@ import {
 import { ServiceError } from '../../common/errors/service-error.js';
 import { rootCommandMeta } from '../../discord/command-groups.js';
 import { DiscordCommands } from '../../discord/decorators/discord-commands.decorator.js';
+import { userMentionsIn } from '../../discord/helpers/allowed-mentions.js';
 import { replyInChunks } from '../../discord/helpers/reply.js';
 import { GuildLocaleService } from '../../i18n/guild-locale.service.js';
 import { localizations } from '../../i18n/localizations.js';
@@ -77,6 +78,7 @@ export class AttendanceCommands {
       voiceChannelId,
     });
 
+    const absentIds = new Set(result.absent.map((member) => member.userId));
     const none = t('attendance.none');
     const listed = (members: readonly AttendanceMember[], line: (m: AttendanceMember) => string) =>
       members.length === 0 ? none : members.map(line).join('\n');
@@ -93,6 +95,11 @@ export class AttendanceCommands {
         presentList: listed(result.present, (member) => `@${member.username}`),
         absentList: listed(result.absent, (member) => `<@${member.userId}>`),
       }),
+      {
+        // The absent are mentioned to be called; each message pings the absent
+        // members it names and nothing else (the role name is plain text).
+        allowedMentions: (chunk) => userMentionsIn(chunk, absentIds),
+      },
     );
   }
 }

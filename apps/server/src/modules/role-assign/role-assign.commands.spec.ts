@@ -120,7 +120,7 @@ describe('/bulk-assign list', () => {
     expect(target.editReply).toHaveBeenCalledWith({ content: t('role-assign.noTargets') });
   });
 
-  it('reports the total, what was left out and each failure', async () => {
+  it('reports the total and each failure in the old words, and says nothing of ids that are not members', async () => {
     const { commands, roles, interaction } = build();
     roles.applyToMembers.mockResolvedValue(
       result({
@@ -132,10 +132,9 @@ describe('/bulk-assign list', () => {
     const target = interaction();
     await commands.onList([target] as never, { role: ROLE, ids: user(1) });
 
-    const text = textOf(target.editReply);
-    expect(text).toContain(t('role-assign.done', { count: 1 }));
-    expect(text).toContain(t('role-assign.skipped', { count: 2 }));
-    expect(text).toContain('ann: Missing Permissions');
+    expect(textOf(target.editReply)).toBe(
+      'Done modifying 1 member(s)!\nFailed 1:\nann: Missing Permissions',
+    );
   });
 
   it('splits an answer that would not fit in one message', async () => {
@@ -184,7 +183,7 @@ describe('/bulk-assign by-reaction', () => {
       { source: 'DISCORD', userId: ASKER },
       { crossGuild: true },
     );
-    expect(textOf(target.editReply)).toBe(t('role-assign.done', { count: 2 }));
+    expect(textOf(target.editReply)).toBe('Done 2 member(s)!');
   });
 
   it('says nobody reacted instead of "done 0"', async () => {

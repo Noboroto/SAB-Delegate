@@ -34,5 +34,6 @@
   "notAThread": "This command can only be used in a thread.",
   "replyNotFound": "The message to reply to was not found.",
   "sent": "Sent!",
-  "sendFailed": "Cannot send: {reason}"
+  "sendFailed": "Cannot send: {reason}",
+  "sendPartial": "Sent {sent} of {total} messages, then Discord refused: {reason}"
 }

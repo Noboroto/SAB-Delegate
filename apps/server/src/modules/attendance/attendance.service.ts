@@ -3,6 +3,7 @@ import { AttendanceCheckSchema, ErrorCode, type AttendanceResult } from '@sab/sh
 import { Client } from 'discord.js';
 import { ServiceError } from '../../common/errors/service-error.js';
 import { fetchGuild, fetchGuildChannel } from '../../discord/helpers/discord-lookup.js';
+import { fetchGuildMembers } from '../../discord/helpers/guild-members.js';
 
 /**
  * Who of a role is in a voice or stage channel right now. Reads only, so
@@ -26,7 +27,7 @@ export class AttendanceService {
     if (role === null) throw new ServiceError(ErrorCode.VALIDATION_FAILED, { field: 'role' });
 
     // `role.members` reads the cache; the full list needs the whole member list.
-    await guild.members.fetch();
+    await fetchGuildMembers(guild);
     const inChannel = new Set(channel.members.keys());
 
     const present: AttendanceResult['present'] = [];

@@ -82,8 +82,24 @@ describe('MentionResultSchema', () => {
       sample: [ID],
       chunks: ['x'.repeat(2001)],
       delivered: false,
+      postedChunks: 0,
     };
     expect(MentionResultSchema.safeParse(result).success).toBe(false);
     expect(MentionResultSchema.safeParse({ ...result, chunks: ['x'] }).success).toBe(true);
+  });
+
+  it('says how many pieces went out, so a partial post is not reported as nothing', () => {
+    const result = {
+      dryRun: false,
+      status: 'SEND_FAILED',
+      count: 1,
+      sample: [ID],
+      chunks: ['a', 'b'],
+      delivered: false,
+      failure: 'Missing Permissions',
+    };
+    expect(MentionResultSchema.safeParse(result).success).toBe(false);
+    expect(MentionResultSchema.safeParse({ ...result, postedChunks: 1 }).success).toBe(true);
+    expect(MentionResultSchema.safeParse({ ...result, postedChunks: -1 }).success).toBe(false);
   });
 });

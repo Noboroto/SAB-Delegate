@@ -97,6 +97,43 @@ describe('/attendance-by-role', () => {
     expect(content).not.toContain('<@400000000000000001>');
   });
 
+  it('pings the absent members and nobody else', async () => {
+    const { commands, interaction } = build();
+    const target = interaction();
+    await commands.onCheck([target] as never, { role: ROLE, voiceChannel: { id: VOICE } });
+    expect(target.editReply).toHaveBeenCalledWith(
+      expect.objectContaining({ allowedMentions: { users: ['400000000000000002'] } }),
+    );
+  });
+
+  it('allows each piece of a long roll to ping only the absent members it names', async () => {
+    const { commands, attendance, interaction } = build();
+    const absent = Array.from({ length: 300 }, (_, index) => ({
+      userId: `4${String(index).padStart(17, '0')}`,
+      username: `member${index}`,
+    }));
+    attendance.checkByRole.mockResolvedValueOnce({
+      roleId: ROLE.id,
+      roleName: 'Mentors',
+      voiceChannelId: VOICE,
+      total: absent.length,
+      present: [],
+      absent,
+    });
+    const target = interaction();
+    await commands.onCheck([target] as never, { role: ROLE, voiceChannel: { id: VOICE } });
+
+    const sent = [...target.editReply.mock.calls, ...target.followUp.mock.calls].map(
+      (call) => call[0] as { content: string; allowedMentions: { users: string[] } },
+    );
+    expect(sent.length).toBeGreaterThan(1);
+    const pinged = sent.flatMap((piece) => piece.allowedMentions.users);
+    expect(pinged).toEqual(absent.map((member) => member.userId));
+    for (const piece of sent) {
+      for (const id of piece.allowedMentions.users) expect(piece.content).toContain(`<@${id}>`);
+    }
+  });
+
   it('says "(none)" for an empty side instead of leaving a blank', async () => {
     const { commands, attendance, interaction } = build();
     attendance.checkByRole.mockResolvedValueOnce({

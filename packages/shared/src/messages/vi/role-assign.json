@@ -16,7 +16,7 @@
     "emojiOption": { "description": "Cảm xúc cần tìm; hãy chọn một mục trong gợi ý" }
   },
   "done": "Xong: đã đổi vai trò cho {count} thành viên.",
-  "skipped": "{count} mã không phải thành viên của máy chủ này nên đã bị bỏ qua.",
+  "doneList": "Xong: đã đổi vai trò cho {count} thành viên.",
   "failed": "Thất bại với {count}:\n{lines}",
   "noReactors": "Chưa có ai thả cảm xúc đó.",
   "noTargets": "Hãy nhập ít nhất một mã thành viên, hoặc một vai trò để lấy thành viên."

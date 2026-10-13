@@ -15,6 +15,7 @@ import pLimit from 'p-limit';
 import { AuditService } from '../../common/audit/audit.service.js';
 import { ServiceError } from '../../common/errors/service-error.js';
 import { discordRefusal } from '../../discord/helpers/discord-failure.js';
+import { fetchGuildMembers } from '../../discord/helpers/guild-members.js';
 import { assertInGuild, requireMessage } from '../../discord/helpers/message-target.js';
 import { discordErrorCode } from '../../discord/helpers/reply.js';
 import { DiscordReactionService } from '../../discord/services/discord-reaction.service.js';
@@ -90,7 +91,7 @@ export class RoleAssignService {
     const guild = await this.fetchGuild(id);
     const ids = new Set(userIds);
     if (membersOfRoleId !== undefined) {
-      const holders = await guild.members.fetch();
+      const holders = await fetchGuildMembers(guild);
       for (const member of holders.values()) {
         if (member.roles.cache.has(membersOfRoleId)) ids.add(member.id);
       }
@@ -138,8 +139,9 @@ export class RoleAssignService {
     opts: ApplyOptions,
   ): Promise<RoleAssignResult> {
     const role = await this.fetchRole(guild, plan.roleId);
-    // The cache holds only the members seen so far; the full list needs a fetch.
-    const members = await guild.members.fetch();
+    // The cache holds only the members seen so far; the full list needs a fetch,
+    // shared with the holders lookup above so a big server is paged once.
+    const members = await fetchGuildMembers(guild);
     const targets = plan.ids.flatMap((id) => {
       const member = members.get(id);
       return member === undefined ? [] : [member];

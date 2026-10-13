@@ -163,7 +163,7 @@ describe('mentionReactors', () => {
     expect(result.sample).toHaveLength(10);
   });
 
-  it('posts a reply to the target, pinging only whom the list names, and says it did', async () => {
+  it('posts a reply to the target, pinging what the list names as the old bot did, and says it did', async () => {
     const { service, reply, audit } = build({ reactors: [user(1)] });
     const result = await service.mentionReactors(
       GUILD,
@@ -174,9 +174,80 @@ describe('mentionReactors', () => {
     expect(result.delivered).toBe(true);
     expect(reply.reply).toHaveBeenCalledWith({
       content: result.chunks[0],
-      allowedMentions: { users: [ASKER, user(1)], roles: [], repliedUser: true },
+      allowedMentions: { parse: ['users', 'roles', 'everyone'], repliedUser: true },
     });
+    expect(result.postedChunks).toBe(1);
     expect(audit.record).toHaveBeenCalledTimes(1);
+  });
+
+  it('lets a typed @everyone ping when a person at a slash command asks for the reply', async () => {
+    const { service, reply } = build({ reactors: [user(1)] });
+    await service.mentionReactors(
+      GUILD,
+      {
+        ...reactorsInput,
+        content: '@everyone @here come',
+        replyTo: { channelId: REPLY_CHANNEL, messageId: REPLY_MESSAGE },
+      },
+      ACTOR,
+    );
+
+    const sent = reply.reply.mock.calls[0]?.[0] as {
+      content: string;
+      allowedMentions: { parse: string[] };
+    };
+    expect(sent.content).toContain('@everyone @here come');
+    expect(sent.allowedMentions.parse).toContain('everyone');
+  });
+
+  it('pings nobody, not even the author of the target, for a caller that is not a slash command', async () => {
+    const { service, reply } = build({ reactors: [user(1)] });
+    await service.mentionReactors(
+      GUILD,
+      {
+        ...reactorsInput,
+        content: '@everyone',
+        replyTo: { channelId: REPLY_CHANNEL, messageId: REPLY_MESSAGE },
+      },
+      { source: 'HTTP', userId: ASKER },
+    );
+
+    expect(reply.reply).toHaveBeenCalledWith(
+      expect.objectContaining({ allowedMentions: { parse: [], repliedUser: false } }),
+    );
+  });
+
+  it('says how far a long post got when Discord refuses a later piece', async () => {
+    const reactors = Array.from({ length: 300 }, (_, n) => user(n));
+    const reply = fakeMessage(REPLY_MESSAGE, REPLY_CHANNEL);
+    const channel = reply.channel as { send: ReturnType<typeof vi.fn> };
+    channel.send
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(discordFailure('Missing Permissions'));
+    const { service, audit } = build({ reactors, reply });
+
+    const result = await service.mentionReactors(
+      GUILD,
+      { ...reactorsInput, replyTo: { channelId: REPLY_CHANNEL, messageId: REPLY_MESSAGE } },
+      ACTOR,
+    );
+
+    expect(result.chunks.length).toBeGreaterThan(3);
+    expect(result).toMatchObject({
+      status: 'SEND_FAILED',
+      delivered: false,
+      postedChunks: 2,
+      failure: 'Missing Permissions',
+    });
+    const recorded = audit.record.mock.calls.at(-1)?.[0] as {
+      ok: boolean;
+      params: Record<string, unknown>;
+    };
+    expect(recorded.ok).toBe(false);
+    expect(recorded.params).toMatchObject({
+      total: result.chunks.length,
+      failed: result.chunks.length - 2,
+    });
   });
 
   it('plans without posting, auditing or touching Discord when it is a dry run', async () => {
@@ -340,6 +411,24 @@ describe('mentionNonReactors', () => {
     expect(result.sample).toEqual([user(1), user(5)]);
   });
 
+  it('takes the bots of the role too when onlyInChannel is false, as the old command did', async () => {
+    const source = fakeMessage(MESSAGE, CHANNEL, { members: [] });
+    source.guild.members.fetch.mockResolvedValue(
+      collect([
+        member(user(5), { roles: [ROLE] }),
+        member(user(7), { roles: [ROLE], bot: true }),
+        member(user(6)),
+      ]),
+    );
+    const { service } = build({ source });
+    const result = await service.mentionNonReactors(
+      GUILD,
+      { ...input, roleId: ROLE, onlyInChannel: false },
+      ACTOR,
+    );
+    expect(result.sample).toEqual([user(5), user(7)]);
+  });
+
   it('reads the members of a thread rather than the channel', async () => {
     const everyone = [member(user(1)), member(user(2)), member(user(3))];
     const thread = {
@@ -412,7 +501,7 @@ describe('mentionEveryoneInThread', () => {
   });
   const input = { threadId: THREAD, content: 'Meeting at 8', locale: 'en' as const };
 
-  it('posts in the thread with only @everyone and the asker allowed to ping', async () => {
+  it('posts in the thread letting @everyone, users and roles ping, as the old bot did', async () => {
     const target = thread();
     const { service, audit } = build({ thread: target });
     const result = await service.mentionEveryoneInThread(GUILD, input, ACTOR);
@@ -421,7 +510,7 @@ describe('mentionEveryoneInThread', () => {
     expect(result.text).toBe(`<@${ASKER}> mentioned @everyone\nMeeting at 8`);
     expect(target.send).toHaveBeenCalledWith({
       content: result.text,
-      allowedMentions: { parse: ['everyone'], users: [ASKER] },
+      allowedMentions: { parse: ['users', 'roles', 'everyone'] },
     });
     expect(audit.record).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -451,7 +540,7 @@ describe('mentionEveryoneInThread', () => {
     );
     expect(reply.reply).toHaveBeenCalledWith(
       expect.objectContaining({
-        allowedMentions: { parse: ['everyone'], users: [ASKER], repliedUser: true },
+        allowedMentions: { parse: ['users', 'roles', 'everyone'], repliedUser: true },
       }),
     );
     expect(target.send).not.toHaveBeenCalled();
@@ -497,6 +586,19 @@ describe('mentionEveryoneInThread', () => {
     const result = await service.mentionEveryoneInThread(GUILD, input, ACTOR);
     expect(result).toMatchObject({ status: 'SEND_FAILED', failure: 'Missing Access' });
   });
+
+  it.each(['HTTP', 'MCP'] as const)(
+    'refuses a %s caller: @everyone is for slash commands',
+    async (source) => {
+      const target = thread();
+      const { service, audit } = build({ thread: target });
+      await expect(
+        service.mentionEveryoneInThread(GUILD, input, { source, userId: ASKER }),
+      ).rejects.toMatchObject({ code: ErrorCode.AUTH_FORBIDDEN });
+      expect(target.send).not.toHaveBeenCalled();
+      expect(audit.record).not.toHaveBeenCalled();
+    },
+  );
 
   it('needs a person to name', async () => {
     const { service } = build({ thread: thread() });

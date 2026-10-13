@@ -38,5 +38,6 @@
   "notAThread": "Lệnh này chỉ dùng được trong một luồng.",
   "replyNotFound": "Không tìm thấy tin nhắn cần trả lời.",
   "sent": "Đã gửi!",
-  "sendFailed": "Không gửi được: {reason}"
+  "sendFailed": "Không gửi được: {reason}",
+  "sendPartial": "Đã gửi {sent}/{total} tin nhắn, sau đó Discord từ chối: {reason}"
 }
