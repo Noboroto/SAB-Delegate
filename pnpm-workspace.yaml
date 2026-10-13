@@ -14,3 +14,12 @@ allowBuilds:
   prisma: true
   '@prisma/engines': true
   prisma-zod-generator: true
+  # Its postinstall only prints a banner, but pnpm 12 refuses the install while
+  # any build is undecided.
+  necord: false
+
+# necord 7 declares discord-api-types ^0.37.99 but only imports its types, and
+# discord.js 14.27 needs 0.38. One copy of 0.38 serves both.
+peerDependencyRules:
+  allowedVersions:
+    necord>discord-api-types: '0.38'
