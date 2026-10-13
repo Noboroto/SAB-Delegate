@@ -1,0 +1,34 @@
+{
+  "commands": {
+    "any": { "description": "Delete messages in this channel up to a message, or the latest few" },
+    "untilLinkOption": {
+      "description": "Link of the message to keep; everything newer than it is deleted"
+    },
+    "fromLinkOption": {
+      "description": "Link of the message to start from, included. Default: the newest"
+    },
+    "countOption": { "description": "Instead of a link, delete this many of the latest messages" }
+  },
+  "contextMenu": { "name": "Purge up to here" },
+  "needsUntilOrCount": "Give until-link, or count to delete the latest messages.",
+  "untilAndCountConflict": "Use either until-link or count, not both.",
+  "fromWithCount": "from-link works together with until-link only; leave it out when you use count.",
+  "wrongChannel": "The messages must be in the channel where you run this command.",
+  "UNTIL_NOT_FOUND": "I could not find the until message in this channel.",
+  "FROM_NOT_FOUND": "I could not find the from message in this channel.",
+  "RANGE_REVERSED": "The until message must be older than the from message.",
+  "RANGE_TOO_LARGE": "That covers more than {max} messages. Pick a closer message and try again.",
+  "nothing": "No message to purge.",
+  "confirm": {
+    "promptRange": "Delete {count, plural, one {# message} other {# messages}} newer than the until message (which stays)? This cannot be undone.",
+    "promptLast": "Delete the latest {count, plural, one {# message} other {# messages}}? This cannot be undone.",
+    "olderNote": "{older, plural, one {# of them is} other {# of them are}} older than 14 days and will be deleted one by one, which takes longer.",
+    "confirmButton": "Delete",
+    "cancelButton": "Cancel",
+    "working": "Deleting...",
+    "cancelled": "Cancelled. Nothing was deleted.",
+    "expired": "No answer in time. Nothing was deleted."
+  },
+  "done": "Deleted {deleted, plural, one {# message} other {# messages}}.",
+  "failedSuffix": " Failed to delete {failed}."
+}

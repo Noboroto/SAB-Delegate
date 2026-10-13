@@ -166,13 +166,11 @@ describe('all feature modules in one application', () => {
     expect(roots).not.toContain('shutdown');
   });
 
-  it('offers only the planned message context menus and leaves a slot free', () => {
+  it('offers exactly four message context menus and leaves a slot free', () => {
     const messageMenus = payload.filter(
       (command) => command.type === ApplicationCommandType.Message,
     );
-    for (const menu of messageMenus) {
-      expect(MESSAGE_CONTEXT_MENUS, menu.name).toContain(menu.name);
-    }
+    expect(messageMenus.map((command) => command.name).sort()).toEqual(MESSAGE_CONTEXT_MENUS);
     expect(messageMenus.length).toBeLessThan(MESSAGE_MENU_LIMIT);
     expect(
       payload.filter((command) => command.type === ApplicationCommandType.User).length,

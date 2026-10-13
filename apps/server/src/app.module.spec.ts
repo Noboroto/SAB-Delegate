@@ -14,6 +14,7 @@ import { GuildConfigService } from './modules/guild-config/guild-config.service.
 import { MentionService } from './modules/mention/mention.service.js';
 import { MessagingService } from './modules/messaging/messaging.service.js';
 import { NoteService } from './modules/note/note.service.js';
+import { PurgeService } from './modules/purge/purge.service.js';
 import { AutoReactListener } from './modules/reactions/auto-react.listener.js';
 import { RoleAssignService } from './modules/role-assign/role-assign.service.js';
 import { ScheduleService } from './modules/schedule/schedule.service.js';
@@ -96,6 +97,7 @@ describe('AppModule', () => {
       MessagingService,
       MentionService,
       RoleAssignService,
+      PurgeService,
     ]) {
       expect(moduleRef.get(provider, { strict: false }), provider.name).toBeDefined();
     }

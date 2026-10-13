@@ -1,0 +1,34 @@
+{
+  "commands": {
+    "any": { "description": "Xoá tin nhắn trong kênh này đến một tin nhắn, hoặc vài tin mới nhất" },
+    "untilLinkOption": {
+      "description": "Liên kết tin nhắn được giữ lại; mọi tin mới hơn nó sẽ bị xoá"
+    },
+    "fromLinkOption": {
+      "description": "Liên kết tin nhắn bắt đầu xoá, tính cả tin này. Mặc định: tin mới nhất"
+    },
+    "countOption": { "description": "Thay cho liên kết, xoá chừng này tin mới nhất" }
+  },
+  "contextMenu": { "name": "Xoá đến đây" },
+  "needsUntilOrCount": "Hãy nhập until-link, hoặc count để xoá các tin mới nhất.",
+  "untilAndCountConflict": "Chỉ dùng until-link hoặc count, không dùng cả hai.",
+  "fromWithCount": "from-link chỉ dùng cùng until-link; bỏ nó đi khi dùng count.",
+  "wrongChannel": "Các tin nhắn phải nằm trong kênh đang chạy lệnh này.",
+  "UNTIL_NOT_FOUND": "Không tìm thấy tin nhắn until trong kênh này.",
+  "FROM_NOT_FOUND": "Không tìm thấy tin nhắn from trong kênh này.",
+  "RANGE_REVERSED": "Tin nhắn until phải cũ hơn tin nhắn from.",
+  "RANGE_TOO_LARGE": "Phạm vi này có hơn {max} tin nhắn. Hãy chọn tin gần hơn rồi thử lại.",
+  "nothing": "Không có tin nhắn nào để xoá.",
+  "confirm": {
+    "promptRange": "Xoá {count, plural, other {# tin nhắn}} mới hơn tin nhắn until (tin này được giữ lại)? Không thể hoàn tác.",
+    "promptLast": "Xoá {count, plural, other {# tin nhắn}} mới nhất? Không thể hoàn tác.",
+    "olderNote": "{older, plural, other {# tin}} trong số đó cũ hơn 14 ngày nên sẽ bị xoá từng tin một, mất nhiều thời gian hơn.",
+    "confirmButton": "Xoá",
+    "cancelButton": "Huỷ",
+    "working": "Đang xoá...",
+    "cancelled": "Đã huỷ. Chưa xoá gì cả.",
+    "expired": "Hết thời gian chờ. Chưa xoá gì cả."
+  },
+  "done": "Đã xoá {deleted, plural, other {# tin nhắn}}.",
+  "failedSuffix": " Không xoá được {failed}."
+}

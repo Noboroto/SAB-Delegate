@@ -8,6 +8,7 @@ import enGuildConfig from './en/guild-config.json';
 import enMention from './en/mention.json';
 import enMessaging from './en/messaging.json';
 import enNote from './en/note.json';
+import enPurge from './en/purge.json';
 import enRoleAssign from './en/role-assign.json';
 import enSchedule from './en/schedule.json';
 import enSystem from './en/system.json';
@@ -20,6 +21,7 @@ import viGuildConfig from './vi/guild-config.json';
 import viMention from './vi/mention.json';
 import viMessaging from './vi/messaging.json';
 import viNote from './vi/note.json';
+import viPurge from './vi/purge.json';
 import viRoleAssign from './vi/role-assign.json';
 import viSchedule from './vi/schedule.json';
 import viSystem from './vi/system.json';
@@ -42,6 +44,7 @@ export const MessageNamespaceSchema = z.enum([
   'messaging',
   'mention',
   'role-assign',
+  'purge',
 ]);
 
 export type MessageNamespace = z.infer<typeof MessageNamespaceSchema>;
@@ -64,6 +67,7 @@ export const MESSAGES = {
     messaging: viMessaging,
     mention: viMention,
     'role-assign': viRoleAssign,
+    purge: viPurge,
   },
   en: {
     common: enCommon,
@@ -78,5 +82,6 @@ export const MESSAGES = {
     messaging: enMessaging,
     mention: enMention,
     'role-assign': enRoleAssign,
+    purge: enPurge,
   },
 } satisfies Record<Locale, Record<MessageNamespace, object>>;
