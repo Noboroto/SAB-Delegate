@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import { ErrorCode, MESSAGES } from '@sab/shared';
 import { TextInputStyle, type ModalBuilder } from 'discord.js';
+import { Logger } from '@nestjs/common';
 import { describe, expect, it, vi } from 'vitest';
 import { ServiceError } from '../../common/errors/service-error.js';
 import type { GuildLocaleService } from '../../i18n/guild-locale.service.js';
@@ -36,7 +37,12 @@ function build(locale: 'vi' | 'en' = 'en') {
       user: { id: USER },
       replied: false,
       deferred: false,
-      guild: { roles: { cache: new Map([[ROLE.id, ROLE]]) } },
+      guild: {
+        roles: {
+          cache: new Map([[ROLE.id, ROLE]]),
+          fetch: vi.fn().mockResolvedValue(null),
+        },
+      },
       fields: { getTextInputValue: vi.fn() },
       reply: vi.fn().mockResolvedValue(undefined),
       showModal: vi.fn().mockImplementation(() => {
@@ -191,10 +197,30 @@ describe('the /note add dialog', () => {
     expect(textOf(target.editReply)).toContain('@Mentors');
   });
 
-  it('names the role by id when it is no longer in the server', async () => {
+  it('fetches a role the cache does not hold and names it', async () => {
     const { commands, target } = submit({ topic: 'Rules', content: 'x' });
+    target.guild.roles.fetch.mockResolvedValue({ id: '300000000000000099', name: 'Alumni' });
     await commands.onAddModal([target] as never, '300000000000000099');
-    expect(textOf(target.editReply)).toContain('@300000000000000099');
+    expect(target.guild.roles.fetch).toHaveBeenCalledWith('300000000000000099');
+    expect(textOf(target.editReply)).toContain('@Alumni');
+  });
+
+  it('does not fetch a role the cache holds', async () => {
+    const { commands, target } = submit({ topic: 'Rules', content: 'x' });
+    await commands.onAddModal([target] as never, ROLE.id);
+    expect(target.guild.roles.fetch).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['is gone from Discord', () => Promise.resolve(null)],
+    ['cannot be fetched', () => Promise.reject(new Error('Unknown Role'))],
+  ])('falls back to the role mention when the role %s', async (_label, outcome) => {
+    vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    const { commands, notes, target } = submit({ topic: 'Rules', content: 'x' });
+    target.guild.roles.fetch.mockImplementation(outcome);
+    await commands.onAddModal([target] as never, '300000000000000099');
+    expect(notes.upsert).toHaveBeenCalled();
+    expect(textOf(target.editReply)).toContain('<@&300000000000000099>');
   });
 
   it('passes blank text on for the service to refuse', async () => {

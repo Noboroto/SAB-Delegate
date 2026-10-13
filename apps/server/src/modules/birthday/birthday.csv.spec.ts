@@ -57,9 +57,11 @@ describe('parseBirthdayCsv rows', () => {
     expect(result.rows.map(({ entry }) => entry.discordId)).toEqual([A, B]);
   });
 
-  it('trims every cell and skips blank lines without counting them', () => {
+  it('trims every cell and skips blank lines without counting them as rows', () => {
     const result = parsed(`${HEADER}\n\n  Ann , SE1 , ${A} , 1 , 2 \n\n`);
     expect(result.total).toBe(1);
+    // Line 2 is blank, so the person is on line 3 of the file.
+    expect(result.rows[0]?.row).toBe(3);
     expect(result.rows[0]?.entry).toEqual({
       studentId: 'SE1',
       name: 'Ann',
@@ -97,6 +99,55 @@ describe('parseBirthdayCsv rows', () => {
       { row: 10, kind: 'DUPLICATE_ID', studentId: 'SE7' },
     ]);
     expect(result.rows.map(({ row }) => row)).toEqual([9, 11]);
+  });
+
+  it('keeps a stray quote inside an unquoted name instead of refusing the file', () => {
+    const result = parsed(`${HEADER}\nNguyen "Bo" Van,SE1,${A},1,2\n`);
+    expect(result.rows[0]?.entry.name).toBe('Nguyen "Bo" Van');
+    expect(result.problems).toEqual([]);
+  });
+
+  it.each(['1e1', '0x5', '1.0', '+5', '-5', '5 5', '', '12345'])(
+    'refuses %j as a day or a month',
+    (value) => {
+      expect(parsed(`${HEADER}\nAnn,SE1,${A},${value},2\n`).problems).toEqual([
+        { row: 2, kind: 'INVALID_DATE' },
+      ]);
+      expect(parsed(`${HEADER}\nAnn,SE1,${A},1,${value}\n`).problems).toEqual([
+        { row: 2, kind: 'INVALID_DATE' },
+      ]);
+    },
+  );
+
+  it('still takes zero-padded numbers', () => {
+    const result = parsed(`${HEADER}\nAnn,SE1,${A},05,02\n`);
+    expect(result.rows[0]?.entry).toMatchObject({ month: 2, day: 5 });
+  });
+
+  describe('line numbers after a field that spans lines', () => {
+    // The bad row sits after a name with line breaks and after blank lines; its
+    // reported line must be the one it is on in the file.
+    it.each([
+      ['LF file, LF in the field', '\n', '\n'],
+      ['CRLF file, LF in the field (a spreadsheet export)', '\r\n', '\n'],
+      ['LF file, CRLF in the field', '\n', '\r\n'],
+      ['CRLF file, CRLF in the field', '\r\n', '\r\n'],
+    ])('%s', (_label, eol, inner) => {
+      const lines = [
+        HEADER, // 1
+        `"Ann${inner}Lee${inner}Tran",SE1,${A},1,2`, // 2-4
+        '', // 5
+        `Bob,SE2,${B},32,1`, // 6: bad day
+        `"${inner}Cat${inner}",SE3,${A},1,2`, // 7-9, quoted break first and last
+        `Dan,SE4,${B},31,2`, // 10: bad date
+      ];
+      const result = parsed(lines.join(eol));
+      expect(result.rows.map(({ row }) => row)).toEqual([2, 7]);
+      expect(result.problems).toEqual([
+        { row: 6, kind: 'INVALID_DATE' },
+        { row: 10, kind: 'INVALID_DATE' },
+      ]);
+    });
   });
 
   it('allows 29 February', () => {

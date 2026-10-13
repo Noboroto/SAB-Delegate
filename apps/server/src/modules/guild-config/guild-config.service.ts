@@ -11,6 +11,7 @@ import {
   type GuildSettings,
   type GuildSettingsDryRun,
 } from '@sab/shared';
+import { LRUCache } from 'lru-cache';
 import { AuditService } from '../../common/audit/audit.service.js';
 import { ServiceError } from '../../common/errors/service-error.js';
 import { ChannelAccessService } from '../../discord/services/channel-access.service.js';
@@ -27,6 +28,17 @@ type GuildRecord = {
 };
 
 type PatchOptions = { dryRun?: boolean };
+
+/** Where the word game of a server is played, as far as routing a message needs. */
+type WordGameRoute = { channelId: string; maxWords: number };
+
+/**
+ * A message in any channel asks for the route; a changed setting reaches this
+ * process at once (`forgetWordGameRoute`), and the TTL bounds how long another
+ * process may still serve the old channel.
+ */
+const WORD_ROUTE_CACHE_MAX = 1_000;
+const WORD_ROUTE_TTL_MS = 60_000;
 
 /** The settings that hold a message channel the bot has to work in. */
 const CHANNEL_SETTINGS = [
@@ -88,11 +100,50 @@ function parseGuildId(guildId: string): string {
  */
 @Injectable()
 export class GuildConfigService {
+  /** "Not configured" is an answer too; the wrapper lets the cache hold it. */
+  private readonly wordRoutes = new LRUCache<string, { route: WordGameRoute | null }>({
+    max: WORD_ROUTE_CACHE_MAX,
+    ttl: WORD_ROUTE_TTL_MS,
+    // lru-cache binds the global clock once, at import; reading it per call
+    // lets a replaced clock (fake timers) take effect.
+    perf: { now: () => performance.now() },
+  });
+  /** Raised on every invalidation; a read that began before it must not be cached. */
+  private wordRouteEpoch = 0;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly channelAccess: ChannelAccessService,
   ) {}
+
+  /**
+   * The word channel and limit of a server, `null` when it has no game channel
+   * or is unknown. Only for deciding whether a message can be a move: the move
+   * itself is judged on a fresh read inside the game service.
+   */
+  async wordGameRoute(guildId: string): Promise<WordGameRoute | null> {
+    const id = parseGuildId(guildId);
+    const cached = this.wordRoutes.get(id);
+    if (cached !== undefined) return cached.route;
+
+    const epoch = this.wordRouteEpoch;
+    const settings = toSettings(await this.readRow(this.prisma, id));
+    const route =
+      settings.wordChannelId === null
+        ? null
+        : { channelId: settings.wordChannelId, maxWords: settings.wordMaxWords };
+    // A write that committed while the read was in flight may have left this
+    // answer stale; serve it once, but do not keep it.
+    if (epoch === this.wordRouteEpoch) this.wordRoutes.set(id, { route });
+    return route;
+  }
+
+  /** Call after a write to the word channel or limit has committed. */
+  forgetWordGameRoute(guildId: string): void {
+    this.wordRouteEpoch += 1;
+    this.wordRoutes.delete(guildId);
+  }
 
   /**
    * Makes sure the server has its row and a settings row, and keeps the cached
@@ -184,7 +235,7 @@ export class GuildConfigService {
     }
 
     const { locale, ...configChanges } = changes;
-    return this.prisma.$transaction(async (tx) => {
+    const updated = await this.prisma.$transaction(async (tx) => {
       const guild = await this.ensureGuild(id, undefined, tx);
       const before = toSettings(await this.readRow(tx, id));
 
@@ -210,6 +261,8 @@ export class GuildConfigService {
       );
       return after;
     });
+    this.forgetWordGameRoute(id);
+    return updated;
   }
 
   private readRow(db: Pick<Prisma.TransactionClient, 'guild'>, discordId: string) {

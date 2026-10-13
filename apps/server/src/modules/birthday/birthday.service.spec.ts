@@ -270,7 +270,11 @@ describe('BirthdayService.list and add', () => {
 describe('BirthdayService.runDailyWishes', () => {
   const DAY = { year: 2026, month: 3, day: 15 };
 
-  function runBuild(options: { channelId: string | null; fetchGuild: () => Promise<unknown> }) {
+  function runBuild(options: {
+    channelId: string | null;
+    fetchGuild: () => Promise<unknown>;
+    fetchChannel?: () => Promise<unknown>;
+  }) {
     const created = vi.fn();
     const prisma = {
       birthdayEntry: {
@@ -292,7 +296,10 @@ describe('BirthdayService.runDailyWishes', () => {
       prisma as unknown as PrismaService,
       { record: vi.fn() } as unknown as AuditService,
       {} as GuildConfigService,
-      { guilds: { fetch: options.fetchGuild }, channels: { fetch: vi.fn() } } as never,
+      {
+        guilds: { fetch: options.fetchGuild },
+        channels: { fetch: options.fetchChannel ?? vi.fn() },
+      } as never,
       reporter as unknown as ErrorReporter,
       { isStopping: () => false } as unknown as DiscordReadyService,
     );
@@ -332,6 +339,38 @@ describe('BirthdayService.runDailyWishes', () => {
     expect(summary.retryAt).toBeInstanceOf(Date);
     expect(reporter.report).toHaveBeenCalledTimes(1);
   });
+
+  it.each([
+    [10003, 'Unknown Channel'],
+    [50001, 'Missing Access'],
+    [50013, 'Missing Permissions'],
+  ])(
+    'skips a server whose birthday channel answers %i, with one warning and one report a day',
+    async (code, label) => {
+      const warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+      const { service, created, reporter } = runBuild({
+        channelId: '400000000000000001',
+        fetchGuild: () => Promise.resolve({}),
+        fetchChannel: () => Promise.reject(Object.assign(new Error(label), { code })),
+      });
+
+      const first = await service.runDailyWishes(DAY);
+      expect(first).toMatchObject({ sent: 0, failed: 0, retryAt: null });
+      expect(created).not.toHaveBeenCalled();
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining(GUILD));
+      expect(reporter.report).toHaveBeenCalledTimes(1);
+
+      // The job and the start-up pass run the same day again: a log line each, no second report.
+      await service.runDailyWishes(DAY);
+      expect(warn).toHaveBeenCalledTimes(2);
+      expect(reporter.report).toHaveBeenCalledTimes(1);
+
+      // The next day is a new day.
+      await service.runDailyWishes({ ...DAY, day: 16 });
+      expect(reporter.report).toHaveBeenCalledTimes(2);
+    },
+  );
 
   it('refuses a day the calendar lacks', async () => {
     const { service } = runBuild({ channelId: null, fetchGuild: vi.fn() });

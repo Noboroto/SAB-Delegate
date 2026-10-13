@@ -39,6 +39,12 @@ export function buildNecordOptions(
   return {
     token: env.DISCORD_TOKEN,
     intents: DISCORD_INTENTS,
+    // Nothing the bot sends may notify anybody unless that message names who:
+    // note text, role names, birthday names and topics are typed by members, and
+    // a pasted `@everyone` must stay text. discord.js applies this only to
+    // messages that set no `allowedMentions` of their own, so the birthday wish
+    // (the celebrant) and replies (the player answered) opt in one by one.
+    allowedMentions: { parse: [] },
     skipRegistration: true,
     development,
   };

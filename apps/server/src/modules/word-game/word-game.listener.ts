@@ -16,7 +16,7 @@ import { WordGameService } from './word-game.service.js';
  */
 type Reactable = {
   react(emoji: string): Promise<unknown>;
-  reply(content: string): Promise<unknown>;
+  reply(options: { content: string; allowedMentions: { repliedUser: true } }): Promise<unknown>;
 };
 
 const SUCCESS_REACTION = '✅';
@@ -110,7 +110,8 @@ export class WordGameListener {
     }
     if (text === undefined) return;
     try {
-      await message.reply(text);
+      // The client mentions nobody by default; a reply still notifies the player it answers.
+      await message.reply({ content: text, allowedMentions: { repliedUser: true } });
     } catch (error) {
       this.logger.warn(`Could not reply to a word (${errorLabel(error)})`);
     }

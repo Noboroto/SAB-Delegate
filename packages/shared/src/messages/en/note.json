@@ -7,9 +7,9 @@
     "topicOption": { "description": "Topic of the note (case-sensitive)" },
     "contentOption": { "description": "Text of the note; leave empty to write it in a dialog" }
   },
-  "saved": "Saved the note for @{role} with topic {topic}.",
-  "removed": "Removed the note of @{role} with topic {topic}.",
-  "list": "Notes for @{role}:\n{notes}",
+  "saved": "Saved the note for {role} with topic {topic}.",
+  "removed": "Removed the note of {role} with topic {topic}.",
+  "list": "Notes for {role}:\n{notes}",
   "modal": {
     "title": "Add a note",
     "topicLabel": "Topic",

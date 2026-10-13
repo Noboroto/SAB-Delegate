@@ -1,4 +1,4 @@
-import { UseInterceptors } from '@nestjs/common';
+import { Logger, UseInterceptors } from '@nestjs/common';
 import {
   ErrorCode,
   NOTE_CONTENT_MAX_LENGTH,
@@ -26,6 +26,7 @@ import { replyInChunks } from '../../discord/helpers/reply.js';
 import { GuildLocaleService } from '../../i18n/guild-locale.service.js';
 import { localizations } from '../../i18n/localizations.js';
 import { translatorFor } from '../../i18n/translator.js';
+import { errorLabel } from '../../prisma/pool-factory.js';
 import { NoteTopicAutocompleteInterceptor } from './note-topic.autocomplete.js';
 import { NoteService } from './note.service.js';
 
@@ -121,6 +122,8 @@ type Answerable = Parameters<typeof replyInChunks>[0] & {
 @DiscordCommands()
 @CommandGroup.note()
 export class NoteCommands {
+  private readonly logger = new Logger(NoteCommands.name);
+
   constructor(
     private readonly notes: NoteService,
     private readonly locales: GuildLocaleService,
@@ -161,8 +164,35 @@ export class NoteCommands {
     const content = interaction.fields.getTextInputValue(CONTENT_INPUT);
 
     await interaction.deferReply();
-    const role = { id: roleId, name: interaction.guild?.roles.cache.get(roleId)?.name ?? roleId };
+    const role = { id: roleId, name: await this.roleName(interaction.guild, roleId) };
     await this.save(interaction, guildId, role, { topic, content });
+  }
+
+  /**
+   * The dialog carries only the role id, and the cache may not hold the role
+   * (it was deleted, or the guild was not fully loaded), so it is asked for
+   * before giving up. The mention text is the last resort: it shows the role
+   * to the people reading and, with the client's no-ping default, notifies
+   * nobody.
+   */
+  private async roleName(
+    guild: {
+      roles: {
+        cache: Map<string, { name: string }>;
+        fetch(id: string): Promise<{ name: string } | null>;
+      };
+    } | null,
+    roleId: string,
+  ): Promise<string> {
+    const cached = guild?.roles.cache.get(roleId);
+    if (cached !== undefined) return `@${cached.name}`;
+    try {
+      const fetched = await guild?.roles.fetch(roleId);
+      if (fetched) return `@${fetched.name}`;
+    } catch (error) {
+      this.logger.warn(`Could not fetch role ${roleId} for a note (${errorLabel(error)})`);
+    }
+    return `<@&${roleId}>`;
   }
 
   @Subcommand({
@@ -179,7 +209,10 @@ export class NoteCommands {
 
     const notes = await this.notes.listByRole(guildId, role.id);
     const t = translatorFor(await this.locales.resolve(guildId, interaction));
-    await replyInChunks(interaction, t('note.list', { role: role.name, notes: toJson(notes) }));
+    await replyInChunks(
+      interaction,
+      t('note.list', { role: `@${role.name}`, notes: toJson(notes) }),
+    );
   }
 
   @UseInterceptors(NoteTopicAutocompleteInterceptor)
@@ -198,7 +231,10 @@ export class NoteCommands {
     await this.notes.remove(guildId, { roleId: role.id, topic }, actorOf(interaction));
     // Said whether or not the topic existed, as before: the room asked for it to be gone.
     const t = translatorFor(await this.locales.resolve(guildId, interaction));
-    await replyInChunks(interaction, t('note.removed', { role: role.name, topic: topic.trim() }));
+    await replyInChunks(
+      interaction,
+      t('note.removed', { role: `@${role.name}`, topic: topic.trim() }),
+    );
   }
 
   private async save(
@@ -213,7 +249,10 @@ export class NoteCommands {
       actorOf(interaction),
     );
     const t = translatorFor(await this.locales.resolve(guildId, interaction));
-    await replyInChunks(interaction, t('note.saved', { role: role.name, topic: saved.topic }));
+    await replyInChunks(
+      interaction,
+      t('note.saved', { role: `@${role.name}`, topic: saved.topic }),
+    );
   }
 }
 

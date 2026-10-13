@@ -7,9 +7,9 @@
     "topicOption": { "description": "Chủ đề của ghi chú (phân biệt hoa thường)" },
     "contentOption": { "description": "Nội dung ghi chú; bỏ trống để nhập trong hộp thoại" }
   },
-  "saved": "Đã lưu ghi chú cho @{role} với chủ đề {topic}.",
-  "removed": "Đã xoá ghi chú của @{role} với chủ đề {topic}.",
-  "list": "Ghi chú của @{role}:\n{notes}",
+  "saved": "Đã lưu ghi chú cho {role} với chủ đề {topic}.",
+  "removed": "Đã xoá ghi chú của {role} với chủ đề {topic}.",
+  "list": "Ghi chú của {role}:\n{notes}",
   "modal": {
     "title": "Thêm ghi chú",
     "topicLabel": "Chủ đề",

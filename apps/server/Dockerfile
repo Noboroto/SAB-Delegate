@@ -68,7 +68,12 @@ COPY apps/server/src ./apps/server/src
 COPY apps/server/assets ./apps/server/assets
 # `nest build` directly: the package's `prebuild` regenerates artifacts through
 # root scripts this stage does not carry, and gen already produced them.
-RUN cd apps/server && pnpm exec nest build
+# The two `test`s fail the image build when the dictionary did not reach the
+# output. DictionaryService loads it on the first word, so without them a
+# missing asset would only surface in production, at the first message.
+RUN cd apps/server && pnpm exec nest build \
+	&& test -f dist/assets/word-dict.json \
+	&& test -s dist/assets/word-dict.json
 # `pnpm deploy`, not `pnpm install` + `pnpm prune --prod`: prune does not support
 # a workspace and silently drops packages that only one member uses. `--prod` is
 # explicit for the same reason as above. `inject-workspace-packages` copies

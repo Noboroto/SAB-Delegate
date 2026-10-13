@@ -150,6 +150,14 @@ function build(setup: Setup = {}) {
   const guilds = {
     assertChannelUsable: vi.fn().mockResolvedValue(undefined),
     ensureGuild: vi.fn().mockResolvedValue({ id: 'guild-key' }),
+    wordGameRoute: vi.fn(() =>
+      Promise.resolve(
+        store.config?.wordChannelId
+          ? { channelId: store.config.wordChannelId, maxWords: store.config.wordMaxWords }
+          : null,
+      ),
+    ),
+    forgetWordGameRoute: vi.fn(),
   };
   const known = new Set(setup.dictionary ?? WORDS);
   const dictionary = { has: vi.fn((word: string) => Promise.resolve(known.has(word))) };
@@ -184,23 +192,35 @@ describe('WordGameService.submitWord: what counts as a move', () => {
     expect(guild.findUnique).not.toHaveBeenCalled();
   });
 
-  it.each(['', '   ', 'two\nlines', 'tab\tseparated'])('ignores %j', async (content) => {
-    const { service, guild } = build();
+  it.each(['', ' ', '   ', ' apple', 'apple ', 'a b'])('ignores %j', async (content) => {
+    const { service, guild, guilds } = build();
     await expect(service.submitWord(GUILD, move(content))).resolves.toMatchObject({
       status: WordStatus.NOTHING,
     });
+    expect(guilds.wordGameRoute).not.toHaveBeenCalled();
     expect(guild.findUnique).not.toHaveBeenCalled();
   });
 
-  it('ignores another channel, a server without a game channel and an unknown server', async () => {
+  it.each(['two\nlines', 'tab\tseparated', 'cat\ndog'])(
+    'treats %j as one word that is not in the dictionary',
+    async (content) => {
+      const { service, store } = build();
+      await expect(service.submitWord(GUILD, move(content))).resolves.toMatchObject({
+        status: WordStatus.NOT_EXIST,
+      });
+      expect(store.used).toEqual([]);
+    },
+  );
+
+  it('does not read the game for a message in another channel or a server without one', async () => {
     for (const setup of [{}, { channelId: null }, { guild: null }] as Setup[]) {
-      const { service, store } = build(setup);
+      const { service, guild } = build(setup);
       const channelId =
         setup.channelId === undefined && setup.guild === undefined ? OTHER_CHANNEL : CHANNEL;
       await expect(service.submitWord(GUILD, move('apple', BOB, channelId))).resolves.toMatchObject(
         { status: WordStatus.NOTHING },
       );
-      expect(store.used).toEqual([]);
+      expect(guild.findUnique).not.toHaveBeenCalled();
     }
   });
 
@@ -250,9 +270,9 @@ describe('WordGameService.submitWord: the first word of a round', () => {
     expect(store.used).toEqual(['apple']);
   });
 
-  it('lower-cases and trims what was typed, and stores the clean word', async () => {
+  it('lower-cases what was typed and stores the clean word', async () => {
     const { service, store } = build();
-    await service.submitWord(GUILD, move('  ApPlE \n'));
+    await service.submitWord(GUILD, move('ApPlE'));
     expect(store.used).toEqual(['apple']);
     expect(store.state?.lastWord).toBe('apple');
   });
@@ -532,6 +552,36 @@ describe('WordGameService.configure', () => {
     });
     expect(plan.clearedWords).toBe(40);
     expect(plan.sample).toHaveLength(10);
+  });
+});
+
+describe('WordGameService: the cached game route', () => {
+  it('is dropped after a committed configure and reset, and not after a dry run or a failure', async () => {
+    const { service, guilds } = build(AFTER_APPLE);
+    await service.configure(GUILD, { maxWords: 300 }, ACTOR, { dryRun: true });
+    await service.reset(GUILD, ACTOR, { dryRun: true });
+    expect(guilds.forgetWordGameRoute).not.toHaveBeenCalled();
+
+    await service.configure(GUILD, { maxWords: 300 }, ACTOR);
+    expect(guilds.forgetWordGameRoute).toHaveBeenCalledTimes(1);
+    await service.reset(GUILD, ACTOR);
+    expect(guilds.forgetWordGameRoute).toHaveBeenCalledTimes(2);
+    expect(guilds.forgetWordGameRoute).toHaveBeenCalledWith(GUILD);
+
+    const failing = build();
+    failing.audit.record.mockRejectedValueOnce(new Error('audit down'));
+    await expect(failing.service.configure(GUILD, { maxWords: 300 }, ACTOR)).rejects.toThrow();
+    expect(failing.guilds.forgetWordGameRoute).not.toHaveBeenCalled();
+  });
+
+  it('still judges a move on a fresh read when the route says the channel matches', async () => {
+    const { service, guilds, store } = build();
+    store.config = null;
+    guilds.wordGameRoute.mockResolvedValueOnce({ channelId: CHANNEL, maxWords: 1500 });
+    await expect(service.submitWord(GUILD, move('apple'))).resolves.toMatchObject({
+      status: WordStatus.NOTHING,
+    });
+    expect(store.used).toEqual([]);
   });
 });
 

@@ -23,6 +23,7 @@ describe('BirthdayService against Postgres', () => {
   let audit: AuditService;
   let guilds: GuildConfigService;
   let service: BirthdayService;
+  let makeService: (db: PrismaService) => BirthdayService;
   let nextGuild = 100000000000000100n;
   let nextChannel = 200000000000000100n;
   let nextUser = 500000000000000000n;
@@ -40,6 +41,7 @@ describe('BirthdayService against Postgres', () => {
   // What the fake Discord saw and how it should misbehave.
   const sent: Sent[] = [];
   const failAfter = new Map<string, number>();
+  const failCode = new Map<string, number>();
   const removedGuilds = new Set<string>();
   const unsendable = new Set<string>();
   const state = { stopping: false, stopWhen: undefined as (() => boolean) | undefined };
@@ -68,7 +70,11 @@ describe('BirthdayService against Postgres', () => {
             send: (message: Omit<Sent, 'channelId'>) => {
               const allowed = failAfter.get(channelId);
               if (allowed !== undefined && sentTo(channelId).length >= allowed) {
-                return Promise.reject(new Error('Missing Permissions'));
+                return Promise.reject(
+                  Object.assign(new Error('Missing Permissions'), {
+                    code: failCode.get(channelId),
+                  }),
+                );
               }
               sent.push({ channelId, ...message });
               return Promise.resolve({});
@@ -77,21 +83,24 @@ describe('BirthdayService against Postgres', () => {
       },
     } as unknown as Client;
 
-    service = new BirthdayService(
-      prisma,
-      audit,
-      guilds,
-      client,
-      { report } as unknown as ErrorReporter,
-      {
-        isStopping: () => state.stopping || (state.stopWhen?.() ?? false),
-      } as unknown as DiscordReadyService,
-    );
+    makeService = (db) =>
+      new BirthdayService(
+        db,
+        audit,
+        guilds,
+        client,
+        { report } as unknown as ErrorReporter,
+        {
+          isStopping: () => state.stopping || (state.stopWhen?.() ?? false),
+        } as unknown as DiscordReadyService,
+      );
+    service = makeService(prisma);
   });
 
   beforeEach(() => {
     sent.length = 0;
     failAfter.clear();
+    failCode.clear();
     removedGuilds.clear();
     unsendable.clear();
     state.stopping = false;
@@ -446,6 +455,96 @@ describe('BirthdayService against Postgres', () => {
       await expect(runRow(guildId)).resolves.toMatchObject({ status: 'DONE', sentDiscordIds: ids });
     });
 
+    /** The database as the stalled run sees it: its first write to a run row waits for `gate`. */
+    function stallingDatabase(gate: Promise<void>, onParked: () => void): PrismaService {
+      let parked = false;
+      const delegate = new Proxy(prisma.birthdayCompletedDate, {
+        get(target, property) {
+          const value: unknown = Reflect.get(target, property);
+          if (property !== 'updateMany' || typeof value !== 'function') return value;
+          return async (args: unknown) => {
+            if (!parked) {
+              parked = true;
+              onParked();
+              await gate;
+            }
+            return (value as (a: unknown) => Promise<unknown>).call(target, args);
+          };
+        },
+      });
+      return new Proxy(prisma, {
+        get(target, property) {
+          if (property === 'birthdayCompletedDate') return delegate;
+          const value: unknown = Reflect.get(target, property);
+          return typeof value === 'function'
+            ? (value as (...args: unknown[]) => unknown).bind(target)
+            : value;
+        },
+      });
+    }
+
+    it('stops a stalled run whose lease was taken over: it records nothing, greets nobody, and everyone is greeted once', async () => {
+      const { guildId, channelId, ids, today } = await seed(3);
+      let release = () => undefined as void;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      let parked = false;
+      const stalled = makeService(
+        stallingDatabase(gate, () => {
+          parked = true;
+        }),
+      );
+
+      const first = stalled.runDailyWishes(today);
+      await vi.waitFor(() => expect(parked).toBe(true));
+      // The stalled run holds the day but has sent nothing; its lease lapses and another run takes over.
+      await prisma.birthdayCompletedDate.updateMany({
+        where: { guild: { discordId: guildId } },
+        data: { leaseUntil: new Date(Date.now() - 1000) },
+      });
+      await expect(service.runDailyWishes(today)).resolves.toMatchObject({ sent: 3, failed: 0 });
+
+      release();
+      await expect(first).resolves.toMatchObject({ sent: 0, failed: 0 });
+      expect(sentTo(channelId).map((message) => message.allowedMentions.users[0])).toEqual(ids);
+      await expect(runRow(guildId)).resolves.toMatchObject({
+        status: 'DONE',
+        leaseUntil: null,
+        sentDiscordIds: ids,
+      });
+    });
+
+    it('does not let a run that was taken over finish the day or shorten the new holder lease', async () => {
+      const { guildId, ids, today } = await seed(2);
+      const guild = await prisma.guild.findUniqueOrThrow({ where: { discordId: guildId } });
+      const holderLease = new Date(Date.now() + RUN_LEASE_MS);
+      let release = () => undefined as void;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      let parked = false;
+      const stalled = makeService(
+        stallingDatabase(gate, () => {
+          parked = true;
+        }),
+      );
+      const first = stalled.runDailyWishes(today);
+      await vi.waitFor(() => expect(parked).toBe(true));
+
+      // Another process owns the day now, with a different lease and its own progress.
+      await prisma.birthdayCompletedDate.updateMany({
+        where: { guildId: guild.id },
+        data: { leaseUntil: holderLease, sentDiscordIds: ids.slice(0, 1) },
+      });
+      release();
+      await expect(first).resolves.toMatchObject({ sent: 0, failed: 0 });
+
+      const row = await runRow(guildId);
+      expect(row).toMatchObject({ status: 'SENDING', sentDiscordIds: ids.slice(0, 1) });
+      expect(row.leaseUntil?.getTime()).toBe(holderLease.getTime());
+    });
+
     it('releases its lease and stops when shutdown begins, so the next start resumes at once', async () => {
       const { guildId, channelId, ids, today } = await seed(4);
       state.stopWhen = () => sentTo(channelId).length >= 2;
@@ -483,6 +582,29 @@ describe('BirthdayService against Postgres', () => {
         prisma.birthdayCompletedDate.count({ where: { guild: { discordId: gone.guildId } } }),
       ).resolves.toBe(0);
     });
+
+    it.each([10003, 50001, 50013])(
+      'skips a server whose channel starts answering %i mid-run, keeps its progress, and resumes once it is fixed',
+      async (code) => {
+        const { guildId, channelId, ids, today } = await seed(4);
+        failAfter.set(channelId, 1);
+        failCode.set(channelId, code);
+        const summary = await service.runDailyWishes(today);
+        expect(summary).toMatchObject({ sent: 1, failed: 0, retryAt: null });
+        expect(report).toHaveBeenCalledTimes(1);
+        const row = await runRow(guildId);
+        expect(row).toMatchObject({ status: 'SENDING', sentDiscordIds: ids.slice(0, 1) });
+        expect(row.leaseUntil && row.leaseUntil.getTime()).toBeLessThanOrEqual(Date.now());
+
+        // The start-up pass meets the same refusal: a log line, no second report.
+        await service.runDailyWishes(today);
+        expect(report).toHaveBeenCalledTimes(1);
+
+        failAfter.clear();
+        await expect(service.runDailyWishes(today)).resolves.toMatchObject({ sent: 3 });
+        expect(sentTo(channelId).map((message) => message.allowedMentions.users[0])).toEqual(ids);
+      },
+    );
 
     it('lets one server fail without stopping the others', async () => {
       const today = freshDay();

@@ -45,6 +45,9 @@ function build(
   return { listener, submitWord, resolve, message };
 }
 
+/** The reply pings only the player it answers, whatever the client-wide default is. */
+const replyTo = (content: string) => ({ content, allowedMentions: { repliedUser: true } });
+
 describe('WordGameListener', () => {
   it('hands the raw message to the service, which does the judging', async () => {
     const { listener, submitWord, message } = build();
@@ -83,7 +86,7 @@ describe('WordGameListener', () => {
     await listener.onMessageCreate([incoming] as never);
     expect(incoming.react).toHaveBeenCalledWith('✅');
     expect(incoming.reply).toHaveBeenCalledWith(
-      'Trò chơi kết thúc do đã đạt 200 từ. Hãy reset nếu muốn chơi tiếp nhé',
+      replyTo('Trò chơi kết thúc do đã đạt 200 từ. Hãy reset nếu muốn chơi tiếp nhé'),
     );
   });
 
@@ -96,7 +99,7 @@ describe('WordGameListener', () => {
     const incoming = message();
     await listener.onMessageCreate([incoming] as never);
     expect(incoming.react).toHaveBeenCalledWith('❌');
-    expect(incoming.reply).toHaveBeenCalledWith(text);
+    expect(incoming.reply).toHaveBeenCalledWith(replyTo(text));
   });
 
   it('names the letter a linking word has to start with', async () => {
@@ -106,7 +109,7 @@ describe('WordGameListener', () => {
     const incoming = message();
     await listener.onMessageCreate([incoming] as never);
     expect(incoming.react).toHaveBeenCalledWith('❌');
-    expect(incoming.reply).toHaveBeenCalledWith('Từ mới phải bắt đầu bằng `k`');
+    expect(incoming.reply).toHaveBeenCalledWith(replyTo('Từ mới phải bắt đầu bằng `k`'));
   });
 
   it('answers in the language of the server', async () => {
@@ -117,7 +120,7 @@ describe('WordGameListener', () => {
     const incoming = message();
     await listener.onMessageCreate([incoming] as never);
     expect(resolve).toHaveBeenCalledWith(GUILD);
-    expect(incoming.reply).toHaveBeenCalledWith(MESSAGES.en['word-game'].reply.SAME_WORD);
+    expect(incoming.reply).toHaveBeenCalledWith(replyTo(MESSAGES.en['word-game'].reply.SAME_WORD));
   });
 
   it.each([WordStatus.NOTHING, WordStatus.MAX_WORD] as const)(

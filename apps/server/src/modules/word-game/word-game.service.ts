@@ -144,8 +144,13 @@ export class WordGameService {
    * talks to Discord: the caller reacts and replies after the move is committed.
    *
    * Anything that is not a move in the game channel (several words, an empty
-   * message, another channel, a server without a game) is `NOTHING` and costs
-   * no database read when the text alone rules it out.
+   * message, another channel, a server without a game) is `NOTHING`. The text
+   * rules a message out first; then a short-lived cached route does, so chat
+   * in every other channel costs no database read. A message that passes both
+   * is judged on a fresh read of the round, whatever the cache said.
+   *
+   * Only a space separates words, as it always has: a tab or a line break is
+   * part of the word, which then is not in the dictionary.
    */
   async submitWord(guildId: string, input: unknown): Promise<WordSubmitResult> {
     const id = parseGuildId(guildId);
@@ -153,8 +158,13 @@ export class WordGameService {
     if (!parsed.success) throw new ServiceError(ErrorCode.VALIDATION_FAILED);
     const { channelId, authorId, content } = parsed.data;
 
-    const word = content.toLowerCase().trim();
-    if (word === '' || /\s/u.test(word)) return this.result(WordStatus.NOTHING, FRESH_ROUND, 0);
+    const word = content.toLowerCase();
+    if (word === '' || word.includes(' ')) return this.result(WordStatus.NOTHING, FRESH_ROUND, 0);
+
+    const route = await this.guilds.wordGameRoute(id);
+    if (route === null || route.channelId !== channelId) {
+      return this.result(WordStatus.NOTHING, FRESH_ROUND, route?.maxWords ?? 0);
+    }
 
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
       const game = await this.loadGame(this.prisma, id);
@@ -301,7 +311,7 @@ export class WordGameService {
       };
     }
 
-    return this.prisma.$transaction(async (tx): Promise<WordGameConfigResult> => {
+    const done = await this.prisma.$transaction(async (tx): Promise<WordGameConfigResult> => {
       const guild = await this.guilds.ensureGuild(id, undefined, tx);
       const before = settingsOf(await this.loadGame(tx, id));
 
@@ -334,6 +344,8 @@ export class WordGameService {
       );
       return { before, after: settings, restarted: restarts, ...wiped, dryRun: false };
     });
+    this.guilds.forgetWordGameRoute(id);
+    return done;
   }
 
   /**
@@ -365,7 +377,7 @@ export class WordGameService {
       };
     }
 
-    return this.prisma.$transaction(async (tx): Promise<WordGameResetResult> => {
+    const done = await this.prisma.$transaction(async (tx): Promise<WordGameResetResult> => {
       const game = await this.loadGame(tx, id);
       if (game === null || game.channelId === null) return notConfigured(false);
       const wiped = await this.startRound(tx, game.guildKey);
@@ -380,6 +392,8 @@ export class WordGameService {
       );
       return { status: 'RESET', channelId: game.channelId, ...wiped, dryRun: false };
     });
+    this.guilds.forgetWordGameRoute(id);
+    return done;
   }
 
   /** The settings and the round being played; `GUILD_NOT_FOUND` for a server the bot never saw. */

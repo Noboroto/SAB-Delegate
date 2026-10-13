@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { Test } from '@nestjs/testing';
 import { AUDIT_ACTIONS, ErrorCode, type ActorContext } from '@sab/shared';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuditService } from '../../common/audit/audit.service.js';
 import {
   ChannelAccessService,
@@ -13,6 +13,7 @@ import { GuildConfigService } from './guild-config.service.js';
 const GUILD = '100000000000000001';
 const CHANNEL = '200000000000000001';
 const OTHER_CHANNEL = '200000000000000002';
+const OTHER_GUILD = '100000000000000009';
 const ACTOR: ActorContext = { source: 'DISCORD', userId: '100000000000000002' };
 
 const config = (overrides: Record<string, unknown> = {}) => ({
@@ -389,6 +390,86 @@ describe('GuildConfigService.ensureGuild', () => {
     await expect(service.ensureGuild('not-an-id')).rejects.toEqual(
       failsWith(ErrorCode.VALIDATION_FAILED),
     );
+  });
+});
+
+describe('GuildConfigService.wordGameRoute', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['performance', 'Date', 'setTimeout', 'clearTimeout'] });
+    // lru-cache reads an entry stamped 0 as "no expiry"; a faked clock starts at 0.
+    vi.advanceTimersByTime(1);
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('reads once for a channel and remembers it', async () => {
+    const { prisma, service } = build();
+    prisma.guild.findUnique.mockResolvedValue(settingsRow({ wordChannelId: CHANNEL }));
+    const expected = { channelId: CHANNEL, maxWords: 1500 };
+    await expect(service.wordGameRoute(GUILD)).resolves.toEqual(expected);
+    await expect(service.wordGameRoute(GUILD)).resolves.toEqual(expected);
+    expect(prisma.guild.findUnique).toHaveBeenCalledTimes(1);
+  });
+
+  it('remembers "not configured" and an unknown server too', async () => {
+    const { prisma, service } = build();
+    await expect(service.wordGameRoute(GUILD)).resolves.toBeNull();
+    await expect(service.wordGameRoute(GUILD)).resolves.toBeNull();
+    prisma.guild.findUnique.mockResolvedValue(null);
+    await expect(service.wordGameRoute(OTHER_GUILD)).resolves.toBeNull();
+    await expect(service.wordGameRoute(OTHER_GUILD)).resolves.toBeNull();
+    expect(prisma.guild.findUnique).toHaveBeenCalledTimes(2);
+  });
+
+  it('reads again after the time to live', async () => {
+    const { prisma, service } = build();
+    await service.wordGameRoute(GUILD);
+    vi.advanceTimersByTime(59_000);
+    await service.wordGameRoute(GUILD);
+    expect(prisma.guild.findUnique).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(2_000);
+    await service.wordGameRoute(GUILD);
+    expect(prisma.guild.findUnique).toHaveBeenCalledTimes(2);
+  });
+
+  it('sees a new word channel right after patch commits', async () => {
+    const { prisma, service } = build();
+    await expect(service.wordGameRoute(GUILD)).resolves.toBeNull();
+    prisma.guild.findUnique.mockResolvedValue(settingsRow({ wordChannelId: CHANNEL }));
+    await service.patch(GUILD, { wordChannelId: CHANNEL }, ACTOR);
+    await expect(service.wordGameRoute(GUILD)).resolves.toEqual({
+      channelId: CHANNEL,
+      maxWords: 1500,
+    });
+  });
+
+  it('keeps the old answer when patch fails before commit', async () => {
+    const { prisma, service } = build();
+    prisma.guild.findUnique.mockResolvedValue(settingsRow({ wordChannelId: CHANNEL }));
+    await service.wordGameRoute(GUILD);
+    prisma.$transaction.mockRejectedValueOnce(new Error('db down'));
+    await expect(service.patch(GUILD, { wordMaxWords: 300 }, ACTOR)).rejects.toThrow();
+    await service.wordGameRoute(GUILD);
+    expect(prisma.guild.findUnique).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not keep an answer read while a write was committing', async () => {
+    const { prisma, service } = build();
+    let release: (row: unknown) => void = () => undefined;
+    prisma.guild.findUnique.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          release = resolve;
+        }),
+    );
+    const pending = service.wordGameRoute(GUILD);
+    service.forgetWordGameRoute(GUILD);
+    release(settingsRow());
+    await pending;
+
+    prisma.guild.findUnique.mockResolvedValue(settingsRow({ wordChannelId: CHANNEL }));
+    await expect(service.wordGameRoute(GUILD)).resolves.toMatchObject({ channelId: CHANNEL });
   });
 });
 

@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import { randomBytes } from 'node:crypto';
 import { Global, Logger, Module, UseInterceptors } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
-import { Client, GatewayIntentBits, Status } from 'discord.js';
+import { Client, GatewayIntentBits, MessagePayload, Status } from 'discord.js';
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { BootGuardError, IDENTITY_REST, type DiscordEnv } from './boot-guard.js';
@@ -364,6 +364,34 @@ describe('buildNecordOptions', () => {
     // Exactly `false`: a guild list would overwrite the guilds of every command.
     expect(options.development).toBe(false);
     expect(options.token).toBe('token-value');
+  });
+
+  it('mentions nobody unless a message names who', () => {
+    expect(buildNecordOptions(env({})).allowedMentions).toEqual({ parse: [] });
+  });
+
+  describe('as discord.js applies it to an outgoing message', () => {
+    const body = (options: Parameters<typeof MessagePayload.create>[1]) => {
+      const client = new Client({
+        intents: [],
+        allowedMentions: buildNecordOptions(env({})).allowedMentions,
+      });
+      const target = { client } as unknown as Parameters<typeof MessagePayload.create>[0];
+      return MessagePayload.create(target, options).resolveBody().body;
+    };
+
+    it('lets pasted text such as a note or a role name ping nobody', () => {
+      expect(body({ content: '@everyone <@&123> <@456>' })).toMatchObject({
+        allowed_mentions: { parse: [] },
+      });
+    });
+
+    it('still pings exactly the user a message names, as the birthday wish does', () => {
+      const celebrant = '444444444444444444';
+      expect(
+        body({ content: `<@${celebrant}>`, allowedMentions: { users: [celebrant] } }),
+      ).toMatchObject({ allowed_mentions: { users: [celebrant] } });
+    });
   });
 
   it('scopes development to the dev guild', () => {

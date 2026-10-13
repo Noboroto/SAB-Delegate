@@ -34,6 +34,14 @@ import {
 } from './birthday.date.js';
 import { pickUnusedWish } from './birthday.wish.js';
 
+/** The configured birthday channel exists but is not a channel the bot can post in. */
+class UnsendableChannelError extends Error {
+  constructor() {
+    super('The birthday channel cannot be written to');
+    this.name = 'UnsendableChannelError';
+  }
+}
+
 /**
  * How long a run owns its day. Every greeting that goes out extends it, so it
  * only has to outlast one send; a process that died leaves a lease that
@@ -46,6 +54,13 @@ const FAILURE_RETRY_MS = 5 * 60_000;
 
 /** Unknown Guild: the bot is no longer in the server. */
 const UNKNOWN_GUILD = 10004;
+
+/**
+ * The birthday channel was deleted (10003), or the bot lost the right to see
+ * (50001) or write in (50013) it. Only an admin can fix that, so a retry the
+ * same day cannot help: the server is skipped until the next run.
+ */
+const UNUSABLE_CHANNEL_CODES: ReadonlySet<number> = new Set([10003, 50001, 50013]);
 
 const IMPORT_CHUNK = 2000;
 const LOOKUP_CHUNK = 10_000;
@@ -81,6 +96,13 @@ const RunSummarySchema = z.object({
 });
 
 export type BirthdayRunSummary = z.infer<typeof RunSummarySchema>;
+
+/**
+ * A lease this process holds. `leaseUntil` is the exact value it last wrote:
+ * every write while sending is conditional on it, so once another run has
+ * taken the day over (its write replaced the value) none of ours can land.
+ */
+type Run = { id: string; sent: Set<string>; leaseUntil: Date };
 
 /** A server with someone to greet today, and where. */
 type Target = {
@@ -121,6 +143,9 @@ function failureLabel(error: unknown): string {
 @Injectable()
 export class BirthdayService {
   private readonly logger = new Logger(BirthdayService.name);
+  /** Servers whose unusable channel was already reported, for the day in `reportedDay`. */
+  private readonly reportedChannels = new Set<string>();
+  private reportedDay = 0;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -401,6 +426,9 @@ export class BirthdayService {
    * One server's greetings for `day`. Returns when unfinished work can be tried
    * again (a lease somebody else holds), or null. Throws on failure after
    * releasing the lease, so a retry can carry on at once.
+   *
+   * A birthday channel that is gone, or that the bot may no longer see or write
+   * in, is not retried: the server is skipped for the day with one warning.
    */
   private async wishGuild(
     target: Target,
@@ -413,9 +441,19 @@ export class BirthdayService {
       return null;
     }
     if (!(await this.botIsIn(target.discordId))) return null;
-    const channel = await this.client.channels.fetch(target.channelId);
+
+    let channel;
+    try {
+      channel = await this.client.channels.fetch(target.channelId);
+    } catch (error) {
+      if (await this.skipUnusableChannel(target, day, error)) return null;
+      throw error;
+    }
     if (channel === null || !channel.isSendable()) {
-      throw new Error('The birthday channel cannot be written to');
+      // A deleted or non-text channel is a configuration problem like a
+      // missing permission: retrying cannot fix it, so skip the day once.
+      await this.skipUnusableChannel(target, day, new UnsendableChannelError());
+      return null;
     }
 
     const run = await this.acquireRun(target.id, day, resumeOnly);
@@ -425,26 +463,65 @@ export class BirthdayService {
       const pending = target.recipients.filter((discordId) => !run.sent.has(discordId));
       for (const discordId of pending) {
         if (this.ready.isStopping()) {
-          await this.releaseLease(run.id);
+          await this.releaseLease(run);
           return null;
         }
+        // Asked before the send, not only after: a run that lost the day while
+        // it was stalled must not greet people the new holder is greeting.
+        if (!(await this.holdLease(run))) return this.lostLease(target);
         const wishIndex = await this.pickWishFor(target.id);
         await channel.send({
           content: renderBirthdayWish(wishIndex, `<@${discordId}>`),
           allowedMentions: { users: [discordId] },
         });
         progress.sent += 1;
-        if (!(await this.recordSent(run.id, discordId))) {
-          this.logger.warn(`Lost the birthday lease of guild ${target.discordId}; stopping`);
-          return null;
-        }
+        if (!(await this.holdLease(run, discordId))) return this.lostLease(target);
       }
-      await this.complete(run.id, target, progress.sent);
+      await this.complete(run, target, progress.sent);
       return null;
     } catch (error) {
-      await this.releaseLease(run.id);
+      await this.releaseLease(run);
+      if (await this.skipUnusableChannel(target, day, error)) return null;
       throw error;
     }
+  }
+
+  private lostLease(target: Target): null {
+    this.logger.warn(`Lost the birthday lease of guild ${target.discordId}; stopping`);
+    return null;
+  }
+
+  /**
+   * Logs the skip and reports it, at most once per server and day however many
+   * times the day is run (the daily job, its retries and the start-up pass).
+   * False when `error` is something else, which the caller treats as a failure.
+   */
+  private async skipUnusableChannel(
+    target: Target,
+    day: BusinessDay,
+    error: unknown,
+  ): Promise<boolean> {
+    const code = discordErrorCode(error);
+    const unusable =
+      error instanceof UnsendableChannelError ||
+      (code !== undefined && UNUSABLE_CHANNEL_CODES.has(code));
+    if (!unusable) return false;
+
+    this.logger.warn(
+      `Skipping birthdays of guild ${target.discordId}: the birthday channel is unusable (${failureLabel(error)})`,
+    );
+    const dayKey = dateColumnValue(day).getTime();
+    if (dayKey !== this.reportedDay) {
+      this.reportedChannels.clear();
+      this.reportedDay = dayKey;
+    }
+    if (this.reportedChannels.has(target.discordId)) return true;
+    this.reportedChannels.add(target.discordId);
+    await this.reporter.report(
+      `Birthday channel of guild ${target.discordId} is unusable; its wishes are skipped today`,
+      error,
+    );
+    return true;
   }
 
   /** True while the bot is in the server; a server it was removed from is skipped with a warning. */
@@ -468,9 +545,7 @@ export class BirthdayService {
     guildId: string,
     day: BusinessDay,
     resumeOnly: boolean,
-  ): Promise<
-    { acquired: true; id: string; sent: Set<string> } | { acquired: false; liveUntil: Date | null }
-  > {
+  ): Promise<({ acquired: true } & Run) | { acquired: false; liveUntil: Date | null }> {
     const date = dateColumnValue(day);
     const now = new Date();
     const leaseUntil = new Date(now.getTime() + RUN_LEASE_MS);
@@ -495,54 +570,67 @@ export class BirthdayService {
       where: { guildId_date: { guildId, date } },
       select: { id: true, status: true, leaseUntil: true, sentDiscordIds: true },
     });
-    if (won && row !== null)
-      return { acquired: true, id: row.id, sent: new Set(row.sentDiscordIds) };
+    // The value this run wrote, not the one just read: if somebody took the day
+    // over in between, the first conditional write of this run must fail.
+    if (won && row !== null) {
+      return { acquired: true, id: row.id, sent: new Set(row.sentDiscordIds), leaseUntil };
+    }
 
     const live = row?.status === 'SENDING' && row.leaseUntil !== null && row.leaseUntil > now;
     return { acquired: false, liveUntil: live ? row.leaseUntil : null };
   }
 
   /**
-   * Notes that `discordId` was greeted and extends the lease. False when the
-   * lease is no longer ours (it lapsed and the run was taken over, or it is done).
+   * Extends the lease and, with `greeted`, notes that person as greeted. The
+   * write applies only while the stored lease is still exactly the one this run
+   * last wrote, so it is false once the run was taken over (or finished) and
+   * the caller must stop. An expired lease nobody has claimed is still ours.
    */
-  private async recordSent(runId: string, discordId: string): Promise<boolean> {
-    const now = Date.now();
+  private async holdLease(run: Run, greeted?: string): Promise<boolean> {
+    const next = new Date(Date.now() + RUN_LEASE_MS);
     const updated = await this.prisma.birthdayCompletedDate.updateMany({
-      where: { id: runId, status: 'SENDING', leaseUntil: { gt: new Date(now) } },
+      where: { id: run.id, status: 'SENDING', leaseUntil: run.leaseUntil },
       data: {
-        sentDiscordIds: { push: discordId },
-        leaseUntil: new Date(now + RUN_LEASE_MS),
+        leaseUntil: next,
+        ...(greeted === undefined ? {} : { sentDiscordIds: { push: greeted } }),
       },
     });
-    return updated.count === 1;
+    if (updated.count !== 1) return false;
+    run.leaseUntil = next;
+    return true;
   }
 
-  private async complete(runId: string, target: Target, sent: number): Promise<void> {
+  private async complete(run: Run, target: Target, sent: number): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
       const done = await tx.birthdayCompletedDate.updateMany({
-        where: { id: runId, status: 'SENDING' },
+        where: { id: run.id, status: 'SENDING', leaseUntil: run.leaseUntil },
         data: { status: 'DONE', leaseUntil: null, doneAt: new Date() },
       });
-      if (done.count === 1) {
-        await this.audit.record(
-          {
-            guildId: target.discordId,
-            actor: SYSTEM_ACTOR,
-            action: AUDIT_ACTIONS.birthdayWish,
-            params: { count: sent, total: target.recipients.length },
-          },
-          tx,
-        );
+      if (done.count !== 1) {
+        this.lostLease(target);
+        return;
       }
+      await this.audit.record(
+        {
+          guildId: target.discordId,
+          actor: SYSTEM_ACTOR,
+          action: AUDIT_ACTIONS.birthdayWish,
+          params: { count: sent, total: target.recipients.length },
+        },
+        tx,
+      );
     });
   }
 
-  /** Makes the run reclaimable right away; the progress stays. Best effort: the lease lapses anyway. */
-  private async releaseLease(runId: string): Promise<void> {
+  /**
+   * Makes the run reclaimable right away; the progress stays. Best effort: the
+   * lease lapses anyway. Conditional like every other write, so it cannot
+   * shorten the lease of the run that took the day over.
+   */
+  private async releaseLease(run: Run): Promise<void> {
     try {
       await this.prisma.birthdayCompletedDate.updateMany({
-        where: { id: runId, status: 'SENDING' },
+        where: { id: run.id, status: 'SENDING', leaseUntil: run.leaseUntil },
         data: { leaseUntil: new Date(Date.now() - 1) },
       });
     } catch (error) {

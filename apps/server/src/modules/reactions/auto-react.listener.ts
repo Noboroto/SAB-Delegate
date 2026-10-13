@@ -8,6 +8,10 @@ import { ReactionDictionary } from './reaction-dictionary.js';
 
 /** The message was deleted before the bot could react. */
 const UNKNOWN_MESSAGE = 10008;
+/** The message already carries the most distinct reactions Discord allows. */
+const MAX_REACTIONS_REACHED = 30010;
+/** Distinct reactions a message can hold; asking for more can only fail. */
+const MAX_REACTIONS_PER_MESSAGE = 20;
 
 /**
  * What reacting needs, structurally (see `emoji-resolver.ts`). `content` is
@@ -19,17 +23,12 @@ type Reactable<Emoji extends { name: string | null }> = {
   react(emoji: Emoji | string): Promise<unknown>;
 };
 
-type Edited<Emoji extends { name: string | null }> = Reactable<Emoji> & {
-  readonly partial: boolean;
-  fetch(): Promise<Reactable<Emoji>>;
-};
-
 /**
  * Reacts to "react <emoji>" and to the phrases of the dictionary, on new
  * messages and on edits. Every message counts, the bot's own included.
  *
  * A reaction fails routinely (no permission, an emoji the server does not
- * have, the maximum number of reactions); that is logged and skipped, never
+ * have); that is logged and skipped, never
  * thrown, so one bad emoji does not stop the others or reach the user.
  */
 @DiscordCommands()
@@ -44,30 +43,13 @@ export class AutoReactListener {
   }
 
   @On('messageUpdate')
-  async onMessageUpdate(@Context() [, updated]: ContextOf<'messageUpdate'>): Promise<void> {
-    await this.reactToEdit(updated);
-  }
-
-  /**
-   * The typings promise a full message, but an edit of one that was not cached
-   * can still arrive without its text; it is read first.
-   */
-  private async reactToEdit<Emoji extends { name: string | null }>(
-    updated: Edited<Emoji>,
-  ): Promise<void> {
-    if (!updated.partial) {
-      await this.react(updated);
-      return;
-    }
-    let full: Reactable<Emoji>;
-    try {
-      full = await updated.fetch();
-    } catch (error) {
-      // Deleted again, or unreadable: nothing to react to.
-      this.logger.warn(`Could not read an edited message (${errorLabel(error)})`);
-      return;
-    }
-    await this.react(full);
+  async onMessageUpdate(@Context() [before, updated]: ContextOf<'messageUpdate'>): Promise<void> {
+    // Discord also sends an update when it only unfurls a link into an embed;
+    // the text is unchanged then, and reacting again would repeat the failures.
+    // Without the message partial, only cached messages reach this event, so
+    // `updated` always carries its text.
+    if (before.content === updated.content) return;
+    await this.react(updated);
   }
 
   private async react<Emoji extends { name: string | null }>(
@@ -77,11 +59,13 @@ export class AutoReactListener {
     // Empty for an attachment-only message or when the bot lacks the content intent.
     if (content === null || content === '') return;
 
-    for (const token of this.dictionary.reactionsFor(content)) {
+    for (const token of this.dictionary.reactionsFor(content).slice(0, MAX_REACTIONS_PER_MESSAGE)) {
       try {
         await message.react(resolveReactionEmoji(message.guild, token));
       } catch (error) {
-        if (discordErrorCode(error) === UNKNOWN_MESSAGE) return;
+        const code = discordErrorCode(error);
+        // Nothing more can be added to either, so the rest would fail alike.
+        if (code === UNKNOWN_MESSAGE || code === MAX_REACTIONS_REACHED) return;
         this.logger.warn(`Reaction failed (${errorLabel(error)})`);
       }
     }

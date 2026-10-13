@@ -118,6 +118,25 @@ describe('AutoReactListener on a new message', () => {
     expect(created.react).toHaveBeenCalledTimes(1);
   });
 
+  it('stops at the first "maximum reactions" error', async () => {
+    const { listener, warn } = build();
+    const created = message('react yes no ok');
+    created.react.mockRejectedValue(discordError(30010));
+    await expect(listener.onMessageCreate([created] as never)).resolves.toBeUndefined();
+    expect(created.react).toHaveBeenCalledTimes(1);
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('asks for at most 20 distinct reactions', async () => {
+    const { listener } = build();
+    const emojis = Array.from({ length: 25 }, (_, i) => String.fromCodePoint(0x1f600 + i));
+    const created = message(emojis.map((emoji) => `react ${emoji}`).join(' '));
+    await listener.onMessageCreate([created] as never);
+    const asked = created.react.mock.calls.map(([emoji]) => emoji as string);
+    expect(asked).toHaveLength(20);
+    expect(new Set(asked).size).toBe(20);
+  });
+
   it('never puts the message text in a warning', async () => {
     const { listener, warn } = build();
     const created = message('react 🎉 secret words');
@@ -136,24 +155,12 @@ describe('AutoReactListener on an edited message', () => {
     expect(after.react).toHaveBeenCalledWith('👌');
   });
 
-  it('reads a message that arrived without its text before reacting', async () => {
+  it('skips an edit that left the text as it was, such as a link turned into an embed', async () => {
     const { listener } = build();
-    const full = message('react ok');
-    const partial = { partial: true, content: null, fetch: vi.fn().mockResolvedValue(full) };
-    await listener.onMessageUpdate([partial, partial] as never);
-    expect(partial.fetch).toHaveBeenCalledTimes(1);
-    expect(full.react).toHaveBeenCalledWith('👌');
-  });
-
-  it('does not throw when the partial message cannot be read', async () => {
-    const { listener, warn } = build();
-    const partial = {
-      partial: true,
-      content: null,
-      fetch: vi.fn().mockRejectedValue(discordError(10008)),
-    };
-    await expect(listener.onMessageUpdate([partial, partial] as never)).resolves.toBeUndefined();
-    expect(warn).toHaveBeenCalledTimes(1);
+    const before = message('react ok');
+    const after = message('react ok');
+    await listener.onMessageUpdate([before, after] as never);
+    expect(after.react).not.toHaveBeenCalled();
   });
 
   it('does nothing for an edit that left no text', async () => {

@@ -61,7 +61,7 @@ export class DictionaryService {
     private readonly source: DictionarySource = loadBundledWords,
   ) {}
 
-  /** `word` must already be lower-case and trimmed. */
+  /** `word` must already be lower-case. */
   async has(word: string): Promise<boolean> {
     return (await this.load()).has(word);
   }
