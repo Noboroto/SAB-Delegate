@@ -6,6 +6,9 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { AppModule } from './app.module.js';
 import { IDENTITY_REST } from './discord/boot-guard.js';
 import { DiscordReadyService } from './discord/discord-ready.service.js';
+import { GuildAccessService } from './common/guild-access/guild-access.service.js';
+import { GuildConfigService } from './modules/guild-config/guild-config.service.js';
+import { SystemService } from './modules/system/system.service.js';
 import { HealthController } from './health/health.controller.js';
 
 const marker = (label: string) => `marker-${label}-${randomBytes(6).toString('hex')}`;
@@ -22,6 +25,7 @@ const testEnv: Record<string, string> = {
   POSTGRES_USER: 'sab_app',
   POSTGRES_PASSWORD: marker('postgres'),
   LOG_LEVEL: 'silent',
+  MIGRATION_PENDING: '',
 };
 
 // Constructor parameters Nest cannot resolve from their emitted type: an
@@ -67,6 +71,12 @@ describe('AppModule', () => {
     expect(moduleRef.get(DiscordReadyService).isReady()).toBe(false);
   });
 
+  it('loads the Discord feature modules', () => {
+    for (const provider of [GuildConfigService, SystemService, GuildAccessService]) {
+      expect(moduleRef.get(provider, { strict: false }), provider.name).toBeDefined();
+    }
+  });
+
   it('gives every controller and provider constructor dependency a resolvable type', () => {
     // Walk the module graph from AppModule's own metadata, so a module added
     // later is checked without editing this list.
@@ -105,6 +115,42 @@ describe('AppModule', () => {
     } finally {
       vi.stubEnv('DISCORD_TOKEN', testEnv['DISCORD_TOKEN'] ?? '');
     }
+  });
+});
+
+describe('AppModule while a migration is pending', () => {
+  let moduleRef: TestingModule | undefined;
+
+  afterAll(async () => {
+    await moduleRef?.close();
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it('leaves out every module that needs the Discord client', async () => {
+    for (const [name, value] of Object.entries(testEnv)) vi.stubEnv(name, value);
+    vi.stubEnv('MIGRATION_PENDING', 'true');
+    // The module graph is fixed when the class is defined, so everything is
+    // imported again under the pending environment; classes from the top-level
+    // imports would be different identities and prove nothing.
+    vi.resetModules();
+    const [{ AppModule: PendingAppModule }, config, system, access, health] = await Promise.all([
+      import('./app.module.js'),
+      import('./modules/guild-config/guild-config.service.js'),
+      import('./modules/system/system.service.js'),
+      import('./common/guild-access/guild-access.service.js'),
+      import('./health/health.controller.js'),
+    ]);
+    moduleRef = await Test.createTestingModule({ imports: [PendingAppModule] }).compile();
+
+    for (const provider of [
+      config.GuildConfigService,
+      system.SystemService,
+      access.GuildAccessService,
+    ]) {
+      expect(() => moduleRef?.get(provider, { strict: false }), provider.name).toThrow();
+    }
+    expect(moduleRef.get(health.HealthController, { strict: false })).toBeDefined();
   });
 });
 

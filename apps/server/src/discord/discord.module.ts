@@ -61,8 +61,9 @@ export class DiscordLifecycleListener {
 }
 
 /** Set `MIGRATION_PENDING` only in the raw environment: Nest builds this module before anything is parsed. */
-const migrationPendingFromEnv = (env: Readonly<Record<string, string | undefined>>): boolean =>
-  env['MIGRATION_PENDING']?.trim() === 'true';
+export const migrationPendingFromEnv = (
+  env: Readonly<Record<string, string | undefined>>,
+): boolean => env['MIGRATION_PENDING']?.trim() === 'true';
 
 @Module({})
 export class DiscordModule {
