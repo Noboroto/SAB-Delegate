@@ -3,6 +3,12 @@
 // A workspace-level `pnpm install` or an editor "fix" that rewrites either file
 // would change what production installs, so both must stay byte-identical to
 // what `main` (the deployed branch) has.
+//
+// Only meaningful on a branch other than main: on main itself the merge-base is
+// HEAD, so the files are compared with themselves and always match. Whichever
+// of `main` and `origin/main` is newer is the baseline: a fresh clone has a
+// stale or missing local `main`, while unpushed work on `main` is ahead of
+// `origin/main`.
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -21,15 +27,36 @@ function git(args: string[]): Buffer {
   });
 }
 
-function mergeBaseWithMain(): string {
-  for (const ref of ['main', 'origin/main']) {
-    try {
-      return git(['merge-base', 'HEAD', ref]).toString('utf8').trim();
-    } catch {
-      // Try the next candidate ref.
-    }
+function refExists(ref: string): boolean {
+  try {
+    git(['rev-parse', '--verify', '--quiet', `${ref}^{commit}`]);
+    return true;
+  } catch {
+    return false;
   }
-  throw new Error('cannot resolve a merge-base with main (neither main nor origin/main exists)');
+}
+
+function isAncestor(older: string, newer: string): boolean {
+  try {
+    git(['merge-base', '--is-ancestor', older, newer]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** The newer of `main` and `origin/main`: either may lag behind the other. */
+function mainRef(): string {
+  const local = refExists('main');
+  const remote = refExists('origin/main');
+  if (local && remote) return isAncestor('origin/main', 'main') ? 'main' : 'origin/main';
+  if (local) return 'main';
+  if (remote) return 'origin/main';
+  throw new Error('cannot resolve main (neither main nor origin/main exists)');
+}
+
+function mergeBaseWithMain(): string {
+  return git(['merge-base', 'HEAD', mainRef()]).toString('utf8').trim();
 }
 
 function bytesAtBase(base: string, file: string): Buffer | undefined {

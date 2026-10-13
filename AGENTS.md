@@ -22,6 +22,7 @@ Code nằm trong `root/` (package `sab-delegate`); file deploy (`dockerfile`, `*
 | Gửi một tin > 2000 ký tự                                                                              | Discord từ chối; chia khối, `reply` + `followUp` (§3)                                             |
 | Tham chiếu path/URL git không track (`plans/`, report cục bộ, `/Users/...`) trong code/comment/docs   | Reader chỉ có repo phải theo được (§5)                                                            |
 | `git commit --no-verify` / `git push --no-verify`                                                     | Bỏ qua hook = bỏ qua cổng chất lượng (§6)                                                         |
+| `HUSKY=0` / tắt husky qua `~/.config/husky/init.sh`                                                   | Giống `--no-verify`: bỏ qua hook = bỏ qua cổng chất lượng (§6)                                    |
 | Tạo `.github/workflows/*`                                                                             | Không dùng CI (§6)                                                                                |
 | Commit code chưa qua ≥2 agent review                                                                  | Một góc nhìn bỏ sót cả lớp lỗi (§7)                                                               |
 | Chạy nhiều việc nặng song song (install + docker build + test)                                        | Máy dùng chung với repo khác, đã bị watchdog reset (§5)                                           |

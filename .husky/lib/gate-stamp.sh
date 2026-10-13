@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
-# Lets pre-push skip the three gates pre-commit already proved on the exact same
-# bytes.
+# Lets pre-push skip the workspace gates (prettier, typecheck, eslint) pre-commit
+# already proved on the exact same bytes. The legacy root/ gates are never
+# skipped by it: they run whenever root/ is part of the change.
 #
 # Why this is not a weakened gate: prettier, tsc and eslint all read the WORKING
 # TREE from disk, not git history. A commit that changes HEAD but not one byte
@@ -21,7 +22,7 @@
 #
 # GATE_SET is part of the stamp so that editing which checks the hooks run
 # invalidates every existing stamp. Bump it whenever the covered steps change.
-GATE_SET="v1:prettier+typecheck+eslint"
+GATE_SET="v2:prettier+typecheck+eslint"
 
 gate_stamp_file() {
   printf '%s/content-gate-stamp' "$(git rev-parse --git-dir)"
@@ -46,8 +47,37 @@ gate_stamp_key() {
   rm -f "$list"
 }
 
+# The key is read once before the first gate (gate_stamp_begin) and once more
+# when the stamp is written. A gate runs minutes against the live worktree, so a
+# file edited meanwhile would otherwise get a stamp for bytes no gate ever saw.
+# A stamp is written only when both readings agree.
+GATE_STAMP_BEFORE=""
+
+# Call after anything that rewrites files on purpose (prettier --write) and
+# before the first gate, so the formatter's own edits are not mistaken for
+# concurrent ones.
+gate_stamp_begin() {
+  GATE_STAMP_BEFORE="$(gate_stamp_key)"
+}
+
+# Echoes the key to record, or nothing when the tree moved (or no begin call).
+gate_stamp_stable_key() {
+  local after
+  after="$(gate_stamp_key)"
+  if [[ -z "$GATE_STAMP_BEFORE" || "$after" != "$GATE_STAMP_BEFORE" ]]; then
+    echo "⚠ working tree changed while the gates ran; no stamp recorded (the next push re-runs them)" >&2
+    return 0
+  fi
+  printf '%s\n' "$after"
+}
+
+# Call only after EVERY gate the stamp vouches for has passed.
 gate_stamp_write() {
-  gate_stamp_key > "$(gate_stamp_file)"
+  local key
+  key="$(gate_stamp_stable_key)"
+  if [[ -n "$key" ]]; then
+    printf '%s\n' "$key" > "$(gate_stamp_file)"
+  fi
 }
 
 # 0 when the recorded content matches the working tree exactly.
@@ -71,21 +101,31 @@ gate_stamp_is_current() {
 # narrow run license a skip of the full suite. So this stamp is written ONLY
 # where the full suite actually ran, and any commit that did not run it simply
 # leaves the stamp stale, which fails closed into running the suite.
-SUITE_SET="v1:vitest-full-suite"
+SUITE_SET="v2:vitest-full-suite"
 
 suite_stamp_file() {
   printf '%s/full-suite-stamp' "$(git rev-parse --git-dir)"
 }
 
+# Takes the content key as an optional argument so a write can bind the stamp to
+# the already-verified (unchanged) reading instead of hashing the tree again.
 suite_stamp_key() {
+  local content_key="${1:-}"
+  if [[ -z "$content_key" ]]; then
+    content_key="$(gate_stamp_key)"
+  fi
   {
     printf '%s\n' "$SUITE_SET"
-    gate_stamp_key
+    printf '%s\n' "$content_key"
   } | git hash-object --stdin
 }
 
 suite_stamp_write() {
-  suite_stamp_key > "$(suite_stamp_file)"
+  local key
+  key="$(gate_stamp_stable_key)"
+  if [[ -n "$key" ]]; then
+    suite_stamp_key "$key" > "$(suite_stamp_file)"
+  fi
 }
 
 suite_stamp_is_current() {

@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# A flag inherited from the calling shell would make every nested pnpm skip
+# artifact generation and gate on stale output; only this hook may set it.
+unset SAB_DEPS_READY
+
 # Swaps the interpreter when husky started this hook under `sh`; must run
 # before anything bash-4-only is parsed.
 . "$(dirname "$0")/lib/require-bash.sh"
@@ -20,8 +24,27 @@ trap on_hook_failure ERR
 ZERO_SHA="0000000000000000000000000000000000000000"
 PUSHED_FILES=()
 
+HOOK_TMP="$(mktemp -d)"
+trap 'rm -rf "$HOOK_TMP"' EXIT
+
 # Saved so the locked re-run of this hook can be fed the same refs.
 REFS="$(cat)"
+
+# Fails closed, like the commit-time scan: a push is the last point before
+# history leaves the machine, so an unscannable range or a missing binary
+# blocks it instead of passing silently.
+scan_pushed_commits() {
+  local scope="$1" out
+  if ! command -v gitleaks >/dev/null 2>&1; then
+    echo "ERROR: gitleaks is not installed (brew install gitleaks); the pushed-commit secret scan cannot run."
+    exit 1
+  fi
+  if ! out=$(gitleaks git --log-opts="$scope" --redact --config .gitleaks.toml --no-banner 2>&1); then
+    echo "ERROR: gitleaks found a secret (or failed) in the commits being pushed. Values are redacted:"
+    printf '%s\n' "$out" | grep -vE '^\s*$' || true
+    exit 1
+  fi
+}
 
 while read -r local_ref local_sha remote_ref remote_sha; do
   local_ref="${local_ref%$'\r'}"
@@ -32,13 +55,30 @@ while read -r local_ref local_sha remote_ref remote_sha; do
     continue
   fi
 
-  if [[ "$remote_sha" == "$ZERO_SHA" ]]; then
+  # A new branch, or a remote tip this clone has never fetched, has no usable
+  # lower bound: the file list falls back to the whole tree, and the secret
+  # scan to every commit not already on a remote-tracking ref.
+  if [[ "$remote_sha" == "$ZERO_SHA" ]] || ! git cat-file -e "$remote_sha^{commit}" 2>/dev/null; then
     range="$(git hash-object -t tree /dev/null)..$local_sha"
+    scan_scope="$local_sha --not --remotes"
   else
     range="$remote_sha..$local_sha"
+    scan_scope="$remote_sha..$local_sha"
   fi
 
-  mapfile -t ref_files < <(git diff --name-only --diff-filter=ACMRD "$range" --)
+  # Before the markdown-only exit below: a token pasted into a doc leaks as
+  # surely as one in code.
+  scan_pushed_commits "$scan_scope"
+
+  # `--no-renames` lists a rename as delete + add, so the old path is seen.
+  # Through a file rather than `< <(git ...)`, whose failure `set -e` swallows
+  # and which would leave an empty list that reads as "nothing to check".
+  git diff --name-only --no-renames --diff-filter=ACMRDT -z "$range" -- >"$HOOK_TMP/ref-files" ||
+    {
+      echo "ERROR: git diff failed for $range; cannot tell which files this push changes."
+      exit 1
+    }
+  mapfile -d '' ref_files <"$HOOK_TMP/ref-files"
   PUSHED_FILES+=("${ref_files[@]}")
 done <<<"$REFS"
 
@@ -46,19 +86,33 @@ if ((${#PUSHED_FILES[@]} == 0)); then
   exit 0
 fi
 
-MARKDOWN_ONLY=true
+# What the pushed range requires; same split as pre-commit. The legacy gates
+# depend only on root/**, so they run when the range touches it.
+ROOT_TOUCHED=false
+WORKSPACE_TOUCHED=false
+INFRA_TOUCHED=false
+MD_TOUCHED=false
 for file in "${PUSHED_FILES[@]}"; do
   case "$file" in
-    *.md) ;;
-    *)
-      MARKDOWN_ONLY=false
-      break
-      ;;
+    *.md) MD_TOUCHED=true ;;
+    root/*) ROOT_TOUCHED=true ;;
+    compose.yml | coolify.compose.yml | docker/* | dockerfile | .dockerignore | .husky/*) INFRA_TOUCHED=true ;;
+    *) WORKSPACE_TOUCHED=true ;;
   esac
 done
 
-if [[ "$MARKDOWN_ONLY" == true ]]; then
+# Repo-wide guards no code gate would otherwise exercise; a workspace suite
+# run executes every scripts/*.test.ts itself (see pre-commit).
+GUARD_SPECS=()
+if [[ "$INFRA_TOUCHED" == true || "$ROOT_TOUCHED" == true ]]; then
+  GUARD_SPECS=(scripts/*.guard.test.ts)
+elif [[ "$MD_TOUCHED" == true ]]; then
+  GUARD_SPECS=(scripts/no-untracked-references.guard.test.ts)
+fi
+
+if [[ "$ROOT_TOUCHED" != true && "$WORKSPACE_TOUCHED" != true && "$INFRA_TOUCHED" != true ]]; then
   echo "markdown-only push: skip code checks"
+  run_step "vitest (repo guards)" pnpm exec vitest run "${GUARD_SPECS[@]}"
   exit 0
 fi
 
@@ -66,48 +120,50 @@ fi
 source "$(dirname "${BASH_SOURCE[0]}")/lib/heavy-lock.sh"
 heavy_lock_hook SAB-Delegate pre-push "$0" "$@" <<<"$REFS"
 
-# What the pushed range requires; same split as pre-commit. The legacy gates
-# depend only on root/**, so they run when the range touches it.
-ROOT_TOUCHED=false
-WORKSPACE_TOUCHED=false
-for file in "${PUSHED_FILES[@]}"; do
-  case "$file" in
-    *.md) ;;
-    root/*) ROOT_TOUCHED=true ;;
-    compose.yml | coolify.compose.yml | dockerfile | .dockerignore | .husky/*) ;;
-    *) WORKSPACE_TOUCHED=true ;;
-  esac
-done
+SUITE_RAN=false
+STAMP_PENDING=false
 
-# Pushing main deploys production, so the gates re-run unless pre-commit
-# already cleared these exact bytes. Prettier only checks here: a push has
-# nothing to re-stage into.
+# Pushing main deploys production, so the workspace gates re-run unless
+# pre-commit already cleared these exact bytes. Prettier only checks here: a
+# push has nothing to re-stage into. The stamp says nothing about root/, so the
+# legacy gates below run whenever the range touches it.
 if gate_stamp_is_current; then
-  echo "✓ workspace + legacy gates: skipped - working tree is byte-identical to what pre-commit already cleared (lib/gate-stamp.sh)"
-else
-  if [[ "$WORKSPACE_TOUCHED" == true ]]; then
-    run_step "prettier (workspace, check only)" pnpm formatter:check
-    # Generated once here; the flag makes every nested pnpm call skip it.
-    run_step "generate deps" pnpm generate:deps
-    export SAB_DEPS_READY=1
-    run_step "eslint (workspace, --max-warnings 0)" pnpm lint
-    run_step "typecheck (workspace)" pnpm typecheck
-    run_step "knip (unused files, exports, dependencies)" pnpm knip
-    if suite_stamp_is_current; then
-      echo "✓ vitest (workspace): skipped - the full suite already passed on these exact bytes"
-    else
-      run_step "vitest (workspace)" pnpm test
-      suite_stamp_write
-    fi
-    gate_stamp_write
+  echo "✓ workspace gates: skipped - working tree is byte-identical to what pre-commit already cleared (lib/gate-stamp.sh)"
+elif [[ "$WORKSPACE_TOUCHED" == true ]]; then
+  run_step "prettier (workspace, check only)" pnpm formatter:check
+  gate_stamp_begin
+  # Generated once here; the flag makes every nested pnpm call skip it.
+  run_step "generate deps" pnpm generate:deps
+  export SAB_DEPS_READY=1
+  run_step "eslint (workspace, --max-warnings 0)" pnpm lint
+  run_step "typecheck (workspace)" pnpm typecheck
+  run_step "knip (unused files, exports, dependencies)" pnpm knip
+  if suite_stamp_is_current; then
+    echo "✓ vitest (workspace): skipped - the full suite already passed on these exact bytes"
+  else
+    run_step "vitest (workspace)" pnpm test
+    SUITE_RAN=true
+    suite_stamp_write
   fi
-  if [[ "$ROOT_TOUCHED" == true ]]; then
-    run_step "prettier (root, check only)" pnpm --dir root pretty
-    run_step "typecheck (root)" pnpm --dir root typecheck
-    run_step "eslint (root, --max-warnings 0)" pnpm --dir root lint
-    run_step "vitest (legacy manifests guard)" \
-      pnpm exec vitest run scripts/legacy-lockfile.guard.test.ts
-  fi
+  STAMP_PENDING=true
+fi
+
+if [[ "$ROOT_TOUCHED" == true ]]; then
+  run_step "prettier (root, check only)" pnpm --dir root pretty
+  run_step "typecheck (root)" pnpm --dir root typecheck
+  run_step "eslint (root, --max-warnings 0)" pnpm --dir root lint
+fi
+
+# A suite that ran in this hook already executed every guard. A skipped one
+# (stamp hit) does not count: the legacy-manifest guard compares against main,
+# which can differ between two pushes of the same bytes.
+if ((${#GUARD_SPECS[@]} > 0)) && [[ "$SUITE_RAN" != true ]]; then
+  run_step "vitest (repo guards)" pnpm exec vitest run "${GUARD_SPECS[@]}"
+fi
+
+# Only after every gate that ran has passed.
+if [[ "$STAMP_PENDING" == true ]]; then
+  gate_stamp_write
 fi
 
 # Cheap and catches the compose errors that only surface as a failed Coolify

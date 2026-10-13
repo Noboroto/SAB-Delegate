@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# A flag inherited from the calling shell would make every nested pnpm skip
+# artifact generation and gate on stale output; only this hook may set it.
+unset SAB_DEPS_READY
+
 # Swaps the interpreter when husky started this hook under `sh`; must run
 # before anything bash-4-only is parsed.
 . "$(dirname "$0")/lib/require-bash.sh"
@@ -18,9 +22,14 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib/gate-stamp.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/lib/compose-check.sh"
 trap on_hook_failure ERR
 
-mapfile -d '' STAGED_FILES < <(
-  git diff --cached --name-only --diff-filter=ACMRD -z
-)
+# Diff output goes through files, not `< <(git ...)`: a failing process
+# substitution is swallowed by `set -e` and would leave an empty list, which
+# reads as "nothing to check". `--no-renames` lists a rename as delete + add, so
+# the old path (a .ts renamed to .md, say) is still seen by the gates below.
+HOOK_TMP="$(mktemp -d)"
+trap 'rm -rf "$HOOK_TMP"' EXIT
+git diff --cached --name-only --no-renames --diff-filter=ACMRDT -z >"$HOOK_TMP/staged"
+mapfile -d '' STAGED_FILES <"$HOOK_TMP/staged"
 
 STAGED_COUNT=$(
   git diff --cached --name-only -z |
@@ -40,12 +49,26 @@ if ((${#STAGED_FILES[@]} == 0)); then
 fi
 
 # A file may sit above LINE_LIMIT, but this commit may not push it higher: the
-# count is compared against HEAD, so the debt can only shrink.
+# count is compared against HEAD, so the debt can only shrink. A rename is read
+# with `-M` here (unlike the file list above) so the new path is compared with
+# the OLD path's HEAD size; otherwise moving an oversize file would look like a
+# brand-new one and be refused, or, worse, be judged against an empty base.
 LINE_LIMIT=1000
 OVERSIZE_GREW=()
-while IFS= read -r file; do
+git diff --cached --name-status -M -z --diff-filter=ACMRT >"$HOOK_TMP/status"
+while IFS= read -r -d '' status; do
+  case "$status" in
+    R*)
+      IFS= read -r -d '' base_path
+      IFS= read -r -d '' file
+      ;;
+    *)
+      IFS= read -r -d '' file
+      base_path="$file"
+      ;;
+  esac
   case "$file" in
-    *.ts | *.tsx | *.js | *.jsx | *.mjs | *.cjs | *.css | *.scss) ;;
+    *.ts | *.tsx | *.mts | *.cts | *.js | *.jsx | *.mjs | *.cjs | *.css | *.scss) ;;
     *) continue ;;
   esac
   staged_lines=$(git show ":$file" 2>/dev/null | wc -l | tr -d ' ')
@@ -53,13 +76,13 @@ while IFS= read -r file; do
   # A file new in this commit has no HEAD version; `git show` failing under
   # pipefail would trip the ERR trap and exit 128 without this message.
   head_lines=0
-  if git cat-file -e "HEAD:$file" 2>/dev/null; then
-    head_lines=$(git show "HEAD:$file" | wc -l | tr -d ' ')
+  if git cat-file -e "HEAD:$base_path" 2>/dev/null; then
+    head_lines=$(git show "HEAD:$base_path" | wc -l | tr -d ' ')
   fi
   if ((staged_lines > head_lines)); then
     OVERSIZE_GREW+=("$file ($head_lines -> $staged_lines)")
   fi
-done < <(git diff --cached --name-only --diff-filter=d)
+done <"$HOOK_TMP/status"
 
 if ((${#OVERSIZE_GREW[@]} > 0)); then
   echo "ERROR: these files pass $LINE_LIMIT lines and this commit makes them longer:"
@@ -79,41 +102,55 @@ if ! gitleaks git --staged --redact --no-banner --config .gitleaks.toml >/dev/nu
   exit 1
 fi
 
-# Docs and memory commits skip the code gates and never wait on the heavy lock.
-MARKDOWN_ONLY=true
-for file in "${STAGED_FILES[@]}"; do
-  case "$file" in
-    *.md) ;;
-    *)
-      MARKDOWN_ONLY=false
-      break
-      ;;
-  esac
-done
-
-if [[ "$MARKDOWN_ONLY" == true ]]; then
-  echo "markdown-only commit: skip code checks"
-  exit 0
-fi
-
 # What the staged files require. Markdown never gates code. Root-level infra
-# (compose files, the legacy image file, .dockerignore) and hook scripts have
-# their own cheap checks below instead of the code gates. Anything else outside
-# root/ belongs to the pnpm workspace; root/ is the legacy bot and keeps its own
-# gates until cutover. Deletions count: removing a workspace file can break it.
+# (compose files, the legacy image file, .dockerignore, docker/) and hook
+# scripts have their own cheap checks below instead of the code gates. Anything
+# else outside root/ belongs to the pnpm workspace; root/ is the legacy bot and
+# keeps its own gates until cutover. Deletions count: removing a workspace file
+# can break it, and a rename shows up as a deletion of the old path.
 ROOT_GATED=false
 WORKSPACE_GATED=false
+INFRA_TOUCHED=false
+MD_TOUCHED=false
 RUN_COMPOSE_CHECK=false
 HOOK_FILES=()
 for file in "${STAGED_FILES[@]}"; do
   case "$file" in
-    *.md) ;;
+    *.md) MD_TOUCHED=true ;;
     root/*) ROOT_GATED=true ;;
-    compose.yml | coolify.compose.yml | dockerfile | .dockerignore) RUN_COMPOSE_CHECK=true ;;
-    .husky/*) HOOK_FILES+=("$file") ;;
+    compose.yml | coolify.compose.yml | docker/test-db.compose.yml | dockerfile | .dockerignore)
+      INFRA_TOUCHED=true
+      RUN_COMPOSE_CHECK=true
+      ;;
+    docker/*) INFRA_TOUCHED=true ;;
+    .husky/*)
+      INFRA_TOUCHED=true
+      HOOK_FILES+=("$file")
+      ;;
     *) WORKSPACE_GATED=true ;;
   esac
 done
+
+# Repo-wide guards that no code gate would otherwise exercise. A workspace run
+# already executes every scripts/*.test.ts through `pnpm test`, so they are
+# only listed here for commits that skip that suite.
+GUARD_SPECS=()
+if [[ "$WORKSPACE_GATED" != true ]]; then
+  if [[ "$INFRA_TOUCHED" == true || "$ROOT_GATED" == true ]]; then
+    GUARD_SPECS=(scripts/*.guard.test.ts)
+  elif [[ "$MD_TOUCHED" == true ]]; then
+    GUARD_SPECS=(scripts/no-untracked-references.guard.test.ts)
+  fi
+fi
+
+# Docs and memory commits skip the code gates and never wait on the heavy lock.
+# They still run the untracked-reference guard: a doc is where a dangling path
+# gets written.
+if [[ "$ROOT_GATED" != true && "$WORKSPACE_GATED" != true && "$INFRA_TOUCHED" != true ]]; then
+  echo "markdown-only commit: skip code checks"
+  run_step "vitest (repo guards)" pnpm exec vitest run "${GUARD_SPECS[@]}"
+  exit 0
+fi
 
 if [[ "$ROOT_GATED" == true || "$WORKSPACE_GATED" == true ]]; then
   # shellcheck source=lib/heavy-lock.sh
@@ -173,7 +210,7 @@ if [[ "$WORKSPACE_GATED" == true ]]; then
   for file in "${STAGED_FILES[@]}"; do
     case "$file" in
       root/*) ;;
-      *.ts | *.tsx | *.mjs | *.cjs)
+      *.ts | *.tsx | *.mts | *.cts | *.mjs | *.cjs)
         # A deleted file is in the staged set but cannot be formatted or re-added.
         if [[ -e "$file" ]]; then
           WORKSPACE_FORMATTABLE+=("$file")
@@ -191,6 +228,10 @@ if [[ "$WORKSPACE_GATED" == true ]]; then
     restage_after_prettier
   fi
 
+  # Taken after prettier --write so its own edits are not read as concurrent
+  # ones; the stamp is written only if the tree is still identical at the end.
+  gate_stamp_begin
+
   # Generated once here; the flag makes every nested pnpm call skip it.
   run_step "generate deps" pnpm generate:deps
   export SAB_DEPS_READY=1
@@ -200,11 +241,6 @@ if [[ "$WORKSPACE_GATED" == true ]]; then
   run_step "knip (unused files, exports, dependencies)" pnpm knip
   run_step "vitest (workspace)" pnpm test
   suite_stamp_write
-  # Recorded after prettier --write so pre-push can skip the same gates on
-  # byte-identical content (see lib/gate-stamp.sh). The legacy gates depend only
-  # on root/** and run in the block below whenever that tree changes, so a
-  # workspace run may vouch for the whole tree.
-  gate_stamp_write
 fi
 
 # The legacy bot's own gates, only when its files are staged.
@@ -227,13 +263,23 @@ if [[ "$ROOT_GATED" == true ]]; then
   restage_after_prettier
   run_step "eslint (root, --max-warnings 0)" pnpm --dir root lint
   run_step "typecheck (root, after prettier + eslint)" pnpm --dir root typecheck
-  # Production installs from root/pnpm-lock.yaml with --frozen-lockfile, so a
-  # change to it (or to root/package.json) must fail here, not only when a
-  # workspace file happens to be staged too.
-  run_step "vitest (legacy manifests guard)" \
-    pnpm exec vitest run scripts/legacy-lockfile.guard.test.ts
+fi
+
+# Production installs from root/pnpm-lock.yaml with --frozen-lockfile, so a
+# change to it (or to root/package.json) must fail here, not only when a
+# workspace file happens to be staged too; the guard list covers it.
+if ((${#GUARD_SPECS[@]} > 0)); then
+  run_step "vitest (repo guards)" pnpm exec vitest run "${GUARD_SPECS[@]}"
 fi
 
 if [[ "$RUN_COMPOSE_CHECK" == true ]]; then
   run_step "docker compose config (compose files)" compose_check
+fi
+
+# Last, once every gate the stamp vouches for (workspace and legacy) has passed,
+# so pre-push can skip the workspace gates on byte-identical content (see
+# lib/gate-stamp.sh). It never vouches for root/: pre-push re-runs those gates
+# whenever the pushed range touches that tree.
+if [[ "$WORKSPACE_GATED" == true ]]; then
+  gate_stamp_write
 fi

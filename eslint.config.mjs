@@ -38,10 +38,6 @@ export default [
       '**/*.d.{ts,mts,cts}',
       // The legacy bot lints itself with its own config until cutover.
       'root/**',
-      // Plain Node ops scripts, run by hand or by hooks, not shipped source.
-      // `scripts/*.mjs` only: `scripts/**` also holds TypeScript specs and
-      // guard tests, which ARE shipped test code and must stay linted.
-      'scripts/*.mjs',
       'apps/*/scripts/**',
       'docs/**',
       'plans/**',
@@ -53,14 +49,19 @@ export default [
   },
   ...tseslint.configs.recommendedTypeChecked,
   {
-    files: ['*.mjs', '*.cjs', '*.config.js'],
+    files: ['*.mjs', '*.cjs', '*.config.js', 'scripts/*.mjs'],
     ...tseslint.configs.disableTypeChecked,
   },
   {
     languageOptions: {
       parserOptions: {
         projectService: {
-          allowDefaultProject: ['*.mjs', 'vitest.config.mts', 'vitest.db.config.mts'],
+          allowDefaultProject: [
+            '*.mjs',
+            'scripts/*.mjs',
+            'vitest.config.mts',
+            'vitest.db.config.mts',
+          ],
           maximumDefaultProjectFileMatchCount_THIS_WILL_SLOW_DOWN_LINTING: 20,
         },
         tsconfigRootDir: import.meta.dirname ?? process.cwd(),

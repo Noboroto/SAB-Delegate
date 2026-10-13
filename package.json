@@ -20,8 +20,8 @@
     "test:db": "vitest run --config vitest.db.config.mts",
     "test-db:start": "node scripts/test-db.mjs start",
     "test-db:stop": "node scripts/test-db.mjs stop",
-    "formatter:fix": "prettier --write \"**/*.{ts,tsx,mjs,cjs}\" --log-level warn --cache --cache-location node_modules/.cache/prettier-fix",
-    "formatter:check": "prettier --check \"**/*.{ts,tsx,mjs,cjs}\" --log-level warn --cache --cache-location node_modules/.cache/prettier-check",
+    "formatter:fix": "prettier --write \"**/*.{ts,tsx,mts,cts,mjs,cjs}\" --log-level warn --cache --cache-location node_modules/.cache/prettier-fix",
+    "formatter:check": "prettier --check \"**/*.{ts,tsx,mts,cts,mjs,cjs}\" --log-level warn --cache --cache-location node_modules/.cache/prettier-check",
     "knip": "knip",
     "secrets:history": "node scripts/secrets-history.mjs",
     "prepare": "if command -v husky >/dev/null; then husky; fi && node scripts/fix-hook-perms.mjs"
