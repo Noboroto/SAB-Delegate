@@ -33,6 +33,7 @@ export const AUDIT_ACTIONS = {
   privateThreadCreate: 'private_thread.create',
   purgeMessages: 'purge.messages',
   activityCreate: 'activity.create',
+  inviteCreate: 'invite.create',
   apiKeyMint: 'api_key.mint',
   apiKeyRevoke: 'api_key.revoke',
 } as const;

@@ -13,6 +13,7 @@ import { BirthdayCommands } from './modules/birthday/birthday.commands.js';
 import { BirthdayCron } from './modules/birthday/birthday.cron.js';
 import { BirthdayService } from './modules/birthday/birthday.service.js';
 import { GuildConfigService } from './modules/guild-config/guild-config.service.js';
+import { InfoService } from './modules/info/info.service.js';
 import { MentionService } from './modules/mention/mention.service.js';
 import { MessagingService } from './modules/messaging/messaging.service.js';
 import { NoteService } from './modules/note/note.service.js';
@@ -106,6 +107,7 @@ describe('AppModule', () => {
       PurgeService,
       ActivityService,
       AttendanceService,
+      InfoService,
     ]) {
       expect(moduleRef.get(provider, { strict: false }), provider.name).toBeDefined();
     }

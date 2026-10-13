@@ -1,0 +1,41 @@
+{
+  "commands": {
+    "intro": { "description": "Get the first introduction of a member from the intro channel" },
+    "idByReaction": {
+      "description": "List the ids of everyone who reacted to a message with an emoji"
+    },
+    "idByRole": { "description": "List the ids of every member who has a role" },
+    "inviteLink": { "description": "Get a permanent invite link for this server" },
+    "userOption": { "description": "Member whose introduction you want" },
+    "messageLinkOption": { "description": "Link of the message" },
+    "emojiOption": { "description": "Emoji of the reaction" },
+    "mentionOption": { "description": "Mention the members instead of listing ids (default: no)" },
+    "replyMessageOption": { "description": "Link of a message to send the list to as a reply" },
+    "contentOption": { "description": "Text to add after the list" },
+    "roleOption": { "description": "Role whose members you want" },
+    "inThisChannelOption": { "description": "Only members who can see this channel (default: no)" },
+    "channelOption": { "description": "Channel to invite to (default: this channel)" }
+  },
+  "intro": {
+    "noChannel": "No introduction channel is set for this server.",
+    "notFound": "This member has no introduction in the last {count, number} messages.",
+    "found": "Jump to the [introduction]({url}) of {user}:\n\n{content}"
+  },
+  "reactors": {
+    "header": "{count, plural, one {# user} other {# users}} [reacted to the message]({url}) with {emoji}:",
+    "none": "No one reacted with that emoji.",
+    "invalidLink": "Provide a valid message link.",
+    "replyNotFound": "The message to reply to was not found.",
+    "sent": "Sent!",
+    "replyFailed": "Cannot reply to that message. Check the permissions of the bot there."
+  },
+  "roleMembers": {
+    "header": "{count, plural, one {# user} other {# users}} in {role}:"
+  },
+  "invite": {
+    "dm": "Invite link for `{channel}` is {url}",
+    "sent": "Check your DM for the invite link.",
+    "dmFailed": "Cannot send you a DM. Here is the invite, only you can see it: {url}",
+    "reason": "Requested by {user}"
+  }
+}

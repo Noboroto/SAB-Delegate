@@ -154,7 +154,7 @@ describe('all feature modules in one application', () => {
     expect(validateCommandMetadata(payload)).toEqual([]);
   });
 
-  it('adds only root commands of the previous bot, minus shutdown, within the 100 limit', () => {
+  it('keeps the 16 root commands of the previous bot, minus shutdown, within the 100 limit', () => {
     const roots = payload
       .filter(
         (command) =>
@@ -162,7 +162,7 @@ describe('all feature modules in one application', () => {
       )
       .map((command) => command.name);
     expect(roots.length).toBeLessThanOrEqual(100);
-    for (const root of roots) expect(LEGACY_ROOT_COMMANDS, root).toContain(root);
+    expect([...roots].sort()).toEqual([...LEGACY_ROOT_COMMANDS].sort());
     expect(roots).not.toContain('shutdown');
   });
 

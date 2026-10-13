@@ -1,0 +1,43 @@
+{
+  "commands": {
+    "intro": {
+      "description": "Lấy bài giới thiệu đầu tiên của một thành viên trong kênh giới thiệu"
+    },
+    "idByReaction": { "description": "Liệt kê id của mọi người đã thả một emoji vào tin nhắn" },
+    "idByRole": { "description": "Liệt kê id của mọi thành viên có một vai trò" },
+    "inviteLink": { "description": "Lấy liên kết mời vĩnh viễn vào máy chủ này" },
+    "userOption": { "description": "Thành viên cần lấy bài giới thiệu" },
+    "messageLinkOption": { "description": "Liên kết của tin nhắn" },
+    "emojiOption": { "description": "Emoji của cảm xúc" },
+    "mentionOption": { "description": "Nhắc thành viên thay vì liệt kê id (mặc định: không)" },
+    "replyMessageOption": {
+      "description": "Liên kết tin nhắn để gửi danh sách vào dưới dạng trả lời"
+    },
+    "contentOption": { "description": "Nội dung thêm vào sau danh sách" },
+    "roleOption": { "description": "Vai trò cần lấy danh sách thành viên" },
+    "inThisChannelOption": { "description": "Chỉ thành viên xem được kênh này (mặc định: không)" },
+    "channelOption": { "description": "Kênh để mời vào (mặc định: kênh này)" }
+  },
+  "intro": {
+    "noChannel": "Máy chủ này chưa đặt kênh giới thiệu.",
+    "notFound": "Thành viên này không có bài giới thiệu nào trong {count, number} tin nhắn gần nhất.",
+    "found": "Đến [bài giới thiệu]({url}) của {user}:\n\n{content}"
+  },
+  "reactors": {
+    "header": "{count, number} người đã [thả cảm xúc]({url}) {emoji} vào tin nhắn:",
+    "none": "Chưa ai thả emoji đó.",
+    "invalidLink": "Hãy nhập liên kết tin nhắn hợp lệ.",
+    "replyNotFound": "Không tìm thấy tin nhắn để trả lời.",
+    "sent": "Đã gửi!",
+    "replyFailed": "Không trả lời được tin nhắn đó. Hãy kiểm tra quyền của bot ở đó."
+  },
+  "roleMembers": {
+    "header": "{count, number} người trong {role}:"
+  },
+  "invite": {
+    "dm": "Liên kết mời vào `{channel}`: {url}",
+    "sent": "Hãy xem tin nhắn riêng để lấy liên kết mời.",
+    "dmFailed": "Không gửi được tin nhắn riêng cho bạn. Đây là liên kết mời, chỉ mình bạn thấy: {url}",
+    "reason": "Yêu cầu bởi {user}"
+  }
+}
