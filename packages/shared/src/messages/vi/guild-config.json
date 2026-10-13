@@ -1,0 +1,21 @@
+{
+  "commands": {
+    "introChannel": {
+      "description": "Đặt kênh để bot đọc phần giới thiệu của thành viên"
+    },
+    "logChannel": {
+      "description": "Đặt kênh để bot ghi nhật ký tin nhắn và sự kiện"
+    },
+    "birthdayChannel": {
+      "description": "Đặt kênh để bot gửi lời chúc mừng sinh nhật"
+    },
+    "channelOption": {
+      "description": "Kênh bạn muốn đặt"
+    }
+  },
+  "set": {
+    "introChannel": "Kênh giới thiệu hiện là {channel}.",
+    "logChannel": "Kênh nhật ký hiện là {channel}.",
+    "birthdayChannel": "Kênh chúc mừng sinh nhật hiện là {channel}."
+  }
+}

@@ -9,7 +9,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { GuildLocaleService } from '../../i18n/guild-locale.service.js';
 import { DiscordCommands } from '../decorators/discord-commands.decorator.js';
 import { BOT_LOG_CHANNEL_NAME, ErrorReporter } from '../error-reporter.service.js';
-import { CommandError, DiscordExceptionFilter } from './discord-exception.filter.js';
+import { ServiceError } from '../../common/errors/service-error.js';
+import { DiscordExceptionFilter } from './discord-exception.filter.js';
 
 const ADMIN_GUILD = '333333333333333333';
 const token = `marker-${randomBytes(8).toString('hex')}`;
@@ -262,11 +263,11 @@ describe('DiscordExceptionFilter', () => {
     expect(interaction.respond).toHaveBeenCalledWith([]);
   });
 
-  it('tells the user what is wrong with a CommandError and does not report it', async () => {
+  it('tells the user what is wrong with a ServiceError and does not report it', async () => {
     silenceLogs();
     const { filter, report } = build();
     const interaction = interactionOf({});
-    await filter.catch(new CommandError(ErrorCode.VALIDATION_FAILED), hostOf(interaction));
+    await filter.catch(new ServiceError(ErrorCode.VALIDATION_FAILED), hostOf(interaction));
     expect(interaction.reply).toHaveBeenCalledWith({
       content: MESSAGES.en.errors.VALIDATION_FAILED,
       flags: MessageFlags.Ephemeral,

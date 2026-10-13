@@ -34,6 +34,21 @@ export {
   toSupportedLocale,
   type Locale,
 } from './utils/locale.js';
+export {
+  CanManageGuildInputSchema,
+  canManageGuild,
+  type CanManageGuildInput,
+} from './permissions/can-manage-guild.js';
+export {
+  GuildSettingsDryRunSchema,
+  GuildSettingsPatchSchema,
+  GuildSettingsSchema,
+  WORD_MAX_WORDS_MAX,
+  WORD_MAX_WORDS_MIN,
+  type GuildSettings,
+  type GuildSettingsDryRun,
+  type GuildSettingsPatch,
+} from './schemas/guild-config.js';
 export { splitMessage } from './utils/split-message.js';
 export { parseSnowflakes } from './utils/snowflakes.js';
 export {

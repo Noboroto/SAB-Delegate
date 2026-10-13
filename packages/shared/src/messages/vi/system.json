@@ -1,0 +1,9 @@
+{
+  "ping": {
+    "pinging": "Đang đo...",
+    "reply": ":ping_pong: Pong!\n:stopwatch: Thời gian hoạt động: {uptime}\n:sparkling_heart: Nhịp websocket: {wsPing}\n:round_pushpin: Độ trễ khứ hồi: {roundtrip}",
+    "uptime": "{days} ngày {hours} giờ {minutes} phút",
+    "milliseconds": "{value} ms",
+    "unavailable": "chưa đo được"
+  }
+}

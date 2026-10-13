@@ -1,5 +1,5 @@
 import { Catch, Logger, type ExceptionFilter, type ExecutionContext } from '@nestjs/common';
-import type { ErrorCode } from '@sab/shared';
+import { ServiceError } from '../../common/errors/service-error.js';
 import { MessageFlags } from 'discord.js';
 import { NecordExecutionContext } from 'necord';
 import { GuildLocaleService } from '../../i18n/guild-locale.service.js';
@@ -7,18 +7,6 @@ import { translatorFor } from '../../i18n/translator.js';
 import { errorLabel } from '../../prisma/pool-factory.js';
 import { ErrorReporter } from '../error-reporter.service.js';
 import { isDeadInteractionError } from '../helpers/reply.js';
-
-/**
- * A failure the person who ran the command is meant to read about (bad input,
- * missing permission). It is answered with the catalog text for its code and is
- * not reported to `#bot-log`: it is not a bug.
- */
-export class CommandError extends Error {
-  constructor(readonly code: ErrorCode) {
-    super(code);
-    this.name = 'CommandError';
-  }
-}
 
 /** The slice of an interaction the filter reads and answers through. */
 type FailedInteraction = {
@@ -81,7 +69,7 @@ export class DiscordExceptionFilter implements ExceptionFilter {
       return;
     }
 
-    const expected = exception instanceof CommandError;
+    const expected = exception instanceof ServiceError;
     if (!expected) await this.reporter.report(describe(necord), exception);
     if (interaction === undefined) return;
 
@@ -92,7 +80,9 @@ export class DiscordExceptionFilter implements ExceptionFilter {
     if (!interaction.isRepliable()) return;
 
     const t = translatorFor(await this.locales.resolve(interaction.guildId, interaction));
-    const content = expected ? t(`errors.${exception.code}`) : t('common.commandFailed');
+    const content = expected
+      ? t(`errors.${exception.code}`, exception.params)
+      : t('common.commandFailed');
     await this.answer(() => {
       const flags = MessageFlags.Ephemeral;
       if (interaction.replied === true) return interaction.followUp({ content, flags });

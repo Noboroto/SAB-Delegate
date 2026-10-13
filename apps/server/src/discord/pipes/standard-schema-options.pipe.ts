@@ -1,6 +1,6 @@
 import { StandardSchemaValidationPipe, type ArgumentMetadata } from '@nestjs/common';
 import { ErrorCode } from '@sab/shared';
-import { CommandError } from '../filters/discord-exception.filter.js';
+import { ServiceError } from '../../common/errors/service-error.js';
 
 type Schema = NonNullable<ArgumentMetadata['schema']>;
 
@@ -20,7 +20,7 @@ export class StandardSchemaOptionsPipe extends StandardSchemaValidationPipe {
     super({
       // Necord options come from a custom parameter decorator.
       validateCustomDecorators: true,
-      exceptionFactory: () => new CommandError(ErrorCode.VALIDATION_FAILED),
+      exceptionFactory: () => new ServiceError(ErrorCode.VALIDATION_FAILED),
     });
   }
 

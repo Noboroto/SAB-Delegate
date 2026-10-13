@@ -1,0 +1,21 @@
+{
+  "commands": {
+    "introChannel": {
+      "description": "Set the channel the bot reads member introductions from"
+    },
+    "logChannel": {
+      "description": "Set the channel the bot logs messages and events to"
+    },
+    "birthdayChannel": {
+      "description": "Set the channel birthday wishes are sent to"
+    },
+    "channelOption": {
+      "description": "The channel you want to set"
+    }
+  },
+  "set": {
+    "introChannel": "The introduction channel is now {channel}.",
+    "logChannel": "The log channel is now {channel}.",
+    "birthdayChannel": "The birthday channel is now {channel}."
+  }
+}

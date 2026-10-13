@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import { ErrorCode, MESSAGE_MAX_LENGTH, z } from '@sab/shared';
 import { MessageFlags } from 'discord.js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { CommandError } from '../filters/discord-exception.filter.js';
+import { ServiceError } from '../../common/errors/service-error.js';
 import { StandardSchemaOptionsPipe } from '../pipes/standard-schema-options.pipe.js';
 import {
   AUTOCOMPLETE_MAX_CHOICES,
@@ -299,8 +299,8 @@ describe('StandardSchemaOptionsPipe', () => {
       () => undefined,
       (error: unknown) => error,
     );
-    expect(failure).toBeInstanceOf(CommandError);
-    expect((failure as CommandError).code).toBe(ErrorCode.VALIDATION_FAILED);
-    expect((failure as CommandError).message).not.toContain('count');
+    expect(failure).toBeInstanceOf(ServiceError);
+    expect((failure as ServiceError).code).toBe(ErrorCode.VALIDATION_FAILED);
+    expect((failure as ServiceError).message).not.toContain('count');
   });
 });

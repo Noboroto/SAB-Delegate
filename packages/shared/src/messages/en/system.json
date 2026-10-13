@@ -1,0 +1,9 @@
+{
+  "ping": {
+    "pinging": "Pinging...",
+    "reply": ":ping_pong: Pong!\n:stopwatch: Uptime: {uptime}\n:sparkling_heart: Websocket heartbeat: {wsPing}\n:round_pushpin: Roundtrip latency: {roundtrip}",
+    "uptime": "{days}d {hours}h {minutes}m",
+    "milliseconds": "{value} ms",
+    "unavailable": "not measured yet"
+  }
+}
