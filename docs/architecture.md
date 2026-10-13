@@ -9,11 +9,11 @@ Phạm vi: bố cục tiến trình, ranh giới và LÝ DO. Hành vi chi tiết
  ┌─ Resource A: Postgres (riêng) ───────┐   ┌─ Resource B: app compose (repo, nhánh main) ───────────────┐
  │ alias `sab-postgres`, không `ports:`  │<─>│ sab-release  (one-shot) ──service_completed_successfully──┐ │
  │ role: migrate · runtime · backup      │   │ sab-server   (Necord bot + Prisma + pg-boss + /health) <───┘ │
- │ dữ liệu: /srv/appdata/sab-delegate/   │   │ sab-backup   (crond, role backup)                            │
+ │ dữ liệu: /srv/appdata/sab-delegate/   │   │ sab-backup   (vòng sleep tới 03:00, role backup)             │
  └───────────────────────────────────────┘   └──────────────────────────────────────────────────────────────┘
 ```
 
-Nơi sở hữu: `coolify.compose.yml` (stack prod), `deploy/postgres.compose.yml` (nội dung resource Postgres), `apps/server/Dockerfile` (target `runner`, `release`), `apps/server/scripts/` (release, backup, restore drill). (xác nhận sau khi compose xong: tên file và service)
+Nơi sở hữu: `coolify.compose.yml` (stack prod), `deploy/postgres.compose.yml` (nội dung resource Postgres), `apps/server/Dockerfile` (target `runner`, `release`), `apps/server/scripts/` (release, backup, restore drill).
 
 ## Quyết định và lý do
 

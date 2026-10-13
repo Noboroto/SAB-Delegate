@@ -1,18 +1,18 @@
 # Triển khai và vận hành
 
-Phạm vi: cách deploy, cấu hình Coolify, kiểm sau deploy, backup, đăng ký lại lệnh. Kiến trúc và lý do ở `docs/architecture.md`; thay bot cũ ở `docs/cutover-runbook.md`; luật cứng ở `AGENTS.md`. Chỗ ghi "(xác nhận sau khi compose xong)" mô tả theo hợp đồng thiết kế, phải đối chiếu lại với `coolify.compose.yml` và script thật khi các file đó hoàn tất. Con số đo được ghi ở `mem:lessons/deploy/*`, không chép lại đây.
+Phạm vi: cách deploy, cấu hình Coolify, kiểm sau deploy, backup, đăng ký lại lệnh. Kiến trúc và lý do ở `docs/architecture.md`; thay bot cũ ở `docs/cutover-runbook.md`; luật cứng ở `AGENTS.md`.
 
 ## Nơi sở hữu từng thứ
 
 | Việc | Nguồn thật |
 | --- | --- |
 | Service, mạng, healthcheck, giới hạn, bind mount | `coolify.compose.yml` |
-| Resource Postgres (image, lệnh, mount) | `deploy/postgres.compose.yml` (xác nhận sau khi compose xong) |
-| Stack chạy thử cục bộ | `compose.yml`, `deploy/local-smoke.compose.yml` (xác nhận sau khi compose xong) |
+| Resource Postgres (image, lệnh, mount) | `deploy/postgres.compose.yml` |
+| Stack chạy thử cục bộ | `compose.yml`, `deploy/local-smoke.compose.yml` |
 | Release (kiểm rỗng, dump, migrate, cấp quyền) | `apps/server/scripts/release.sh` |
-| Backup, restore drill | `apps/server/scripts/backup.sh`, `restore-drill.sh` (xác nhận sau khi compose xong) |
+| Backup, restore drill | `apps/server/scripts/backup.sh`, `restore-drill.sh` |
 | Hợp lệ của biến môi trường | `apps/server/src/config/env.ts` |
-| Luật compose (cấm `ports`, named volume...) | `scripts/compose-rules.guard.test.ts` (xác nhận sau khi compose xong) |
+| Luật compose (cấm `ports`, named volume...) | `scripts/compose-rules.guard.test.ts` |
 
 ## Tài nguyên trên Coolify
 
@@ -30,15 +30,34 @@ Bảng này, `env.ts`, khối `environment:` của compose và `.env.example` ph
 
 | Service | Biến |
 | --- | --- |
-| `sab-server` | `APP_ENV`, **`DISCORD_TOKEN`**, `DISCORD_CLIENT_ID`, `DISCORD_ALLOWED_APP_IDS`, `ADMIN_GUILD_ID`, `MIGRATION_PENDING`, `COMMANDS_FORCE_RESET`, `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, **`POSTGRES_PASSWORD`** (role runtime), `DB_POOL_MAX`, `PGBOSS_POOL_MAX`, `PGBOSS_WORKERS_ENABLED`, `LOG_LEVEL`. `DISCORD_DEV_GUILD_ID` chỉ ở dev cục bộ, CẤM ở production |
-| `sab-release` | `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER` (role runtime, để cấp quyền), `POSTGRES_MIGRATE_USER`, **`POSTGRES_MIGRATE_PASSWORD`**, `BACKUP_ENABLED`, `BACKUP_KEEP_PRE_MIGRATE`, cùng các biến backup nếu release gọi `backup.sh` |
-| `sab-backup` | `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_BACKUP_USER`, **`POSTGRES_BACKUP_PASSWORD`**, `BACKUP_ENABLED`, `BACKUP_KEEP_DAILY`, `BACKUP_KEEP_PRE_MIGRATE` |
+| `sab-server` | `APP_ENV`, **`DISCORD_TOKEN`**, `DISCORD_CLIENT_ID`, `DISCORD_ALLOWED_APP_IDS`, `ADMIN_GUILD_ID`, `MIGRATION_PENDING` (mặc định compose `true`: thiếu hay trống thì bot không đăng nhập; chạy thật phải đặt `false` rõ ràng), `COMMANDS_FORCE_RESET`, `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, **`POSTGRES_PASSWORD`** (role runtime), `DB_POOL_MAX`, `PGBOSS_POOL_MAX`, `PGBOSS_WORKERS_ENABLED`, `LOG_LEVEL`. `DISCORD_DEV_GUILD_ID` chỉ ở dev cục bộ, CẤM ở production |
+| `sab-release` | `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER` (role runtime, để cấp quyền), `POSTGRES_MIGRATE_USER`, **`POSTGRES_MIGRATE_PASSWORD`**, `BACKUP_DIR`, `BACKUP_KEEP_PRE_MIGRATE`. Không có `BACKUP_ENABLED`: release luôn dump DB không rỗng (xem mục Backup) |
+| `sab-backup` | `TZ`, `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_BACKUP_USER`, **`POSTGRES_BACKUP_PASSWORD`**, `BACKUP_DIR`, `BACKUP_ENABLED`, `BACKUP_KEEP_DAILY` |
 | Không service mới nào | `TOKENS` (cũ). Giữ trên Coolify tới hết cửa sổ rollback nhưng NGOÀI mọi allowlist |
 | Máy owner, tạm | `LEGACY_BOT_TOKEN`, `LEGACY_CLIENT_ID` (script dọn lệnh Alohomora); không bao giờ vào compose |
 
-(xác nhận sau khi compose xong: danh sách thật của từng khối `environment:`; `COMMANDS_FORCE_RESET` chỉ đặt tạm, xem mục đăng ký lại lệnh.)
+Bảng đã đối chiếu với `coolify.compose.yml` (2026-10-14). `COMMANDS_FORCE_RESET` chỉ đặt tạm, xem mục đăng ký lại lệnh.
 
 Kiểm: `docker exec <container> env | cut -d= -f1` cho từng container, so với bảng; không `TOKENS`. Không in giá trị, không `docker compose config` đã nội suy.
+
+## Trước lần deploy đầu
+
+Làm đúng thứ tự, trên host; thiếu một bước thì `sab-release` hoặc Postgres hỏng ngay lần push đầu.
+
+1. Mạng: `docker network create sab-db`.
+2. Thư mục dưới `/srv/appdata/sab-delegate/` (và `/srv/appdata/_archive/sab-delegate/`), với chủ và quyền:
+
+| Thư mục | Chủ / quyền | Ghi chú |
+| --- | --- | --- |
+| `postgres` | root, 0755 lúc tạo | entrypoint của image Postgres chown phần dữ liệu về uid 999 khi khởi tạo; sau lần chạy đầu kiểm `ls -ln` thấy cụm PG18 thuộc 999, mode 0700 |
+| `backups` | root, 0700 | `sab-release` và `sab-backup` chạy root; `backup.sh` cũng tự `chmod 700` |
+| `files-final` | root, 0755; file 0644 | mount chỉ-đọc cho server (uid `node`); tạo bằng các bước T0 của `docs/cutover-runbook.md`, không `mkdir` rỗng |
+| `files` | giữ nguyên | dữ liệu sống của bot cũ, không đụng |
+
+3. Triển khai resource Postgres (`deploy/postgres.compose.yml`) và chờ healthy.
+4. Chạy `deploy/initdb/01-roles.sh` MỘT lần theo hướng dẫn ở đầu file (tạo ba role, khoá `CONNECT`). Script tắt ghi log câu lệnh cho phiên của nó nên mật khẩu không vào log Postgres. File phải `+x` trong git (`git ls-files -s deploy/initdb/01-roles.sh` bắt đầu bằng `100755`). Xong bước này mới được push.
+5. Nhập biến trên Coolify (`is_buildtime=false` cho mọi bí mật). `MIGRATION_PENDING` để mặc định (`true`).
+6. Push `main`. Sau lần build đầu: `docker history --no-trunc` trên CẢ ba image, `grep -c '<TÊN_SECRET>='` phải 0 cho từng tên bí mật; đo thời gian từ `StartedAt` của `sab-server` tới lần healthcheck đầu tiên thành công và so với `start_period: 60s` (chừa dư; lệnh ở runbook T1).
 
 ## Giảm downtime khi deploy
 
@@ -64,11 +83,13 @@ Coolify xoá rồi dựng lại cả stack mỗi deploy, và một token chỉ �
 
 ## Backup và restore
 
-- Một script `backup.sh` dùng cho release (tag `pre-migrate`, chạy mỗi lần Postgres đã có bảng, TRƯỚC `prisma migrate deploy`) và job hằng ngày `sab-backup` (`0 3 * * *`, `Asia/Ho_Chi_Minh`, tag `daily`). Dump hỏng thì release dừng, server không khởi động.
-- Dump `pg_dump -Fc`, kiểm bằng `pg_restore --list`, đổi tên nguyên tử; file 0600, thư mục `/srv/appdata/sab-delegate/backups` 0700. Tên `<db>-<tag>-<UTC>.dump`; xoay vòng chỉ trong cùng tiền tố `<db>-<tag>-` (`daily` giữ 14, `pre-migrate` giữ 5). Tag khác (`baseline`, `pre-cutover`, `pre-rollback`) KHÔNG xoay. (xác nhận sau khi compose xong: số giữ, đường dẫn)
+- Một script `backup.sh` dùng cho release (tag `pre-migrate`, chạy mỗi lần Postgres đã có bảng, TRƯỚC `prisma migrate deploy`) và job hằng ngày `sab-backup` (vòng sleep tới 03:00 `Asia/Ho_Chi_Minh`, tag `daily`). Dump hỏng thì release dừng, server không khởi động. Release LUÔN dump DB không rỗng: nó ép `BACKUP_ENABLED=true` cho lần gọi đó và không đọc biến này, nên một giá trị `false` lạc vào không thể để migration chạy trên dữ liệu không có bản sao. `BACKUP_ENABLED` chỉ tắt job hằng ngày và dump thủ công (dev).
+- Lệnh backup thủ công chạy trong container `sab-backup`: `b=$(docker ps --filter label=com.docker.compose.service=sab-backup --format '{{.Names}}'); docker exec "$b" /bin/sh /app/apps/server/scripts/backup.sh <tag>`.
+- Healthcheck của `sab-backup`: khoẻ khi có dump `*-daily-*.dump` mới hơn 26 giờ (cron 03:00 cộng 2 giờ dự phòng). Container mới chưa có dump nào nên trong 26 giờ đầu một file đánh dấu lúc khởi động (`/tmp/backup-started`) thay chỗ; dump `pre-migrate` hay `baseline` KHÔNG được tính, để không che việc dump hằng ngày hỏng. Hệ quả: job hằng ngày hỏng ngay ngày đầu chỉ lộ ra sau 26 giờ.
+- Dump `pg_dump -Fc`, kiểm bằng `pg_restore --list`, đổi tên nguyên tử rồi `sync` (rename nguyên tử nhưng chưa bền); file 0600, thư mục `/srv/appdata/sab-delegate/backups` 0700. Tên `<db>-<tag>-<UTC>.dump`; xoay vòng chỉ trong cùng tiền tố `<db>-<tag>-` (`daily` giữ 14, `pre-migrate` giữ 5). Tag khác (`baseline`, `pre-cutover`, `pre-rollback`) KHÔNG xoay.
 - Dump trước thay đổi rủi ro (cutover, rollback, migration lớn) copy thêm sang `/srv/appdata/_archive/sab-delegate/`, ngoài vòng xoay.
 - Ngoại lệ có ghi nhận: chủ host không đề xuất backup định kỳ, nhưng owner repo QUYẾT ĐỊNH có backup hằng ngày. Điều kiện giữ ngoại lệ: restore drill đạt. Không có bản sao ngoài máy chủ ở Release 1; owner tải tay dump `baseline` về máy riêng sau cutover.
-- Restore drill (`restore-drill.sh`): khôi phục dump mới nhất vào database tạm, đếm row so với nguồn, rồi xoá database tạm. Chạy sau khi dựng và sau mỗi thay đổi lớn của schema hoặc script backup. Khôi phục thật: dừng app, `pg_restore --clean --if-exists`, đọc lại số dòng bằng kết nối MỚI.
+- Restore drill (`restore-drill.sh`): khôi phục dump mới nhất vào database tạm, đếm row so với nguồn, rồi xoá database tạm. Chỉ so schema `public` (dữ liệu ứng dụng và `_prisma_migrations`): các bảng của pg-boss (schema `pgboss`) đổi từng giây nên so sẽ báo lệch trên một dump hoàn toàn lành; dump vẫn được khôi phục đủ schema đó (`--exit-on-error`). Chạy sau khi dựng và sau mỗi thay đổi lớn của schema hoặc script backup. Khôi phục thật: dừng app, `pg_restore --clean --if-exists`, đọc lại số dòng bằng kết nối MỚI.
 - Cấm `docker compose down -v`; cấm `prisma migrate dev|reset` và `db push` trên DB không phải máy dev.
 
 ## Log và giám sát
