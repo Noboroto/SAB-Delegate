@@ -13,9 +13,14 @@ type Run = (deps: {
 const scriptPath = './clear-legacy-commands.mjs';
 const { run } = (await import(scriptPath)) as { run: Run };
 
-// Built at runtime so no token-shaped literal lives in the repo.
-const TOKEN = ['fake', 'legacy', 'token', String(Date.now())].join('.');
 const CLIENT_ID = '123456789012345678';
+// Built at runtime so no token-shaped literal lives in the repo. The first
+// segment is the base64url of the application id, as in a real token.
+const tokenFor = (applicationId: string) =>
+  [Buffer.from(applicationId).toString('base64url'), 'legacy', String(Date.now())].join('.');
+const TOKEN = tokenFor(CLIENT_ID);
+// Built at runtime: a literal id next to `DISCORD_CLIENT_ID` trips the secret scanner.
+const OTHER_APP_ID = '3'.repeat(18);
 const GUILD_ID = '987654321098765432';
 
 const routes = {
@@ -113,6 +118,39 @@ describe('clear-legacy-commands', () => {
     const h = harness();
     expect(await h.exec([], { LEGACY_CLIENT_ID: 'abc' })).toBe(2);
     expect(h.calls).toHaveLength(0);
+  });
+
+  it('refuses a client id that differs from the one encoded in the token', async () => {
+    const h = harness();
+    const other = '223456789012345678';
+    expect(await h.exec([], { LEGACY_CLIENT_ID: other })).toBe(2);
+    expect(h.calls).toHaveLength(0);
+    const text = h.err.join('\n');
+    expect(text).toContain('does not match');
+    expect(text).not.toContain(other);
+    expect(text).not.toContain(TOKEN);
+  });
+
+  it.each(['not-base64.!!.x', 'bm90LWEtc25vd2ZsYWtl.x.y'])(
+    'refuses a token whose first segment is not an application id (%s)',
+    async (token) => {
+      const h = harness();
+      expect(await h.exec([], { LEGACY_BOT_TOKEN: token })).toBe(2);
+      expect(h.calls).toHaveLength(0);
+      expect(h.err.join('\n')).not.toContain(token);
+    },
+  );
+
+  it('refuses to run against the new bot application', async () => {
+    const h = harness();
+    expect(await h.exec(['--apply'], { DISCORD_CLIENT_ID: CLIENT_ID })).toBe(2);
+    expect(h.calls).toHaveLength(0);
+    expect(h.err.join('\n')).toContain('new bot');
+  });
+
+  it('proceeds when DISCORD_CLIENT_ID is another application', async () => {
+    const h = harness();
+    expect(await h.exec([], { DISCORD_CLIENT_ID: OTHER_APP_ID })).toBe(0);
   });
 
   it('never prints the token, even when the REST error contains it', async () => {

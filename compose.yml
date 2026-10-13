@@ -54,8 +54,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_MIGRATE_USER: ${POSTGRES_MIGRATE_USER}
       POSTGRES_MIGRATE_PASSWORD: ${POSTGRES_MIGRATE_PASSWORD}
-      # Dumps need a backup directory; local development has no use for them.
-      BACKUP_ENABLED: 'false'
+      # The release job always dumps a non-empty database before migrating (into
+      # this container's /backups, discarded with it); no switch turns that off.
 
   sab-server:
     build:

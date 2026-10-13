@@ -61,14 +61,20 @@ describe('translatorFor', () => {
     expect(translatorFor('vi')).not.toBe(translatorFor('en'));
   });
 
-  it('has a message for every ErrorCode in both languages', () => {
+  it('has a message for every ErrorCode in both languages, formatted without a warning', () => {
+    const warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    // The ICU select needs its argument, as every throw site supplies it.
+    const params: Partial<
+      Record<(typeof ErrorCodeSchema.options)[number], { permission: string }>
+    > = { DISCORD_MISSING_PERMISSIONS: { permission: 'other' } };
     for (const locale of ['vi', 'en']) {
       const t = translatorFor(locale);
       for (const code of ErrorCodeSchema.options) {
         expect(t.has(`errors.${code}`), `${locale} ${code}`).toBe(true);
-        expect(t(`errors.${code}`).length).toBeGreaterThan(0);
+        expect(t(`errors.${code}`, params[code]).length).toBeGreaterThan(0);
       }
     }
+    expect(warn).not.toHaveBeenCalled();
   });
 
   it('does not throw when a placeholder has no value, and logs without failing the reply', () => {

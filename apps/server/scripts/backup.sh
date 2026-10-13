@@ -158,6 +158,9 @@ fi
 
 chmod 600 "$tmp" || die "cannot restrict the dump to 0600"
 mv "$tmp" "$final" || die "cannot move the dump into place"
+# Rename is atomic but not durable: flush so a power loss right after the log
+# line below cannot leave a zero-length or missing file under the final name.
+sync
 log "wrote $(basename "$final") ($(wc -c <"$final" | tr -d ' ') bytes)"
 
 if [ -n "$keep" ]; then

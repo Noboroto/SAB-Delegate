@@ -5,6 +5,11 @@
 #
 # Usage: restore-drill.sh [dump-file]   (default: newest `<db>-*-<ts>.dump`)
 #
+# Only the `public` schema is compared: the application data and the migration
+# history. pg-boss keeps its own `pgboss` schema whose tables change every second
+# (job rows, maintenance), so counting them would report a mismatch on a healthy
+# dump. The dump still restores that schema (`--exit-on-error` proves it loads).
+#
 # Two roles are involved on purpose: the read-only backup role reads the
 # source counts, and an admin role with CREATEDB creates and drops the
 # throwaway database. Counts are compared exactly, so run the drill soon after a
@@ -114,12 +119,12 @@ cleanup() {
 trap cleanup EXIT
 trap 'exit 1' INT TERM HUP
 
-# One row per user table: `schema.table|count`. query_to_xml counts every
+# One row per `public` table: `schema.table|count`. query_to_xml counts every
 # table with a single statement, so the list cannot drift from the counted set.
 COUNT_SQL="select format('%I.%I', schemaname, tablename) || '|' ||
 	(xpath('/row/c/text()', query_to_xml(format('select count(*) as c from %I.%I', schemaname, tablename), false, true, '')))[1]::text
 from pg_tables
-where schemaname not in ('pg_catalog', 'information_schema')
+where schemaname = 'public'
 order by 1"
 
 log "restoring $(basename "$dump") into $drill_db"

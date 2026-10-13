@@ -207,6 +207,79 @@ function envKeys(service: Mapping): string[] | undefined {
   return undefined;
 }
 
+/** Secret-looking names must never become build ARGs: they land in `docker history`. */
+const SECRET_NAME = /PASSWORD|TOKEN|SECRET|CREDENTIAL|PRIVATE|API_?KEY|ACCESS_?KEY/i;
+const FORBIDDEN_SERVICE_KEYS = ['privileged', 'network_mode', 'extends'] as const;
+
+/** Drops quoted text, so `&&` or `*` inside a command string is not mistaken for YAML syntax. */
+function withoutQuoted(text: string): string {
+  return text.replace(/'[^']*'|"[^"]*"/g, "''");
+}
+
+/**
+ * Constructs the small reader above (and a human reviewer) cannot follow
+ * across the file: anchors, aliases, merge keys, `include` and `extends`.
+ * Block scalars (the backup entrypoint script) are shell, not YAML, and skipped.
+ */
+function structuralViolations(text: string): string[] {
+  const found: string[] = [];
+  let blockIndent: number | null = null;
+  text.split('\n').forEach((source, index) => {
+    const indent = source.length - source.trimStart().length;
+    if (blockIndent !== null) {
+      if (source.trim() === '' || indent > blockIndent) return;
+      blockIndent = null;
+    }
+    const code = stripComment(source).trimEnd();
+    if (code.trim() === '') return;
+    if (/(?:^|\s)[|>][+-]?$/.test(code)) blockIndent = indent;
+    const plain = withoutQuoted(code);
+    const at = `line ${index + 1}`;
+    if (/(?:^|[\s:[{,-])&[A-Za-z0-9_-]/.test(plain)) found.push(`${at}: YAML anchor`);
+    if (/(?:^|[\s:[{,-])\*[A-Za-z0-9_-]/.test(plain)) found.push(`${at}: YAML alias`);
+    if (/(?:^|\s)<<\s*:/.test(plain)) found.push(`${at}: YAML merge key`);
+    if (/^include\s*:/.test(plain)) found.push(`${at}: top-level include`);
+    if (/^\s*extends\s*:/.test(plain)) found.push(`${at}: extends`);
+  });
+  return found;
+}
+
+/** A bind-mount source must stay inside the app's data directory, spelled out. */
+function mountSourceProblem(source: string): string | null {
+  if (!/^\/srv\/appdata\/sab-delegate\//.test(source)) return 'outside /srv/appdata/sab-delegate/';
+  if (source.split('/').some((segment) => segment === '..' || segment === '.')) {
+    return 'contains a . or .. segment';
+  }
+  // A single file keeps its old inode after a git pull.
+  if (/\.[A-Za-z0-9]+$/.test(source.split('/').pop()!)) return 'is a single file';
+  return null;
+}
+
+function buildArgNames(service: Mapping): string[] {
+  const build = service['build'];
+  if (build === undefined || typeof build === 'string' || Array.isArray(build)) return [];
+  const args = build['args'];
+  if (Array.isArray(args)) return args.map((entry) => stringOf(entry, 'build arg').split('=')[0]!);
+  if (args && typeof args === 'object') return Object.keys(args);
+  return [];
+}
+
+function serviceViolations(service: Mapping): string[] {
+  const found: string[] = [];
+  for (const key of FORBIDDEN_SERVICE_KEYS) {
+    if (service[key] !== undefined) found.push(`forbidden key ${key}`);
+  }
+  for (const name of buildArgNames(service)) {
+    if (SECRET_NAME.test(name)) found.push(`build arg ${name} looks like a secret`);
+  }
+  return found;
+}
+
+/** Joins lines into a YAML sample; escapes in literals would read as a path to the tracked-paths guard. */
+function yaml(...lines: string[]): string {
+  return lines.join('\n');
+}
+
 const PROD_FILES = ['coolify.compose.yml', 'deploy/postgres.compose.yml'] as const;
 const ALL_FILES = [
   'coolify.compose.yml',
@@ -246,6 +319,118 @@ describe('every compose file', () => {
   });
 });
 
+describe('compose constructs the reader cannot see through', () => {
+  it.each(ALL_FILES)('%s has no anchors, aliases, merge keys, include or extends', (file) => {
+    expect(structuralViolations(read(file).text)).toEqual([]);
+  });
+
+  it.each(ALL_FILES)('%s has no privileged, network_mode or secret build args', (file) => {
+    for (const [name, service] of servicesOf(read(file).doc)) {
+      expect(serviceViolations(service), `${file} ${name}`).toEqual([]);
+    }
+  });
+
+  it.each([
+    ['an anchor', 'x-common: &common\n  restart: unless-stopped\n', 'YAML anchor'],
+    [
+      'an anchor on a list item',
+      yaml('services:', '  a:', '    dns:', '      - &d 1.1.1.1'),
+      'YAML anchor',
+    ],
+    ['an alias', yaml('services:', '  a:', '    environment: *common'), 'YAML alias'],
+    ['an alias on a list item', yaml('services:', '  a:', '    dns:', '      - *d'), 'YAML alias'],
+    ['a merge key', yaml('services:', '  a:', '    <<: *common'), 'YAML merge key'],
+    ['a top-level include', yaml('include:', '  - other.compose.yml'), 'top-level include'],
+    ['extends', yaml('services:', '  a:', '    extends:', '      service: b'), 'extends'],
+  ])('flags %s', (_label, text, expected) => {
+    expect(structuralViolations(text).join('\n')).toContain(expected);
+  });
+
+  it('does not mistake shell syntax in quotes, comments or block scalars for YAML', () => {
+    const text = [
+      '# an anchor &a and an alias *a named in a comment',
+      'services:',
+      '  a:',
+      '    healthcheck:',
+      `      test: ['CMD-SHELL', "find . -name '*-daily-*' | grep -q . && true"]`,
+      '    entrypoint:',
+      '      - /bin/sh',
+      '      - -c',
+      '      - |',
+      '        set -- $$(date) && echo *.dump &',
+      '        cat <<EOF',
+      '    restart: unless-stopped',
+    ].join('\n');
+    expect(structuralViolations(text)).toEqual([]);
+  });
+
+  it.each([
+    ['privileged', yaml('services:', '  a:', '    privileged: true'), 'forbidden key privileged'],
+    [
+      'network_mode',
+      yaml('services:', '  a:', '    network_mode: host'),
+      'forbidden key network_mode',
+    ],
+    ['extends', yaml('services:', '  a:', '    extends: b'), 'forbidden key extends'],
+    [
+      'a map build arg',
+      yaml(
+        'services:',
+        '  a:',
+        '    build:',
+        '      context: .',
+        '      args:',
+        '        DISCORD_TOKEN: x',
+      ),
+      'build arg DISCORD_TOKEN',
+    ],
+    [
+      'a list build arg',
+      yaml(
+        'services:',
+        '  a:',
+        '    build:',
+        '      context: .',
+        '      args:',
+        '        - API_KEY=x',
+      ),
+      'build arg API_KEY',
+    ],
+  ])('flags %s', (_label, text, expected) => {
+    const [, service] = servicesOf(parseYaml(text))[0]!;
+    expect(serviceViolations(service).join('\n')).toContain(expected);
+  });
+
+  it('accepts a build arg that carries no secret', () => {
+    const text = yaml(
+      'services:',
+      '  a:',
+      '    build:',
+      '      context: .',
+      '      args:',
+      '        NODE_ENV: production',
+    );
+    const [, service] = servicesOf(parseYaml(text))[0]!;
+    expect(serviceViolations(service)).toEqual([]);
+  });
+
+  it.each([
+    ['/srv/appdata/sab-delegate/../../etc', 'contains a . or .. segment'],
+    ['/srv/appdata/sab-delegate/backups/..', 'contains a . or .. segment'],
+    ['/srv/appdata/sab-delegate/./backups', 'contains a . or .. segment'],
+    ['/srv/appdata/other/backups', 'outside'],
+    ['../backups', 'outside'],
+    ['/srv/appdata/sab-delegate/config.yml', 'single file'],
+  ])('rejects the mount source %s', (source, expected) => {
+    expect(mountSourceProblem(source)).toContain(expected);
+  });
+
+  it('accepts the real mount directories', () => {
+    expect(mountSourceProblem('/srv/appdata/sab-delegate/backups')).toBeNull();
+    expect(mountSourceProblem('/srv/appdata/sab-delegate/files-final')).toBeNull();
+  });
+});
+
 describe('production compose files', () => {
   it.each(PROD_FILES)('%s forbids ports, container_name, service cpus, env_file', (file) => {
     for (const [name, service] of servicesOf(read(file).doc)) {
@@ -264,10 +449,7 @@ describe('production compose files', () => {
       if (volumes === undefined) continue;
       expect(Array.isArray(volumes), `${file} ${name} volumes`).toBe(true);
       for (const entry of volumes as string[]) {
-        const source = entry.split(':')[0]!;
-        expect(source, `${file} ${name} ${entry}`).toMatch(/^\/srv\/appdata\/sab-delegate\//);
-        // A single file keeps its old inode after a git pull.
-        expect(source.split('/').pop()!, `${file} ${name} ${entry}`).not.toMatch(/\.[A-Za-z0-9]+$/);
+        expect(mountSourceProblem(entry.split(':')[0]!), `${file} ${name} ${entry}`).toBeNull();
       }
     }
   });
@@ -388,6 +570,19 @@ describe('coolify.compose.yml', () => {
       );
       expect(limits['cpus'], `${name} limits.cpus`).toBeDefined();
     }
+  });
+
+  it('keeps the bot offline unless MIGRATION_PENDING is explicitly false', () => {
+    const env = asMap(services['sab-server']!['environment'], 'sab-server environment');
+    expect(env['MIGRATION_PENDING']).toBe('${MIGRATION_PENDING:-true}');
+  });
+
+  it('judges the backup job by the age of its newest daily dump', () => {
+    const health = asMap(services['sab-backup']!['healthcheck'], 'healthcheck');
+    expect(health['test']).toEqual([
+      'CMD-SHELL',
+      expect.stringContaining("-name '*-daily-*.dump' -mmin -1560"),
+    ]);
   });
 
   it('never references the local-only smoke stack', () => {

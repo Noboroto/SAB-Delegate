@@ -171,7 +171,7 @@ const NOT_READ_BY_SERVER: ReadonlyMap<string, string> = new Map([
   ['POSTGRES_MIGRATE_PASSWORD', 'release job'],
   ['POSTGRES_BACKUP_USER', 'backup job'],
   ['POSTGRES_BACKUP_PASSWORD', 'backup job'],
-  ['BACKUP_ENABLED', 'backup and release jobs'],
+  ['BACKUP_ENABLED', 'backup job'],
   ['BACKUP_KEEP_DAILY', 'backup and release jobs'],
   ['BACKUP_KEEP_PRE_MIGRATE', 'backup and release jobs'],
   ['LEGACY_BOT_TOKEN', 'owner-machine cleanup script'],

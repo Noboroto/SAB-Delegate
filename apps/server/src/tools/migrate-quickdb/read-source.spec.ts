@@ -9,7 +9,14 @@ import {
   writeLegacyDb,
   writeLegacyFixture,
 } from '../../testing/legacy-quickdb-fixtures.js';
-import { LegacyJournalError, LegacyWalError, checkDictionary, readLegacy } from './read-source.js';
+import {
+  LegacyJournalError,
+  LegacyWalError,
+  MissingSourceFilesError,
+  assertCompleteSource,
+  checkDictionary,
+  readLegacy,
+} from './read-source.js';
 
 describe('readLegacy', () => {
   let dir: string;
@@ -50,6 +57,18 @@ describe('readLegacy', () => {
     const data = readLegacy(dir);
     expect(data.unparsableRows).toBe(1);
     expect(data.rows.config.map((row) => row.id)).toEqual(['good']);
+  });
+
+  it('lets an apply proceed only when every expected file was read', () => {
+    writeLegacyFixture(dir, prodShapedContent(new Date()));
+    expect(() => assertCompleteSource(readLegacy(dir))).not.toThrow();
+
+    rmSync(join(dir, 'note.sqlite'));
+    rmSync(join(dir, 'dict.sqlite'));
+    const partial = readLegacy(dir);
+    expect(partial.missingFiles).toEqual(['note', 'dict']);
+    expect(() => assertCompleteSource(partial)).toThrow(MissingSourceFilesError);
+    expect(() => assertCompleteSource(partial)).toThrow(/note\.sqlite, dict\.sqlite/);
   });
 
   it('refuses a directory with no quick.db file', () => {

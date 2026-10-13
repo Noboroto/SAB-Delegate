@@ -33,6 +33,17 @@ export class LegacyJournalError extends Error {
   }
 }
 
+export class MissingSourceFilesError extends Error {
+  constructor(readonly files: readonly LegacyFileKey[]) {
+    super(
+      `--apply refused: source file(s) missing: ${files.map((file) => LEGACY_FILES[file]).join(', ')}. ` +
+        'A partial import cannot be repeated (the target would no longer be empty); ' +
+        'check the source directory against the dry-run report and retry',
+    );
+    this.name = 'MissingSourceFilesError';
+  }
+}
+
 class LegacySchemaError extends Error {
   constructor(readonly file: LegacyFileKey) {
     super(`${LEGACY_FILES[file]} has no quick.db "json" table with an id and a value column`);
@@ -125,6 +136,11 @@ export function readLegacy(sourceDir: string): LegacyData {
     throw new Error('No quick.db file found in the source directory');
   }
   return LegacyDataSchema.parse(data);
+}
+
+/** An apply loads into an empty target exactly once, so every expected file must be there. */
+export function assertCompleteSource(data: LegacyData): void {
+  if (data.missingFiles.length > 0) throw new MissingSourceFilesError(data.missingFiles);
 }
 
 /** Compares the key count of the dumped dictionary with the packaged asset, when there is one. */

@@ -45,6 +45,14 @@ psql --no-psqlrc -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTG
 \getenv backup_user POSTGRES_BACKUP_USER
 \getenv backup_password POSTGRES_BACKUP_PASSWORD
 
+-- The password literals below are part of the statement text, which the server
+-- would write to its log under log_statement = 'all' (or 'ddl') and in an error
+-- context line. Switch both off for this session first; both settings need the
+-- superuser this script connects as.
+SET log_statement = 'none';
+SET log_min_error_statement = 'panic';
+SET log_min_duration_statement = -1;
+
 SELECT format('CREATE ROLE %I LOGIN', :'migrate_user')
 WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = :'migrate_user') \gexec
 SELECT format('CREATE ROLE %I LOGIN', :'runtime_user')

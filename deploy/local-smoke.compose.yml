@@ -71,7 +71,7 @@ services:
       POSTGRES_MIGRATE_USER: ${POSTGRES_MIGRATE_USER}
       POSTGRES_MIGRATE_PASSWORD: ${POSTGRES_MIGRATE_PASSWORD}
       BACKUP_DIR: /backups
-      BACKUP_ENABLED: ${BACKUP_ENABLED:-true}
+      # No BACKUP_ENABLED: the release job always dumps a non-empty database.
       BACKUP_KEEP_PRE_MIGRATE: ${BACKUP_KEEP_PRE_MIGRATE:-5}
     volumes:
       - smoke-backups:/backups
@@ -107,7 +107,8 @@ services:
       DISCORD_ALLOWED_APP_IDS: ${DISCORD_ALLOWED_APP_IDS}
       DISCORD_DEV_GUILD_ID: ${DISCORD_DEV_GUILD_ID}
       ADMIN_GUILD_ID: ${ADMIN_GUILD_ID}
-      MIGRATION_PENDING: ${MIGRATION_PENDING:-false}
+      # Same fail-safe default as production: pass MIGRATION_PENDING=false to log in.
+      MIGRATION_PENDING: ${MIGRATION_PENDING:-true}
       COMMANDS_FORCE_RESET: ${COMMANDS_FORCE_RESET:-false}
       POSTGRES_HOST: sab-postgres
       POSTGRES_PORT: '5432'
@@ -137,20 +138,27 @@ services:
       - /bin/sh
       - -c
       - |
+        rm -f /tmp/backup-started
+        touch /tmp/backup-started
         while :; do
-          h=$$(date +%H); m=$$(date +%M); s=$$(date +%S)
-          elapsed=$$(( $${h#0} * 3600 + $${m#0} * 60 + $${s#0} ))
+          set -- $$(date +'%H %M %S')
+          elapsed=$$(( $${1#0} * 3600 + $${2#0} * 60 + $${3#0} ))
           wait=$$(( (10800 - elapsed + 86400) % 86400 ))
           echo "backup: next daily dump in $${wait}s"
           sleep "$$wait"
           /bin/sh /app/apps/server/scripts/backup.sh daily || echo "backup: daily dump failed" >&2
           sleep 60
         done
+    # Healthy while a daily dump is under 26 h old (a 03:00 job plus 2 h of
+    # slack). A new container has no dump yet, so for its first 26 h the start
+    # marker stands in; a pre-migrate or baseline dump is NOT accepted, or it
+    # could hide a failing daily job.
     healthcheck:
-      test: ['CMD-SHELL', 'pidof sh >/dev/null']
-      interval: 60s
-      timeout: 5s
+      test: ['CMD-SHELL', "find /backups -maxdepth 1 -name '*-daily-*.dump' -mmin -1560 | grep -q . || find /tmp/backup-started -mmin -1560 | grep -q ."]
+      interval: 5m
+      timeout: 10s
       retries: 3
+      start_period: 30s
     environment:
       TZ: Asia/Ho_Chi_Minh
       POSTGRES_HOST: sab-postgres

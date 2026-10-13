@@ -51,14 +51,14 @@ RUN pnpm --filter @sab/server run db:generate \
 # Runs as root: it writes dumps to a host bind mount whose ownership the host
 # decides, and unlike the runner it is short-lived with no listener.
 # One image, three jobs: the release step (default ENTRYPOINT), the scheduled
-# daily dump (compose overrides the entrypoint and runs busybox crond) and the
-# restore drill. The runtime image stays free of the PG client on purpose: the
-# server never dumps, and backups run outside it.
+# daily dump (compose overrides the entrypoint with a sleep loop that waits for
+# 03:00 and runs backup.sh) and the restore drill. The runtime image stays free
+# of the PG client on purpose: the server never dumps, and backups run outside it.
 FROM gen AS release
 # pg_dump refuses to dump a server newer than itself; keep this on the same
-# major as the postgres image the stack runs. tzdata lets crond read the
-# Asia/Ho_Chi_Minh schedule from TZ; without it musl silently falls back to UTC
-# and the daily dump would run at 10:00 local time.
+# major as the postgres image the stack runs. tzdata lets `date` read the
+# Asia/Ho_Chi_Minh clock from TZ; without it musl silently falls back to UTC and
+# the daily dump would run at 10:00 local time.
 RUN apk add --no-cache postgresql18-client tzdata
 # Fail the image build when the client is not the major the server runs.
 RUN pg_dump --version | grep -q ' 18\.' && pg_restore --version | grep -q ' 18\.'

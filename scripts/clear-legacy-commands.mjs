@@ -10,8 +10,13 @@
 // --dry-run (default) only lists the count and names of registered commands.
 // --apply replaces them with an empty list (PUT []) and re-reads to prove the
 // remaining count is 0. --guild targets one guild's commands instead of the
-// global ones. Exit codes: 0 ok, 1 Discord/verification failure, 2 usage or
-// missing env.
+// global ones. Exit codes: 0 ok, 1 Discord/verification failure, 2 usage,
+// missing env or a refused identity check.
+//
+// Identity checks (run before any request): LEGACY_CLIENT_ID must be the
+// application id encoded in the first segment of LEGACY_BOT_TOKEN, and must not
+// be the new bot's DISCORD_CLIENT_ID when that variable is set. Either mistake
+// would wipe the new bot's global commands. Neither value is ever printed.
 //
 // The token is only ever printed as "[redacted]": REST errors can echo request
 // details, so every message is scrubbed before it reaches the terminal.
@@ -25,6 +30,18 @@ const REQUIRED_ENV = ['LEGACY_BOT_TOKEN', 'LEGACY_CLIENT_ID'];
  * @typedef {{ get(route: string): Promise<unknown>, put(route: string, options: { body: unknown[] }): Promise<unknown> }} RestLike
  * @typedef {{ applicationCommands(id: string): string, applicationGuildCommands(id: string, guildId: string): string }} RoutesLike
  */
+
+/**
+ * A bot token starts with the base64url of its application id.
+ * @param {string} token
+ * @returns {string | null}
+ */
+function applicationIdOf(token) {
+  const first = token.split('.')[0] ?? '';
+  if (!/^[A-Za-z0-9_-]+$/.test(first)) return null;
+  const decoded = Buffer.from(first, 'base64url').toString('utf8');
+  return SNOWFLAKE.test(decoded) ? decoded : null;
+}
 
 /** @param {string[]} argv */
 function parseArgs(argv) {
@@ -83,6 +100,14 @@ export async function run({ argv, env, createRest, routes, log, logError }) {
   }
   if (!SNOWFLAKE.test(clientId)) {
     logError('LEGACY_CLIENT_ID must be a numeric snowflake.');
+    return 2;
+  }
+  if (applicationIdOf(token) !== clientId) {
+    logError('LEGACY_CLIENT_ID does not match the application id encoded in LEGACY_BOT_TOKEN.');
+    return 2;
+  }
+  if (clientId === (env.DISCORD_CLIENT_ID?.trim() ?? '')) {
+    logError('LEGACY_CLIENT_ID is the new bot (DISCORD_CLIENT_ID); refusing to clear its commands.');
     return 2;
   }
   const args = parseArgs(argv);

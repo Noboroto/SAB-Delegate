@@ -7,8 +7,11 @@
 # server only starts once this job has completed successfully.
 #
 # A non-empty database is dumped (backup.sh, tag pre-migrate) before any
-# migration touches it, and a failed dump stops the release. An empty database
-# has nothing to lose, so the first deploy skips the dump.
+# migration touches it, and a failed dump stops the release. The dump is forced
+# on for this call: BACKUP_ENABLED switches off the scheduled job and manual
+# dumps, but a stray BACKUP_ENABLED=false must never let a migration run on data
+# with no safety copy. An empty database has nothing to lose, so the first
+# deploy skips the dump.
 #
 # Plain POSIX sh on purpose: the image is Alpine, which ships no bash, so there
 # is no `pipefail`. Every command whose failure matters is therefore run on its
@@ -18,7 +21,8 @@
 #   POSTGRES_DB, POSTGRES_USER                                      required
 #   POSTGRES_MIGRATE_USER, POSTGRES_MIGRATE_PASSWORD                required
 #   POSTGRES_HOST (default sab-postgres), POSTGRES_PORT (default 5432)
-#   BACKUP_DIR, BACKUP_ENABLED, BACKUP_KEEP_PRE_MIGRATE             read by backup.sh
+#   BACKUP_DIR, BACKUP_KEEP_PRE_MIGRATE                             read by backup.sh
+#   BACKUP_ENABLED is ignored here: the pre-migrate dump is always taken
 set -eu
 
 for name in POSTGRES_DB POSTGRES_USER POSTGRES_MIGRATE_USER POSTGRES_MIGRATE_PASSWORD; do
@@ -54,7 +58,8 @@ case "$state" in
 		exit 1
 	fi
 	echo "release: database has data, taking a pre-migrate dump"
-	POSTGRES_BACKUP_USER="$POSTGRES_MIGRATE_USER" \
+	BACKUP_ENABLED=true \
+		POSTGRES_BACKUP_USER="$POSTGRES_MIGRATE_USER" \
 		POSTGRES_BACKUP_PASSWORD="$POSTGRES_MIGRATE_PASSWORD" \
 		/bin/sh "$scripts_dir/backup.sh" pre-migrate
 	;;

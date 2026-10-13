@@ -5,7 +5,12 @@ import { createPool, errorLabel } from '../../prisma/pool-factory.js';
 import { ArgsError, USAGE, parseArgs } from './args.js';
 import { exportClaims } from './export-claims.js';
 import { TargetNotEmptyError, applyPlan } from './load.js';
-import { checkDictionary, readLegacy } from './read-source.js';
+import {
+  MissingSourceFilesError,
+  assertCompleteSource,
+  checkDictionary,
+  readLegacy,
+} from './read-source.js';
 import { buildReport, exitCodeFor, formatReport } from './report.js';
 import { transform } from './transform.js';
 import type { CliOptions } from './types.js';
@@ -42,6 +47,7 @@ async function run(options: CliOptions): Promise<number> {
   }
 
   try {
+    assertCompleteSource(data);
     const applied = await withPrisma((prisma) =>
       applyPlan(prisma, plan, { allowNonEmpty: options.allowNonEmpty }),
     );
@@ -52,6 +58,10 @@ async function run(options: CliOptions): Promise<number> {
     if (error instanceof TargetNotEmptyError) {
       console.error(error.message);
       return 2;
+    }
+    if (error instanceof MissingSourceFilesError) {
+      console.error(error.message);
+      return 3;
     }
     throw error;
   }
