@@ -1,0 +1,31 @@
+enum ScheduledKind {
+  SEND
+  COPY
+}
+
+enum ScheduledStatus {
+  PENDING
+  SENDING
+  SENT
+  CANCELED
+  FAILED
+}
+
+/// A birthday run claims its day as SENDING with a lease and only becomes DONE
+/// after every greeting went out.
+enum WishRunStatus {
+  SENDING
+  DONE
+}
+
+enum ActorSource {
+  DISCORD
+  HTTP
+  MCP
+  SYSTEM
+}
+
+enum ApiKeyMode {
+  READ
+  WRITE
+}

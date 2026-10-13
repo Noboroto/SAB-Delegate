@@ -76,11 +76,26 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
 	CI=true pnpm --filter @sab/server --config.inject-workspace-packages=true \
 	deploy --prod /out/server
 
+# `pnpm deploy` reinstalls the packages from the store, which discards what
+# `prisma generate` wrote in the gen stage. With the `prisma-client-js` generator
+# that is the `.prisma/client` folder next to `@prisma/client` in the virtual
+# store (the package's `default.js` requires it), so that folder is copied into
+# the matching place of the deployed tree. Both locations are resolved with node
+# because pnpm names the virtual-store directory after the package's peer set,
+# and that differs between the full install in gen and the production-only one
+# here. The final check fails the build when the copy did not take: an
+# ungenerated @prisma/client loads fine and only fails when the server starts.
+RUN set -eu; \
+	locate='const p=require("path");console.log(p.resolve(p.dirname(require.resolve("@prisma/client/package.json")),"..","..",".prisma"))'; \
+	generated="$(cd /app/apps/server && node -e "$locate")"; \
+	deployed="$(cd /out/server && node -e "$locate")"; \
+	test -d "$generated/client"; \
+	rm -rf "$deployed"; \
+	cp -a "$generated" "$deployed"; \
+	cd /out/server; \
+	node -e "const { Prisma } = require('@prisma/client'); if (!Prisma.ModelName || !Prisma.ModelName.Guild) { console.error('generated Prisma client missing'); process.exit(1); }"
+
 # ── runner ───────────────────────────────────────────────────────────────────
-# The server does not load the Prisma client yet. `pnpm deploy` reinstalls the
-# packages, which discards a client generated into their directory, so the first
-# code that imports it must copy a client generated outside node_modules (or
-# generate one here) before this image can start it.
 FROM ${NODE_IMAGE} AS runner
 WORKDIR /app
 ENV NODE_ENV=production

@@ -1,0 +1,15 @@
+model GuildConfig {
+  id                 String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  guildId            String   @unique @db.Uuid
+  /// CHECK (migration `_checks`): every channel column below is NULL or a 17-20 digit snowflake.
+  introChannelId     String?
+  logChannelId       String?
+  birthdayChannelId  String?
+  activityCategoryId String?
+  wordChannelId      String?
+  /// CHECK (migration `_checks`): >= 200.
+  wordMaxWords       Int      @default(1500)
+  updatedAt          DateTime @updatedAt @db.Timestamptz(3)
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+}

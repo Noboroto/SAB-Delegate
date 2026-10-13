@@ -1,0 +1,25 @@
+/// A key belongs to a Discord user, not to a guild: what it may touch is decided per
+/// request from the owner's current permissions.
+/// CHECK (migration `_checks`): char_length(prefix) = 8; a WRITE key must carry an
+/// expiry no more than 30 days after creation.
+model ApiKey {
+  id            String     @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  discordUserId String
+  name          String
+  /// First 8 characters of the secret, for display and lookup only.
+  prefix        String
+  /// Hash of the secret; the secret itself is never stored.
+  keyHash       String     @unique
+  mode          ApiKeyMode
+  /// Display only, never used for an access decision.
+  lastUsedIp    String?
+  lastUsedAt    DateTime?  @db.Timestamptz(3)
+  expiresAt     DateTime?  @db.Timestamptz(3)
+  revokedAt     DateTime?  @db.Timestamptz(3)
+  createdAt     DateTime   @default(now()) @db.Timestamptz(3)
+
+  scheduled ScheduledMessage[]
+
+  @@index([discordUserId])
+  @@index([prefix])
+}

@@ -9,7 +9,7 @@
     "apps/server": {
       "entry": ["src/main.ts"],
       "project": ["src/**/*.ts"],
-      "ignoreDependencies": ["@prisma/client", "prisma-zod-generator"],
+      "ignoreDependencies": ["prisma-zod-generator"],
       "prisma": false
     },
     "packages/shared": {

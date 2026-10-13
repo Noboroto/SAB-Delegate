@@ -1,0 +1,14 @@
+/// CHECK (migration `_checks`): topic and content are non-empty.
+model NoteEntry {
+  id        String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  guildId   String   @db.Uuid
+  roleId    String
+  topic     String
+  content   String
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@unique([guildId, roleId, topic])
+}

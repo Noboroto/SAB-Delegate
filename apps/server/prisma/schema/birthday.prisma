@@ -1,0 +1,51 @@
+/// CHECK (migration `_checks`): month 1..12, day 1..31, and (month, day) is a real
+/// calendar day (2/30 rejected, 2/29 allowed because people are born on it).
+model BirthdayEntry {
+  id        String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  guildId   String   @db.Uuid
+  studentId String
+  name      String
+  discordId String
+  month     Int      @db.SmallInt
+  day       Int      @db.SmallInt
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@unique([guildId, studentId])
+  @@index([guildId, month, day])
+  @@index([guildId, discordId])
+}
+
+/// One greeting run per guild per business day (Asia/Ho_Chi_Minh).
+/// CHECK (migration `_checks`): status = SENDING requires leaseUntil, so a crashed run
+/// is always reclaimable once the lease lapses.
+model BirthdayCompletedDate {
+  id             String        @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  guildId        String        @db.Uuid
+  date           DateTime      @db.Date
+  status         WishRunStatus @default(SENDING)
+  leaseUntil     DateTime?     @db.Timestamptz(3)
+  /// Discord ids already greeted in this run, so a reclaimed run skips them.
+  sentDiscordIds String[]      @default([])
+  createdAt      DateTime      @default(now()) @db.Timestamptz(3)
+  doneAt         DateTime?     @db.Timestamptz(3)
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@unique([guildId, date])
+  @@index([status, leaseUntil])
+}
+
+/// Wish `wishIndex` (position in the shared wish list) was used in the current cycle.
+/// CHECK (migration `_checks`): wishIndex >= 0.
+model BirthdayWishUsage {
+  id        String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  guildId   String   @db.Uuid
+  wishIndex Int
+  usedAt    DateTime @default(now()) @db.Timestamptz(3)
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@unique([guildId, wishIndex])
+}

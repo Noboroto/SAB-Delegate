@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common';
 import { LoggerModule } from 'nestjs-pino';
+import { AppStateModule } from './app-state/app-state.service.js';
 import { loadEnv } from './config/env.js';
 import { HealthModule } from './health/health.module.js';
 import { buildPinoParams } from './logger/pino.config.js';
+import { PrismaModule } from './prisma/prisma.module.js';
 
 @Module({
   imports: [
@@ -11,6 +13,8 @@ import { buildPinoParams } from './logger/pino.config.js';
       // environment the entry point never looked at.
       useFactory: () => buildPinoParams(loadEnv().LOG_LEVEL),
     }),
+    PrismaModule,
+    AppStateModule,
     HealthModule,
   ],
 })

@@ -1,0 +1,19 @@
+model AuditLog {
+  id             String      @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  /// SET NULL on guild delete: the trail outlives the guild.
+  guildId        String?     @db.Uuid
+  source         ActorSource
+  actorDiscordId String?
+  /// Plain column, not a foreign key: revoking or deleting a key must not rewrite history.
+  apiKeyId       String?     @db.Uuid
+  action         String
+  /// Redacted before it is stored.
+  params         Json?
+  ok             Boolean
+  error          String?
+  createdAt      DateTime    @default(now()) @db.Timestamptz(3)
+
+  guild Guild? @relation(fields: [guildId], references: [id], onDelete: SetNull)
+
+  @@index([guildId, createdAt(sort: Desc)])
+}

@@ -1,0 +1,36 @@
+/// CHECK (migration `_checks`): seq > 0; attempts >= 0; kind = SEND requires content and
+/// no source; kind = COPY requires both source columns; status = SENDING requires
+/// leaseUntil. A SENDING row past its lease is reclaimable; nothing is marked SENT
+/// before the Discord call returned.
+model ScheduledMessage {
+  id              String          @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  guildId         String          @db.Uuid
+  /// Per-guild number shown in Discord.
+  seq             Int
+  kind            ScheduledKind
+  channelId       String
+  content         String?
+  sourceChannelId String?
+  sourceMessageId String?
+  /// Defaults to "mention nobody"; a schedule must opt in to pings explicitly.
+  allowedMentions Json            @default("{\"parse\": []}")
+  runAt           DateTime        @db.Timestamptz(3)
+  status          ScheduledStatus @default(PENDING)
+  leaseUntil      DateTime?       @db.Timestamptz(3)
+  attempts        Int             @default(0)
+  pgBossJobId     String?         @unique @db.Uuid
+  source          ActorSource
+  createdByUserId String
+  apiKeyId        String?         @db.Uuid
+  lastError       String?
+  createdAt       DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime        @updatedAt @db.Timestamptz(3)
+
+  guild  Guild   @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  apiKey ApiKey? @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
+
+  @@unique([guildId, seq])
+  @@index([guildId, status, runAt])
+  @@index([status, leaseUntil])
+  @@index([apiKeyId])
+}

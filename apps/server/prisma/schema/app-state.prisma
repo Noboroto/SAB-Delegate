@@ -1,0 +1,8 @@
+/// Small key/value store, e.g. the hash of the slash-command payload last registered.
+/// CHECK (migration `_checks`): key is non-empty.
+model AppState {
+  id        String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+}

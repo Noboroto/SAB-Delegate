@@ -1,0 +1,27 @@
+/// Runtime state of the word-chain game; its settings live in GuildConfig.
+/// CHECK (migration `_checks`): count >= 0.
+model WordGameState {
+  id         String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  guildId    String   @unique @db.Uuid
+  /// True until the first word of a round is accepted.
+  started    Boolean  @default(true)
+  lastUserId String   @default("")
+  lastWord   String   @default("")
+  count      Int      @default(0)
+  updatedAt  DateTime @updatedAt @db.Timestamptz(3)
+
+  guild     Guild              @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  usedWords WordGameUsedWord[]
+}
+
+/// CHECK (migration `_checks`): word is non-empty and already lower-case; the unique
+/// key is also the atomic "this word was already played" guard.
+model WordGameUsedWord {
+  id      String @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  stateId String @db.Uuid
+  word    String
+
+  state WordGameState @relation(fields: [stateId], references: [id], onDelete: Cascade)
+
+  @@unique([stateId, word])
+}

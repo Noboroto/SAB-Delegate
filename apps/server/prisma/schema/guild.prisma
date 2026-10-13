@@ -1,12 +1,20 @@
 model Guild {
-  id                 String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  id        String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
   /// Discord snowflake; the internal key above never leaves the database.
-  discordId          String   @unique
-  locale             String   @default("vi")
-  introChannelId     String?
-  logChannelId       String?
-  birthdayChannelId  String?
-  activityCategoryId String?
-  createdAt          DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt          DateTime @updatedAt @db.Timestamptz(3)
+  discordId String   @unique
+  /// Display cache refreshed from Discord; never authoritative.
+  name      String?
+  /// CHECK (migration `_checks`): one of 'vi', 'en'.
+  locale    String   @default("vi")
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  config         GuildConfig?
+  birthdays      BirthdayEntry[]
+  birthdayRuns   BirthdayCompletedDate[]
+  birthdayWishes BirthdayWishUsage[]
+  notes          NoteEntry[]
+  wordGame       WordGameState?
+  scheduled      ScheduledMessage[]
+  auditLogs      AuditLog[]
 }
