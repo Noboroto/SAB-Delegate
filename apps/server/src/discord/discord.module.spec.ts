@@ -2,13 +2,17 @@ import 'reflect-metadata';
 import { randomBytes } from 'node:crypto';
 import { Global, Logger, Module, UseInterceptors } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
-import { Client, GatewayIntentBits } from 'discord.js';
+import { Client, GatewayIntentBits, Status } from 'discord.js';
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { BootGuardError, IDENTITY_REST, type DiscordEnv } from './boot-guard.js';
 import { CommandRegistrar } from './command-registrar.js';
 import { DiscordCommands } from './decorators/discord-commands.decorator.js';
-import { DiscordLifecycleListener, DiscordModule } from './discord.module.js';
+import {
+  DiscordClientShutdown,
+  DiscordLifecycleListener,
+  DiscordModule,
+} from './discord.module.js';
 import { DiscordReadyService } from './discord-ready.service.js';
 import { ErrorReporter } from './error-reporter.service.js';
 import { DISCORD_INTENTS, buildNecordOptions } from './necord-options.js';
@@ -108,6 +112,21 @@ describe('DiscordModule', () => {
     expect(ref.get(DiscordReadyService, { strict: false }).isReady()).toBe(false);
   });
 
+  it('judges readiness by the real client: marked ready but never connected is not ready', async () => {
+    const ref = await compileFull();
+    const ready = ref.get(DiscordReadyService, { strict: false });
+    ready.markReady();
+    // The client in this module never logged in, so its gateway is idle. Had
+    // the client not been injected the service would answer true here.
+    expect(ref.get(Client, { strict: false }).ws.status).not.toBe(Status.Ready);
+    expect(ready.isReady()).toBe(false);
+  });
+
+  it('registers the hook that closes the client before the database', async () => {
+    const ref = await compileFull();
+    expect(ref.get(DiscordClientShutdown, { strict: false })).toBeInstanceOf(DiscordClientShutdown);
+  });
+
   it('verifies the token application before any gateway login', async () => {
     stubEnv();
     await expect(
@@ -172,6 +191,57 @@ describe('DiscordReadyService', () => {
     expect(logged).not.toContain('secret detail');
   });
 
+  describe('gateway connection', () => {
+    function gatewayOf(managerStatus: Status, shardStatuses: Status[]) {
+      const shards = shardStatuses.map((status) => ({ status }));
+      return {
+        ws: {
+          status: managerStatus,
+          shards: {
+            size: shards.length,
+            every: (test: (s: { status: Status }) => boolean) => shards.every(test),
+          },
+        },
+      };
+    }
+
+    it('is ready only while every shard is connected', () => {
+      const connected = new DiscordReadyService(false, gatewayOf(Status.Ready, [Status.Ready]));
+      connected.markReady();
+      expect(connected.isReady()).toBe(true);
+    });
+
+    it('is not ready while a shard reconnects, although the manager still says Ready', () => {
+      // discord.js sets the manager status once and never lowers it; a dropped
+      // connection shows only in the shard.
+      for (const shard of [Status.Connecting, Status.Resuming, Status.Disconnected]) {
+        const dropped = new DiscordReadyService(
+          false,
+          gatewayOf(Status.Ready, [Status.Ready, shard]),
+        );
+        dropped.markReady();
+        expect(dropped.isReady(), `shard ${shard}`).toBe(false);
+      }
+    });
+
+    it('is not ready without shards or before the manager is ready', () => {
+      const none = new DiscordReadyService(false, gatewayOf(Status.Ready, []));
+      none.markReady();
+      expect(none.isReady()).toBe(false);
+      const idle = new DiscordReadyService(false, gatewayOf(Status.Idle, [Status.Ready]));
+      idle.markReady();
+      expect(idle.isReady()).toBe(false);
+    });
+
+    it('is not ready once shutdown began', () => {
+      const ready = new DiscordReadyService(false, gatewayOf(Status.Ready, [Status.Ready]));
+      ready.markReady();
+      ready.onModuleDestroy();
+      expect(ready.isStopping()).toBe(true);
+      expect(ready.isReady()).toBe(false);
+    });
+  });
+
   it('marking ready twice does not run a task twice', async () => {
     const ready = new DiscordReadyService(false);
     const task = vi.fn();
@@ -179,6 +249,32 @@ describe('DiscordReadyService', () => {
     ready.markReady();
     ready.markReady();
     await vi.waitFor(() => expect(task).toHaveBeenCalledTimes(1));
+  });
+});
+
+describe('DiscordClientShutdown', () => {
+  beforeEach(() => {
+    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+  });
+
+  it('destroys the client', async () => {
+    const destroy = vi.fn().mockResolvedValue(undefined);
+    await new DiscordClientShutdown({ destroy }).beforeApplicationShutdown();
+    expect(destroy).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not stop the shutdown when destroying fails', async () => {
+    const destroy = vi.fn().mockRejectedValue(new Error('socket already closed'));
+    await expect(
+      new DiscordClientShutdown({ destroy }).beforeApplicationShutdown(),
+    ).resolves.toBeUndefined();
+  });
+
+  it('can run before Necord destroys the same client again', async () => {
+    // Necord calls `destroy()` in its own shutdown hook, after ours.
+    const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+    await new DiscordClientShutdown(client).beforeApplicationShutdown();
+    await expect(client.destroy()).resolves.toBeUndefined();
   });
 });
 
@@ -222,6 +318,22 @@ describe('DiscordLifecycleListener', () => {
     expect(registrar.wipeAndRegister).toHaveBeenCalledWith({ kind: 'guild', guildId: DEV_GUILD });
     expect(registrar.registerIfChanged).not.toHaveBeenCalled();
     expect(ready.isReady()).toBe(true);
+  });
+
+  it('warns at every boot while the one-shot reset flag is set, and only then', async () => {
+    const warn = vi.spyOn(Logger.prototype, 'warn');
+    for (let boot = 0; boot < 2; boot += 1) {
+      await build(true).listener.onClientReady(clientReady);
+    }
+    const resetWarnings = warn.mock.calls.filter(([message]) =>
+      String(message).includes('COMMANDS_FORCE_RESET'),
+    );
+    expect(resetWarnings).toHaveLength(2);
+    expect(String(resetWarnings[0]?.[0])).toContain('unset it');
+
+    warn.mockClear();
+    await build(false).listener.onClientReady(clientReady);
+    expect(warn.mock.calls.flat().join(' ')).not.toContain('COMMANDS_FORCE_RESET');
   });
 
   it('opens the gate even if registration throws', async () => {

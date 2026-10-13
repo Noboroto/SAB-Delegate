@@ -12,13 +12,45 @@ export const GUILD_ACCESS_ALLOW_TTL_MS = 30_000;
 /** Refusals are remembered only briefly: enough to absorb a retry loop, short enough not to lock out a user who was just promoted. */
 export const GUILD_ACCESS_DENY_TTL_MS = 5_000;
 
+/**
+ * How long an infrastructure failure (Discord rate limit or outage, network)
+ * is replayed to callers instead of asking Discord again. Short: it only has
+ * to stop a retry loop from turning one outage into a flood of REST calls.
+ */
+export const GUILD_ACCESS_FAILURE_TTL_MS = 2_000;
+
 /** Unknown Member (not in the guild), Unknown User, Unknown Guild. */
 const NOT_A_MEMBER_CODES: ReadonlySet<number> = new Set([10007, 10013, 10004]);
 
+const NETWORK_ERROR_NAMES: ReadonlySet<string> = new Set([
+  'RateLimitError',
+  'HTTPError',
+  'AbortError',
+  'TimeoutError',
+]);
+
+/**
+ * Discord rate limiting (429), a Discord outage (5xx), or the request never
+ * completing. Not "the answer is no": the caller has to see a server error.
+ */
+function isInfrastructureError(error: unknown): error is Error {
+  if (!(error instanceof Error)) return false;
+  const { status, code, name } = error as { status?: unknown; code?: unknown; name?: unknown };
+  if (typeof status === 'number') return status === 429 || status >= 500;
+  if (typeof name === 'string' && NETWORK_ERROR_NAMES.has(name)) return true;
+  // Node's fetch reports a dropped connection as `TypeError: fetch failed`, and
+  // socket errors carry a string code such as ECONNRESET or UND_ERR_SOCKET.
+  if (typeof code === 'string' && /^(E[A-Z]+|UND_ERR\w*)$/.test(code)) return true;
+  return error instanceof TypeError && error.message === 'fetch failed';
+}
+
 /**
  * The one answer for "no such server for you": the bot is not in it, the user
- * is not in it, or the user may not manage it. A single error keeps a caller
- * from probing which servers the bot has joined.
+ * is not in it, or the user may not manage it. These three share a single
+ * error (and a single message) so a caller cannot probe which servers the bot
+ * has joined. Infrastructure failures are deliberately not part of it: they
+ * keep their own error class so the caller reports a server error instead of
+ * telling someone they have no access.
  */
 export class GuildNotFoundError extends ServiceError {
   constructor() {
@@ -51,6 +83,12 @@ export class GuildAccessService {
     // still monotonic and lets a replaced clock (fake timers) take effect.
     perf: { now: () => performance.now() },
   });
+  /** Infrastructure failures, replayed for a moment so a retry loop does not hammer REST. */
+  private readonly failures = new LRUCache<string, Error>({
+    max: GUILD_ACCESS_CACHE_MAX,
+    ttl: GUILD_ACCESS_FAILURE_TTL_MS,
+    perf: { now: () => performance.now() },
+  });
   /** Concurrent checks for one pair share a single Discord request. */
   private readonly inFlight = new Map<string, Promise<boolean>>();
 
@@ -75,15 +113,26 @@ export class GuildAccessService {
     const cached = this.cache.get(key);
     if (cached !== undefined && (!fresh || !cached)) return cached;
 
+    const recentFailure = this.failures.get(key);
+    if (recentFailure !== undefined) throw recentFailure;
+
     const running = this.inFlight.get(key);
     if (running !== undefined) return running;
 
-    const pending = this.lookup(userId, guildId).then((allowed) => {
-      this.cache.set(key, allowed, {
-        ttl: allowed ? GUILD_ACCESS_ALLOW_TTL_MS : GUILD_ACCESS_DENY_TTL_MS,
-      });
-      return allowed;
-    });
+    const pending = this.lookup(userId, guildId).then(
+      (allowed) => {
+        this.cache.set(key, allowed, {
+          ttl: allowed ? GUILD_ACCESS_ALLOW_TTL_MS : GUILD_ACCESS_DENY_TTL_MS,
+        });
+        return allowed;
+      },
+      (error: unknown) => {
+        if (isInfrastructureError(error)) {
+          this.failures.set(key, error);
+        }
+        throw error;
+      },
+    );
     this.inFlight.set(key, pending);
     const release = (): void => {
       if (this.inFlight.get(key) === pending) this.inFlight.delete(key);
@@ -101,7 +150,7 @@ export class GuildAccessService {
     if (!(await this.canManage(userId, guildId, options))) throw new GuildNotFoundError();
   }
 
-  /** Asks Discord. Failures other than "not a member" are thrown and never cached. */
+  /** Asks Discord. Failures other than "not a member" are thrown as they are and never cached as an answer. */
   private async lookup(userId: string, guildId: string): Promise<boolean> {
     const guild = this.client.guilds.cache.get(guildId);
     if (guild === undefined) return false;

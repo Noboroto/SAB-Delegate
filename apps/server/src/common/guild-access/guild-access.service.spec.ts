@@ -5,6 +5,7 @@ import {
   GUILD_ACCESS_ALLOW_TTL_MS,
   GUILD_ACCESS_CACHE_MAX,
   GUILD_ACCESS_DENY_TTL_MS,
+  GUILD_ACCESS_FAILURE_TTL_MS,
   GuildAccessService,
   GuildNotFoundError,
 } from './guild-access.service.js';
@@ -139,6 +140,63 @@ describe('GuildAccessService.canManage', () => {
     state.failWith = undefined;
     expect(await service.canManage(USER, GUILD)).toBe(true);
     expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  describe('infrastructure failures', () => {
+    class RestError extends Error {
+      constructor(
+        readonly status: number,
+        readonly code = 0,
+      ) {
+        super(`HTTP ${String(status)}`);
+        this.name = 'DiscordAPIError';
+      }
+    }
+
+    it.each([
+      ['rate limit', new RestError(429)],
+      ['outage', new RestError(503)],
+      ['dropped connection', new TypeError('fetch failed')],
+      ['socket error', Object.assign(new Error('read ECONNRESET'), { code: 'ECONNRESET' })],
+    ])('replays a %s for a moment instead of asking Discord again', async (_name, failure) => {
+      const { service, fetch, state } = setup();
+      state.failWith = failure;
+      await expect(service.canManage(USER, GUILD)).rejects.toBe(failure);
+      await expect(service.canManage(USER, GUILD, { fresh: true })).rejects.toBe(failure);
+      await expect(service.assertManageGuild(USER, GUILD)).rejects.toBe(failure);
+      expect(fetch).toHaveBeenCalledTimes(1);
+
+      state.failWith = undefined;
+      vi.advanceTimersByTime(GUILD_ACCESS_FAILURE_TTL_MS + 1);
+      expect(await service.canManage(USER, GUILD)).toBe(true);
+      expect(fetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('keeps the original error class and never turns it into "no such server"', async () => {
+      const { service, state } = setup();
+      state.failWith = new RestError(502);
+      const error = await service.assertManageGuild(USER, GUILD).catch((e: unknown) => e);
+      expect(error).toBeInstanceOf(RestError);
+      expect(error).not.toBeInstanceOf(GuildNotFoundError);
+    });
+
+    it('does not replay the failure for other users or guilds', async () => {
+      const { service, fetch, state } = setup();
+      state.failWith = new RestError(500);
+      await expect(service.canManage(USER, GUILD)).rejects.toBeInstanceOf(RestError);
+      state.failWith = undefined;
+      expect(await service.canManage(OWNER, GUILD)).toBe(true);
+      expect(fetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not replay a client error such as 404 or 403', async () => {
+      const { service, fetch, state } = setup();
+      state.failWith = new RestError(403, 50013);
+      await expect(service.canManage(USER, GUILD)).rejects.toBeInstanceOf(RestError);
+      state.failWith = undefined;
+      expect(await service.canManage(USER, GUILD)).toBe(true);
+      expect(fetch).toHaveBeenCalledTimes(2);
+    });
   });
 
   it('never holds more than max entries when ten thousand new keys arrive', async () => {

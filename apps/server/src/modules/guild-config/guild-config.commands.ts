@@ -8,7 +8,7 @@ import { replyInChunks } from '../../discord/helpers/reply.js';
 import { GuildLocaleService } from '../../i18n/guild-locale.service.js';
 import { localizations } from '../../i18n/localizations.js';
 import { translatorFor } from '../../i18n/translator.js';
-import { GuildConfigService } from './guild-config.service.js';
+import { GuildConfigService, type ChannelSetting } from './guild-config.service.js';
 
 const CHANNEL_TYPES: ApplicationCommandOptionAllowedChannelType[] = [
   ChannelType.GuildText,
@@ -31,7 +31,6 @@ export class ChannelOptions {
   readonly channel!: { readonly id: string };
 }
 
-type ChannelSetting = 'introChannelId' | 'logChannelId' | 'birthdayChannelId';
 type ConfirmationKey =
   | 'guild-config.set.introChannel'
   | 'guild-config.set.logChannel'
@@ -112,11 +111,18 @@ export class GuildConfigCommands {
     const guildId = interaction.guildId;
     if (guildId === null) throw new ServiceError(ErrorCode.GUILD_NOT_FOUND);
 
+    // Before the reply is deferred: a channel the bot cannot use is refused
+    // with a private answer, which a deferred public reply could not give.
+    await this.config.assertChannelUsable(setting, channelId);
+
+    // The database write below can outlast the 3 s window for a first reply.
+    // Public, as before: the confirmation tells the room where the bot now works.
+    await interaction.deferReply();
+
     const actor: ActorContext = { source: 'DISCORD', userId: interaction.user.id };
     await this.config.patch(guildId, { [setting]: channelId }, actor);
 
     const t = translatorFor(await this.locales.resolve(guildId, interaction));
-    // Public, as before: the confirmation tells the room where the bot now works.
     await replyInChunks(interaction, t(confirmation, { channel: `<#${channelId}>` }));
   }
 }

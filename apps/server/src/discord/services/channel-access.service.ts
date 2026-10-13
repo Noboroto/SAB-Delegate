@@ -2,8 +2,20 @@ import { Injectable } from '@nestjs/common';
 import { Client, PermissionFlagsBits } from 'discord.js';
 import { discordErrorCode } from '../helpers/reply.js';
 
-/** Unknown Channel, Missing Access: the bot cannot see the channel at all. */
-const INVISIBLE_CHANNEL_CODES: ReadonlySet<number> = new Set([10003, 50001]);
+/** Unknown Channel: the id names nothing the bot can resolve. */
+const UNKNOWN_CHANNEL_CODE = 10003;
+/** Missing Access: the channel exists but the bot may not see it. */
+const MISSING_ACCESS_CODE = 50001;
+
+export type ChannelNeed = 'send' | 'read';
+
+/**
+ * `not-found`: no such channel, or not one the bot can have permissions in (a
+ * direct message). `missing-permissions`: the channel is there but the bot may
+ * not do what was asked in it. Callers tell the person which of the two, since
+ * the fix is different.
+ */
+export type ChannelAccess = 'ok' | 'not-found' | 'missing-permissions';
 
 /**
  * What the bot may do in one specific channel. The guild-level permission says
@@ -14,30 +26,26 @@ const INVISIBLE_CHANNEL_CODES: ReadonlySet<number> = new Set([10003, 50001]);
 export class ChannelAccessService {
   constructor(private readonly client: Client) {}
 
-  /** Can see the channel and post in it (in a thread: post in threads). */
-  botCanSend(channelId: string): Promise<boolean> {
-    return this.check(channelId, 'send');
-  }
-
-  /** Can see the channel and read its history. */
-  botCanRead(channelId: string): Promise<boolean> {
-    return this.check(channelId, 'read');
-  }
-
-  private async check(channelId: string, need: 'send' | 'read'): Promise<boolean> {
+  /**
+   * `send`: can see the channel and post in it (in a thread: post in threads).
+   * `read`: can see the channel and read its history. Failures other than
+   * "unknown channel" and "missing access" are thrown.
+   */
+  async check(channelId: string, need: ChannelNeed): Promise<ChannelAccess> {
     let channel;
     try {
       channel = await this.client.channels.fetch(channelId);
     } catch (error) {
       const code = discordErrorCode(error);
-      if (code !== undefined && INVISIBLE_CHANNEL_CODES.has(code)) return false;
+      if (code === UNKNOWN_CHANNEL_CODE) return 'not-found';
+      if (code === MISSING_ACCESS_CODE) return 'missing-permissions';
       throw error;
     }
-    if (!channel || channel.isDMBased() || !('permissionsFor' in channel)) return false;
+    if (!channel || channel.isDMBased() || !('permissionsFor' in channel)) return 'not-found';
 
     const me = channel.guild.members.me ?? (await channel.guild.members.fetchMe());
     const permissions = channel.permissionsFor(me);
-    if (!permissions) return false;
+    if (!permissions) return 'not-found';
 
     const required =
       need === 'read'
@@ -48,6 +56,6 @@ export class ChannelAccessService {
               ? PermissionFlagsBits.SendMessagesInThreads
               : PermissionFlagsBits.SendMessages,
           ];
-    return permissions.has(required);
+    return permissions.has(required) ? 'ok' : 'missing-permissions';
   }
 }

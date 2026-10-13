@@ -1,5 +1,6 @@
 import { Logger } from '@nestjs/common';
 import { Context, On, Once, type ContextOf } from 'necord';
+import { DiscordReadyService } from '../../discord/discord-ready.service.js';
 import { DiscordCommands } from '../../discord/decorators/discord-commands.decorator.js';
 import { errorLabel } from '../../prisma/pool-factory.js';
 import { GuildConfigService } from './guild-config.service.js';
@@ -20,11 +21,17 @@ function nameOf(guild: GuildLike): string | undefined {
 export class GuildSyncListener {
   private readonly logger = new Logger(GuildSyncListener.name);
 
-  constructor(private readonly guilds: GuildConfigService) {}
+  constructor(
+    private readonly guilds: GuildConfigService,
+    private readonly ready: DiscordReadyService,
+  ) {}
 
   @Once('clientReady')
   async onClientReady(@Context() [client]: ContextOf<'clientReady'>): Promise<void> {
     for (const guild of client.guilds.cache.values()) {
+      // A long server list can still be running when shutdown begins; the
+      // database pool is about to close, so stop between servers.
+      if (this.ready.isStopping()) return;
       await this.sync(guild);
     }
   }
@@ -41,6 +48,7 @@ export class GuildSyncListener {
 
   /** One server failing must not leave the rest unrecorded, so nothing is rethrown. */
   private async sync(guild: GuildLike): Promise<void> {
+    if (this.ready.isStopping()) return;
     try {
       await this.guilds.ensureGuild(guild.id, nameOf(guild));
     } catch (error) {

@@ -1,3 +1,4 @@
+import { setTimeout as sleep } from 'node:timers/promises';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ApplicationCommandManager, Client, Routes, type REST } from 'discord.js';
 import { CommandsService } from 'necord';
@@ -22,7 +23,16 @@ type CommandSource = {
 };
 type Route = `/${string}`;
 
-const WIPE_RETRY_ATTEMPTS = 3;
+/** Pause before each retry of the registration that follows a wipe (so up to four attempts). */
+type RetryBackoff = {
+  readonly delaysMs: readonly number[];
+  sleep(ms: number): Promise<void>;
+};
+
+const DEFAULT_BACKOFF: RetryBackoff = {
+  delaysMs: [1000, 2000, 4000],
+  sleep: (ms) => sleep(ms),
+};
 
 // discord.js keeps this conversion (camelCase builder data to the REST body)
 // behind a private static that `ApplicationCommandManager#set` itself uses.
@@ -64,6 +74,9 @@ export class CommandRegistrar {
     @Inject(DISCORD_ENV)
     private readonly env: Pick<DiscordEnv, 'APP_ENV' | 'DISCORD_DEV_GUILD_ID'>,
   ) {}
+
+  /** The pauses between retries after a wipe; a test replaces them with instant ones. */
+  backoff: RetryBackoff = DEFAULT_BACKOFF;
 
   /** The only scope this environment may write to. */
   configuredScope(): RegistrationScope {
@@ -129,11 +142,13 @@ export class CommandRegistrar {
    * with nothing to register would leave users with no commands at all, so it is
    * refused too; an empty guild payload is fine (it just clears the dev guild).
    *
-   * Commands are missing between the two calls; if the second one fails the
-   * empty state is logged and the next boot's check finds the difference and
-   * registers again.
+   * Commands are missing between the two calls, so the second one is retried
+   * with a growing pause. If it still fails the scope is left empty: that is
+   * logged as an error naming the scope, and the next boot's check finds the
+   * difference and registers again.
    */
   async wipeAndRegister(scope: RegistrationScope): Promise<RegistrationOutcome> {
+    let wiped = false;
     try {
       const allowed = this.configuredScope();
       if (describeScope(scope) !== describeScope(allowed)) {
@@ -149,6 +164,7 @@ export class CommandRegistrar {
       const applicationId = this.applicationId();
       const route = routeFor(applicationId, scope);
       await this.client.rest.put(route, { body: [] });
+      wiped = true;
       this.logger.warn(`Wiped the ${describeScope(scope)} slash commands`);
       await this.putWithRetry(route, payload);
       await this.appState.set(hashKey(applicationId, scope), commandHash(payload));
@@ -157,7 +173,11 @@ export class CommandRegistrar {
       );
       return 'registered';
     } catch (error) {
-      this.logger.error(`Slash command wipe failed (${errorLabel(error)})`);
+      this.logger.error(
+        wiped
+          ? `Slash command wipe left the ${describeScope(scope)} commands EMPTY: registering them again failed (${errorLabel(error)}); the next boot registers them`
+          : `Slash command wipe failed for ${describeScope(scope)} (${errorLabel(error)})`,
+      );
       return 'failed';
     }
   }
@@ -187,13 +207,17 @@ export class CommandRegistrar {
   }
 
   private async putWithRetry(route: Route, payload: CommandPayload[]): Promise<void> {
-    for (let attempt = 1; ; attempt += 1) {
+    for (let attempt = 0; ; attempt += 1) {
       try {
         await this.client.rest.put(route, { body: payload });
         return;
       } catch (error) {
-        if (attempt >= WIPE_RETRY_ATTEMPTS) throw error;
-        this.logger.warn(`Registering after the wipe failed (${errorLabel(error)}); retrying`);
+        const delay = this.backoff.delaysMs[attempt];
+        if (delay === undefined) throw error;
+        this.logger.warn(
+          `Registering after the wipe failed (${errorLabel(error)}); retrying in ${delay} ms`,
+        );
+        await this.backoff.sleep(delay);
       }
     }
   }

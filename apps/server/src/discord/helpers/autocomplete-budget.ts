@@ -43,6 +43,11 @@ const logger = new Logger('AutocompleteBudget');
  * finds its result in the cache. Results are cached per key for 30 s, so typing
  * more characters filters locally instead of asking Discord again.
  *
+ * A load still running for a key is shared by the keystrokes that arrive
+ * meanwhile (typing fast would otherwise start one Discord fetch per
+ * character, each slower than the last), and only a load that succeeded is
+ * cached: a failure is retried by the next keystroke.
+ *
  * An interaction that died while we worked (10062/40060) is only logged:
  * nobody is left to answer and a second reply cannot succeed. Any other error
  * from `load` propagates to the exception filter.
@@ -56,6 +61,28 @@ export function withAutocompleteBudget<Data extends NonNullable<unknown>>(
     ttl: options.ttlMs ?? AUTOCOMPLETE_CACHE_TTL_MS,
   });
 
+  const inFlight = new Map<string, Promise<Data>>();
+
+  function load(key: string | undefined, interaction: AutocompleteInteraction): Promise<Data> {
+    const running = key === undefined ? undefined : inFlight.get(key);
+    if (running !== undefined) return running;
+
+    // The cache is written inside the chain, before the entry leaves
+    // `inFlight`, so there is no instant at which neither holds the data.
+    const loading = (async () => options.load(interaction))().then((data) => {
+      if (key !== undefined) cache.set(key, data);
+      return data;
+    });
+    if (key !== undefined) {
+      inFlight.set(key, loading);
+      const release = (): void => {
+        if (inFlight.get(key) === loading) inFlight.delete(key);
+      };
+      void loading.then(release, release);
+    }
+    return loading;
+  }
+
   return async (interaction) => {
     const key = options.cacheKey(interaction);
     const cached = key === undefined ? undefined : cache.get(key);
@@ -64,10 +91,7 @@ export function withAutocompleteBudget<Data extends NonNullable<unknown>>(
     if (cached !== undefined) {
       choices = options.choices(cached, interaction);
     } else {
-      const loading = options.load(interaction).then((data) => {
-        if (key !== undefined) cache.set(key, data);
-        return data;
-      });
+      const loading = load(key, interaction);
       const outcome = await withinBudget(loading, budgetMs);
       choices = outcome === OVER_BUDGET ? [] : options.choices(outcome, interaction);
     }

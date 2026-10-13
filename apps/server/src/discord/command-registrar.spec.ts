@@ -91,13 +91,15 @@ function setup(options: Setup = {}) {
     APP_ENV: options.appEnv ?? 'production',
     DISCORD_DEV_GUILD_ID: options.devGuild,
   } as Pick<DiscordEnv, 'APP_ENV' | 'DISCORD_DEV_GUILD_ID'>;
+  const sleep = vi.fn((_ms: number) => Promise.resolve());
   const registrar = new CommandRegistrar(
     { rest, application: { id: options.applicationId ?? APP_ID } },
     commands,
     appState as unknown as AppStateService,
     env,
   );
-  return { registrar, rest, commands, appState, store };
+  registrar.backoff = { delaysMs: [1000, 2000, 4000], sleep };
+  return { registrar, rest, commands, appState, store, sleep };
 }
 
 const bodyOf = (discovered: Discovered[]) => discovered.map((entry) => toRestBody(entry.toJSON()));
@@ -335,20 +337,38 @@ describe('CommandRegistrar.wipeAndRegister', () => {
     expect(rest.put).toHaveBeenCalledTimes(2);
   });
 
-  it('retries the registration after the wipe, then gives up and reports failure', async () => {
-    vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
-    vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+  it('retries the registration after the wipe with a growing pause, then gives up and reports failure', async () => {
+    const warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    const error = vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
 
     const flaky = setup();
-    flaky.rest.put.mockResolvedValueOnce([]).mockRejectedValueOnce(new Error('boom'));
+    flaky.rest.put
+      .mockResolvedValueOnce([])
+      .mockRejectedValueOnce(new Error('boom'))
+      .mockRejectedValueOnce(new Error('boom'));
     await expect(flaky.registrar.wipeAndRegister({ kind: 'global' })).resolves.toBe('registered');
-    expect(flaky.rest.put).toHaveBeenCalledTimes(3);
+    expect(flaky.rest.put).toHaveBeenCalledTimes(4);
+    expect(flaky.sleep.mock.calls.map(([ms]) => ms)).toEqual([1000, 2000]);
+    expect(error).not.toHaveBeenCalled();
 
     const broken = setup();
     broken.rest.put.mockResolvedValueOnce([]).mockRejectedValue(new Error('boom'));
     await expect(broken.registrar.wipeAndRegister({ kind: 'global' })).resolves.toBe('failed');
-    expect(broken.rest.put).toHaveBeenCalledTimes(4);
+    // One wipe, the registration, and three retries after pauses of 1, 2 and 4 seconds.
+    expect(broken.rest.put).toHaveBeenCalledTimes(5);
+    expect(broken.sleep.mock.calls.map(([ms]) => ms)).toEqual([1000, 2000, 4000]);
     expect(broken.store.size).toBe(0);
+    const logged = error.mock.calls.flat().join(' ');
+    expect(logged).toContain('global');
+    expect(logged).toContain('EMPTY');
+    expect(warn).toHaveBeenCalled();
+  });
+
+  it('does not call the wipe a failure-after-wipe when the wipe itself is refused', async () => {
+    const error = vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    const { registrar } = setup({ global: [] });
+    await registrar.wipeAndRegister({ kind: 'global' });
+    expect(error.mock.calls.flat().join(' ')).not.toContain('EMPTY');
   });
 });
 

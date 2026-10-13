@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import { type NestFastifyApplication, FastifyAdapter } from '@nestjs/platform-fastify';
 import { Test } from '@nestjs/testing';
+import { Status } from 'discord.js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DiscordReadyService } from '../discord/discord-ready.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -52,8 +53,9 @@ describe('GET /health (readiness)', () => {
     pending?: boolean;
     ready?: boolean;
     queryRaw: ReturnType<typeof vi.fn>;
+    gateway?: ConstructorParameters<typeof DiscordReadyService>[1];
   }) {
-    const discord = new DiscordReadyService(options.pending ?? false);
+    const discord = new DiscordReadyService(options.pending ?? false, options.gateway);
     if (options.ready) discord.markReady();
     app = await startApp(
       [
@@ -86,6 +88,25 @@ describe('GET /health (readiness)', () => {
       status: 'unavailable',
       checks: { database: 'up', discord: 'down' },
     });
+  });
+
+  it('is 503 when the gateway dropped after it was ready once', async () => {
+    const shard = { status: Status.Ready as Status };
+    const gateway = {
+      ws: {
+        status: Status.Ready,
+        shards: { size: 1, every: (test: (s: { status: Status }) => boolean) => test(shard) },
+      },
+    };
+    const queryRaw = vi.fn().mockResolvedValue([]);
+    const up = await readiness({ ready: true, queryRaw, gateway });
+    expect(up.statusCode).toBe(200);
+    await app?.close();
+
+    shard.status = Status.Connecting;
+    const down = await readiness({ ready: true, queryRaw, gateway });
+    expect(down.statusCode).toBe(503);
+    expect(down.json()).toMatchObject({ checks: { database: 'up', discord: 'down' } });
   });
 
   it('is 503 when the database does not answer', async () => {

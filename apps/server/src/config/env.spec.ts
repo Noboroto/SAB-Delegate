@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { envSchema, InvalidEnvError, loadEnv, variableNames } from './env.js';
+import { envSchema, InvalidEnvError, loadEnv, SECRET_ENV_NAMES, variableNames } from './env.js';
 
 // Generated per run: the values only need to be present and non-trivial.
 const token = `tok-${randomBytes(8).toString('hex')}`;
@@ -213,5 +213,14 @@ describe('env contract between the schema and .env.example', () => {
     expect(
       schemaKeys.filter((key) => NOT_READ_BY_SERVER.has(key) || LEGACY_DB_PATH.test(key)),
     ).toEqual([]);
+  });
+});
+
+describe('SECRET_ENV_NAMES', () => {
+  it('lists every variable of the schema that looks like a secret', () => {
+    const secretLooking = Object.keys(envSchema.shape).filter((name) =>
+      /TOKEN|PASSWORD|SECRET|KEY/.test(name),
+    );
+    expect([...SECRET_ENV_NAMES].sort()).toEqual(secretLooking.sort());
   });
 });

@@ -172,6 +172,78 @@ describe('withAutocompleteBudget', () => {
     expect(load).toHaveBeenCalledTimes(1);
   });
 
+  it('shares one load between keystrokes that arrive while it runs', async () => {
+    let finish: (data: string[]) => void = () => undefined;
+    const load = vi.fn(() => new Promise<string[]>((resolve) => (finish = resolve)));
+    const handler = withAutocompleteBudget<string[]>({
+      cacheKey: () => 'message:1',
+      load,
+      choices: identity,
+      budgetMs: 1000,
+    });
+
+    const first = interaction();
+    const second = interaction();
+    const answered = Promise.all([handler(first.value), handler(second.value)]);
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(load).toHaveBeenCalledTimes(1);
+
+    finish(['a']);
+    await answered;
+    expect(first.respond).toHaveBeenCalledWith([{ name: 'a', value: 'a' }]);
+    expect(second.respond).toHaveBeenCalledWith([{ name: 'a', value: 'a' }]);
+  });
+
+  it('joins a load that outlived the budget instead of starting another', async () => {
+    let finish: (data: string[]) => void = () => undefined;
+    const load = vi.fn(() => new Promise<string[]>((resolve) => (finish = resolve)));
+    const handler = withAutocompleteBudget<string[]>({
+      cacheKey: () => 'message:1',
+      load,
+      choices: identity,
+      budgetMs: 10,
+    });
+    await handler(interaction().value);
+    await handler(interaction().value);
+    expect(load).toHaveBeenCalledTimes(1);
+    finish(['a']);
+  });
+
+  it('does not cache a failed load, and the next keystroke loads again', async () => {
+    const load = vi
+      .fn<() => Promise<string[]>>()
+      .mockRejectedValueOnce(new Error('Discord 500'))
+      .mockResolvedValue(['a']);
+    const handler = withAutocompleteBudget<string[]>({
+      cacheKey: () => 'message:1',
+      load,
+      choices: identity,
+    });
+    await expect(handler(interaction().value)).rejects.toThrow('Discord 500');
+
+    const retry = interaction();
+    await handler(retry.value);
+    expect(load).toHaveBeenCalledTimes(2);
+    expect(retry.respond).toHaveBeenCalledWith([{ name: 'a', value: 'a' }]);
+  });
+
+  it('survives a load that throws before returning a promise', async () => {
+    const load = vi
+      .fn<() => Promise<string[]>>()
+      .mockImplementationOnce(() => {
+        throw new TypeError('sync failure');
+      })
+      .mockResolvedValue(['a']);
+    const handler = withAutocompleteBudget<string[]>({
+      cacheKey: () => 'k',
+      load,
+      choices: identity,
+    });
+    await expect(handler(interaction().value)).rejects.toThrow('sync failure');
+    await handler(interaction().value);
+    expect(load).toHaveBeenCalledTimes(2);
+  });
+
   it('does not let a load that fails after the budget become an unhandled rejection', async () => {
     const unhandled = vi.fn();
     process.on('unhandledRejection', unhandled);

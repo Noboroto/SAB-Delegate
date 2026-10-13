@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger, type OnModuleDestroy } from '@nestjs/common';
 import { Client } from 'discord.js';
+import { SECRET_ENV_NAMES } from '../config/env.js';
 import { errorLabel } from '../prisma/pool-factory.js';
 import { DISCORD_ENV, type DiscordEnv } from './boot-guard.js';
 
@@ -9,7 +10,13 @@ export const BOT_LOG_CHANNEL_NAME = 'bot-log';
 const MAX_DETAIL_LENGTH = 1900;
 const MAX_TITLE_LENGTH = 200;
 
-type LogChannelPort = { send(message: { content: string }): Promise<unknown> };
+type OutgoingMessage = { content: string; allowedMentions: { parse: readonly [] } };
+type LogChannelPort = { send(message: OutgoingMessage): Promise<unknown> };
+type ReporterEnv = Pick<DiscordEnv, 'ADMIN_GUILD_ID' | (typeof SECRET_ENV_NAMES)[number]>;
+
+// A stack trace can contain user-controlled text (an option value, a message
+// body). Mentions in it must not ping anyone.
+const NO_MENTIONS: OutgoingMessage['allowedMentions'] = { parse: [] };
 type ClientPort = {
   guilds: {
     cache: {
@@ -49,7 +56,7 @@ export class ErrorReporter implements OnModuleDestroy {
 
   constructor(
     @Inject(Client) private readonly client: ClientPort,
-    @Inject(DISCORD_ENV) private readonly env: Pick<DiscordEnv, 'ADMIN_GUILD_ID' | 'DISCORD_TOKEN'>,
+    @Inject(DISCORD_ENV) private readonly env: ReporterEnv,
   ) {}
 
   /**
@@ -69,8 +76,13 @@ export class ErrorReporter implements OnModuleDestroy {
     try {
       const channel = this.findLogChannel();
       if (channel === undefined) return;
-      await channel.send({ content: title.slice(0, MAX_TITLE_LENGTH) });
-      await channel.send({ content: '```\n' + detail.slice(0, MAX_DETAIL_LENGTH) + '\n```' });
+      await channel.send({
+        content: title.slice(0, MAX_TITLE_LENGTH),
+        allowedMentions: NO_MENTIONS,
+      });
+      // Fence-safe before the cut: neutralising adds characters.
+      const fenced = breakFences(detail).slice(0, MAX_DETAIL_LENGTH);
+      await channel.send({ content: '```\n' + fenced + '\n```', allowedMentions: NO_MENTIONS });
     } catch (reportFailure) {
       this.logger.warn(`Could not post to #${BOT_LOG_CHANNEL_NAME} (${errorLabel(reportFailure)})`);
     }
@@ -88,10 +100,25 @@ export class ErrorReporter implements OnModuleDestroy {
   }
 
   private redact(text: string): string {
-    // A library error can echo the request that failed; keep the token out of
-    // a channel and a log that more people can read than the environment.
-    return text.replaceAll(this.env.DISCORD_TOKEN, '[redacted]');
+    // A library error can echo the request that failed or the connection
+    // string; keep every secret out of a channel and a log that more people
+    // can read than the environment. The URL-encoded form is what a database
+    // URL carries.
+    let redacted = text;
+    for (const name of SECRET_ENV_NAMES) {
+      const value = this.env[name];
+      if (value === '') continue;
+      for (const form of new Set([value, encodeURIComponent(value)])) {
+        redacted = redacted.replaceAll(form, '[redacted]');
+      }
+    }
+    return redacted;
   }
+}
+
+/** Puts a zero-width space between the backticks of any run of three or more, so the text cannot close the code fence it is posted in. */
+function breakFences(text: string): string {
+  return text.replaceAll(/`{3,}/g, (run) => [...run].join('\u200b'));
 }
 
 function isLogChannel(value: unknown): value is LogChannelPort {

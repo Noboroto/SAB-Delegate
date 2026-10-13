@@ -1,4 +1,12 @@
-import { Inject, Logger, Module, type DynamicModule } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  Logger,
+  Module,
+  type BeforeApplicationShutdown,
+  type DynamicModule,
+} from '@nestjs/common';
+import { Client } from 'discord.js';
 import { Context, NecordModule, On, Once, type ContextOf } from 'necord';
 import { AppStateModule } from '../app-state/app-state.service.js';
 import { I18nModule } from '../i18n/guild-locale.service.js';
@@ -49,13 +57,40 @@ export class DiscordLifecycleListener {
   private async registerCommands(): Promise<void> {
     try {
       if (this.env.COMMANDS_FORCE_RESET) {
-        this.logger.warn('COMMANDS_FORCE_RESET is set: wiping and registering the slash commands');
+        this.logger.warn(
+          'COMMANDS_FORCE_RESET is still set: this one-shot flag wipes and registers the slash commands at every boot - unset it',
+        );
         await this.registrar.wipeAndRegister(this.registrar.configuredScope());
       } else {
         await this.registrar.registerIfChanged();
       }
     } catch (error) {
       this.logger.error(`Slash command registration aborted (${errorLabel(error)})`);
+    }
+  }
+}
+
+/**
+ * Closes the gateway between the two phases that matter: after pg-boss stopped
+ * (`onModuleDestroy`, so a job still draining can use the client) and before
+ * Prisma closes its pool (`onApplicationShutdown`), because a handler running
+ * on the last events needs the database. Necord destroys the client in its own
+ * `onApplicationShutdown`, which Nest runs in module order and so may come
+ * after the pool is gone; destroying twice is harmless (discord.js guards the
+ * websocket manager, and the sweepers and REST timers clear idempotently).
+ */
+@Injectable()
+export class DiscordClientShutdown implements BeforeApplicationShutdown {
+  private readonly logger = new Logger(DiscordClientShutdown.name);
+
+  constructor(@Inject(Client) private readonly client: Pick<Client, 'destroy'>) {}
+
+  async beforeApplicationShutdown(): Promise<void> {
+    try {
+      await this.client.destroy();
+    } catch (error) {
+      // Shutdown goes on to close the database whatever happens here.
+      this.logger.error(`Could not close the Discord client (${errorLabel(error)})`);
     }
   }
 }
@@ -107,6 +142,7 @@ export class DiscordModule {
         ErrorReporter,
         CommandRegistrar,
         DiscordLifecycleListener,
+        DiscordClientShutdown,
         ChannelAccessService,
         DiscordReactionService,
         MessageResolver,

@@ -14,6 +14,8 @@ import { DiscordExceptionFilter } from './discord-exception.filter.js';
 
 const ADMIN_GUILD = '333333333333333333';
 const token = `marker-${randomBytes(8).toString('hex')}`;
+// Characters that a database URL escapes, so the encoded form differs from the raw one.
+const databasePassword = `p@ss/${randomBytes(8).toString('hex')}:w?rd`;
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -58,6 +60,7 @@ describe('ErrorReporter', () => {
     const reporter = new ErrorReporter(client, {
       ADMIN_GUILD_ID: ADMIN_GUILD,
       DISCORD_TOKEN: token,
+      POSTGRES_PASSWORD: databasePassword,
     });
     return { reporter, send };
   }
@@ -71,7 +74,10 @@ describe('ErrorReporter', () => {
     await reporter.report('Error in SetCommands.logChannel', error);
 
     expect(send).toHaveBeenCalledTimes(2);
-    expect(send.mock.calls[0]?.[0]).toEqual({ content: 'Error in SetCommands.logChannel' });
+    expect(send.mock.calls[0]?.[0]).toEqual({
+      content: 'Error in SetCommands.logChannel',
+      allowedMentions: { parse: [] },
+    });
     const detail = (send.mock.calls[1]?.[0] as { content: string }).content;
     expect(detail.startsWith('```\nError: boom')).toBe(true);
     expect(detail.endsWith('\n```')).toBe(true);
@@ -126,6 +132,40 @@ describe('ErrorReporter', () => {
     expect(posted).toContain('[redacted]');
   });
 
+  it('keeps the database password out of the channel, raw and URL-encoded', async () => {
+    silenceLogs();
+    const { reporter, send } = build({});
+    const url = `postgresql://sab_app:${encodeURIComponent(databasePassword)}@db/sab`;
+    await reporter.report('title', new Error(`connect failed ${databasePassword} via ${url}`));
+    const posted = send.mock.calls
+      .map(([message]) => (message as { content: string }).content)
+      .join('\n');
+    expect(posted).not.toContain(databasePassword);
+    expect(posted).not.toContain(encodeURIComponent(databasePassword));
+    expect(posted).toContain('[redacted]');
+  });
+
+  it('sends no mention to anyone', async () => {
+    silenceLogs();
+    const { reporter, send } = build({});
+    await reporter.report('title @everyone', new Error('<@123456789012345678> @here'));
+    expect(send).toHaveBeenCalledTimes(2);
+    for (const [message] of send.mock.calls) {
+      expect((message as { allowedMentions: unknown }).allowedMentions).toEqual({ parse: [] });
+    }
+  });
+
+  it('cannot be made to close its own code fence', async () => {
+    silenceLogs();
+    const { reporter, send } = build({});
+    await reporter.report('title', new Error('x ```\n@everyone ````` y'));
+    const detail = (send.mock.calls[1]?.[0] as { content: string }).content;
+    const inner = detail.slice('```\n'.length, -'\n```'.length);
+    expect(inner).not.toContain('```');
+    expect(inner).toContain('@everyone');
+    expect(detail.length).toBeLessThanOrEqual(2000);
+  });
+
   it('only logs once the process is shutting down', async () => {
     silenceLogs();
     const { reporter, send } = build({});
@@ -142,18 +182,29 @@ describe('DiscordExceptionFilter', () => {
   function interactionOf(state: {
     replied?: boolean;
     deferred?: boolean;
+    ephemeral?: boolean;
     repliable?: boolean;
     autocomplete?: boolean;
+    commandName?: string;
+    group?: string | null;
+    subcommand?: string | null;
   }) {
     return {
+      commandName: state.commandName,
+      options: {
+        getSubcommandGroup: () => state.group ?? null,
+        getSubcommand: () => state.subcommand ?? null,
+      },
       guildId: ADMIN_GUILD,
       locale: 'en-US',
       replied: state.replied ?? false,
       deferred: state.deferred ?? false,
+      ephemeral: state.deferred === true ? (state.ephemeral ?? false) : null,
       isRepliable: () => state.repliable ?? true,
       isAutocomplete: () => state.autocomplete ?? false,
       reply: vi.fn().mockResolvedValue(undefined),
       editReply: vi.fn().mockResolvedValue(undefined),
+      deleteReply: vi.fn().mockResolvedValue(undefined),
       followUp: vi.fn().mockResolvedValue(undefined),
       respond: vi.fn().mockResolvedValue(undefined),
     };
@@ -200,16 +251,99 @@ describe('DiscordExceptionFilter', () => {
     expect(report).toHaveBeenCalledWith('Error in SetCommands.logChannel', expect.any(Error));
   });
 
-  it('edits the placeholder of a deferred reply', async () => {
+  it('answers the user before the report goes out, and does not wait for the report', async () => {
+    silenceLogs();
+    const { filter, report } = build();
+    const interaction = interactionOf({});
+    const order: string[] = [];
+    interaction.reply.mockImplementation(() => {
+      order.push('reply');
+      return Promise.resolve();
+    });
+    // A report that never finishes (a stalled or rate-limited channel).
+    report.mockImplementation(() => {
+      order.push('report');
+      return new Promise(() => undefined);
+    });
+
+    await filter.catch(new Error(secret), hostOf(interaction));
+
+    expect(order).toEqual(['reply', 'report']);
+  });
+
+  it('still reports when answering fails, and a failing report cannot escape', async () => {
+    silenceLogs();
+    const { filter, report } = build();
+    const interaction = interactionOf({});
+    interaction.reply.mockRejectedValue(new Error('Missing Access'));
+    report.mockRejectedValue(new Error('reporter bug'));
+    await expect(filter.catch(new Error(secret), hostOf(interaction))).resolves.toBeUndefined();
+    await vi.waitFor(() => expect(report).toHaveBeenCalledTimes(1));
+  });
+
+  it('names the command, with its group and subcommand, in the report title', async () => {
+    silenceLogs();
+    const cases = [
+      [{ commandName: 'set', subcommand: 'log-channel' }, '/set log-channel'],
+      [{ commandName: 'note', group: 'tag', subcommand: 'add' }, '/note tag add'],
+      [{ commandName: 'ping' }, '/ping'],
+    ] as const;
+    for (const [state, expected] of cases) {
+      const { filter, report } = build();
+      await filter.catch(new Error(secret), hostOf(interactionOf(state)));
+      expect(report).toHaveBeenCalledWith(
+        `Error in SetCommands.logChannel (${expected})`,
+        expect.any(Error),
+      );
+    }
+  });
+
+  it('edits the placeholder of an ephemeral deferred reply', async () => {
     silenceLogs();
     const { filter } = build();
-    const interaction = interactionOf({ deferred: true });
+    const interaction = interactionOf({ deferred: true, ephemeral: true });
     await filter.catch(new Error(secret), hostOf(interaction));
     expect(interaction.editReply).toHaveBeenCalledWith({
       content: MESSAGES.en.common.commandFailed,
     });
+    expect(interaction.deleteReply).not.toHaveBeenCalled();
     expect(interaction.reply).not.toHaveBeenCalled();
+    expect(interaction.followUp).not.toHaveBeenCalled();
   });
+
+  it('removes a public placeholder and sends the error privately', async () => {
+    silenceLogs();
+    const { filter } = build();
+    const interaction = interactionOf({ deferred: true, ephemeral: false });
+    const order: string[] = [];
+    interaction.deleteReply.mockImplementation(() => {
+      order.push('delete');
+      return Promise.resolve();
+    });
+    interaction.followUp.mockImplementation(() => {
+      order.push('followUp');
+      return Promise.resolve();
+    });
+    await filter.catch(new Error(secret), hostOf(interaction));
+    expect(order).toEqual(['delete', 'followUp']);
+    expect(interaction.followUp).toHaveBeenCalledWith({
+      content: MESSAGES.en.common.commandFailed,
+      flags: MessageFlags.Ephemeral,
+    });
+    expect(interaction.editReply).not.toHaveBeenCalled();
+  });
+
+  it.each([10008, 10062])(
+    'still sends the private error when the placeholder is already gone (%i)',
+    async (code) => {
+      silenceLogs();
+      const { filter } = build();
+      const interaction = interactionOf({ deferred: true });
+      interaction.deleteReply.mockRejectedValue(Object.assign(new Error('gone'), { code }));
+      await filter.catch(new Error(secret), hostOf(interaction));
+      expect(interaction.followUp).toHaveBeenCalledTimes(1);
+    },
+  );
 
   it('follows up when a reply was already sent, also after a deferred one', async () => {
     silenceLogs();

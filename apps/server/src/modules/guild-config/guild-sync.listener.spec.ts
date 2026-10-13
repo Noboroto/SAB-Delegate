@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import { Logger } from '@nestjs/common';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { DiscordReadyService } from '../../discord/discord-ready.service.js';
 import type { GuildConfigService } from './guild-config.service.js';
 import { GuildSyncListener } from './guild-sync.listener.js';
 
@@ -10,8 +11,11 @@ afterEach(() => {
 
 const guild = (id: string, name = `Guild ${id}`, available = true) => ({ id, name, available });
 
-function build(ensureGuild = vi.fn().mockResolvedValue({})) {
-  const listener = new GuildSyncListener({ ensureGuild } as unknown as GuildConfigService);
+function build(ensureGuild = vi.fn().mockResolvedValue({}), stopping = () => false) {
+  const listener = new GuildSyncListener(
+    { ensureGuild } as unknown as GuildConfigService,
+    { isStopping: stopping } as unknown as DiscordReadyService,
+  );
   return { listener, ensureGuild };
 }
 
@@ -30,6 +34,28 @@ describe('GuildSyncListener', () => {
     expect(ensureGuild).toHaveBeenCalledTimes(2);
     expect(ensureGuild).toHaveBeenCalledWith('1', 'Guild 1');
     expect(ensureGuild).toHaveBeenCalledWith('2', 'Guild 2');
+  });
+
+  it('stops recording servers once shutdown began', async () => {
+    let stopping = false;
+    const ensureGuild = vi.fn().mockImplementation(() => {
+      stopping = true;
+      return Promise.resolve({});
+    });
+    const { listener } = build(ensureGuild, () => stopping);
+    const client = {
+      guilds: {
+        cache: new Map([
+          ['1', guild('1')],
+          ['2', guild('2')],
+        ]),
+      },
+    };
+    await listener.onClientReady([client] as never);
+    expect(ensureGuild).toHaveBeenCalledTimes(1);
+
+    await listener.onGuildCreate([guild('3')] as never);
+    expect(ensureGuild).toHaveBeenCalledTimes(1);
   });
 
   it('does not store the placeholder name of an unavailable guild', async () => {

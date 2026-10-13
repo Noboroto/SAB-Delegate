@@ -6,7 +6,7 @@ import { GuildLocaleService } from '../../i18n/guild-locale.service.js';
 import { translatorFor } from '../../i18n/translator.js';
 import { errorLabel } from '../../prisma/pool-factory.js';
 import { ErrorReporter } from '../error-reporter.service.js';
-import { isDeadInteractionError } from '../helpers/reply.js';
+import { discordErrorCode, isDeadInteractionError } from '../helpers/reply.js';
 
 /** The slice of an interaction the filter reads and answers through. */
 type FailedInteraction = {
@@ -15,10 +15,17 @@ type FailedInteraction = {
   readonly guildLocale?: string | null;
   readonly replied?: boolean;
   readonly deferred?: boolean;
+  readonly ephemeral?: boolean | null;
+  readonly commandName?: string;
+  readonly options?: {
+    getSubcommandGroup?(required?: boolean): string | null;
+    getSubcommand?(required?: boolean): string | null;
+  };
   isRepliable(): boolean;
   isAutocomplete(): boolean;
   reply(options: { content: string; flags: MessageFlags.Ephemeral }): Promise<unknown>;
   editReply(options: { content: string }): Promise<unknown>;
+  deleteReply?(): Promise<unknown>;
   followUp(options: { content: string; flags: MessageFlags.Ephemeral }): Promise<unknown>;
   respond?(choices: []): Promise<unknown>;
 };
@@ -70,9 +77,16 @@ export class DiscordExceptionFilter implements ExceptionFilter {
     }
 
     const expected = exception instanceof ServiceError;
-    if (!expected) await this.reporter.report(describe(necord), exception);
-    if (interaction === undefined) return;
+    try {
+      if (interaction !== undefined) await this.respond(interaction, exception);
+    } finally {
+      // After the answer, and not awaited: the person waiting on the command
+      // must not also wait on `#bot-log`, which may be slow or rate limited.
+      if (!expected) this.reportInBackground(describe(necord, interaction), exception);
+    }
+  }
 
+  private async respond(interaction: FailedInteraction, exception: unknown): Promise<void> {
     if (interaction.isAutocomplete()) {
       await this.answer(() => interaction.respond?.([]));
       return;
@@ -80,16 +94,52 @@ export class DiscordExceptionFilter implements ExceptionFilter {
     if (!interaction.isRepliable()) return;
 
     const t = translatorFor(await this.locales.resolve(interaction.guildId, interaction));
-    const content = expected
-      ? t(`errors.${exception.code}`, exception.params)
-      : t('common.commandFailed');
-    await this.answer(() => {
-      const flags = MessageFlags.Ephemeral;
-      if (interaction.replied === true) return interaction.followUp({ content, flags });
-      // A deferred reply is edited into place; replying again would be refused.
-      if (interaction.deferred === true) return interaction.editReply({ content });
-      return interaction.reply({ content, flags });
-    });
+    const content =
+      exception instanceof ServiceError
+        ? t(`errors.${exception.code}`, exception.params)
+        : t('common.commandFailed');
+    const flags = MessageFlags.Ephemeral;
+    if (interaction.replied !== true && interaction.deferred === true) {
+      // An ephemeral placeholder is edited into place. A public one cannot be
+      // made private, so it is removed and the error goes out as a private
+      // follow-up: an error is for the person who ran the command, not the room.
+      if (interaction.ephemeral === true) {
+        await this.answer(() => interaction.editReply({ content }));
+        return;
+      }
+      await this.removePlaceholder(interaction);
+      await this.answer(() => interaction.followUp({ content, flags }));
+      return;
+    }
+    await this.answer(() =>
+      interaction.replied === true
+        ? interaction.followUp({ content, flags })
+        : interaction.reply({ content, flags }),
+    );
+  }
+
+  private async removePlaceholder(interaction: FailedInteraction): Promise<void> {
+    try {
+      await interaction.deleteReply?.();
+    } catch (error) {
+      // 10008: already gone; 10062: the token expired. Either way there is
+      // nothing left to remove.
+      const code = discordErrorCode(error);
+      if (code === 10008 || code === 10062) return;
+      this.logger.warn(`Could not remove the public placeholder (${errorLabel(error)})`);
+    }
+  }
+
+  private reportInBackground(title: string, exception: unknown): void {
+    // The reporter does not throw; the catch covers a replaced or broken one so
+    // that nothing here can become an unhandled rejection.
+    void (async () => {
+      try {
+        await this.reporter.report(title, exception);
+      } catch (failure) {
+        this.logger.error(`Error report failed (${errorLabel(failure)})`);
+      }
+    })();
   }
 
   private async answer(send: () => Promise<unknown> | undefined): Promise<void> {
@@ -101,7 +151,23 @@ export class DiscordExceptionFilter implements ExceptionFilter {
   }
 }
 
-function describe(necord: NecordExecutionContext): string {
+function describe(
+  necord: NecordExecutionContext,
+  interaction: FailedInteraction | undefined,
+): string {
   const where = [necord.getClass()?.name, necord.getHandler()?.name].filter(Boolean).join('.');
-  return `Error in ${where === '' ? 'a Discord handler' : where}`;
+  const command = commandPath(interaction);
+  return `Error in ${where === '' ? 'a Discord handler' : where}${command === '' ? '' : ` (${command})`}`;
+}
+
+/** `/set log-channel`, `/group sub command`; empty when the context is not a command. */
+function commandPath(interaction: FailedInteraction | undefined): string {
+  if (interaction?.commandName === undefined) return '';
+  // `false`: the option may be absent, and the lookup must not throw then.
+  const group = interaction.options?.getSubcommandGroup?.(false);
+  const subcommand = interaction.options?.getSubcommand?.(false);
+  const parts = [interaction.commandName, group, subcommand].filter(
+    (part): part is string => typeof part === 'string',
+  );
+  return `/${parts.join(' ')}`;
 }

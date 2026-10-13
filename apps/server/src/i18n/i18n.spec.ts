@@ -19,6 +19,21 @@ describe('translatorFor', () => {
     expect(MESSAGES.vi.errors.GUILD_NOT_FOUND).not.toBe(MESSAGES.en.errors.GUILD_NOT_FOUND);
   });
 
+  it('names the missing channel permission through the ICU select', () => {
+    const en = translatorFor('en');
+    const vi = translatorFor('vi');
+    const text = (t: typeof en, permission: string) =>
+      t('errors.DISCORD_MISSING_PERMISSIONS', { permission });
+    expect(text(en, 'view')).toContain('view this channel');
+    expect(text(en, 'send')).toContain('send messages');
+    expect(text(vi, 'view')).toContain('xem kênh');
+    expect(text(vi, 'send')).toContain('gửi tin nhắn');
+    for (const t of [en, vi]) {
+      expect(text(t, 'view')).not.toBe(text(t, 'send'));
+      expect(text(t, 'something-else')).not.toContain('{');
+    }
+  });
+
   it('maps regional tags onto their language and any other language to English', () => {
     expect(translatorFor('en-US')('common.commandFailed')).toBe(MESSAGES.en.common.commandFailed);
     expect(translatorFor('vi-VN')('common.commandFailed')).toBe(MESSAGES.vi.common.commandFailed);

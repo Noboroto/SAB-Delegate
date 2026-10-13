@@ -3,7 +3,10 @@ import { Test } from '@nestjs/testing';
 import { AUDIT_ACTIONS, ErrorCode, type ActorContext } from '@sab/shared';
 import { describe, expect, it, vi } from 'vitest';
 import { AuditService } from '../../common/audit/audit.service.js';
-import { ChannelAccessService } from '../../discord/services/channel-access.service.js';
+import {
+  ChannelAccessService,
+  type ChannelAccess,
+} from '../../discord/services/channel-access.service.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { GuildConfigService } from './guild-config.service.js';
 
@@ -26,10 +29,12 @@ const settingsRow = (overrides: Record<string, unknown> = {}, locale = 'vi') => 
   config: config(overrides),
 });
 
-function build(options: { usable?: boolean } = {}) {
+function build(options: { access?: ChannelAccess } = {}) {
   const prisma = {
     guild: {
-      upsert: vi
+      createMany: vi.fn().mockResolvedValue({ count: 1 }),
+      updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      findUniqueOrThrow: vi
         .fn()
         .mockResolvedValue({ id: 'guild-uuid', discordId: GUILD, name: null, locale: 'vi' }),
       findUnique: vi.fn().mockResolvedValue(settingsRow()),
@@ -43,10 +48,7 @@ function build(options: { usable?: boolean } = {}) {
   };
   prisma.$transaction.mockImplementation((work: (tx: typeof prisma) => unknown) => work(prisma));
   const audit = { record: vi.fn().mockResolvedValue(undefined) };
-  const access = {
-    botCanRead: vi.fn().mockResolvedValue(options.usable ?? true),
-    botCanSend: vi.fn().mockResolvedValue(options.usable ?? true),
-  };
+  const access = { check: vi.fn().mockResolvedValue(options.access ?? 'ok') };
   const service = new GuildConfigService(
     prisma as unknown as PrismaService,
     audit as unknown as AuditService,
@@ -60,7 +62,7 @@ const failsWith = (code: string): unknown =>
 
 describe('GuildConfigService.patch validation', () => {
   it('refuses a channel the bot cannot use, before anything is written', async () => {
-    const { prisma, audit, service } = build({ usable: false });
+    const { prisma, audit, service } = build({ access: 'not-found' });
     await expect(service.patch(GUILD, { logChannelId: CHANNEL }, ACTOR)).rejects.toEqual(
       failsWith(ErrorCode.DISCORD_CHANNEL_NOT_FOUND),
     );
@@ -71,19 +73,23 @@ describe('GuildConfigService.patch validation', () => {
   it('holds the intro channel to read access and the others to send access', async () => {
     const { access, service } = build();
     await service.patch(GUILD, { introChannelId: CHANNEL }, ACTOR);
-    expect(access.botCanRead).toHaveBeenCalledWith(CHANNEL);
-    expect(access.botCanSend).not.toHaveBeenCalled();
+    expect(access.check).toHaveBeenCalledWith(CHANNEL, 'read');
+    expect(access.check).toHaveBeenCalledTimes(1);
 
     await service.patch(GUILD, { logChannelId: OTHER_CHANNEL }, ACTOR);
     await service.patch(GUILD, { birthdayChannelId: OTHER_CHANNEL }, ACTOR);
     await service.patch(GUILD, { wordChannelId: OTHER_CHANNEL }, ACTOR);
-    expect(access.botCanSend).toHaveBeenCalledTimes(3);
+    expect(access.check.mock.calls.slice(1)).toEqual([
+      [OTHER_CHANNEL, 'send'],
+      [OTHER_CHANNEL, 'send'],
+      [OTHER_CHANNEL, 'send'],
+    ]);
   });
 
   it('does not ask Discord anything to clear a channel', async () => {
     const { access, service } = build();
     await service.patch(GUILD, { logChannelId: null }, ACTOR);
-    expect(access.botCanSend).not.toHaveBeenCalled();
+    expect(access.check).not.toHaveBeenCalled();
   });
 
   it('rejects wordMaxWords under 200 and checks no channel for it', async () => {
@@ -91,7 +97,7 @@ describe('GuildConfigService.patch validation', () => {
     await expect(
       service.patch(GUILD, { wordMaxWords: 199, logChannelId: CHANNEL }, ACTOR),
     ).rejects.toEqual(failsWith(ErrorCode.VALIDATION_FAILED));
-    expect(access.botCanSend).not.toHaveBeenCalled();
+    expect(access.check).not.toHaveBeenCalled();
     expect(prisma.$transaction).not.toHaveBeenCalled();
     await expect(service.patch(GUILD, { wordMaxWords: 200 }, ACTOR)).resolves.toBeDefined();
   });
@@ -140,7 +146,7 @@ describe('GuildConfigService.patch with dryRun', () => {
     expect(result.after.logChannelId).toBe(CHANNEL);
     expect(result.after.wordMaxWords).toBe(1500);
     expect(prisma.$transaction).not.toHaveBeenCalled();
-    expect(prisma.guild.upsert).not.toHaveBeenCalled();
+    expect(prisma.guild.createMany).not.toHaveBeenCalled();
     expect(prisma.guildConfig.update).not.toHaveBeenCalled();
     expect(prisma.guild.update).not.toHaveBeenCalled();
     expect(audit.record).not.toHaveBeenCalled();
@@ -163,11 +169,11 @@ describe('GuildConfigService.patch with dryRun', () => {
   });
 
   it('still checks the channel against Discord, which is a read', async () => {
-    const { access, service } = build({ usable: false });
+    const { access, service } = build({ access: 'not-found' });
     await expect(
       service.patch(GUILD, { birthdayChannelId: CHANNEL }, ACTOR, { dryRun: true }),
     ).rejects.toEqual(failsWith(ErrorCode.DISCORD_CHANNEL_NOT_FOUND));
-    expect(access.botCanSend).toHaveBeenCalledWith(CHANNEL);
+    expect(access.check).toHaveBeenCalledWith(CHANNEL, 'send');
   });
 
   it('executes exactly what the dry run reported when run for real', async () => {
@@ -253,7 +259,7 @@ describe('GuildConfigService.patch', () => {
   it('creates the server and settings rows first when the bot had not recorded them', async () => {
     const { prisma, service } = build();
     await service.patch(GUILD, { logChannelId: CHANNEL }, ACTOR);
-    expect(prisma.guild.upsert).toHaveBeenCalled();
+    expect(prisma.guild.createMany).toHaveBeenCalled();
     expect(prisma.guildConfig.createMany).toHaveBeenCalled();
   });
 });
@@ -289,14 +295,60 @@ describe('GuildConfigService.get', () => {
   });
 });
 
+describe('GuildConfigService.assertChannelUsable', () => {
+  it.each([
+    ['introChannelId', 'read', 'view'],
+    ['logChannelId', 'send', 'send'],
+    ['birthdayChannelId', 'send', 'send'],
+  ] as const)(
+    'names the missing %s permission, not just "not found"',
+    async (setting, need, permission) => {
+      const { access, service } = build({ access: 'missing-permissions' });
+      await expect(service.assertChannelUsable(setting, CHANNEL)).rejects.toEqual(
+        expect.objectContaining({
+          code: ErrorCode.DISCORD_MISSING_PERMISSIONS,
+          params: { permission },
+          name: 'ServiceError',
+        }),
+      );
+      expect(access.check).toHaveBeenCalledWith(CHANNEL, need);
+    },
+  );
+
+  it('says not found only for a channel that is not there', async () => {
+    const { service } = build({ access: 'not-found' });
+    await expect(service.assertChannelUsable('logChannelId', CHANNEL)).rejects.toEqual(
+      failsWith(ErrorCode.DISCORD_CHANNEL_NOT_FOUND),
+    );
+  });
+
+  it('resolves for a usable channel', async () => {
+    const { service } = build();
+    await expect(service.assertChannelUsable('introChannelId', CHANNEL)).resolves.toBeUndefined();
+  });
+
+  it('is what patch reports too, before anything is written', async () => {
+    const { prisma, service } = build({ access: 'missing-permissions' });
+    await expect(service.patch(GUILD, { introChannelId: CHANNEL }, ACTOR)).rejects.toEqual(
+      expect.objectContaining({
+        code: ErrorCode.DISCORD_MISSING_PERMISSIONS,
+        params: { permission: 'view' },
+      }),
+    );
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+});
+
 describe('GuildConfigService.ensureGuild', () => {
-  it('upserts the server by its Discord id and the settings by the server key', async () => {
+  it('inserts the server and its settings with ON CONFLICT DO NOTHING, then reads the server back', async () => {
     const { prisma, service } = build();
     await expect(service.ensureGuild(GUILD, 'SAB')).resolves.toMatchObject({ id: 'guild-uuid' });
-    expect(prisma.guild.upsert.mock.calls[0]?.[0]).toMatchObject({
+    expect(prisma.guild.createMany.mock.calls[0]?.[0]).toEqual({
+      data: [{ discordId: GUILD, name: 'SAB' }],
+      skipDuplicates: true,
+    });
+    expect(prisma.guild.findUniqueOrThrow.mock.calls[0]?.[0]).toMatchObject({
       where: { discordId: GUILD },
-      create: { discordId: GUILD, name: 'SAB' },
-      update: { name: 'SAB' },
     });
     expect(prisma.guildConfig.createMany.mock.calls[0]?.[0]).toEqual({
       data: [{ guildId: 'guild-uuid' }],
@@ -304,21 +356,32 @@ describe('GuildConfigService.ensureGuild', () => {
     });
   });
 
-  it('leaves the stored name alone when no name is given', async () => {
+  it('renames only when the stored name differs, and never writes without a name', async () => {
     const { prisma, service } = build();
+    await service.ensureGuild(GUILD, 'SAB');
+    expect(prisma.guild.updateMany.mock.calls[0]?.[0]).toEqual({
+      where: { discordId: GUILD, OR: [{ name: null }, { name: { not: 'SAB' } }] },
+      data: { name: 'SAB' },
+    });
+
+    prisma.guild.updateMany.mockClear();
     await service.ensureGuild(GUILD);
-    expect(prisma.guild.upsert.mock.calls[0]?.[0]).toHaveProperty('update', {});
+    expect(prisma.guild.updateMany).not.toHaveBeenCalled();
   });
 
   it('works inside the transaction it is handed', async () => {
     const { prisma, service } = build();
     const tx = {
-      guild: { upsert: vi.fn().mockResolvedValue({ id: 'tx-guild' }) },
+      guild: {
+        createMany: vi.fn().mockResolvedValue({ count: 0 }),
+        updateMany: vi.fn(),
+        findUniqueOrThrow: vi.fn().mockResolvedValue({ id: 'tx-guild' }),
+      },
       guildConfig: { createMany: vi.fn().mockResolvedValue({ count: 0 }) },
     };
     await service.ensureGuild(GUILD, undefined, tx as never);
-    expect(tx.guild.upsert).toHaveBeenCalled();
-    expect(prisma.guild.upsert).not.toHaveBeenCalled();
+    expect(tx.guild.createMany).toHaveBeenCalled();
+    expect(prisma.guild.createMany).not.toHaveBeenCalled();
   });
 
   it('refuses an id that is not a snowflake', async () => {

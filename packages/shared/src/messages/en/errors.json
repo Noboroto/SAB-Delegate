@@ -8,7 +8,7 @@
   "GUILD_ACCESS_DENIED": "You do not have permission to manage this server.",
   "GUILD_BOT_MISSING": "The bot is not in this server.",
   "DISCORD_API_ERROR": "Discord returned an error. Please try again later.",
-  "DISCORD_MISSING_PERMISSIONS": "The bot lacks the permissions needed for this.",
+  "DISCORD_MISSING_PERMISSIONS": "The bot cannot {permission, select, view {view this channel} send {send messages in this channel} other {use this channel}}. Grant it that permission and try again.",
   "DISCORD_CHANNEL_NOT_FOUND": "Channel not found, or the bot cannot access it.",
   "DISCORD_MESSAGE_NOT_FOUND": "Message not found.",
   "VALIDATION_FAILED": "Some values are not valid. Check what you entered and try again.",

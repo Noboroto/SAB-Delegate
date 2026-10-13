@@ -24,10 +24,7 @@ describe('GuildConfigService against Postgres', () => {
     database = await createTestDatabase(requireDatabaseUrl());
     prisma = database.prisma as unknown as PrismaService;
     audit = new AuditService(prisma);
-    const access = {
-      botCanRead: vi.fn().mockResolvedValue(true),
-      botCanSend: vi.fn().mockResolvedValue(true),
-    } as unknown as ChannelAccessService;
+    const access = { check: vi.fn().mockResolvedValue('ok') } as unknown as ChannelAccessService;
     service = new GuildConfigService(prisma, audit, access);
   });
 
@@ -131,10 +128,7 @@ describe('GuildConfigService against Postgres', () => {
     const failingAudit = {
       record: vi.fn().mockRejectedValue(new Error('audit unavailable')),
     } as unknown as AuditService;
-    const access = {
-      botCanRead: vi.fn().mockResolvedValue(true),
-      botCanSend: vi.fn().mockResolvedValue(true),
-    } as unknown as ChannelAccessService;
+    const access = { check: vi.fn().mockResolvedValue('ok') } as unknown as ChannelAccessService;
     const strict = new GuildConfigService(prisma, failingAudit, access);
 
     await expect(
@@ -144,6 +138,34 @@ describe('GuildConfigService against Postgres', () => {
       logChannelId: CHANNEL,
       locale: 'vi',
     });
+  });
+
+  it('survives ensureGuild and patch racing on a server nobody recorded yet', async () => {
+    const guildId = newGuild();
+    const racers = [
+      ...Array.from({ length: 6 }, () => service.ensureGuild(guildId, 'Racing')),
+      ...Array.from({ length: 6 }, (_, i) =>
+        service.patch(guildId, { wordMaxWords: 300 + i }, ACTOR),
+      ),
+    ];
+    const outcomes = await Promise.allSettled(racers);
+
+    expect(outcomes.filter((outcome) => outcome.status === 'rejected')).toEqual([]);
+    await expect(prisma.guild.count({ where: { discordId: guildId } })).resolves.toBe(1);
+    const guild = await prisma.guild.findUniqueOrThrow({ where: { discordId: guildId } });
+    expect(guild.name).toBe('Racing');
+    await expect(prisma.guildConfig.count({ where: { guildId: guild.id } })).resolves.toBe(1);
+    const page = await audit.list({ guildId });
+    expect(page.items).toHaveLength(6);
+  });
+
+  it('does not write the name again when it has not changed', async () => {
+    const guildId = newGuild();
+    await service.ensureGuild(guildId, 'Same');
+    const before = await prisma.guild.findUniqueOrThrow({ where: { discordId: guildId } });
+    await service.ensureGuild(guildId, 'Same');
+    const after = await prisma.guild.findUniqueOrThrow({ where: { discordId: guildId } });
+    expect(after.updatedAt).toEqual(before.updatedAt);
   });
 
   it('answers GUILD_NOT_FOUND for a server that was never recorded', async () => {

@@ -58,6 +58,16 @@ export const envSchema = z
 
 type Env = z.infer<typeof envSchema>;
 
+/**
+ * Variables whose values must never reach a log or a channel. Anything that
+ * echoes text from outside the process (error reports) redacts exactly these.
+ * A new secret in the schema has to be added here; the env spec fails otherwise.
+ */
+export const SECRET_ENV_NAMES = [
+  'DISCORD_TOKEN',
+  'POSTGRES_PASSWORD',
+] as const satisfies ReadonlyArray<keyof Env>;
+
 /** Carries only variable NAMES: values can be secrets and end up in logs. */
 export class InvalidEnvError extends Error {
   constructor(readonly names: readonly string[]) {

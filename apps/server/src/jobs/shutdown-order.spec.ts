@@ -2,8 +2,10 @@ import 'reflect-metadata';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { Injectable, Module, type OnModuleDestroy } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
+import { Client } from 'discord.js';
 import { Pool } from 'pg';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { DiscordClientShutdown } from '../discord/discord.module.js';
 import { PrismaModule } from '../prisma/prisma.module.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { PgBossModule } from './pg-boss.module.js';
@@ -22,13 +24,21 @@ import {
  * library enforces this; this spec does.
  */
 
-type Event = 'boss.stop.begin' | 'boss.stop.end' | 'prisma.close';
+type Event = 'boss.stop.begin' | 'boss.stop.end' | 'client.destroy' | 'prisma.close';
 
 /** The invariant under test: pg-boss finished stopping before the pool was touched. */
 function bossStoppedBeforeClose(events: readonly Event[]): boolean {
   const stopped = events.indexOf('boss.stop.end');
   const closed = events.indexOf('prisma.close');
   return stopped !== -1 && closed !== -1 && stopped < closed;
+}
+
+/** True when every named event happened, in exactly this order. */
+function happenedInOrder<T extends string>(events: readonly T[], ...order: T[]): boolean {
+  const positions = order.map((name) => events.indexOf(name));
+  return positions.every(
+    (at, index) => at !== -1 && (index === 0 || at > (positions[index - 1] ?? -1)),
+  );
 }
 
 const STOP_DURATION_MS = 40;
@@ -44,6 +54,14 @@ describe('bossStoppedBeforeClose', () => {
     );
     expect(bossStoppedBeforeClose(['boss.stop.begin', 'boss.stop.end'])).toBe(false);
     expect(bossStoppedBeforeClose([])).toBe(false);
+  });
+});
+
+describe('happenedInOrder', () => {
+  it('requires every event, in the given order', () => {
+    expect(happenedInOrder(['a', 'b'], 'a', 'b')).toBe(true);
+    expect(happenedInOrder(['b', 'a'], 'a', 'b')).toBe(false);
+    expect(happenedInOrder(['a'], 'a', 'b')).toBe(false);
   });
 });
 
@@ -121,6 +139,39 @@ describe('shutdown order', () => {
 
     expect(events).toContain('boss.stop.end');
     expect(bossStoppedBeforeClose(events)).toBe(true);
+  });
+
+  it.each([
+    ['PgBossModule first', [PgBossModule, PrismaModule]],
+    ['PrismaModule first', [PrismaModule, PgBossModule]],
+  ])('destroys the Discord client after pg-boss and before Prisma (%s)', async (_name, imports) => {
+    @Module({
+      providers: [
+        {
+          provide: Client,
+          useValue: {
+            destroy: () => {
+              events.push('client.destroy');
+              return Promise.resolve();
+            },
+          },
+        },
+        DiscordClientShutdown,
+      ],
+    })
+    class DiscordStubModule {}
+
+    app = await Test.createTestingModule({ imports: [DiscordStubModule, ...imports] }).compile();
+    slowStop(app.get(PgBossService));
+    vi.spyOn(app.get(PrismaService), '$disconnect').mockImplementation(() => {
+      events.push('prisma.close');
+      return Promise.resolve();
+    });
+    await app.init();
+    await app.close();
+    app = undefined;
+
+    expect(happenedInOrder(events, 'boss.stop.end', 'client.destroy', 'prisma.close')).toBe(true);
   });
 
   it('is detected when the pool closes in onModuleDestroy instead', async () => {

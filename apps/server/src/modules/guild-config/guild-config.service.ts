@@ -28,6 +28,15 @@ type GuildRecord = {
 
 type PatchOptions = { dryRun?: boolean };
 
+/** The settings that hold a message channel the bot has to work in. */
+const CHANNEL_SETTINGS = [
+  'introChannelId',
+  'logChannelId',
+  'birthdayChannelId',
+  'wordChannelId',
+] as const;
+export type ChannelSetting = (typeof CHANNEL_SETTINGS)[number];
+
 const GUILD_SELECT = {
   id: true,
   discordId: true,
@@ -88,21 +97,34 @@ export class GuildConfigService {
   /**
    * Makes sure the server has its row and a settings row, and keeps the cached
    * display name current when one is given. Safe to call any number of times,
-   * concurrently: both writes are single-statement upserts on a unique key.
-   * Pass `tx` to run inside the caller's transaction.
+   * concurrently, from any number of transactions. Pass `tx` to run inside the
+   * caller's transaction.
+   *
+   * Each row is created with `createMany` + `skipDuplicates`, which is
+   * `INSERT .. ON CONFLICT DO NOTHING`: a caller that loses the race waits for
+   * the winner and carries on, instead of failing on the unique key (P2002) the
+   * way a read-then-insert does. Prisma's `upsert` is that read-then-insert
+   * whenever it cannot compile to one `ON CONFLICT` statement, so it is not
+   * relied on here.
    */
   async ensureGuild(discordId: string, name?: string, tx?: Db): Promise<GuildRecord> {
     const id = parseGuildId(discordId);
     const db: Db = tx ?? this.prisma;
-    const guild = await db.guild.upsert({
+    await db.guild.createMany({
+      data: [{ discordId: id, name: name ?? null }],
+      skipDuplicates: true,
+    });
+    if (name !== undefined) {
+      // Only when it differs: the sync runs for every server at every boot.
+      await db.guild.updateMany({
+        where: { discordId: id, OR: [{ name: null }, { name: { not: name } }] },
+        data: { name },
+      });
+    }
+    const guild = await db.guild.findUniqueOrThrow({
       where: { discordId: id },
-      create: { discordId: id, name: name ?? null },
-      update: name === undefined ? {} : { name },
       select: GUILD_SELECT,
     });
-    // `createMany` + `skipDuplicates` is `INSERT .. ON CONFLICT DO NOTHING`:
-    // two callers announcing the same server cannot collide. Prisma's `upsert`
-    // here is a read then an insert, and the loser fails on the unique key.
     await db.guildConfig.createMany({ data: [{ guildId: guild.id }], skipDuplicates: true });
     return guild;
   }
@@ -196,28 +218,32 @@ export class GuildConfigService {
 
   /**
    * The bot reads the intro channel and posts in the others, so each is held
-   * to the permission it actually needs. The category of the activity command
-   * is not a message channel and is checked when the command uses it.
+   * to the permission it actually needs. `DISCORD_CHANNEL_NOT_FOUND` when the
+   * channel does not exist for the bot; `DISCORD_MISSING_PERMISSIONS` (naming
+   * `view` or `send`) when it exists but the bot may not do its job there.
+   * The category of the activity command is not a message channel and is
+   * checked when the command uses it.
+   *
+   * A slash command calls this before it defers, so a refusal is a quick
+   * private answer; `patch` repeats it for the callers that do not.
    */
-  private async assertChannelsUsable(changes: {
-    introChannelId?: string | null;
-    logChannelId?: string | null;
-    birthdayChannelId?: string | null;
-    wordChannelId?: string | null;
-  }): Promise<void> {
-    const needs: Array<[string | null | undefined, 'read' | 'send']> = [
-      [changes.introChannelId, 'read'],
-      [changes.logChannelId, 'send'],
-      [changes.birthdayChannelId, 'send'],
-      [changes.wordChannelId, 'send'],
-    ];
-    for (const [channelId, need] of needs) {
+  async assertChannelUsable(setting: ChannelSetting, channelId: string): Promise<void> {
+    const need = setting === 'introChannelId' ? 'read' : 'send';
+    const access = await this.channelAccess.check(channelId, need);
+    if (access === 'ok') return;
+    if (access === 'not-found') throw new ServiceError(ErrorCode.DISCORD_CHANNEL_NOT_FOUND);
+    throw new ServiceError(ErrorCode.DISCORD_MISSING_PERMISSIONS, {
+      permission: need === 'read' ? 'view' : 'send',
+    });
+  }
+
+  private async assertChannelsUsable(
+    changes: Partial<Record<ChannelSetting, string | null>>,
+  ): Promise<void> {
+    for (const setting of CHANNEL_SETTINGS) {
+      const channelId = changes[setting];
       if (channelId === undefined || channelId === null) continue;
-      const usable =
-        need === 'read'
-          ? await this.channelAccess.botCanRead(channelId)
-          : await this.channelAccess.botCanSend(channelId);
-      if (!usable) throw new ServiceError(ErrorCode.DISCORD_CHANNEL_NOT_FOUND);
+      await this.assertChannelUsable(setting, channelId);
     }
   }
 }

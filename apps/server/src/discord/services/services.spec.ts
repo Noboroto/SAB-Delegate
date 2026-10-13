@@ -52,29 +52,32 @@ describe('ChannelAccessService', () => {
     const both = channel({
       allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
     });
-    expect(await serviceFor(both.value).botCanSend(CHANNEL_ID)).toBe(true);
+    expect(await serviceFor(both.value).check(CHANNEL_ID, 'send')).toBe('ok');
     const viewOnly = channel({ allow: [PermissionFlagsBits.ViewChannel] });
-    expect(await serviceFor(viewOnly.value).botCanSend(CHANNEL_ID)).toBe(false);
+    expect(await serviceFor(viewOnly.value).check(CHANNEL_ID, 'send')).toBe('missing-permissions');
   });
 
   it('needs Send Messages in Threads in a thread', async () => {
     const plain = [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages];
     expect(
-      await serviceFor(channel({ thread: true, allow: plain }).value).botCanSend(CHANNEL_ID),
-    ).toBe(false);
+      await serviceFor(channel({ thread: true, allow: plain }).value).check(CHANNEL_ID, 'send'),
+    ).toBe('missing-permissions');
     const forThreads = [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessagesInThreads];
     expect(
-      await serviceFor(channel({ thread: true, allow: forThreads }).value).botCanSend(CHANNEL_ID),
-    ).toBe(true);
+      await serviceFor(channel({ thread: true, allow: forThreads }).value).check(
+        CHANNEL_ID,
+        'send',
+      ),
+    ).toBe('ok');
   });
 
   it('can read with View Channel and Read Message History', async () => {
     const allowed = channel({
       allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.ReadMessageHistory],
     });
-    expect(await serviceFor(allowed.value).botCanRead(CHANNEL_ID)).toBe(true);
+    expect(await serviceFor(allowed.value).check(CHANNEL_ID, 'read')).toBe('ok');
     const noHistory = channel({ allow: [PermissionFlagsBits.ViewChannel] });
-    expect(await serviceFor(noHistory.value).botCanRead(CHANNEL_ID)).toBe(false);
+    expect(await serviceFor(noHistory.value).check(CHANNEL_ID, 'read')).toBe('missing-permissions');
   });
 
   it('checks the bot member of that channel, fetching it when it is not cached', async () => {
@@ -82,26 +85,27 @@ describe('ChannelAccessService', () => {
       meCached: false,
       allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages],
     });
-    expect(await serviceFor(uncached.value).botCanSend(CHANNEL_ID)).toBe(true);
+    expect(await serviceFor(uncached.value).check(CHANNEL_ID, 'send')).toBe('ok');
     expect(uncached.fetchMe).toHaveBeenCalledTimes(1);
     expect(uncached.permissionsFor).toHaveBeenCalledWith({ id: 'bot' });
   });
 
-  it('is false for a direct message, an unknown channel and no resolvable permissions', async () => {
-    expect(await serviceFor(channel({ dm: true }).value).botCanSend(CHANNEL_ID)).toBe(false);
-    expect(await serviceFor(null).botCanSend(CHANNEL_ID)).toBe(false);
-    expect(await serviceFor(channel({ noPermissions: true }).value).botCanSend(CHANNEL_ID)).toBe(
-      false,
+  it('says not-found for a direct message, an unknown channel and no resolvable permissions', async () => {
+    expect(await serviceFor(channel({ dm: true }).value).check(CHANNEL_ID, 'send')).toBe(
+      'not-found',
+    );
+    expect(await serviceFor(null).check(CHANNEL_ID, 'send')).toBe('not-found');
+    expect(await serviceFor(channel({ noPermissions: true }).value).check(CHANNEL_ID, 'send')).toBe(
+      'not-found',
     );
   });
 
-  it('is false for a channel the bot cannot see, and throws for any other failure', async () => {
-    for (const code of [10003, 50001]) {
-      const service = new ChannelAccessService(clientOf(vi.fn().mockRejectedValue(apiError(code))));
-      expect(await service.botCanRead(CHANNEL_ID)).toBe(false);
-    }
-    const broken = new ChannelAccessService(clientOf(vi.fn().mockRejectedValue(apiError(50035))));
-    await expect(broken.botCanRead(CHANNEL_ID)).rejects.toThrow('50035');
+  it('tells an unknown channel from one the bot may not see, and throws for any other failure', async () => {
+    const failing = (code: number) =>
+      new ChannelAccessService(clientOf(vi.fn().mockRejectedValue(apiError(code))));
+    expect(await failing(10003).check(CHANNEL_ID, 'read')).toBe('not-found');
+    expect(await failing(50001).check(CHANNEL_ID, 'read')).toBe('missing-permissions');
+    await expect(failing(50035).check(CHANNEL_ID, 'read')).rejects.toThrow('50035');
   });
 });
 
