@@ -1,0 +1,65 @@
+{
+  "commands": {
+    "create": { "description": "Tạo một luồng" },
+    "editPrefix": { "description": "Đổi tên các luồng đang mở bằng cách thay phần đầu của tên" },
+    "removeByPrefix": { "description": "Xoá các luồng đang mở có tên bắt đầu bằng một tiền tố" },
+    "nameOption": { "description": "Tên luồng, tối đa 100 ký tự" },
+    "messageOption": { "description": "Tin nhắn đầu tiên của luồng" },
+    "isPrivateOption": {
+      "description": "Tạo luồng riêng tư (chỉ ở kênh văn bản). Mặc định: không"
+    },
+    "destinationOption": { "description": "Kênh để thực hiện; mặc định là kênh này" },
+    "oldPrefixOption": { "description": "Tiền tố cần thay" },
+    "newPrefixOption": { "description": "Tiền tố mới" },
+    "prefixOption": { "description": "Chỉ xoá các luồng có tên bắt đầu bằng tiền tố này" }
+  },
+  "create": {
+    "byline": "{user} đã tạo luồng này.",
+    "done": "Đã tạo luồng {thread}.",
+    "CHANNEL_CANNOT_HOLD_THREADS": "Không thể tạo luồng trong kênh này. Hãy chọn kênh văn bản, kênh thông báo hoặc diễn đàn.",
+    "PRIVATE_NEEDS_TEXT_CHANNEL": "Chỉ tạo được luồng riêng tư trong kênh văn bản!"
+  },
+  "prefix": {
+    "CHANNEL_CANNOT_HOLD_THREADS": "Không thể liệt kê luồng trong kênh này!",
+    "noMatch": "Không có luồng đang mở nào trong {channel} bắt đầu bằng `{prefix}`.",
+    "done": "Đã xử lý {done} luồng!",
+    "failedHeader": "Thất bại {count}:",
+    "failure": "{name}: {reason}",
+    "NAME_INVALID": "tên mới sẽ bị trống hoặc dài hơn 100 ký tự"
+  },
+  "delete": {
+    "prompt": "Xoá {count, plural, other {# luồng đang mở}} trong {channel} có tên bắt đầu bằng `{prefix}`?\n{list}\nKhông thể hoàn tác.",
+    "more": "...và {count} luồng nữa",
+    "working": "Đang xoá các luồng..."
+  },
+  "privateThread": {
+    "commands": {
+      "list": { "description": "Tạo luồng riêng cho từng thành viên trong danh sách hoặc vai trò" },
+      "byReaction": {
+        "description": "Tạo luồng riêng cho từng thành viên đã thả biểu cảm vào một tin nhắn"
+      },
+      "prefixOption": {
+        "description": "Tên luồng bắt đầu bằng tiền tố này, rồi dấu gạch ngang và tên thành viên"
+      },
+      "idsOption": {
+        "description": "Id hoặc mention thành viên, cách nhau bằng dấu phẩy hoặc khoảng trắng"
+      },
+      "roleOption": { "description": "Tạo thêm luồng cho mọi thành viên có vai trò này" },
+      "messageOption": { "description": "Tin nhắn đầu tiên trong mỗi luồng" },
+      "destinationOption": { "description": "Kênh văn bản để tạo luồng; mặc định là kênh này" },
+      "messageLinkOption": { "description": "Liên kết tin nhắn có biểu cảm cần lấy" },
+      "emojiOption": { "description": "Chỉ lấy thành viên đã thả biểu cảm này" }
+    },
+    "defaultMessage": "Luồng mới đã được tạo",
+    "done": "Đã tạo {created}/{total} luồng!",
+    "errorsHeader": "Lỗi:",
+    "failure": "{user}: {reason}",
+    "CHANNEL_NOT_TEXT": "Chỉ tạo được luồng riêng tư trong kênh văn bản!",
+    "noMembers": "Không có thành viên nào để tạo luồng. Hãy nhập id, hoặc chọn vai trò có thành viên.",
+    "noReactors": "Không ai thả {emoji} vào tin nhắn đó nên chưa tạo luồng nào.",
+    "needsIdsOrRole": "Hãy nhập id thành viên hoặc chọn một vai trò.",
+    "MESSAGE_NOT_FOUND": "Không tìm thấy tin nhắn đó.",
+    "NO_ACCESS": "Bot không đọc được tin nhắn đó.",
+    "MEMBER_NOT_FOUND": "không phải thành viên của máy chủ này"
+  }
+}

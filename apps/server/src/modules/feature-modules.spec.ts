@@ -11,6 +11,7 @@ import { ReactionsModule } from './reactions/reactions.module.js';
 import { RoleAssignModule } from './role-assign/role-assign.module.js';
 import { ScheduleModule } from './schedule/schedule.module.js';
 import { SystemModule } from './system/system.module.js';
+import { ThreadModule } from './thread/thread.module.js';
 import { WordGameModule } from './word-game/word-game.module.js';
 
 describe('featureModules', () => {
@@ -27,6 +28,7 @@ describe('featureModules', () => {
       MessagingModule,
       MentionModule,
       RoleAssignModule,
+      ThreadModule,
       PurgeModule,
     ]);
     expect(featureModules({})).toEqual(DISCORD_FEATURE_MODULES);

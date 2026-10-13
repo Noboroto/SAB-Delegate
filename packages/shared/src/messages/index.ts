@@ -12,6 +12,7 @@ import enPurge from './en/purge.json';
 import enRoleAssign from './en/role-assign.json';
 import enSchedule from './en/schedule.json';
 import enSystem from './en/system.json';
+import enThread from './en/thread.json';
 import enWordGame from './en/word-game.json';
 import viBirthday from './vi/birthday.json';
 import viCommands from './vi/commands.json';
@@ -25,6 +26,7 @@ import viPurge from './vi/purge.json';
 import viRoleAssign from './vi/role-assign.json';
 import viSchedule from './vi/schedule.json';
 import viSystem from './vi/system.json';
+import viThread from './vi/thread.json';
 import viWordGame from './vi/word-game.json';
 
 /** Discord rejects a command or option description longer than this. */
@@ -44,6 +46,7 @@ export const MessageNamespaceSchema = z.enum([
   'messaging',
   'mention',
   'role-assign',
+  'thread',
   'purge',
 ]);
 
@@ -67,6 +70,7 @@ export const MESSAGES = {
     messaging: viMessaging,
     mention: viMention,
     'role-assign': viRoleAssign,
+    thread: viThread,
     purge: viPurge,
   },
   en: {
@@ -82,6 +86,7 @@ export const MESSAGES = {
     messaging: enMessaging,
     mention: enMention,
     'role-assign': enRoleAssign,
+    thread: enThread,
     purge: enPurge,
   },
 } satisfies Record<Locale, Record<MessageNamespace, object>>;

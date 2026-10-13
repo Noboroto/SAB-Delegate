@@ -1,0 +1,65 @@
+{
+  "commands": {
+    "create": { "description": "Create a thread" },
+    "editPrefix": { "description": "Rename active threads by replacing the start of their name" },
+    "removeByPrefix": { "description": "Delete active threads whose name starts with a prefix" },
+    "nameOption": { "description": "Name of the thread, up to 100 characters" },
+    "messageOption": { "description": "First message of the thread" },
+    "isPrivateOption": {
+      "description": "Make the thread private (text channels only). Default: no"
+    },
+    "destinationOption": { "description": "Channel to work in; defaults to this channel" },
+    "oldPrefixOption": { "description": "The prefix to replace" },
+    "newPrefixOption": { "description": "The new prefix" },
+    "prefixOption": { "description": "Only threads whose name starts with this are deleted" }
+  },
+  "create": {
+    "byline": "{user} created this thread.",
+    "done": "Created thread {thread}.",
+    "CHANNEL_CANNOT_HOLD_THREADS": "Threads cannot be created in this channel. Pick a text, announcement or forum channel.",
+    "PRIVATE_NEEDS_TEXT_CHANNEL": "Private threads can only be created in text channels!"
+  },
+  "prefix": {
+    "CHANNEL_CANNOT_HOLD_THREADS": "Threads cannot be listed in this channel!",
+    "noMatch": "No active thread in {channel} starts with `{prefix}`.",
+    "done": "Done {done} thread(s)!",
+    "failedHeader": "Failed {count}:",
+    "failure": "{name}: {reason}",
+    "NAME_INVALID": "the new name would be empty or longer than 100 characters"
+  },
+  "delete": {
+    "prompt": "Delete {count, plural, one {# active thread} other {# active threads}} in {channel} whose name starts with `{prefix}`?\n{list}\nThis cannot be undone.",
+    "more": "...and {count} more",
+    "working": "Deleting the threads..."
+  },
+  "privateThread": {
+    "commands": {
+      "list": { "description": "Create a private thread for each member in a list or role" },
+      "byReaction": {
+        "description": "Create a private thread for each member who reacted to a message"
+      },
+      "prefixOption": {
+        "description": "Thread names start with this prefix, then a dash and the member name"
+      },
+      "idsOption": { "description": "Member ids or mentions, separated by commas or spaces" },
+      "roleOption": { "description": "Also create a thread for every member who has this role" },
+      "messageOption": { "description": "The first message in each thread" },
+      "destinationOption": {
+        "description": "Text channel to create the threads in; defaults to this channel"
+      },
+      "messageLinkOption": { "description": "Link of the message whose reactions are used" },
+      "emojiOption": { "description": "Only members who reacted with this emoji" }
+    },
+    "defaultMessage": "New thread is created",
+    "done": "Done {created}/{total} thread(s)!",
+    "errorsHeader": "Errors:",
+    "failure": "{user}: {reason}",
+    "CHANNEL_NOT_TEXT": "Private threads can only be created in text channels!",
+    "noMembers": "No member to create a thread for. Give ids, or a role that has members.",
+    "noReactors": "Nobody reacted to that message with {emoji}, so no thread was created.",
+    "needsIdsOrRole": "Give member ids or choose a role.",
+    "MESSAGE_NOT_FOUND": "I could not find that message.",
+    "NO_ACCESS": "I cannot read that message.",
+    "MEMBER_NOT_FOUND": "not a member of this server"
+  }
+}

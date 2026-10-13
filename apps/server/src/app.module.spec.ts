@@ -19,6 +19,8 @@ import { AutoReactListener } from './modules/reactions/auto-react.listener.js';
 import { RoleAssignService } from './modules/role-assign/role-assign.service.js';
 import { ScheduleService } from './modules/schedule/schedule.service.js';
 import { SystemService } from './modules/system/system.service.js';
+import { PrivateThreadService } from './modules/thread/private-thread.service.js';
+import { ThreadService } from './modules/thread/thread.service.js';
 import { WordGameService } from './modules/word-game/word-game.service.js';
 import { HealthController } from './health/health.controller.js';
 
@@ -97,6 +99,8 @@ describe('AppModule', () => {
       MessagingService,
       MentionService,
       RoleAssignService,
+      ThreadService,
+      PrivateThreadService,
       PurgeService,
     ]) {
       expect(moduleRef.get(provider, { strict: false }), provider.name).toBeDefined();
