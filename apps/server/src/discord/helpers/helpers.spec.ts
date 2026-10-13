@@ -81,6 +81,34 @@ describe('replyInChunks', () => {
     expect(order[0]).toBe('reply');
   });
 
+  it('passes a fixed allowedMentions to every piece, and leaves the key out when none is given', async () => {
+    const pinged = target({ deferred: true });
+    await replyInChunks(pinged, longText(), { allowedMentions: { parse: [] } });
+    const sent = [
+      ...pinged.editReply.mock.calls.map(([o]) => o as object),
+      ...pinged.followUp.mock.calls.map(([o]) => o as object),
+    ];
+    expect(sent.length).toBeGreaterThan(1);
+    for (const message of sent) expect(message).toMatchObject({ allowedMentions: { parse: [] } });
+
+    const plain = target();
+    await replyInChunks(plain, 'short');
+    expect(plain.reply.mock.calls[0]?.[0]).not.toHaveProperty('allowedMentions');
+  });
+
+  it('asks a function for the allowedMentions of each piece separately', async () => {
+    const interaction = target({ replied: true });
+    await replyInChunks(interaction, longText(), {
+      allowedMentions: (chunk) => ({ users: [chunk.slice(0, 1)] }),
+    });
+    const users = interaction.followUp.mock.calls.map(
+      ([o]) => (o as { allowedMentions: { users: string[] } }).allowedMentions.users[0],
+    );
+    expect(users.length).toBeGreaterThan(1);
+    expect(users[0]).toBe('0');
+    expect(users).not.toEqual(users.map(() => users[0]));
+  });
+
   it('propagates a failed send so the caller sees it', async () => {
     const interaction = target();
     interaction.reply.mockRejectedValue(new Error('Missing Access'));

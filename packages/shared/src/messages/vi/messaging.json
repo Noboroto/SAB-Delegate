@@ -1,0 +1,52 @@
+{
+  "commands": {
+    "send": { "description": "Gửi tin nhắn bằng bot vào kênh này hoặc kênh khác" },
+    "copyPaste": { "description": "Sao chép một tin nhắn sang kênh" },
+    "editCopy": { "description": "Sửa tin nhắn của bot bằng nội dung của tin nhắn khác" },
+    "editSend": { "description": "Sửa tin nhắn do bot này gửi" },
+    "react": {
+      "description": "Thả biểu cảm vào tin nhắn, có thể kèm các lựa chọn bình chọn đánh số"
+    },
+    "contentOption": { "description": "Nội dung tin nhắn; bỏ trống để nhập trong hộp thoại" },
+    "destinationOption": { "description": "Kênh nhận tin; mặc định là kênh hiện tại" },
+    "replyMessageOption": {
+      "description": "Liên kết tin nhắn cần trả lời; dùng thay cho kênh nhận tin"
+    },
+    "copySourceOption": { "description": "Liên kết tin nhắn cần sao chép" },
+    "newMessageLinkOption": { "description": "Liên kết tin nhắn có nội dung mới" },
+    "oldBotMessageLinkOption": { "description": "Liên kết tin nhắn của bot cần sửa" },
+    "newContentOption": { "description": "Nội dung mới; bỏ trống để sửa trong hộp thoại" },
+    "reactTargetOption": { "description": "Liên kết tin nhắn cần thả biểu cảm" },
+    "emojiOption": { "description": "Biểu cảm cần thả; gợi ý lấy từ các biểu cảm có sẵn trên tin" },
+    "reactChoiceCountOption": { "description": "Số lựa chọn bình chọn đánh số cần thêm (0-10)" },
+    "pollChoiceCountOption": { "description": "Số lựa chọn bình chọn cần thêm (1-10)" },
+    "pollMessageLinkOption": {
+      "description": "Tin nhắn cần thêm lựa chọn; bỏ trống để tạo tin mới"
+    }
+  },
+  "contextMenus": {
+    "edit": { "name": "Sửa tin nhắn của bot" },
+    "reply": { "name": "Trả lời bằng bot" }
+  },
+  "modal": {
+    "send": { "title": "Gửi tin nhắn" },
+    "reply": { "title": "Trả lời bằng bot" },
+    "edit": { "title": "Sửa tin nhắn của bot" },
+    "contentLabel": "Nội dung"
+  },
+  "sent": "Đã gửi!",
+  "done": "Đã xong!",
+  "emptyContent": "Nội dung không được để trống!",
+  "notBotMessage": "Tin nhắn cũ không do bot này gửi!",
+  "nothingToCopy": {
+    "source": "Tin nhắn nguồn không có chữ hay tệp đính kèm để sao chép!",
+    "new": "Tin nhắn mới không có chữ hay tệp đính kèm để sao chép!"
+  },
+  "cannot": {
+    "send": "Không gửi được: {reason}",
+    "copy": "Không gửi được tới {channel}: {reason}",
+    "edit": "Không sửa được tin nhắn: {reason}",
+    "react": "Không thả được biểu cảm: {reason}",
+    "poll": "Không thêm được bình chọn: {reason}"
+  }
+}

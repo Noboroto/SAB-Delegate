@@ -89,3 +89,12 @@ type GroupDecorators = {
 export const CommandGroup: GroupDecorators = Object.fromEntries(
   GROUP_NAMES.map((name) => [name, createCommandGroupDecorator(rootCommandMeta(name))]),
 ) as GroupDecorators;
+
+// Decorator syntax takes a plain name, not an indexed access, and these groups
+// have a dash in theirs. `BotMessageGroup` and `ThreadGroup` are the groups
+// that several feature modules contribute to; the declaration is the same
+// object for all of them, so they cannot drift apart.
+export const BotMessageGroup = CommandGroup['bot-message'];
+export const BulkAssignGroup = CommandGroup['bulk-assign'];
+export const PrivateThreadGroup = CommandGroup['private-thread'];
+export const ThreadGroup = CommandGroup.thread;

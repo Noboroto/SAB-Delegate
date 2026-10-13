@@ -1,0 +1,52 @@
+{
+  "commands": {
+    "send": { "description": "Send a message as the bot to this channel or another" },
+    "copyPaste": { "description": "Copy a message to a channel" },
+    "editCopy": { "description": "Edit a bot message with the content of another message" },
+    "editSend": { "description": "Edit a message sent by this bot" },
+    "react": { "description": "React to a message, optionally adding numbered poll choices" },
+    "contentOption": { "description": "Message text; leave empty to type it in a dialog" },
+    "destinationOption": { "description": "Channel to send to; defaults to this channel" },
+    "replyMessageOption": {
+      "description": "Link of the message to reply to; used instead of the destination"
+    },
+    "copySourceOption": { "description": "Link of the message to copy" },
+    "newMessageLinkOption": { "description": "Link of the message to take the new content from" },
+    "oldBotMessageLinkOption": { "description": "Link of the bot message to edit" },
+    "newContentOption": { "description": "New text; leave empty to edit it in a dialog" },
+    "reactTargetOption": { "description": "Link of the message to react to" },
+    "emojiOption": {
+      "description": "Emoji to react with; the message's own reactions are suggested"
+    },
+    "reactChoiceCountOption": { "description": "Number of numbered poll choices to add (0-10)" },
+    "pollChoiceCountOption": { "description": "Number of poll choices to add (1-10)" },
+    "pollMessageLinkOption": {
+      "description": "Message to add the choices to; leave empty to post a new one"
+    }
+  },
+  "contextMenus": {
+    "edit": { "name": "Edit bot message" },
+    "reply": { "name": "Reply as bot" }
+  },
+  "modal": {
+    "send": { "title": "Send a message" },
+    "reply": { "title": "Reply as bot" },
+    "edit": { "title": "Edit bot message" },
+    "contentLabel": "Message"
+  },
+  "sent": "Sent!",
+  "done": "Done!",
+  "emptyContent": "The message must not be empty!",
+  "notBotMessage": "The old message was not sent by this bot!",
+  "nothingToCopy": {
+    "source": "The source message has no text or attachment to copy!",
+    "new": "The new message has no text or attachment to copy!"
+  },
+  "cannot": {
+    "send": "Cannot send: {reason}",
+    "copy": "Cannot send to {channel}: {reason}",
+    "edit": "Cannot edit the message: {reason}",
+    "react": "Cannot react: {reason}",
+    "poll": "Cannot add the poll: {reason}"
+  }
+}

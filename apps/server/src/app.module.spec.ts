@@ -11,6 +11,7 @@ import { BirthdayCommands } from './modules/birthday/birthday.commands.js';
 import { BirthdayCron } from './modules/birthday/birthday.cron.js';
 import { BirthdayService } from './modules/birthday/birthday.service.js';
 import { GuildConfigService } from './modules/guild-config/guild-config.service.js';
+import { MessagingService } from './modules/messaging/messaging.service.js';
 import { NoteService } from './modules/note/note.service.js';
 import { AutoReactListener } from './modules/reactions/auto-react.listener.js';
 import { SystemService } from './modules/system/system.service.js';
@@ -88,6 +89,7 @@ describe('AppModule', () => {
       NoteService,
       AutoReactListener,
       WordGameService,
+      MessagingService,
     ]) {
       expect(moduleRef.get(provider, { strict: false }), provider.name).toBeDefined();
     }

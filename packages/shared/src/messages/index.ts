@@ -5,6 +5,7 @@ import enCommands from './en/commands.json';
 import enCommon from './en/common.json';
 import enErrors from './en/errors.json';
 import enGuildConfig from './en/guild-config.json';
+import enMessaging from './en/messaging.json';
 import enNote from './en/note.json';
 import enSystem from './en/system.json';
 import enWordGame from './en/word-game.json';
@@ -13,6 +14,7 @@ import viCommands from './vi/commands.json';
 import viCommon from './vi/common.json';
 import viErrors from './vi/errors.json';
 import viGuildConfig from './vi/guild-config.json';
+import viMessaging from './vi/messaging.json';
 import viNote from './vi/note.json';
 import viSystem from './vi/system.json';
 import viWordGame from './vi/word-game.json';
@@ -30,6 +32,7 @@ export const MessageNamespaceSchema = z.enum([
   'birthday',
   'note',
   'word-game',
+  'messaging',
 ]);
 
 export type MessageNamespace = z.infer<typeof MessageNamespaceSchema>;
@@ -48,6 +51,7 @@ export const MESSAGES = {
     birthday: viBirthday,
     note: viNote,
     'word-game': viWordGame,
+    messaging: viMessaging,
   },
   en: {
     common: enCommon,
@@ -58,5 +62,6 @@ export const MESSAGES = {
     birthday: enBirthday,
     note: enNote,
     'word-game': enWordGame,
+    messaging: enMessaging,
   },
 } satisfies Record<Locale, Record<MessageNamespace, object>>;

@@ -606,11 +606,22 @@ describe('BirthdayService against Postgres', () => {
       },
     );
 
+    it('skips a server whose channel cannot take messages instead of failing it', async () => {
+      const today = freshDay();
+      const broken = await seedOn(2, today);
+      unsendable.add(broken.channelId);
+      const summary = await service.runDailyWishes(today);
+      expect(summary).toMatchObject({ sent: 0, failed: 0 });
+      expect(sentTo(broken.channelId)).toHaveLength(0);
+    });
+
     it('lets one server fail without stopping the others', async () => {
       const today = freshDay();
       const broken = await seedOn(2, today);
       const fine = await seedOn(2, today);
-      unsendable.add(broken.channelId);
+      // A server whose send fails for a reason that is not a refusal: an
+      // unsendable channel is skipped, not failed, so it cannot stand in here.
+      failAfter.set(broken.channelId, 0);
       const summary = await service.runDailyWishes(today);
       expect(summary.failed).toBe(1);
       expect(sentTo(fine.channelId)).toHaveLength(2);

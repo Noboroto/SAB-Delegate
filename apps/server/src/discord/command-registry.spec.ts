@@ -150,4 +150,44 @@ describe('validateCommandMetadata', () => {
   it('does not ask a context-menu command for a description', () => {
     expect(validateCommandMetadata([{ name: 'quote', type: 3 }])).toEqual([]);
   });
+
+  it.each([2, 3])('lets a type %i context menu use capitals and spaces in its name', (type) => {
+    const entry = {
+      name: 'Purge up to here',
+      type,
+      name_localizations: { vi: 'Xoá đến đây' },
+    } as CommandPayload;
+    expect(validateCommandMetadata([entry])).toEqual([]);
+  });
+
+  it('still limits a context menu name to 1..32 characters, and forbids a description', () => {
+    const tooLong = { name: 'x'.repeat(33), type: 3 } as CommandPayload;
+    expect(validateCommandMetadata([tooLong]).join('\n')).toContain('1..32');
+    const localisedTooLong = {
+      name: 'Short',
+      type: 3,
+      name_localizations: { vi: 'y'.repeat(33) },
+    } as CommandPayload;
+    expect(validateCommandMetadata([localisedTooLong]).join('\n')).toContain('localisation vi');
+    const described = { name: 'Short', type: 2, description: 'No such thing' } as CommandPayload;
+    expect(validateCommandMetadata([described]).join('\n')).toContain('no description');
+  });
+
+  it('keeps the strict name pattern for chat commands next to a context menu', () => {
+    const problems = validateCommandMetadata([
+      { name: 'Ping Pong', description: 'x', type: 1 },
+      { name: 'Ping Pong', type: 3 },
+    ] as CommandPayload[]);
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain('/Ping Pong: name must match');
+  });
+
+  it('allows a chat command and a context menu to share a name', () => {
+    expect(
+      validateCommandMetadata([
+        { name: 'purge', description: 'x', type: 1 },
+        { name: 'purge', type: 3 },
+      ] as CommandPayload[]),
+    ).toEqual([]);
+  });
 });

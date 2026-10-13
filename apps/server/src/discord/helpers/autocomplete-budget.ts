@@ -32,6 +32,16 @@ type AutocompleteBudgetOptions<Data extends NonNullable<unknown>> = {
 
 const OVER_BUDGET = Symbol('over budget');
 
+const budgetedAnswers = new WeakSet<object>();
+
+/**
+ * Whether `value` is an answer function built by `withAutocompleteBudget`.
+ * Lets a test prove that every autocomplete of the application is wrapped,
+ * which nothing in the types can enforce.
+ */
+export const isBudgetedAnswer = (value: unknown): boolean =>
+  typeof value === 'function' && budgetedAnswers.has(value);
+
 const logger = new Logger('AutocompleteBudget');
 
 /**
@@ -83,7 +93,7 @@ export function withAutocompleteBudget<Data extends NonNullable<unknown>>(
     return loading;
   }
 
-  return async (interaction) => {
+  const answer = async (interaction: AutocompleteInteraction): Promise<void> => {
     const key = options.cacheKey(interaction);
     const cached = key === undefined ? undefined : cache.get(key);
 
@@ -103,6 +113,8 @@ export function withAutocompleteBudget<Data extends NonNullable<unknown>>(
       logger.warn('Autocomplete expired before it could be answered');
     }
   };
+  budgetedAnswers.add(answer);
+  return answer;
 }
 
 async function withinBudget<T>(

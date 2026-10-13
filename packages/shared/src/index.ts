@@ -25,7 +25,11 @@ export {
 } from './constants/birthday-wishes.js';
 export { REACTION_PHRASES } from './constants/reaction-phrases.js';
 export { QUEUES, type QueueName } from './constants/queues.js';
-export { BUSINESS_TIME_ZONE, MESSAGE_MAX_LENGTH } from './constants/limits.js';
+export {
+  BUSINESS_TIME_ZONE,
+  MESSAGE_MAX_LENGTH,
+  REACTION_EMOJI_MAX_LENGTH,
+} from './constants/limits.js';
 export { ActorContextSchema, ActorSourceSchema, type ActorContext } from './actor.js';
 export { AUDIT_ACTIONS, AuditActionSchema, type AuditAction } from './audit-actions.js';
 export {
@@ -115,6 +119,36 @@ export {
   type WordSubmitInput,
   type WordSubmitResult,
 } from './schemas/word-game.js';
+export {
+  CopyMessageResultSchema,
+  CopyMessageSchema,
+  CreateReactionPollResultSchema,
+  CreateReactionPollSchema,
+  EditBotMessageFromCopySchema,
+  EditBotMessageResultSchema,
+  EditBotMessageSchema,
+  MessageContentSchema,
+  MessageTargetSchema,
+  POLL_CHOICES_MAX,
+  POLL_EMOJIS,
+  POLL_PLACEHOLDER_TEXT,
+  ReactToMessageResultSchema,
+  ReactToMessageSchema,
+  SendMessageResultSchema,
+  SendMessageSchema,
+  type CopyMessage,
+  type CopyMessageResult,
+  type CreateReactionPoll,
+  type CreateReactionPollResult,
+  type EditBotMessage,
+  type EditBotMessageFromCopy,
+  type EditBotMessageResult,
+  type MessageTarget,
+  type ReactToMessage,
+  type ReactToMessageResult,
+  type SendMessage,
+  type SendMessageResult,
+} from './schemas/messaging.js';
 export { splitMessage } from './utils/split-message.js';
 export { parseSnowflakes } from './utils/snowflakes.js';
 export {

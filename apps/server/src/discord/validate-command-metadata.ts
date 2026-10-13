@@ -6,6 +6,8 @@ const NAME_MAX_LENGTH = 32;
 const MAX_ROOT_COMMANDS = 100;
 const MAX_CHILDREN = 25;
 const CHAT_INPUT = 1;
+const USER_COMMAND = 2;
+const MESSAGE_COMMAND = 3;
 
 type Node = Record<string, unknown>;
 
@@ -37,12 +39,46 @@ export function validateCommandMetadata(commands: readonly CommandPayload[]): st
   const seen = new Set<string>();
   for (const command of commands as unknown as readonly Node[]) {
     const name = typeof command['name'] === 'string' ? command['name'] : '';
-    if (seen.has(name)) problems.push(`/${name}: declared more than once`);
-    seen.add(name);
-    const isChatInput = command['type'] === undefined || command['type'] === CHAT_INPUT;
-    checkNode(command, `/${name}`, isChatInput, problems);
+    const type = command['type'];
+    // A chat command and a context menu entry may share a name.
+    const key = `${typeof type === 'number' ? type : CHAT_INPUT}:${name}`;
+    if (seen.has(key)) problems.push(`/${name}: declared more than once`);
+    seen.add(key);
+    if (type === USER_COMMAND || type === MESSAGE_COMMAND) {
+      checkContextMenu(command, name, problems);
+    } else {
+      checkNode(command, `/${name}`, type === undefined || type === CHAT_INPUT, problems);
+    }
   }
   return problems;
+}
+
+/**
+ * A context menu entry is shown by its name alone: Discord allows capitals and
+ * spaces in it (1..32 characters), and it has no description at all.
+ */
+function checkContextMenu(command: Node, name: string, problems: string[]): void {
+  const path = `context menu "${name}"`;
+  if (name.length < 1 || name.length > NAME_MAX_LENGTH) {
+    problems.push(`${path}: name must be 1..${NAME_MAX_LENGTH} characters`);
+  }
+  for (const [locale, text] of localeTexts(command['name_localizations'])) {
+    if (text.length < 1 || text.length > NAME_MAX_LENGTH) {
+      problems.push(
+        `${path}: name localisation ${locale} must be 1..${NAME_MAX_LENGTH} characters`,
+      );
+    }
+  }
+  const description = command['description'];
+  if (typeof description === 'string' && description !== '') {
+    problems.push(`${path}: a context menu has no description`);
+  }
+  if (localeTexts(command['description_localizations']).length > 0) {
+    problems.push(`${path}: a context menu has no description localisations`);
+  }
+  if (Array.isArray(command['options']) && command['options'].length > 0) {
+    problems.push(`${path}: a context menu has no options`);
+  }
 }
 
 function checkNode(node: Node, path: string, needsDescription: boolean, problems: string[]): void {
