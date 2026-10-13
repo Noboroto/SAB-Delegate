@@ -3,13 +3,13 @@ import { randomBytes } from 'node:crypto';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { Logger } from '@nestjs/common';
-import { QUEUES } from '@sab/shared';
+import { BUSINESS_TIME_ZONE, QUEUES } from '@sab/shared';
 import { Pool } from 'pg';
 import type { ConstructorOptions } from 'pg-boss';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { requireDatabaseUrl } from '../../../../vitest-test-database.mjs';
 import { createPool } from '../prisma/pool-factory.js';
-import { PgBossService, SCHEDULE_TIME_ZONE } from './pg-boss.service.js';
+import { PgBossService } from './pg-boss.service.js';
 
 const run = promisify(execFile);
 const INSTALL_SCRIPT = join(__dirname, '..', '..', 'scripts', 'install-pgboss.mjs');
@@ -206,7 +206,7 @@ describe('PgBossService against Postgres', () => {
       const stored = await first.boss.getSchedule(QUEUES.birthdayDaily);
       expect(stored).toMatchObject({
         cron: '0 0 * * *',
-        timezone: SCHEDULE_TIME_ZONE,
+        timezone: BUSINESS_TIME_ZONE,
         options: { missed: 'once' },
       });
       await stopService(first);

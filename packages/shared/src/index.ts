@@ -24,4 +24,4 @@ export {
 } from './constants/birthday-wishes.js';
 export { REACTION_PHRASES } from './constants/reaction-phrases.js';
 export { QUEUES, type QueueName } from './constants/queues.js';
-export { MESSAGE_MAX_LENGTH } from './constants/limits.js';
+export { BUSINESS_TIME_ZONE, MESSAGE_MAX_LENGTH } from './constants/limits.js';

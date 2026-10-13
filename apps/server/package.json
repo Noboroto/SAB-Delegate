@@ -15,6 +15,7 @@
     "typecheck": "tsc --noEmit",
     "db:generate": "node -e \"require('node:fs').rmSync('../../packages/shared/src/generated/zod', { recursive: true, force: true })\" && prisma generate && node scripts/fix-generated-esm.mjs",
     "db:migrate": "prisma migrate deploy",
+    "migrate:quickdb": "node dist/tools/migrate-quickdb/main.js",
     "pretest": "pnpm --workspace-root run generate:deps",
     "test": "vitest run"
   },

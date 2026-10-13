@@ -3,7 +3,7 @@ import { randomBytes } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { Logger } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { QUEUES } from '@sab/shared';
+import { BUSINESS_TIME_ZONE, QUEUES } from '@sab/shared';
 import { PgBoss, type ConstructorOptions } from 'pg-boss';
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
 import { DEFAULT_CONNECT_RETRY, DatabaseConnectError } from '../prisma/pool-factory.js';
@@ -13,7 +13,6 @@ import {
   PGBOSS_CONNECT_RETRY,
   PGBOSS_SCHEMA,
   PgBossService,
-  SCHEDULE_TIME_ZONE,
   STOP_TIMEOUT_MS,
   buildPgBossOptions,
 } from './pg-boss.service.js';
@@ -320,7 +319,7 @@ describe('PgBossService', () => {
       const schedule = vi.spyOn(service.boss, 'schedule').mockResolvedValue();
       await started(service);
       await service.schedule(QUEUES.birthdayDaily, '0 0 * * *');
-      expect(SCHEDULE_TIME_ZONE).toBe('Asia/Ho_Chi_Minh');
+      expect(BUSINESS_TIME_ZONE).toBe('Asia/Ho_Chi_Minh');
       expect(schedule).toHaveBeenCalledWith(
         QUEUES.birthdayDaily,
         '0 0 * * *',

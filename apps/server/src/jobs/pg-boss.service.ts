@@ -5,7 +5,7 @@ import {
   type OnApplicationBootstrap,
   type OnModuleDestroy,
 } from '@nestjs/common';
-import { z, type QueueName } from '@sab/shared';
+import { BUSINESS_TIME_ZONE, z, type QueueName } from '@sab/shared';
 import { PgBoss, type ConstructorOptions, type WorkHandler, type WorkOptions } from 'pg-boss';
 import { resolveDatabaseUrl } from '../config/database-url.js';
 import { loadEnv } from '../config/env.js';
@@ -23,12 +23,6 @@ export const PGBOSS_WORKERS_ENABLED = Symbol('PGBOSS_WORKERS_ENABLED');
 export const PGBOSS_CONNECT_RETRY = Symbol('PGBOSS_CONNECT_RETRY');
 
 export const PGBOSS_SCHEMA = 'pgboss';
-
-/**
- * Business days are Vietnamese days wherever the host runs, so a cron
- * expression is read in this zone and not in the server's.
- */
-export const SCHEDULE_TIME_ZONE = 'Asia/Ho_Chi_Minh';
 
 /** Time given to jobs in flight to finish before the process stops waiting. */
 export const STOP_TIMEOUT_MS = 30_000;
@@ -191,13 +185,14 @@ export class PgBossService implements OnApplicationBootstrap, OnModuleDestroy {
   }
 
   /**
-   * Upserts a recurring job, read in the business time zone. Safe to call on
+   * Upserts a recurring job, read in the business time zone (Vietnamese days
+   * wherever the host runs, not the server's zone). Safe to call on
    * every boot. `missed: 'once'` sends a single catch-up job when the process
    * was down at the due time, however many occurrences were missed.
    */
   async schedule(queue: QueueName, cron: string, data: object = {}): Promise<void> {
     await this.ensureQueue(queue);
-    await this.boss.schedule(queue, cron, data, { tz: SCHEDULE_TIME_ZONE, missed: 'once' });
+    await this.boss.schedule(queue, cron, data, { tz: BUSINESS_TIME_ZONE, missed: 'once' });
   }
 
   private ensureQueue(queue: QueueName): Promise<void> {

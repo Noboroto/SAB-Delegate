@@ -7,7 +7,7 @@
       "project": ["*.{ts,mjs}", "scripts/**/*.{ts,mjs}"]
     },
     "apps/server": {
-      "entry": ["src/main.ts"],
+      "entry": ["src/main.ts", "src/tools/*/main.ts"],
       "project": ["src/**/*.ts"],
       "ignoreDependencies": ["prisma-zod-generator"],
       "prisma": false
