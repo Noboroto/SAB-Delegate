@@ -11,6 +11,7 @@ export const AUDIT_ACTIONS = {
   birthdayAdd: 'birthday.add',
   birthdayRemove: 'birthday.remove',
   birthdayImport: 'birthday.import',
+  birthdayWish: 'birthday.wish',
   noteUpsert: 'note.upsert',
   noteRemove: 'note.remove',
   wordGameConfigure: 'word_game.configure',

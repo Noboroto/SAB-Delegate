@@ -7,6 +7,9 @@ import { AppModule } from './app.module.js';
 import { IDENTITY_REST } from './discord/boot-guard.js';
 import { DiscordReadyService } from './discord/discord-ready.service.js';
 import { GuildAccessService } from './common/guild-access/guild-access.service.js';
+import { BirthdayCommands } from './modules/birthday/birthday.commands.js';
+import { BirthdayCron } from './modules/birthday/birthday.cron.js';
+import { BirthdayService } from './modules/birthday/birthday.service.js';
 import { GuildConfigService } from './modules/guild-config/guild-config.service.js';
 import { SystemService } from './modules/system/system.service.js';
 import { HealthController } from './health/health.controller.js';
@@ -72,7 +75,14 @@ describe('AppModule', () => {
   });
 
   it('loads the Discord feature modules', () => {
-    for (const provider of [GuildConfigService, SystemService, GuildAccessService]) {
+    for (const provider of [
+      GuildConfigService,
+      SystemService,
+      GuildAccessService,
+      BirthdayService,
+      BirthdayCommands,
+      BirthdayCron,
+    ]) {
       expect(moduleRef.get(provider, { strict: false }), provider.name).toBeDefined();
     }
   });
@@ -134,19 +144,22 @@ describe('AppModule while a migration is pending', () => {
     // imported again under the pending environment; classes from the top-level
     // imports would be different identities and prove nothing.
     vi.resetModules();
-    const [{ AppModule: PendingAppModule }, config, system, access, health] = await Promise.all([
-      import('./app.module.js'),
-      import('./modules/guild-config/guild-config.service.js'),
-      import('./modules/system/system.service.js'),
-      import('./common/guild-access/guild-access.service.js'),
-      import('./health/health.controller.js'),
-    ]);
+    const [{ AppModule: PendingAppModule }, config, system, access, health, birthday] =
+      await Promise.all([
+        import('./app.module.js'),
+        import('./modules/guild-config/guild-config.service.js'),
+        import('./modules/system/system.service.js'),
+        import('./common/guild-access/guild-access.service.js'),
+        import('./health/health.controller.js'),
+        import('./modules/birthday/birthday.service.js'),
+      ]);
     moduleRef = await Test.createTestingModule({ imports: [PendingAppModule] }).compile();
 
     for (const provider of [
       config.GuildConfigService,
       system.SystemService,
       access.GuildAccessService,
+      birthday.BirthdayService,
     ]) {
       expect(() => moduleRef?.get(provider, { strict: false }), provider.name).toThrow();
     }

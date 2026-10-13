@@ -49,6 +49,28 @@ export {
   type GuildSettingsDryRun,
   type GuildSettingsPatch,
 } from './schemas/guild-config.js';
+export {
+  BIRTHDAY_CSV_HEADER,
+  BIRTHDAY_CSV_TEMPLATE,
+  BIRTHDAY_IMPORT_MAX_ROWS,
+  BIRTHDAY_SAMPLE_SIZE,
+  BirthdayAddResultSchema,
+  BirthdayAddSchema,
+  BirthdayEntryViewSchema,
+  BirthdayImportProblemSchema,
+  BirthdayImportResultSchema,
+  BirthdayImportSchema,
+  BirthdayRemoveResultSchema,
+  BirthdaySelectorSchema,
+  type BirthdayAdd,
+  type BirthdayAddResult,
+  type BirthdayEntryView,
+  type BirthdayImport,
+  type BirthdayImportProblem,
+  type BirthdayImportResult,
+  type BirthdayRemoveResult,
+  type BirthdaySelector,
+} from './schemas/birthday.js';
 export { splitMessage } from './utils/split-message.js';
 export { parseSnowflakes } from './utils/snowflakes.js';
 export {

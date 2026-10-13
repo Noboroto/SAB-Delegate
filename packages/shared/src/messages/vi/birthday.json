@@ -1,0 +1,52 @@
+{
+  "commands": {
+    "appendList": {
+      "description": "Thêm thành viên vào danh sách sinh nhật từ tệp CSV"
+    },
+    "fileOption": {
+      "description": "Tệp CSV có các cột Name,ID,DiscordID,Day,Month"
+    },
+    "getList": {
+      "description": "Xem danh sách sinh nhật của thành viên"
+    },
+    "monthOption": {
+      "description": "Chỉ xem một tháng (1-12)"
+    },
+    "remove": {
+      "description": "Xoá một thành viên khỏi danh sách sinh nhật"
+    },
+    "studentIdOption": {
+      "description": "Mã số sinh viên cần xoá"
+    },
+    "userOption": {
+      "description": "Người dùng Discord cần xoá"
+    }
+  },
+  "import": {
+    "notCsv": "Tệp phải có định dạng CSV",
+    "tooLarge": "Tệp quá lớn (tối đa 1 MB)",
+    "downloadFailed": "Không tải được tệp (HTTP {status})",
+    "unreadable": "Không đọc được tệp CSV",
+    "badHeader": "Dòng đầu tiên phải có các cột {header}. Ví dụ:\n{template}",
+    "summary": "Đã thêm {added} trên {total} dòng.",
+    "skipped": "Bỏ qua {count} dòng:",
+    "more": "...và {count} dòng nữa",
+    "problem": {
+      "missingFields": "Dòng {row}: thiếu Name, ID hoặc DiscordID",
+      "invalidDate": "Dòng {row}: Day/Month không hợp lệ",
+      "invalidDiscordId": "Dòng {row}: DiscordID không hợp lệ",
+      "invalidValue": "Dòng {row}: Name hoặc ID quá dài",
+      "duplicateId": "Dòng {row}: ID {id} đã tồn tại"
+    }
+  },
+  "list": {
+    "fetching": "Đang lấy danh sách sinh nhật",
+    "done": "Xong!"
+  },
+  "remove": {
+    "removed": "Đã xoá sinh nhật",
+    "notFound": "Không tìm thấy sinh nhật",
+    "notFoundForUser": "Không tìm thấy sinh nhật của người dùng này",
+    "noSelector": "Hãy nhập mã số sinh viên hoặc chọn một người dùng Discord"
+  }
+}

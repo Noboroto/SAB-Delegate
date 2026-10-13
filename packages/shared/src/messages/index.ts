@@ -1,10 +1,12 @@
 import { z } from 'zod';
 import type { Locale } from '../utils/locale.js';
+import enBirthday from './en/birthday.json';
 import enCommands from './en/commands.json';
 import enCommon from './en/common.json';
 import enErrors from './en/errors.json';
 import enGuildConfig from './en/guild-config.json';
 import enSystem from './en/system.json';
+import viBirthday from './vi/birthday.json';
 import viCommands from './vi/commands.json';
 import viCommon from './vi/common.json';
 import viErrors from './vi/errors.json';
@@ -21,6 +23,7 @@ export const MessageNamespaceSchema = z.enum([
   'errors',
   'system',
   'guild-config',
+  'birthday',
 ]);
 
 export type MessageNamespace = z.infer<typeof MessageNamespaceSchema>;
@@ -36,6 +39,7 @@ export const MESSAGES = {
     errors: viErrors,
     system: viSystem,
     'guild-config': viGuildConfig,
+    birthday: viBirthday,
   },
   en: {
     common: enCommon,
@@ -43,5 +47,6 @@ export const MESSAGES = {
     errors: enErrors,
     system: enSystem,
     'guild-config': enGuildConfig,
+    birthday: enBirthday,
   },
 } satisfies Record<Locale, Record<MessageNamespace, object>>;

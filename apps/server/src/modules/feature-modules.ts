@@ -1,6 +1,7 @@
 import type { Type } from '@nestjs/common';
 import { migrationPendingFromEnv } from '../discord/discord.module.js';
 import { GuildAccessModule } from '../common/guild-access/guild-access.module.js';
+import { BirthdayModule } from './birthday/birthday.module.js';
 import { GuildConfigModule } from './guild-config/guild-config.module.js';
 import { SystemModule } from './system/system.module.js';
 
@@ -15,6 +16,7 @@ export const DISCORD_FEATURE_MODULES: readonly Type[] = [
   GuildConfigModule,
   SystemModule,
   GuildAccessModule,
+  BirthdayModule,
 ];
 
 /** Reads the raw environment like `DiscordModule.forRoot`: Nest builds the module graph before anything is parsed. */

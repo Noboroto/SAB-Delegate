@@ -1,0 +1,52 @@
+{
+  "commands": {
+    "appendList": {
+      "description": "Add members to the birthday list from a CSV file"
+    },
+    "fileOption": {
+      "description": "CSV file with the columns Name,ID,DiscordID,Day,Month"
+    },
+    "getList": {
+      "description": "Show the members on the birthday list"
+    },
+    "monthOption": {
+      "description": "Only show this month (1-12)"
+    },
+    "remove": {
+      "description": "Remove a member from the birthday list"
+    },
+    "studentIdOption": {
+      "description": "The student ID to remove"
+    },
+    "userOption": {
+      "description": "The Discord user to remove"
+    }
+  },
+  "import": {
+    "notCsv": "File must be a csv",
+    "tooLarge": "File is too large (max 1 MB)",
+    "downloadFailed": "Cannot download the file (HTTP {status})",
+    "unreadable": "Cannot read the csv file",
+    "badHeader": "The first line must contain the columns {header}. Example:\n{template}",
+    "summary": "Added {added} of {total} row(s).",
+    "skipped": "Skipped {count}:",
+    "more": "...and {count} more",
+    "problem": {
+      "missingFields": "Row {row}: missing Name, ID or DiscordID",
+      "invalidDate": "Row {row}: invalid Day/Month",
+      "invalidDiscordId": "Row {row}: invalid DiscordID",
+      "invalidValue": "Row {row}: Name or ID is too long",
+      "duplicateId": "Row {row}: ID {id} already exists"
+    }
+  },
+  "list": {
+    "fetching": "Getting list of users in the birthday list",
+    "done": "Done!"
+  },
+  "remove": {
+    "removed": "Birthday removed",
+    "notFound": "No birthday found",
+    "notFoundForUser": "No birthday found for this user",
+    "noSelector": "Please provide a student ID or a Discord user"
+  }
+}
