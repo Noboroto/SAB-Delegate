@@ -1,0 +1,5 @@
+{
+  "commandFailed": "Đã có lỗi xảy ra khi thực hiện lệnh này. Vui lòng thử lại sau.",
+  "memberCount": "{count, plural, other {# thành viên}}",
+  "messageCount": "{count, plural, other {# tin nhắn}}"
+}

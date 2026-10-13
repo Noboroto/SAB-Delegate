@@ -1,0 +1,22 @@
+{
+  "AUTH_REQUIRED": "Bạn cần đăng nhập để tiếp tục.",
+  "AUTH_FORBIDDEN": "Bạn không có quyền thực hiện thao tác này.",
+  "AUTH_INVALID_API_KEY": "Khoá API không hợp lệ.",
+  "AUTH_API_KEY_EXPIRED": "Khoá API đã hết hạn.",
+  "AUTH_API_KEY_READ_ONLY": "Khoá API này chỉ được đọc, không được thay đổi dữ liệu.",
+  "GUILD_NOT_FOUND": "Không tìm thấy máy chủ.",
+  "GUILD_ACCESS_DENIED": "Bạn không có quyền quản lý máy chủ này.",
+  "GUILD_BOT_MISSING": "Bot chưa ở trong máy chủ này.",
+  "DISCORD_API_ERROR": "Discord trả về lỗi. Vui lòng thử lại sau.",
+  "DISCORD_MISSING_PERMISSIONS": "Bot thiếu quyền cần thiết để thực hiện thao tác này.",
+  "DISCORD_CHANNEL_NOT_FOUND": "Không tìm thấy kênh, hoặc bot không truy cập được kênh đó.",
+  "DISCORD_MESSAGE_NOT_FOUND": "Không tìm thấy tin nhắn.",
+  "VALIDATION_FAILED": "Một số giá trị không hợp lệ. Hãy kiểm tra lại những gì đã nhập.",
+  "RATE_LIMITED": "Bạn thao tác quá nhanh. Vui lòng đợi một lát rồi thử lại.",
+  "INTERNAL": "Đã có lỗi xảy ra. Vui lòng thử lại sau.",
+  "invalidLink": {
+    "EMPTY": "Hãy nhập liên kết tin nhắn. Nhấn chuột phải vào tin nhắn và chọn Sao chép liên kết tin nhắn.",
+    "MALFORMED": "Đây không phải liên kết tin nhắn. Nhấn chuột phải vào tin nhắn và chọn Sao chép liên kết tin nhắn.",
+    "CHANNEL_REQUIRED": "Chỉ có mã tin nhắn thì chưa đủ. Hãy dán đầy đủ liên kết tin nhắn."
+  }
+}

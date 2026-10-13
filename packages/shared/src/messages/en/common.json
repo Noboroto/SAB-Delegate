@@ -1,0 +1,5 @@
+{
+  "commandFailed": "Something went wrong while running this command. Please try again later.",
+  "memberCount": "{count, plural, one {# member} other {# members}}",
+  "messageCount": "{count, plural, one {# message} other {# messages}}"
+}
