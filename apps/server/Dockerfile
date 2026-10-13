@@ -102,7 +102,9 @@ ENV NODE_ENV=production
 COPY --from=deploy --chown=node:node /out/server/ ./
 USER node
 EXPOSE 3100
-HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+# start-period covers the worst-case boot: Prisma and pg-boss each spend up to
+# ~15 s of connect retries plus 5 s connect timeouts before the server listens.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
 	CMD wget -q -O /dev/null http://127.0.0.1:3100/health || exit 1
 # node directly rather than through pnpm: SIGTERM from `docker stop` must reach
 # the process that runs the shutdown hooks.

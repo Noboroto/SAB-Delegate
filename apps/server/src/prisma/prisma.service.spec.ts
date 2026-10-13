@@ -128,6 +128,45 @@ describe('connectWithRetry', () => {
   });
 });
 
+describe('connectWithRetry permanent errors', () => {
+  it.each(['28P01', '28000', '3D000', '42501'])(
+    'fails at once on SQLSTATE %s without leaking the driver message',
+    async (code) => {
+      const leaked = marker('postgres-detail');
+      let calls = 0;
+      const failures: Array<{ label: string; retryInMs: number | undefined }> = [];
+      const attempt = connectWithRetry(
+        () => {
+          calls += 1;
+          return Promise.reject(Object.assign(new Error(leaked), { code }));
+        },
+        { attempts: 5, baseDelayMs: 1 },
+        ({ label, retryInMs }) => failures.push({ label, retryInMs }),
+      );
+      await expect(attempt).rejects.toBeInstanceOf(DatabaseConnectError);
+      await expect(attempt).rejects.toThrow('1 attempt(s)');
+      await expect(attempt).rejects.not.toThrow(leaked);
+      expect(calls).toBe(1);
+      expect(failures).toEqual([{ label: `Error ${code}`, retryInMs: undefined }]);
+    },
+  );
+
+  it('still retries a transient SQLSTATE', async () => {
+    let calls = 0;
+    await connectWithRetry(
+      () => {
+        calls += 1;
+        return calls < 2
+          ? Promise.reject(Object.assign(new Error('x'), { code: '57P03' }))
+          : Promise.resolve();
+      },
+      { attempts: 3, baseDelayMs: 1 },
+      () => undefined,
+    );
+    expect(calls).toBe(2);
+  });
+});
+
 describe('PrismaService', () => {
   let moduleRef: TestingModule | undefined;
   let password: string;

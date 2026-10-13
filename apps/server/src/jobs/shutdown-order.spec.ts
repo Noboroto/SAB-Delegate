@@ -47,6 +47,14 @@ describe('bossStoppedBeforeClose', () => {
   });
 });
 
+describe('lifecycle hooks', () => {
+  it('closes Prisma in onApplicationShutdown and never in onModuleDestroy', () => {
+    expect(Object.hasOwn(PrismaService.prototype, 'onModuleDestroy')).toBe(false);
+    expect('onModuleDestroy' in PrismaService.prototype).toBe(false);
+    expect(typeof PrismaService.prototype.onApplicationShutdown).toBe('function');
+  });
+});
+
 describe('shutdown order', () => {
   let events: Event[];
   let app: TestingModule | undefined;
@@ -95,8 +103,13 @@ describe('shutdown order', () => {
     });
   }
 
-  it('finishes pg-boss before the Prisma pool is closed', async () => {
-    app = await Test.createTestingModule({ imports: [PgBossModule, PrismaModule] }).compile();
+  // Nest orders hooks by module import order within a phase; the rule must not
+  // depend on it.
+  it.each([
+    ['PgBossModule first', [PgBossModule, PrismaModule]],
+    ['PrismaModule first', [PrismaModule, PgBossModule]],
+  ])('finishes pg-boss before the Prisma pool is closed (%s)', async (_name, imports) => {
+    app = await Test.createTestingModule({ imports }).compile();
     slowStop(app.get(PgBossService));
     vi.spyOn(app.get(PrismaService), '$disconnect').mockImplementation(() => {
       events.push('prisma.close');

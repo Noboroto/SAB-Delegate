@@ -100,7 +100,20 @@ export class DatabaseConnectError extends Error {
 }
 
 /**
- * Runs `connect` until it succeeds or the budget is spent. Every failure is
+ * SQLSTATEs that no wait can fix: bad password, bad authorization spec, missing
+ * database, missing privilege. Retrying only delays the failure by ~15 s and
+ * repeats failed logins against the server.
+ */
+const PERMANENT_SQLSTATES: ReadonlySet<string> = new Set(['28P01', '28000', '3D000', '42501']);
+
+function isPermanent(error: unknown): boolean {
+  const code = (error as { code?: unknown } | null)?.code;
+  return typeof code === 'string' && PERMANENT_SQLSTATES.has(code);
+}
+
+/**
+ * Runs `connect` until it succeeds, the budget is spent or a permanent error
+ * (see above) occurs. Every failure is
  * reported through `onFailure` by label only; the final one throws a
  * DatabaseConnectError that carries no driver message.
  */
@@ -116,7 +129,7 @@ export async function connectWithRetry(
       return;
     } catch (error) {
       const label = errorLabel(error);
-      if (attempt >= attempts) {
+      if (attempt >= attempts || isPermanent(error)) {
         onFailure({ attempt, label, retryInMs: undefined });
         throw new DatabaseConnectError(attempt, label);
       }

@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { ListQuerySchema } from './list-query.js';
-import { PAGE_SIZE_DEFAULT, PAGE_SIZE_MAX, PaginatedSchema } from './pagination.js';
+import {
+  PAGE_MAX,
+  PAGE_SIZE_DEFAULT,
+  PAGE_SIZE_MAX,
+  PaginatedSchema,
+  PaginationQuerySchema,
+} from './pagination.js';
 import { SnowflakeSchema } from './snowflake.js';
 
 describe('SnowflakeSchema', () => {
@@ -69,5 +75,21 @@ describe('PaginatedSchema', () => {
 
   it('rejects an envelope without pagination', () => {
     expect(Page.safeParse({ items: [] }).success).toBe(false);
+  });
+});
+
+describe('PaginationQuerySchema', () => {
+  it('keeps the largest row offset within a signed 32-bit integer', () => {
+    const { page, pageSize } = PaginationQuerySchema.parse({
+      page: PAGE_MAX,
+      pageSize: PAGE_SIZE_MAX,
+    });
+    expect((page - 1) * pageSize).toBeLessThanOrEqual(2 ** 31 - 1);
+  });
+
+  it('rejects a page past the bound and below 1', () => {
+    expect(PaginationQuerySchema.safeParse({ page: PAGE_MAX + 1 }).success).toBe(false);
+    expect(PaginationQuerySchema.safeParse({ page: String(2 ** 40) }).success).toBe(false);
+    expect(PaginationQuerySchema.safeParse({ page: 0 }).success).toBe(false);
   });
 });
