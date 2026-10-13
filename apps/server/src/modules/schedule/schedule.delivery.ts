@@ -13,7 +13,11 @@ import { Client } from 'discord.js';
 import { AuditService } from '../../common/audit/audit.service.js';
 import { GuildAccessService } from '../../common/guild-access/guild-access.service.js';
 import { ErrorReporter } from '../../discord/error-reporter.service.js';
-import { buildMessageCopy } from '../../discord/helpers/message-copy.js';
+import {
+  buildMessageCopy,
+  copyProblem,
+  uploadLimitForChannel,
+} from '../../discord/helpers/message-copy.js';
 import { discordErrorCode } from '../../discord/helpers/reply.js';
 import { MessageResolver } from '../../discord/services/message-resolver.service.js';
 import { errorLabel } from '../../prisma/pool-factory.js';
@@ -33,6 +37,14 @@ export const SCHEDULE_LEASE_MS = 2 * 60_000;
  */
 export const SCHEDULE_MAX_ATTEMPTS = 3;
 
+/**
+ * Base wait before a failed send is tried again. pg-boss grows it on every
+ * retry (`retryBackoff`), so three attempts span minutes. The row carries the
+ * same wait as a lease on its PENDING state, which keeps the reconcile pass
+ * from retrying it sooner than the job would.
+ */
+export const SCHEDULE_RETRY_DELAY_S = 30;
+
 const ERROR_LABEL_LENGTH = 200;
 /** Discord reads a nonce of up to 25 characters. */
 const NONCE_LENGTH = 25;
@@ -50,6 +62,7 @@ const CLAIM_SELECT = {
   attempts: true,
   source: true,
   createdByUserId: true,
+  apiKeyId: true,
   leaseUntil: true,
   guild: { select: { discordId: true } },
 } satisfies Prisma.ScheduledMessageSelect;
@@ -138,10 +151,12 @@ export class ScheduleDelivery {
   }
 
   /**
-   * Takes the lease: `PENDING`, or `SENDING` with a lapsed lease, becomes
-   * `SENDING` for this worker. Only one concurrent caller gets a row back.
-   * Attempts are counted here, so a message whose sender keeps dying is given
-   * up on instead of being retried for ever.
+   * Takes the lease: `PENDING` (not waiting out a retry delay), or `SENDING`
+   * with a lapsed lease, becomes `SENDING` for this worker. Only one
+   * concurrent caller gets a row back. Attempts are counted here, so a message
+   * whose sender keeps dying is given up on instead of being retried for ever.
+   * The claim and the read of the row are one transaction: a claim that fails
+   * half-way is rolled back and counts as no attempt, since nothing was sent.
    */
   private async claim(scheduleId: string): Promise<Claimed | null> {
     const id = z.uuid().safeParse(scheduleId);
@@ -149,22 +164,20 @@ export class ScheduleDelivery {
     const now = new Date();
     const leaseUntil = new Date(now.getTime() + SCHEDULE_LEASE_MS);
 
-    const won = await this.prisma.scheduledMessage.updateMany({
-      where: {
-        id: id.data,
-        OR: [{ status: 'PENDING' }, { status: 'SENDING', leaseUntil: { lt: now } }],
-      },
-      data: { status: 'SENDING', leaseUntil, attempts: { increment: 1 } },
+    return this.prisma.$transaction(async (tx) => {
+      const won = await tx.scheduledMessage.updateMany({
+        where: {
+          id: id.data,
+          OR: [
+            { status: 'PENDING', OR: [{ leaseUntil: null }, { leaseUntil: { lt: now } }] },
+            { status: 'SENDING', leaseUntil: { lt: now } },
+          ],
+        },
+        data: { status: 'SENDING', leaseUntil, attempts: { increment: 1 } },
+      });
+      if (won.count !== 1) return null;
+      return tx.scheduledMessage.findUnique({ where: { id: id.data }, select: CLAIM_SELECT });
     });
-    if (won.count !== 1) return null;
-
-    const row = await this.prisma.scheduledMessage.findUnique({
-      where: { id: id.data },
-      select: CLAIM_SELECT,
-    });
-    // The value this worker wrote: if somebody took the row over in between,
-    // every conditional write below must fail.
-    return row !== null && row.leaseUntil?.getTime() === leaseUntil.getTime() ? row : null;
   }
 
   private async deliver(row: Claimed): Promise<void> {
@@ -187,6 +200,9 @@ export class ScheduleDelivery {
   /** Posts the message and returns its id. Throws `DeliveryRefusal` when it never can go out. */
   private async send(row: Claimed): Promise<string> {
     try {
+      if (row.apiKeyId !== null && (await this.keyRevoked(row.apiKeyId))) {
+        throw new DeliveryRefusal('CANCELED', 'KEY_REVOKED');
+      }
       if (row.source !== 'DISCORD' && !(await this.creatorMayManage(row))) {
         throw new DeliveryRefusal('CANCELED', 'CREATOR_LOST_ACCESS');
       }
@@ -198,7 +214,7 @@ export class ScheduleDelivery {
         throw new DeliveryRefusal('FAILED', 'CHANNEL_GONE');
       }
 
-      const payload = await this.payloadFor(row);
+      const payload = await this.payloadFor(row, channel);
       const sent = await channel.send({
         ...payload,
         allowedMentions: mentionsOf(row.allowedMentions),
@@ -213,11 +229,20 @@ export class ScheduleDelivery {
     }
   }
 
+  /** A key revoked after it scheduled the message must not get it posted. */
+  private async keyRevoked(apiKeyId: string): Promise<boolean> {
+    const key = await this.prisma.apiKey.findUnique({
+      where: { id: apiKeyId },
+      select: { revokedAt: true },
+    });
+    return key?.revokedAt != null;
+  }
+
   private async creatorMayManage(row: Claimed): Promise<boolean> {
     return this.access.canManage(row.createdByUserId, row.guild.discordId, { fresh: true });
   }
 
-  private async payloadFor(row: Claimed) {
+  private async payloadFor(row: Claimed, channel: unknown) {
     if (row.kind === 'SEND') {
       if (row.content === null) throw new DeliveryRefusal('FAILED', 'SEND_REJECTED');
       return { content: row.content };
@@ -232,6 +257,11 @@ export class ScheduleDelivery {
     }
     const copy = buildMessageCopy(resolved.message);
     if (copy === null) throw new DeliveryRefusal('FAILED', 'SOURCE_EMPTY');
+    // The source may have grown since it was scheduled; Discord's refusal would
+    // arrive as an opaque form error after the attempt.
+    if (copyProblem(copy, uploadLimitForChannel(channel)) !== null) {
+      throw new DeliveryRefusal('FAILED', 'SEND_REJECTED');
+    }
     return copy;
   }
 
@@ -260,7 +290,8 @@ export class ScheduleDelivery {
         where: { id: row.id, status: 'SENDING', leaseUntil: row.leaseUntil },
         data: {
           status: 'PENDING',
-          leaseUntil: null,
+          // Not claimable before the retry delay has passed; see SCHEDULE_RETRY_DELAY_S.
+          leaseUntil: new Date(Date.now() + SCHEDULE_RETRY_DELAY_S * 1000),
           lastError: label.slice(0, ERROR_LABEL_LENGTH),
         },
       });

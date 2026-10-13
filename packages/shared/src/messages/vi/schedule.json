@@ -46,7 +46,7 @@
   "created": "Đã hẹn giờ tin nhắn số {seq} vào {when}.",
   "canceled": "Đã huỷ tin nhắn hẹn giờ số {seq}.",
   "alreadyCanceled": "Tin nhắn hẹn giờ số {seq} đã được huỷ từ trước.",
-  "notFound": "Không có tin nhắn hẹn giờ số {seq}.",
+  "notFound": "Mã tin nhắn hẹn giờ không hợp lệ.",
   "notPending": {
     "SENDING": "Tin nhắn hẹn giờ số {seq} đang được gửi nên không huỷ được nữa.",
     "SENT": "Tin nhắn hẹn giờ số {seq} đã được gửi nên không huỷ được.",
@@ -79,5 +79,12 @@
     "KEY_REVOKED": "Khoá API đã hẹn giờ tin này đã bị thu hồi.",
     "GAVE_UP": "Gửi thất bại sau nhiều lần thử.",
     "SEND_REJECTED": "Discord từ chối tin nhắn này (có thể quá dài hoặc không được phép)."
+  },
+  "problem": {
+    "SCHEDULE_LIMIT": "Server này đã có {max} tin nhắn hẹn giờ đang chờ. Hãy huỷ bớt hoặc chờ chúng được gửi.",
+    "TOO_FAR": "Chỉ hẹn giờ được tối đa {days} ngày tới. Hãy chọn thời điểm sớm hơn.",
+    "EMPTY_SOURCE": "Tin nhắn cần sao chép không có chữ hay tệp đính kèm.",
+    "TOO_LONG": "Tin nhắn cần sao chép dài hơn 2000 ký tự nên bot không gửi được.",
+    "FILES_TOO_LARGE": "Tệp của tin nhắn cần sao chép lớn hơn mức server đích cho phép."
   }
 }

@@ -5,7 +5,7 @@ import type { MessageResolution } from '../../discord/services/message-resolver.
 import type { translatorFor } from '../../i18n/translator.js';
 import { errorLabel } from '../../prisma/pool-factory.js';
 import { ServiceError } from '../../common/errors/service-error.js';
-import { discordReasonOf } from './messaging.errors.js';
+import { copyProblemOf, discordReasonOf } from './messaging.errors.js';
 
 export type Translator = ReturnType<typeof translatorFor>;
 
@@ -35,7 +35,7 @@ export function resolutionProblem(
     case 'INVALID_LINK':
       return t(`errors.invalidLink.${resolution.reason}`);
     case 'NOT_FOUND':
-      return t('errors.DISCORD_MESSAGE_NOT_FOUND');
+      return t('messaging.notFound');
     case 'NO_ACCESS':
       return t('errors.DISCORD_MISSING_PERMISSIONS', { permission: 'view' });
   }
@@ -69,10 +69,16 @@ export async function answerPrivately(
   try {
     text = await work();
   } catch (error) {
+    const problem = copyProblemOf(error);
     const reason = discordReasonOf(error);
-    if (reason === undefined) throw error;
-    logger.warn(`${verb} refused by Discord (${errorLabel(error)})`);
-    text = t(`messaging.cannot.${verb}`, { ...placeholders, reason });
+    if (problem !== undefined) {
+      text = t(`messaging.problem.${problem}`);
+    } else if (reason === undefined) {
+      throw error;
+    } else {
+      logger.warn(`${verb} refused by Discord (${errorLabel(error)})`);
+      text = t(`messaging.cannot.${verb}`, { ...placeholders, reason });
+    }
   }
   await replyInChunks(interaction, text, { ephemeral: true });
 }

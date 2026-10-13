@@ -7,6 +7,8 @@ import {
   ErrorCode,
   QUEUES,
   SCHEDULE_AUTOCOMPLETE_MAX,
+  SCHEDULE_MAX_HORIZON_DAYS,
+  SCHEDULE_PENDING_MAX,
   ScheduleCancelResultSchema,
   ScheduleCopyInputSchema,
   ScheduleListQuerySchema,
@@ -27,14 +29,25 @@ import { Client } from 'discord.js';
 import { AuditService } from '../../common/audit/audit.service.js';
 import { ServiceError } from '../../common/errors/service-error.js';
 import { DiscordReadyService } from '../../discord/discord-ready.service.js';
-import { buildMessageCopy } from '../../discord/helpers/message-copy.js';
+import { isHiddenChannelError } from '../../discord/helpers/channel-visibility.js';
+import {
+  buildMessageCopy,
+  copyErrorCode,
+  copyProblem,
+  uploadLimitForChannel,
+} from '../../discord/helpers/message-copy.js';
 import { ChannelAccessService } from '../../discord/services/channel-access.service.js';
 import { MessageResolver } from '../../discord/services/message-resolver.service.js';
 import { PgBossService } from '../../jobs/pg-boss.service.js';
 import { errorLabel } from '../../prisma/pool-factory.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { GuildConfigService } from '../guild-config/guild-config.service.js';
-import { ScheduleDelivery, guildIdOf } from './schedule.delivery.js';
+import {
+  SCHEDULE_RETRY_DELAY_S,
+  SCHEDULE_MAX_ATTEMPTS,
+  ScheduleDelivery,
+  guildIdOf,
+} from './schedule.delivery.js';
 
 /**
  * A pending message is only "overdue" this long after its time, so a job that
@@ -46,6 +59,7 @@ const RECONCILE_BATCH = 200;
 const RECONCILE_MAX_BATCHES = 10;
 const SEQ_RETRIES = 12;
 const INT_MAX = 2_147_483_647;
+const DAY_MS = 86_400_000;
 const PREVIEW_LENGTH = 40;
 
 type DestructiveOptions = { dryRun?: boolean };
@@ -150,9 +164,12 @@ export class ScheduleService {
   ) {}
 
   /**
-   * Schedules `content` for `runAt`. The channel must belong to `guildId`;
-   * slash commands pass the guild of the channel they resolved. With `dryRun`
-   * it reports the message as it would be stored and writes nothing.
+   * Schedules `content` for `runAt` under `guildId`, the server the caller
+   * works in. A slash command may name a channel of any server the bot is in
+   * (the bot works across servers on purpose) and still finds the message in
+   * its own server's list; the REST API and MCP must name a channel of
+   * `guildId`. With `dryRun` it reports the message as it would be stored and
+   * writes nothing.
    */
   async scheduleSend(
     guildId: string,
@@ -164,8 +181,8 @@ export class ScheduleService {
     const parsed = ScheduleSendInputSchema.safeParse(input);
     if (!parsed.success) throw new ServiceError(ErrorCode.VALIDATION_FAILED);
     const { channelId, content, runAt } = parsed.data;
-    this.assertFuture(runAt);
-    await this.assertDestination(id, channelId);
+    this.assertWithinHorizon(runAt, actor);
+    await this.assertDestination(id, channelId, actor);
 
     return this.create(
       id,
@@ -199,8 +216,8 @@ export class ScheduleService {
     const parsed = ScheduleCopyInputSchema.safeParse(input);
     if (!parsed.success) throw new ServiceError(ErrorCode.VALIDATION_FAILED);
     const { channelId, source, sourceChannelId, runAt } = parsed.data;
-    this.assertFuture(runAt);
-    await this.assertDestination(id, channelId);
+    this.assertWithinHorizon(runAt, actor);
+    const destination = await this.assertDestination(id, channelId, actor);
 
     const resolved = await this.resolver.fetch(
       source,
@@ -212,7 +229,11 @@ export class ScheduleService {
       case 'NOT_FOUND':
         throw new ServiceError(ErrorCode.DISCORD_MESSAGE_NOT_FOUND);
       case 'NO_ACCESS':
-        throw new ServiceError(ErrorCode.DISCORD_MISSING_PERMISSIONS, { permission: 'view' });
+        // Not told apart from "no such message" for a caller held to one server: the
+        // answer would say which ids are real messages elsewhere.
+        throw actor.source === 'DISCORD'
+          ? new ServiceError(ErrorCode.DISCORD_MISSING_PERMISSIONS, { permission: 'view' })
+          : new ServiceError(ErrorCode.DISCORD_MESSAGE_NOT_FOUND);
       case 'OK':
         break;
     }
@@ -224,6 +245,8 @@ export class ScheduleService {
     const copy = buildMessageCopy(message);
     if (copy === null)
       throw new ServiceError(ErrorCode.VALIDATION_FAILED, { reason: 'EMPTY_SOURCE' });
+    const problem = copyProblem(copy, uploadLimitForChannel(destination));
+    if (problem !== null) throw new ServiceError(copyErrorCode(problem));
 
     return this.create(
       id,
@@ -427,7 +450,12 @@ export class ScheduleService {
       const overdue = await this.prisma.scheduledMessage.findMany({
         where: {
           OR: [
-            { status: 'PENDING', runAt: { lte: new Date(now - graceMs) } },
+            {
+              status: 'PENDING',
+              runAt: { lte: new Date(now - graceMs) },
+              // A PENDING row with a lease is waiting out a retry delay.
+              OR: [{ leaseUntil: null }, { leaseUntil: { lt: new Date(now) } }],
+            },
             { status: 'SENDING', leaseUntil: { lt: new Date(now) } },
           ],
         },
@@ -462,9 +490,18 @@ export class ScheduleService {
     return { handled, enqueued };
   }
 
-  private assertFuture(runAt: Date): void {
-    if (runAt.getTime() <= Date.now()) {
+  /**
+   * The past is refused for everyone. How far ahead is bounded for the API and
+   * MCP only: a slash command may schedule as far as it likes, as in the
+   * legacy bot.
+   */
+  private assertWithinHorizon(runAt: Date, actor: ActorContext): void {
+    const now = Date.now();
+    if (runAt.getTime() <= now) {
       throw new ServiceError(ErrorCode.VALIDATION_FAILED, { reason: 'PAST' });
+    }
+    if (actor.source !== 'DISCORD' && runAt.getTime() > now + SCHEDULE_MAX_HORIZON_DAYS * DAY_MS) {
+      throw new ServiceError(ErrorCode.SCHEDULE_TOO_FAR);
     }
   }
 
@@ -480,16 +517,37 @@ export class ScheduleService {
     return actor.source === 'DISCORD' ? (requested ?? ALLOWED_MENTIONS_ALL) : ALLOWED_MENTIONS_NONE;
   }
 
-  /** The bot can post in the channel, and the channel is in `guildId`. */
-  private async assertDestination(guildId: string, channelId: string): Promise<void> {
+  /**
+   * The bot can post in the channel. A slash command may name any server's
+   * channel; every other caller must name one of `guildId`, and learns nothing
+   * about channels elsewhere: the server is compared before the bot's own
+   * access is, so "in another server" and "not visible to the bot" read alike.
+   * Returns the channel.
+   */
+  private async assertDestination(
+    guildId: string,
+    channelId: string,
+    actor: ActorContext,
+  ): Promise<unknown> {
+    if (actor.source !== 'DISCORD') {
+      let channel;
+      try {
+        channel = await this.client.channels.fetch(channelId);
+      } catch (error) {
+        if (isHiddenChannelError(error))
+          throw new ServiceError(ErrorCode.DISCORD_CHANNEL_NOT_FOUND);
+        throw error;
+      }
+      if (guildIdOf(channel) !== guildId) {
+        throw new ServiceError(ErrorCode.DISCORD_CHANNEL_NOT_FOUND);
+      }
+    }
     const access = await this.channels.check(channelId, 'send');
     if (access === 'not-found') throw new ServiceError(ErrorCode.DISCORD_CHANNEL_NOT_FOUND);
     if (access === 'missing-permissions') {
       throw new ServiceError(ErrorCode.DISCORD_MISSING_PERMISSIONS, { permission: 'send' });
     }
-    const channel = await this.client.channels.fetch(channelId);
-    // The same answer as an unknown channel: another server's channels are not for the asker to learn about.
-    if (guildIdOf(channel) !== guildId) throw new ServiceError(ErrorCode.DISCORD_CHANNEL_NOT_FOUND);
+    return this.client.channels.fetch(channelId);
   }
 
   private async create(
@@ -506,12 +564,28 @@ export class ScheduleService {
       attachmentCount: plan.preview.attachmentCount,
       allowedMentions: plan.allowedMentions,
     };
+    // Allowed without a bound for slash commands, as in the legacy bot.
+    if (actor.source !== 'DISCORD') await this.assertRoom(guildId);
     if (opts.dryRun === true) return { dryRun: true, ...base, schedule: null };
 
     const row = await this.insert(guildId, plan, actor);
     // After the commit: a job must never exist for a row that rolled back.
     await this.enqueue(row.id, plan.runAt);
     return { dryRun: false, ...base, schedule: toView(row) };
+  }
+
+  /**
+   * A server holds a bounded number of pending messages. Two creations in the
+   * same instant can overshoot by one each; the bound is a guard against runaway
+   * callers, not an exact quota.
+   */
+  private async assertRoom(guildId: string): Promise<void> {
+    const pending = await this.prisma.scheduledMessage.count({
+      where: { guild: { discordId: guildId }, status: 'PENDING' },
+    });
+    if (pending >= SCHEDULE_PENDING_MAX) {
+      throw new ServiceError(ErrorCode.SCHEDULE_LIMIT_REACHED);
+    }
   }
 
   /**
@@ -573,7 +647,15 @@ export class ScheduleService {
       const jobId = await this.boss.send(
         QUEUES.scheduledMessageSend,
         { scheduleId: id } satisfies ScheduleJobData,
-        { id, startAfter: runAt },
+        {
+          id,
+          startAfter: runAt,
+          // Spread over minutes: a Discord or network fault that lasts seconds
+          // would otherwise use all attempts before it clears.
+          retryLimit: SCHEDULE_MAX_ATTEMPTS - 1,
+          retryDelay: SCHEDULE_RETRY_DELAY_S,
+          retryBackoff: true,
+        },
       );
       // `null`: a job with this id already exists, which is as good.
       await this.prisma.scheduledMessage.updateMany({

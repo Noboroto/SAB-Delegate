@@ -12,6 +12,16 @@ export const SCHEDULE_DESCRIPTION_MAX_LENGTH = 200;
 /** The most scheduled messages one listing returns (the newest ones). */
 export const SCHEDULE_LIST_MAX = 100;
 
+/**
+ * Pending messages one server may hold. Each one is a row and a queued job
+ * that stays until its time, so an unbounded count lets a leaked API key (or
+ * a loop) fill the table.
+ */
+export const SCHEDULE_PENDING_MAX = 500;
+
+/** How far ahead a message may be scheduled, in days; a day more than a year keeps "same date next year" valid. */
+export const SCHEDULE_MAX_HORIZON_DAYS = 366;
+
 /** How many suggestions `scheduler cancel` offers; Discord shows at most 25. */
 export const SCHEDULE_AUTOCOMPLETE_MAX = 25;
 

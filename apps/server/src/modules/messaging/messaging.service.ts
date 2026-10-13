@@ -30,10 +30,15 @@ import {
 } from 'discord.js';
 import { AuditService } from '../../common/audit/audit.service.js';
 import { ServiceError } from '../../common/errors/service-error.js';
-import { buildMessageCopy } from '../../discord/helpers/message-copy.js';
+import { isHiddenChannelError } from '../../discord/helpers/channel-visibility.js';
+import {
+  buildMessageCopy,
+  copyProblem,
+  uploadLimitForChannel,
+} from '../../discord/helpers/message-copy.js';
 import { ChannelAccessService } from '../../discord/services/channel-access.service.js';
 import { errorLabel } from '../../prisma/pool-factory.js';
-import { discordFailure, type PermissionKind } from './messaging.errors.js';
+import { copyRefusal, discordFailure, type PermissionKind } from './messaging.errors.js';
 
 type Options = { dryRun?: boolean };
 
@@ -68,9 +73,16 @@ function parseInput<Schema extends z.ZodType>(schema: Schema, input: unknown): z
   return parsed.data;
 }
 
-/** `null` is a direct message, which belongs to no server. */
-function parseGuildId(guildId: string | null): string | null {
-  if (guildId === null) return null;
+/**
+ * `null` is a direct message, which belongs to no server. Only a slash command
+ * can be in one; every other caller works in a server, and one without it
+ * would be held to "channels with no server", which are direct messages.
+ */
+function parseGuildId(guildId: string | null, actor: ActorContext): string | null {
+  if (guildId === null) {
+    if (!isSlash(actor)) throw new ServiceError(ErrorCode.GUILD_NOT_FOUND);
+    return null;
+  }
   const parsed = SnowflakeSchema.safeParse(guildId);
   if (!parsed.success) throw new ServiceError(ErrorCode.VALIDATION_FAILED);
   return parsed.data;
@@ -113,7 +125,7 @@ export class MessagingService {
     actor: ActorContext,
     opts: Options = {},
   ): Promise<SendMessageResult> {
-    const guild = parseGuildId(guildId);
+    const guild = parseGuildId(guildId, actor);
     const { channelId, content, replyTo } = parseInput(SendMessageSchema, input);
     const destinationId = replyTo?.channelId ?? channelId;
 
@@ -150,13 +162,15 @@ export class MessagingService {
     input: unknown,
     actor: ActorContext,
   ): Promise<CopyMessageResult> {
-    const guild = parseGuildId(guildId);
+    const guild = parseGuildId(guildId, actor);
     const { source, channelId } = parseInput(CopyMessageSchema, input);
 
     const destination = await this.sendableChannel(channelId, guild, actor);
     const original = await this.fetchTarget(source, guild, actor);
     const copy = buildMessageCopy(original);
     if (copy === null) return { status: 'NOTHING_TO_COPY', channelId, messageId: null };
+    const problem = copyProblem(copy, uploadLimitForChannel(destination));
+    if (problem !== null) throw copyRefusal(problem);
 
     const sent = await this.write('send', async () => {
       await destination.sendTyping();
@@ -177,7 +191,7 @@ export class MessagingService {
     actor: ActorContext,
     opts: Options = {},
   ): Promise<EditBotMessageResult> {
-    const guild = parseGuildId(guildId);
+    const guild = parseGuildId(guildId, actor);
     const { target, content } = parseInput(EditBotMessageSchema, input);
     const dryRun = opts.dryRun === true;
 
@@ -200,7 +214,7 @@ export class MessagingService {
     input: unknown,
     actor: ActorContext,
   ): Promise<EditBotMessageResult> {
-    const guild = parseGuildId(guildId);
+    const guild = parseGuildId(guildId, actor);
     const { target, source } = parseInput(EditBotMessageFromCopySchema, input);
 
     const message = await this.fetchTarget(target, guild, actor);
@@ -208,6 +222,8 @@ export class MessagingService {
     if (!this.isOwn(message)) return this.editOutcome('NOT_BOT_MESSAGE', target, null, false);
     const copy = buildMessageCopy(original);
     if (copy === null) return this.editOutcome('NOTHING_TO_COPY', target, null, false);
+    const problem = copyProblem(copy, uploadLimitForChannel(message.channel));
+    if (problem !== null) throw copyRefusal(problem);
 
     await this.write('other', () => message.edit({ ...copy, allowedMentions: mentionsFor(actor) }));
     await this.record(actor, guild, AUDIT_ACTIONS.messageEdit, {
@@ -225,7 +241,7 @@ export class MessagingService {
     input: unknown,
     actor: ActorContext,
   ): Promise<ReactToMessageResult> {
-    const guild = parseGuildId(guildId);
+    const guild = parseGuildId(guildId, actor);
     const { target, emoji, pollChoices } = parseInput(ReactToMessageSchema, input);
 
     const message = await this.fetchTarget(target, guild, actor);
@@ -253,7 +269,7 @@ export class MessagingService {
     actor: ActorContext,
     opts: Options = {},
   ): Promise<CreateReactionPollResult> {
-    const guild = parseGuildId(guildId);
+    const guild = parseGuildId(guildId, actor);
     const { channelId, messageId, choices } = parseInput(CreateReactionPollSchema, input);
     const emojis = POLL_EMOJIS.slice(0, choices);
     const planned = (id: string | null, isNew: boolean): CreateReactionPollResult => ({
@@ -319,6 +335,11 @@ export class MessagingService {
     try {
       channel = await this.client.channels.fetch(channelId);
     } catch (error) {
+      // Before the server is compared, Discord cannot say whether a channel it
+      // hides is in the caller's server, so a held caller gets one answer for all.
+      if (!isSlash(actor) && isHiddenChannelError(error)) {
+        throw new ServiceError(ErrorCode.DISCORD_CHANNEL_NOT_FOUND);
+      }
       throw discordFailure(error, 'view');
     }
     if (!channel?.isTextBased()) throw new ServiceError(ErrorCode.DISCORD_CHANNEL_NOT_FOUND);

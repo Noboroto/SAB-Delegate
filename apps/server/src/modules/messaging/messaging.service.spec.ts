@@ -31,6 +31,7 @@ function build(
     author?: string;
     content?: string;
     files?: string[];
+    fileSize?: number;
     access?: 'ok' | 'not-found' | 'missing-permissions';
   } = {},
 ) {
@@ -39,7 +40,12 @@ function build(
     channelId: CHANNEL,
     author: { id: options.author ?? BOT },
     content: options.content ?? 'old text',
-    attachments: new Map((options.files ?? []).map((url) => [url, { url }])),
+    attachments: new Map(
+      (options.files ?? []).map((url) => [
+        url,
+        options.fileSize === undefined ? { url } : { url, size: options.fileSize },
+      ]),
+    ),
     react: vi.fn().mockResolvedValue(undefined),
     edit: vi.fn().mockResolvedValue(undefined),
     reply: vi.fn().mockResolvedValue({ id: REPLY }),
@@ -179,6 +185,25 @@ describe('MessagingService.sendMessage', () => {
     ).rejects.toMatchObject({ code: ErrorCode.DISCORD_CHANNEL_NOT_FOUND });
   });
 
+  it('refuses an API caller that names no server, but not a slash command in a direct message', async () => {
+    const { service, channel } = build({ channelGuild: null });
+    await expect(
+      service.sendMessage(null, { channelId: CHANNEL, content: 'x' }, API),
+    ).rejects.toMatchObject({ code: ErrorCode.GUILD_NOT_FOUND });
+    expect(channel.send).not.toHaveBeenCalled();
+  });
+
+  it('answers a channel Discord hides like a channel that is not there, for the API only', async () => {
+    const hidden = build();
+    hidden.client.channels.fetch.mockRejectedValue(discordError(50001, 'Missing Access'));
+    await expect(
+      hidden.service.sendMessage(GUILD, { channelId: CHANNEL, content: 'x' }, API),
+    ).rejects.toMatchObject({ code: ErrorCode.DISCORD_CHANNEL_NOT_FOUND });
+    await expect(
+      hidden.service.sendMessage(GUILD, { channelId: CHANNEL, content: 'x' }, SLASH),
+    ).rejects.toMatchObject({ code: ErrorCode.DISCORD_MISSING_PERMISSIONS });
+  });
+
   it('lets a slash command reach a message in another server, as the old bot did', async () => {
     const { service, channel } = build({ channelGuild: OTHER_GUILD });
     await service.sendMessage(GUILD, { channelId: CHANNEL, content: 'x' }, SLASH);
@@ -287,6 +312,26 @@ describe('MessagingService.copyMessage', () => {
     expect(audit.record).not.toHaveBeenCalled();
   });
 
+  it('refuses to copy what Discord would not let the bot post, naming the problem', async () => {
+    const long = build({ content: 'x'.repeat(2001) });
+    await expect(
+      long.service.copyMessage(GUILD, { source: target, channelId: CHANNEL }, SLASH),
+    ).rejects.toMatchObject({
+      code: ErrorCode.MESSAGE_TOO_LONG,
+    });
+    expect(long.channel.send).not.toHaveBeenCalled();
+
+    const heavy = build({
+      content: '',
+      files: ['https://cdn.example/a.bin'],
+      fileSize: 11 * 1024 * 1024,
+    });
+    await expect(
+      heavy.service.copyMessage(GUILD, { source: target, channelId: CHANNEL }, SLASH),
+    ).rejects.toMatchObject({ code: ErrorCode.ATTACHMENTS_TOO_LARGE });
+    expect(heavy.channel.send).not.toHaveBeenCalled();
+  });
+
   it('does not let an API caller copy out of another server', async () => {
     const { service, channel, client } = build();
     const foreign = { ...channel, id: OTHER_CHANNEL, guildId: OTHER_GUILD };
@@ -379,6 +424,14 @@ describe('MessagingService.editBotMessageFromCopy', () => {
     const { service, message } = build({ author: USER, content: '' });
     const result = await service.editBotMessageFromCopy(GUILD, { target, source: target }, SLASH);
     expect(result.status).toBe('NOT_BOT_MESSAGE');
+    expect(message.edit).not.toHaveBeenCalled();
+  });
+
+  it('edits nothing when the source is too long to post', async () => {
+    const { service, message } = build({ content: 'x'.repeat(2001) });
+    await expect(
+      service.editBotMessageFromCopy(GUILD, { target, source: target }, SLASH),
+    ).rejects.toMatchObject({ code: ErrorCode.MESSAGE_TOO_LONG });
     expect(message.edit).not.toHaveBeenCalled();
   });
 

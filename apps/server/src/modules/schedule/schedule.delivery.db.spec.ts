@@ -1,7 +1,11 @@
 import { AUDIT_ACTIONS } from '@sab/shared';
 import { describe, expect, it, vi } from 'vitest';
 import { useScheduleDb } from './schedule.db-harness.js';
-import { SCHEDULE_LEASE_MS, SCHEDULE_MAX_ATTEMPTS } from './schedule.delivery.js';
+import {
+  SCHEDULE_LEASE_MS,
+  SCHEDULE_MAX_ATTEMPTS,
+  SCHEDULE_RETRY_DELAY_S,
+} from './schedule.delivery.js';
 
 describe('ScheduleService delivery against Postgres', () => {
   const db = useScheduleDb();
@@ -29,6 +33,10 @@ describe('ScheduleService delivery against Postgres', () => {
     schedule,
     registerSource,
   } = db;
+
+  /** Skips the wait a failed send puts on its message, as pg-boss's retry delay would. */
+  const waitedOut = (id: string) =>
+    db.prisma.scheduledMessage.update({ where: { id }, data: { leaseUntil: null } });
 
   describe('sending', () => {
     it('lets only one of two workers send, then marks the message sent', async () => {
@@ -219,16 +227,62 @@ describe('ScheduleService delivery against Postgres', () => {
       failures.set(w.channelId, [new Error('socket hang up')]);
 
       await expect(db.service.handleJob(id)).rejects.toThrow('socket hang up');
-      expect(await rowOf(id)).toMatchObject({
-        status: 'PENDING',
-        attempts: 1,
-        leaseUntil: null,
-        lastError: 'Error',
-      });
+      const waiting = await rowOf(id);
+      expect(waiting).toMatchObject({ status: 'PENDING', attempts: 1, lastError: 'Error' });
+      // The retry wait rides on the row, so a sweep cannot send it sooner than the job would.
+      const waitMs = (waiting.leaseUntil?.getTime() ?? 0) - Date.now();
+      expect(waitMs).toBeGreaterThan((SCHEDULE_RETRY_DELAY_S - 5) * 1000);
+      expect(waitMs).toBeLessThanOrEqual(SCHEDULE_RETRY_DELAY_S * 1000);
+      await expect(db.service.handleJob(id)).resolves.toBe(false);
 
+      await waitedOut(id);
       await expect(db.service.handleJob(id)).resolves.toBe(true);
       expect(await rowOf(id)).toMatchObject({ status: 'SENT', attempts: 2, lastError: null });
       expect(delivered).toHaveLength(1);
+    });
+
+    it('does not let a sweep resend a failed message before its retry wait is over', async () => {
+      const w = world();
+      const { id } = await schedule(w);
+      await db.prisma.scheduledMessage.update({
+        where: { id },
+        data: { runAt: anHourAgo() },
+      });
+      failures.set(w.channelId, [new Error('socket hang up')]);
+      await expect(db.service.handleJob(id)).rejects.toThrow('socket hang up');
+
+      await db.service.reconcilePending();
+      expect(attemptsAt.get(w.channelId)).toBe(1);
+      expect((await rowOf(id)).status).toBe('PENDING');
+
+      await waitedOut(id);
+      await db.service.reconcilePending();
+      expect((await rowOf(id)).status).toBe('SENT');
+    });
+
+    it('counts no attempt when the claim itself fails before anything is sent', async () => {
+      const w = world();
+      const { id } = await schedule(w);
+      type ClaimTx = { scheduledMessage: { updateMany(args: object): Promise<unknown> } };
+      const real = db.prisma.$transaction.bind(db.prisma) as unknown as (
+        fn: (tx: ClaimTx) => Promise<unknown>,
+      ) => Promise<unknown>;
+      const spy = vi.spyOn(db.prisma, '$transaction').mockImplementationOnce(((
+        fn: (tx: unknown) => Promise<unknown>,
+      ) =>
+        real((tx) =>
+          fn({
+            scheduledMessage: {
+              updateMany: (args: object) => tx.scheduledMessage.updateMany(args),
+              findUnique: () => Promise.reject(new Error('read failed')),
+            },
+          }),
+        )) as never);
+
+      await expect(db.service.handleJob(id)).rejects.toThrow('read failed');
+      spy.mockRestore();
+      expect(await rowOf(id)).toMatchObject({ status: 'PENDING', attempts: 0, leaseUntil: null });
+      expect(delivered).toEqual([]);
     });
 
     it('gives up after the attempts are used, without throwing, and says so', async () => {
@@ -241,6 +295,7 @@ describe('ScheduleService delivery against Postgres', () => {
 
       for (let attempt = 1; attempt < SCHEDULE_MAX_ATTEMPTS; attempt += 1) {
         await expect(db.service.handleJob(id)).rejects.toThrow('socket hang up');
+        await waitedOut(id);
       }
       await expect(db.service.handleJob(id)).resolves.toBe(true);
 
@@ -272,6 +327,22 @@ describe('ScheduleService delivery against Postgres', () => {
       expect(entry).toMatchObject({ ok: false, error: 'CREATOR_LOST_ACCESS' });
     });
 
+    it('cancels instead of sending when the key that scheduled it was revoked meanwhile', async () => {
+      const w = world();
+      const actor = await apiFor(w);
+      const keyId = actor.apiKeyId ?? '';
+      const { id } = await schedule(w, 'From the API', actor);
+      await db.prisma.apiKey.update({
+        where: { id: keyId },
+        data: { revokedAt: new Date() },
+      });
+
+      await expect(db.service.handleJob(id)).resolves.toBe(true);
+      expect(delivered).toEqual([]);
+      expect(await rowOf(id)).toMatchObject({ status: 'CANCELED', lastError: 'KEY_REVOKED' });
+      expect(canManage).not.toHaveBeenCalled();
+    });
+
     it('sends when the owner of an API key still can', async () => {
       const w = world();
       const { id } = await schedule(w, 'From the API', await apiFor(w));
@@ -299,6 +370,7 @@ describe('ScheduleService delivery against Postgres', () => {
       expect(delivered).toEqual([]);
 
       manage.delete(w.userId);
+      await waitedOut(id);
       await db.service.handleJob(id);
       expect((await rowOf(id)).status).toBe('SENT');
     });

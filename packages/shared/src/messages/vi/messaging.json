@@ -42,6 +42,11 @@
     "source": "Tin nhắn nguồn không có chữ hay tệp đính kèm để sao chép!",
     "new": "Tin nhắn mới không có chữ hay tệp đính kèm để sao chép!"
   },
+  "notFound": "Không tìm thấy tin nhắn!",
+  "problem": {
+    "TOO_LONG": "Tin nhắn nguồn dài hơn 2000 ký tự nên bot không gửi được.",
+    "FILES_TOO_LARGE": "Tệp của tin nhắn nguồn lớn hơn mức server đích cho phép."
+  },
   "cannot": {
     "send": "Không gửi được: {reason}",
     "copy": "Không gửi được tới {channel}: {reason}",

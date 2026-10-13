@@ -42,6 +42,11 @@
     "source": "The source message has no text or attachment to copy!",
     "new": "The new message has no text or attachment to copy!"
   },
+  "notFound": "Message not found!",
+  "problem": {
+    "TOO_LONG": "The source message is longer than 2000 characters, which the bot cannot send.",
+    "FILES_TOO_LARGE": "The files of the source message are larger than the destination server accepts."
+  },
   "cannot": {
     "send": "Cannot send: {reason}",
     "copy": "Cannot send to {channel}: {reason}",

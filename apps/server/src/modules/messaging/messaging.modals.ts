@@ -48,11 +48,11 @@ export function buildSendModal(
     );
 }
 
-/** A dialog to rewrite a bot message, showing its current text. */
+/** A dialog to rewrite a bot message, showing its current text when it is known. */
 export function buildEditModal(
   locale: string,
   target: MessageTarget,
-  currentContent: string,
+  currentContent: string = '',
 ): ModalBuilder {
   const t = translatorFor(locale);
   const input = new TextInputBuilder()

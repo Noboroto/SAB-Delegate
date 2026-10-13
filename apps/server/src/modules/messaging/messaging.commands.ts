@@ -314,22 +314,24 @@ export class MessagingCommands {
     @Options() { oldBotMessageLink, newContent }: EditSendOptions,
   ): Promise<void> {
     if (newContent === undefined) {
-      // The dialog shows the current text, so the message is read before it
-      // opens; that read has to fit in the 3 seconds Discord gives.
-      const t = await this.translator(interaction);
-      const old = await this.resolveOrExplain(interaction, t, oldBotMessageLink);
-      if (old === undefined) return;
-      if (old.author.id !== interaction.client.user.id) {
-        await replyInChunks(interaction, t('messaging.notBotMessage'), { ephemeral: true });
+      // A dialog must be the first response, within 3 seconds of the command,
+      // and fetching the message first can take longer. The link is only read
+      // here; whether the message exists and is the bot's is found out when the
+      // dialog is submitted, so it opens empty instead of showing the old text.
+      const ref = parseMessageRef(oldBotMessageLink, { channelId: channelOf(interaction) });
+      if (!ref.ok) {
+        const t = await this.translator(interaction);
+        await replyInChunks(interaction, t(`errors.invalidLink.${ref.reason}`), {
+          ephemeral: true,
+        });
         return;
       }
       await showModalFirst(
         interaction,
-        buildEditModal(
-          interaction.locale,
-          { channelId: old.channelId, messageId: old.id },
-          old.content,
-        ),
+        buildEditModal(interaction.locale, {
+          channelId: ref.channelId,
+          messageId: ref.messageId,
+        }),
       );
       return;
     }

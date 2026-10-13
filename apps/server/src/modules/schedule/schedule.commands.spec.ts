@@ -124,21 +124,39 @@ describe('/bot-message schedule-send', () => {
       { source: 'DISCORD', userId: USER },
     );
     const unix = unixOf(new Date('2026-10-13T07:30:00.000Z'));
-    expect(textOf(target.editReply)).toBe(`Scheduled message 1 for <t:${unix}:F> (<t:${unix}:R>).`);
+    expect(textOf(target.editReply)).toBe(
+      `Job has been scheduled with id 1 at <t:${unix}:F> (<t:${unix}:R>)`,
+    );
   });
 
-  it('sends to the destination and uses the server of that channel', async () => {
+  it('sends to the destination and files the message under the server it ran in', async () => {
     const { commands, schedules } = build();
     const { target } = interaction();
     await commands.onScheduleSend([target] as never, {
       time: '2h',
       message: 'Hi',
       date: null,
-      destination: { id: OTHER_CHANNEL, guildId: GUILD },
+      destination: { id: OTHER_CHANNEL },
     });
     expect(schedules.scheduleSend).toHaveBeenCalledWith(
       GUILD,
       { channelId: OTHER_CHANNEL, content: 'Hi', runAt: new Date('2026-10-13T05:00:00.000Z') },
+      expect.anything(),
+    );
+  });
+
+  it('keeps the message in the invoking server when the destination is in another one', async () => {
+    const { commands, schedules } = build();
+    const { target } = interaction();
+    await commands.onScheduleSend([target] as never, {
+      time: '2h',
+      message: 'Hi',
+      date: null,
+      destination: { id: OTHER_CHANNEL, guildId: '9'.repeat(18) } as never,
+    });
+    expect(schedules.scheduleSend).toHaveBeenCalledWith(
+      GUILD,
+      expect.anything(),
       expect.anything(),
     );
   });
@@ -150,7 +168,7 @@ describe('/bot-message schedule-send', () => {
       time: '14:30',
       message: undefined,
       date: 'tomorrow',
-      destination: { id: OTHER_CHANNEL, guildId: GUILD },
+      destination: { id: OTHER_CHANNEL },
     });
 
     expect(calls).toEqual(['showModal']);
@@ -268,7 +286,7 @@ describe('the schedule-send dialog', () => {
       },
       { source: 'DISCORD', userId: USER },
     );
-    expect(textOf(target.editReply)).toContain('Scheduled message 1');
+    expect(textOf(target.editReply)).toContain('Job has been scheduled with id 1');
   });
 
   it('says so when the dialog stayed open past the moment', async () => {
@@ -316,7 +334,7 @@ describe('/bot-message schedule-copy', () => {
       },
       { source: 'DISCORD', userId: USER },
     );
-    expect(textOf(target.editReply)).toContain('Scheduled message 2');
+    expect(textOf(target.editReply)).toContain('Job has been scheduled with id 2');
   });
 
   it('explains a link that cannot be read instead of a generic error', async () => {
@@ -329,9 +347,26 @@ describe('/bot-message schedule-copy', () => {
     expect(textOf(target.editReply)).toBe(MESSAGES.en.errors.invalidLink.MALFORMED);
   });
 
+  it.each([
+    [new ServiceError(ErrorCode.VALIDATION_FAILED, { reason: 'EMPTY_SOURCE' }), 'EMPTY_SOURCE'],
+    [new ServiceError(ErrorCode.SCHEDULE_LIMIT_REACHED), 'SCHEDULE_LIMIT'],
+    [new ServiceError(ErrorCode.SCHEDULE_TOO_FAR), 'TOO_FAR'],
+    [new ServiceError(ErrorCode.MESSAGE_TOO_LONG), 'TOO_LONG'],
+    [new ServiceError(ErrorCode.ATTACHMENTS_TOO_LARGE), 'FILES_TOO_LARGE'],
+  ] as const)('explains the refusal %s in words', async (refusal, reason) => {
+    const { commands, schedules } = build();
+    schedules.scheduleCopy.mockRejectedValueOnce(refusal);
+    const { target } = interaction();
+    await commands.onScheduleCopy([target] as never, { messageLink: link, time: '14:30' });
+    const text = textOf(target.editReply);
+    expect(text).toBe(
+      MESSAGES.en.schedule.problem[reason].replace('{max}', '500').replace('{days}', '366'),
+    );
+  });
+
   it('lets any other refusal reach the exception filter', async () => {
     const { commands, schedules } = build();
-    const other = new ServiceError(ErrorCode.VALIDATION_FAILED, { reason: 'EMPTY_SOURCE' });
+    const other = new ServiceError(ErrorCode.VALIDATION_FAILED, { reason: 'PAST' });
     schedules.scheduleCopy.mockRejectedValueOnce(other);
     const { target } = interaction();
     await expect(
@@ -410,7 +445,7 @@ describe('/scheduler get', () => {
     const { target } = interaction();
     await scheduler.onGet([target] as never);
     expect(target.deferReply).toHaveBeenCalledWith();
-    expect(textOf(target.editReply)).toBe('No scheduled messages.');
+    expect(textOf(target.editReply)).toBe('No job found');
   });
 
   it('lists every entry under a header, packed into messages of at most 2000 characters', async () => {
@@ -442,7 +477,7 @@ describe('/scheduler get', () => {
       ...target.editReply.mock.calls.map(([options]) => (options as { content: string }).content),
       ...target.followUp.mock.calls.map(([options]) => (options as { content: string }).content),
     ];
-    expect(sent[0]).toBe('Scheduled messages:');
+    expect(sent[0]).toBe('List of jobs:');
     for (const text of sent) expect(text.length).toBeLessThanOrEqual(2000);
     const body = sent.slice(1).join('\n');
     expect(body.match(/^## /gm)).toHaveLength(12);
@@ -470,7 +505,7 @@ describe('/scheduler cancel', () => {
 
     expect(target.deferReply).toHaveBeenCalledWith({ flags: MessageFlags.Ephemeral });
     expect(schedules.cancel).toHaveBeenCalledWith(GUILD, 4, { source: 'DISCORD', userId: USER });
-    expect(textOf(target.editReply)).toBe('Canceled scheduled message 4.');
+    expect(textOf(target.editReply)).toBe('Job `4` has been canceled');
   });
 
   it('is not an error to cancel twice', async () => {
@@ -483,7 +518,7 @@ describe('/scheduler cancel', () => {
     });
     const { target } = interaction();
     await scheduler.onCancel([target] as never, { id: 4 });
-    expect(textOf(target.editReply)).toBe('Scheduled message 4 was already canceled.');
+    expect(textOf(target.editReply)).toBe('Job `4` was already canceled');
   });
 
   it('declares its number as an integer with suggestions', () => {

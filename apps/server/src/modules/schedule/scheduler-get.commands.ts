@@ -48,7 +48,9 @@ export class SchedulerCommands {
     // Public, and acknowledged before the read, which can take a while.
     await interaction.deferReply();
 
-    const views = await this.schedules.list(guildId);
+    // The jobs still to run, as the previous bot listed (it only knew live ones);
+    // finished and canceled ones are available through the API.
+    const views = await this.schedules.list(guildId, { status: 'PENDING' });
     const t = translatorFor(await this.locales.resolve(guildId, interaction));
     if (views.length === 0) {
       await replyInChunks(interaction, t('schedule.list.empty'));

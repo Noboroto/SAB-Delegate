@@ -127,6 +127,8 @@ export {
   SCHEDULE_AUTOCOMPLETE_MAX,
   SCHEDULE_DESCRIPTION_MAX_LENGTH,
   SCHEDULE_LIST_MAX,
+  SCHEDULE_MAX_HORIZON_DAYS,
+  SCHEDULE_PENDING_MAX,
   ScheduleCancelByKeyResultSchema,
   ScheduleCancelResultSchema,
   ScheduleCopyInputSchema,

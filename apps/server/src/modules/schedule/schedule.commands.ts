@@ -3,6 +3,9 @@ import {
   ErrorCode,
   MESSAGE_MAX_LENGTH,
   MessageRefFailureSchema,
+  SCHEDULE_MAX_HORIZON_DAYS,
+  SCHEDULE_PENDING_MAX,
+  z,
   formatDiscordTimestamp,
   formatWhenIct,
   parseWhen,
@@ -60,7 +63,29 @@ const DESTINATION_TYPES: ApplicationCommandOptionAllowedChannelType[] = [
 /** What the person typed in `time` and `date` is short; a longer value is a mistake Discord can refuse. */
 const WHEN_MAX_LENGTH = 100;
 
-type DestinationRef = { readonly id: string; readonly guildId: string };
+/**
+ * The channel is any the bot can post in, in any server; the message is listed
+ * under the server the command ran in, whichever server the channel is from.
+ */
+type DestinationRef = { readonly id: string };
+
+/** Refusals of the service that the person is told about in their own words. */
+const ScheduleProblemSchema = z.enum([
+  'SCHEDULE_LIMIT',
+  'TOO_FAR',
+  'EMPTY_SOURCE',
+  'TOO_LONG',
+  'FILES_TOO_LARGE',
+]);
+type ScheduleProblem = z.infer<typeof ScheduleProblemSchema>;
+
+/** Refusals that have a code of their own, with the text key each is shown under. */
+const PROBLEM_BY_CODE: Partial<Record<ErrorCode, ScheduleProblem>> = {
+  [ErrorCode.SCHEDULE_LIMIT_REACHED]: 'SCHEDULE_LIMIT',
+  [ErrorCode.SCHEDULE_TOO_FAR]: 'TOO_FAR',
+  [ErrorCode.MESSAGE_TOO_LONG]: 'TOO_LONG',
+  [ErrorCode.ATTACHMENTS_TOO_LARGE]: 'FILES_TOO_LARGE',
+};
 
 // The options are spelled once and used by both subcommands. They are not a
 // shared base class: Necord lists a derived class's options before its base's,
@@ -183,12 +208,13 @@ export class ScheduleCommands {
     }
 
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    const result = await this.schedules.scheduleSend(
-      destination?.guildId ?? guildId,
-      { channelId, content: message, runAt: at },
-      actorOf(interaction),
+    await this.confirmed(interaction, guildId, () =>
+      this.schedules.scheduleSend(
+        guildId,
+        { channelId, content: message, runAt: at },
+        actorOf(interaction),
+      ),
     );
-    await this.confirm(interaction, guildId, result);
   }
 
   /** The dialog `schedule-send` opened. */
@@ -212,12 +238,9 @@ export class ScheduleCommands {
       return;
     }
 
-    const result = await this.schedules.scheduleSend(
-      guildId,
-      { channelId, content, runAt: at },
-      actorOf(interaction),
+    await this.confirmed(interaction, guildId, () =>
+      this.schedules.scheduleSend(guildId, { channelId, content, runAt: at }, actorOf(interaction)),
     );
-    await this.confirm(interaction, guildId, result);
   }
 
   @UseInterceptors(ScheduleWhenAutocompleteInterceptor)
@@ -235,9 +258,9 @@ export class ScheduleCommands {
     if (at === undefined) return;
 
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    try {
-      const result = await this.schedules.scheduleCopy(
-        destination?.guildId ?? guildId,
+    await this.confirmed(interaction, guildId, () =>
+      this.schedules.scheduleCopy(
+        guildId,
         {
           channelId: destination?.id ?? interaction.channelId,
           source: messageLink,
@@ -245,15 +268,8 @@ export class ScheduleCommands {
           runAt: at,
         },
         actorOf(interaction),
-      );
-      await this.confirm(interaction, guildId, result);
-    } catch (error) {
-      // A link that cannot be read is told apart from a generic bad value.
-      const reason = linkFailureOf(error);
-      if (reason === undefined) throw error;
-      const t = translatorFor(await this.locales.resolve(guildId, interaction));
-      await replyInChunks(interaction, t(`errors.invalidLink.${reason}`), { ephemeral: true });
-    }
+      ),
+    );
   }
 
   /**
@@ -277,6 +293,36 @@ export class ScheduleCommands {
       { ephemeral: true },
     );
     return undefined;
+  }
+
+  /**
+   * Runs the scheduling and confirms it. A refusal the person can act on (a
+   * link that cannot be read, a full list, a date too far away) is answered in
+   * words; anything else goes on to the exception filter.
+   */
+  private async confirmed(
+    interaction: Answerable,
+    guildId: string,
+    schedule: () => Promise<ScheduleCreateResult>,
+  ): Promise<void> {
+    let result: ScheduleCreateResult;
+    try {
+      result = await schedule();
+    } catch (error) {
+      const reason = reasonOf(error);
+      if (reason === undefined) throw error;
+      const t = translatorFor(await this.locales.resolve(guildId, interaction));
+      const text =
+        reason.kind === 'link'
+          ? t(`errors.invalidLink.${reason.value}`)
+          : t(`schedule.problem.${reason.value}`, {
+              max: SCHEDULE_PENDING_MAX,
+              days: SCHEDULE_MAX_HORIZON_DAYS,
+            });
+      await replyInChunks(interaction, text, { ephemeral: true });
+      return;
+    }
+    await this.confirm(interaction, guildId, result);
   }
 
   private async confirm(
@@ -324,13 +370,17 @@ function actorOf(interaction: { readonly user: { readonly id: string } }): Actor
   return { source: 'DISCORD', userId: interaction.user.id };
 }
 
-/** Set only when `error` says the message link could not be read. */
-function linkFailureOf(error: unknown) {
-  if (!(error instanceof ServiceError) || error.code !== ErrorCode.VALIDATION_FAILED) {
-    return undefined;
-  }
-  const reason = MessageRefFailureSchema.safeParse(error.params?.['reason']);
-  return reason.success ? reason.data : undefined;
+/** Set only when `error` is a refusal the person is told about; a link that cannot be read is told apart from a generic bad value. */
+function reasonOf(error: unknown) {
+  if (!(error instanceof ServiceError)) return undefined;
+  const coded = PROBLEM_BY_CODE[error.code];
+  if (coded !== undefined) return { kind: 'problem' as const, value: coded };
+  if (error.code !== ErrorCode.VALIDATION_FAILED) return undefined;
+  const raw = error.params?.['reason'];
+  const link = MessageRefFailureSchema.safeParse(raw);
+  if (link.success) return { kind: 'link' as const, value: link.data };
+  const problem = ScheduleProblemSchema.safeParse(raw);
+  return problem.success ? { kind: 'problem' as const, value: problem.data } : undefined;
 }
 
 function buildSendModal(locale: string, channelId: string, at: Date): ModalBuilder {

@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { ServiceError } from '../../common/errors/service-error.js';
 import type { GuildLocaleService } from '../../i18n/guild-locale.service.js';
 import type { MessageResolver } from '../../discord/services/message-resolver.service.js';
+import { copyRefusal } from './messaging.errors.js';
 import { AddPollCommands } from './add-poll.commands.js';
 import { MessagingCommands } from './messaging.commands.js';
 import type { MessagingService } from './messaging.service.js';
@@ -186,7 +187,7 @@ describe('/bot-message send', () => {
     await commands.onSend([target] as never, { content: 'hello', replyMessage: 'x' });
 
     expect(messaging.sendMessage).not.toHaveBeenCalled();
-    expect(textOf(target.editReply)).toBe(MESSAGES.en.errors.DISCORD_MESSAGE_NOT_FOUND);
+    expect(textOf(target.editReply)).toBe(T.notFound);
   });
 
   it('rejects text that is only spaces', async () => {
@@ -251,6 +252,17 @@ describe('/bot-message copy-paste', () => {
     expect(textOf(target.editReply)).toBe(`Cannot send to <#${OTHER_CHANNEL}>: Missing Access`);
   });
 
+  it.each(['TOO_LONG', 'FILES_TOO_LARGE'] as const)(
+    'tells the person why a copy is refused (%s) instead of Discord’s raw error',
+    async (problem) => {
+      const { commands, messaging, interaction } = build();
+      messaging.copyMessage.mockRejectedValueOnce(copyRefusal(problem));
+      const target = interaction();
+      await commands.onCopyPaste([target] as never, { messageLink: 'x' });
+      expect(textOf(target.editReply)).toBe(T.problem[problem]);
+    },
+  );
+
   it('reports a source that cannot be found', async () => {
     const { commands, messaging, resolver, interaction } = build();
     resolver.fetch.mockResolvedValue({ status: 'INVALID_LINK', reason: 'EMPTY' });
@@ -298,30 +310,30 @@ describe('/bot-message edit-copy', () => {
 });
 
 describe('/bot-message edit-send', () => {
-  it('opens a dialog showing the current text when the new text is missing', async () => {
-    const { commands, messaging, interaction } = build();
+  it('opens an empty dialog at once, without reading the message, when the new text is missing', async () => {
+    const { commands, messaging, resolver, interaction } = build();
     const target = interaction();
-    await commands.onEditSend([target] as never, { oldBotMessageLink: 'old' });
+    await commands.onEditSend([target] as never, {
+      oldBotMessageLink: `https://discord.com/channels/${GUILD}/${CHANNEL}/${MESSAGE}`,
+    });
 
     expect(target.deferReply).not.toHaveBeenCalled();
+    expect(resolver.fetch).not.toHaveBeenCalled();
     expect(messaging.editBotMessage).not.toHaveBeenCalled();
     const modal = modalOf(target);
     expect(modal.custom_id).toBe(`bm-edit/${CHANNEL}/${MESSAGE}`);
-    expect(inputOf(modal)).toMatchObject({
-      style: TextInputStyle.Paragraph,
-      value: 'current text',
-      required: true,
-    });
+    const input = inputOf(modal);
+    expect(input).toMatchObject({ style: TextInputStyle.Paragraph, required: true });
+    expect(input).not.toHaveProperty('value');
   });
 
-  it('does not open a dialog for a message the bot did not send', async () => {
-    const { commands, resolver, interaction } = build();
-    resolver.fetch.mockResolvedValue(found({ author: USER }));
+  it('says so, instead of opening a dialog, when the link cannot be read', async () => {
+    const { commands, interaction } = build();
     const target = interaction();
-    await commands.onEditSend([target] as never, { oldBotMessageLink: 'old' });
+    await commands.onEditSend([target] as never, { oldBotMessageLink: 'nope' });
 
     expect(target.showModal).not.toHaveBeenCalled();
-    expect(textOf(target.reply)).toBe(T.notBotMessage);
+    expect(textOf(target.reply)).toBe(MESSAGES.en.errors.invalidLink.MALFORMED);
   });
 
   it('edits straight away when the new text is given', async () => {
@@ -445,7 +457,7 @@ describe('/add-poll', () => {
     await poll.onAddPoll([target] as never, { pollChoiceCount: 2, messageLink: 'link' });
 
     expect(messaging.createReactionPoll).not.toHaveBeenCalled();
-    expect(textOf(target.editReply)).toBe(MESSAGES.en.errors.DISCORD_MESSAGE_NOT_FOUND);
+    expect(textOf(target.editReply)).toBe(T.notFound);
   });
 
   it('shows "Cannot add the poll: <reason>" when Discord refuses', async () => {

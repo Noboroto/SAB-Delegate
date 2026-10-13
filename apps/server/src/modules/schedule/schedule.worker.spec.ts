@@ -3,17 +3,24 @@ import { QUEUES } from '@sab/shared';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DiscordReadyService } from '../../discord/discord-ready.service.js';
 import type { PgBossService } from '../../jobs/pg-boss.service.js';
-import { SCHEDULE_RECONCILE_INTERVAL_MS, ScheduleWorker } from './schedule.worker.js';
+import {
+  REGISTER_ATTEMPTS,
+  SCHEDULE_RECONCILE_INTERVAL_MS,
+  ScheduleWorker,
+} from './schedule.worker.js';
 import type { ScheduleService } from './schedule.service.js';
 
 const ID = '0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b';
 
 type Handler = (jobs: Array<{ id: string; data: unknown }>) => Promise<void>;
 
-function build(options: { workerId?: string | null; stopping?: boolean } = {}) {
+function build(
+  options: { workerId?: string | null; stopping?: boolean; workersEnabled?: boolean } = {},
+) {
   let handler: Handler | undefined;
   const queued: Array<{ label: string; task: () => Promise<void> | void }> = [];
   const boss = {
+    workersEnabled: options.workersEnabled ?? true,
     work: vi.fn((_queue: string, _options: object, fn: Handler) => {
       handler = fn;
       return Promise.resolve(options.workerId === undefined ? 'worker-1' : options.workerId);
@@ -105,12 +112,80 @@ describe('ScheduleWorker', () => {
   });
 
   it('neither sends nor reconciles when workers are off in this process', async () => {
+    const { worker, boss, schedules, runQueued } = build({
+      workerId: null,
+      workersEnabled: false,
+    });
+    worker.onApplicationBootstrap();
+    await runQueued();
+
+    await vi.advanceTimersByTimeAsync(SCHEDULE_RECONCILE_INTERVAL_MS * 3);
+    expect(boss.work).not.toHaveBeenCalled();
+    expect(schedules.reconcilePending).not.toHaveBeenCalled();
+  });
+
+  it('stops sweeping when the queue declines the consumer', async () => {
     const { worker, schedules, runQueued } = build({ workerId: null });
     worker.onApplicationBootstrap();
     await runQueued();
 
     await vi.advanceTimersByTimeAsync(SCHEDULE_RECONCILE_INTERVAL_MS * 3);
     expect(schedules.reconcilePending).not.toHaveBeenCalled();
+  });
+
+  it('retries registering the consumer with a growing wait, and sweeps meanwhile', async () => {
+    const { worker, boss, schedules, runQueued } = build();
+    boss.work
+      .mockRejectedValueOnce(new Error('queue unreachable'))
+      .mockRejectedValueOnce(new Error('queue unreachable'));
+    worker.onApplicationBootstrap();
+    const starting = runQueued();
+
+    await vi.advanceTimersByTimeAsync(0);
+    expect(boss.work).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(boss.work).toHaveBeenCalledTimes(2);
+    // The second wait is longer than the first.
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(boss.work).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(boss.work).toHaveBeenCalledTimes(3);
+    await starting;
+
+    expect(schedules.reconcilePending).toHaveBeenCalledTimes(1);
+    worker.onModuleDestroy();
+  });
+
+  it('sweeps overdue messages even when no consumer could be registered', async () => {
+    const { worker, boss, schedules, runQueued } = build();
+    boss.work.mockRejectedValue(new Error('queue unreachable'));
+    worker.onApplicationBootstrap();
+    const starting = runQueued();
+
+    await vi.advanceTimersByTimeAsync(SCHEDULE_RECONCILE_INTERVAL_MS);
+    expect(schedules.reconcilePending).toHaveBeenCalledTimes(1);
+
+    // Bounded: 5 + 10 + 20 + 40 seconds of waiting, then it gives up.
+    await vi.advanceTimersByTimeAsync(60_000);
+    await starting;
+    expect(boss.work).toHaveBeenCalledTimes(REGISTER_ATTEMPTS);
+    await vi.advanceTimersByTimeAsync(SCHEDULE_RECONCILE_INTERVAL_MS * 3);
+    expect(boss.work).toHaveBeenCalledTimes(REGISTER_ATTEMPTS);
+    expect(schedules.reconcilePending.mock.calls.length).toBeGreaterThanOrEqual(3);
+    worker.onModuleDestroy();
+  });
+
+  it('stops retrying once the module is destroyed', async () => {
+    const { worker, boss, runQueued } = build();
+    boss.work.mockRejectedValue(new Error('queue unreachable'));
+    worker.onApplicationBootstrap();
+    const starting = runQueued();
+    await vi.advanceTimersByTimeAsync(0);
+
+    worker.onModuleDestroy();
+    await vi.advanceTimersByTimeAsync(60_000);
+    await starting;
+    expect(boss.work).toHaveBeenCalledTimes(1);
   });
 
   it('reconciles again every interval and stops when the module is destroyed', async () => {

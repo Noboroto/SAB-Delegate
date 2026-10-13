@@ -1,5 +1,6 @@
 import { ErrorCode } from '@sab/shared';
 import { ServiceError } from '../../common/errors/service-error.js';
+import { copyErrorCode, type CopyProblem } from '../../discord/helpers/message-copy.js';
 import { discordErrorCode } from '../../discord/helpers/reply.js';
 
 /** Unknown Channel. */
@@ -45,4 +46,15 @@ export function discordReasonOf(error: unknown): string | undefined {
   if (!(error instanceof ServiceError)) return undefined;
   const reason = error.params?.[REASON_PARAM];
   return typeof reason === 'string' ? reason : undefined;
+}
+
+/** A copy that Discord would refuse (too long, files too large), refused before it is tried. */
+export function copyRefusal(problem: CopyProblem): ServiceError {
+  return new ServiceError(copyErrorCode(problem));
+}
+
+export function copyProblemOf(error: unknown): CopyProblem | undefined {
+  if (!(error instanceof ServiceError)) return undefined;
+  if (error.code === ErrorCode.MESSAGE_TOO_LONG) return 'TOO_LONG';
+  return error.code === ErrorCode.ATTACHMENTS_TOO_LARGE ? 'FILES_TOO_LARGE' : undefined;
 }

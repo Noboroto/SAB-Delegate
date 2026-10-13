@@ -61,6 +61,7 @@ export function useScheduleDb() {
   const sources = new Map<string, unknown>();
   const manage = new Map<string, boolean | Error>();
   const jobs = new Map<string, { data: unknown; startAfter: Date | undefined }>();
+  const sendOptions = new Map<string, Record<string, unknown>>();
   const cancelledJobs = new Set<string>();
   const state = { hold: undefined as Promise<void> | undefined, queueDown: false };
   let messageCounter = 0;
@@ -110,6 +111,7 @@ export function useScheduleDb() {
 
     const boss = {
       send: vi.fn((_queue: string, data: unknown, options: { id: string; startAfter?: Date }) => {
+        sendOptions.set(options.id, options);
         if (state.queueDown) return Promise.reject(new Error('queue is down'));
         if (jobs.has(options.id)) return Promise.resolve(null);
         jobs.set(options.id, { data, startAfter: options.startAfter });
@@ -305,6 +307,7 @@ export function useScheduleDb() {
     manage,
     jobs,
     cancelledJobs,
+    sendOptions,
     state,
     report,
     canManage,

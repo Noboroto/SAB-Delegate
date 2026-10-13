@@ -135,13 +135,11 @@ describe('describeCancel', () => {
   ) => ({ dryRun: false, code, seq: 7, status });
 
   it('says what happened for each outcome', () => {
-    expect(describeCancel(en, result('CANCELED', 'CANCELED'))).toBe(
-      'Canceled scheduled message 7.',
-    );
+    expect(describeCancel(en, result('CANCELED', 'CANCELED'))).toBe('Job `7` has been canceled');
     expect(describeCancel(en, result('ALREADY_CANCELED', 'CANCELED'))).toBe(
-      'Scheduled message 7 was already canceled.',
+      'Job `7` was already canceled',
     );
-    expect(describeCancel(en, result('NOT_FOUND'))).toBe('There is no scheduled message 7.');
+    expect(describeCancel(en, result('NOT_FOUND'))).toBe('Invalid job ID');
   });
 
   it('tells apart a message that is being sent, was sent, or failed', () => {

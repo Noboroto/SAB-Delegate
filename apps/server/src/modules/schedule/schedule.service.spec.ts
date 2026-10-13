@@ -2,6 +2,8 @@ import {
   ALLOWED_MENTIONS_ALL,
   ALLOWED_MENTIONS_NONE,
   ErrorCode,
+  SCHEDULE_MAX_HORIZON_DAYS,
+  SCHEDULE_PENDING_MAX,
   type ActorContext,
 } from '@sab/shared';
 import { describe, expect, it, vi } from 'vitest';
@@ -50,7 +52,7 @@ type SourceMessage = {
   channelId: string;
   guildId: string | null;
   content: string;
-  attachments: { values(): Iterable<{ name: string }> };
+  attachments: { values(): Iterable<{ name: string; size?: number }> };
 };
 
 function sourceMessage(overrides: Partial<SourceMessage> = {}): SourceMessage {
@@ -64,7 +66,14 @@ function sourceMessage(overrides: Partial<SourceMessage> = {}): SourceMessage {
   };
 }
 
-function build(options: { prisma?: unknown; channelGuild?: string | null; access?: string } = {}) {
+function build(
+  options: {
+    prisma?: unknown;
+    channelGuild?: string | null;
+    access?: string;
+    pending?: number;
+  } = {},
+) {
   const channels = { check: vi.fn().mockResolvedValue(options.access ?? 'ok') };
   const client = {
     channels: {
@@ -79,8 +88,19 @@ function build(options: { prisma?: unknown; channelGuild?: string | null; access
     fetch: vi.fn().mockResolvedValue({ status: 'OK', message: sourceMessage() }),
   };
   const delivery = { run: vi.fn().mockResolvedValue(true) };
+  // Dry runs read nothing but the number of waiting messages; any other use fails the test.
+  const count = vi.fn().mockResolvedValue(options.pending ?? 0);
+  const defaultPrisma = new Proxy(
+    { scheduledMessage: { count } },
+    {
+      get(target, property) {
+        if (property in target) return target[property as keyof typeof target];
+        throw new Error(`prisma.${String(property)} must not be used here`);
+      },
+    },
+  );
   const service = new ScheduleService(
-    (options.prisma ?? forbidden('prisma')) as PrismaService,
+    (options.prisma ?? defaultPrisma) as PrismaService,
     forbidden('audit') as AuditService,
     forbidden('guilds') as GuildConfigService,
     forbidden('boss') as PgBossService,
@@ -90,7 +110,7 @@ function build(options: { prisma?: unknown; channelGuild?: string | null; access
     delivery as unknown as ScheduleDelivery,
     { isStopping: () => false } as unknown as DiscordReadyService,
   );
-  return { service, channels, client, resolver, delivery };
+  return { service, channels, client, resolver, delivery, count };
 }
 
 const refusal = (code: ErrorCode, params?: Record<string, string | number>): unknown =>
@@ -206,8 +226,67 @@ describe('ScheduleService.scheduleSend', () => {
       }),
     ).rejects.toEqual(refusal(ErrorCode.DISCORD_MISSING_PERMISSIONS, { permission: 'send' }));
     await expect(
-      build({ channelGuild: null }).service.scheduleSend(GUILD, input(), SLASH, { dryRun: true }),
+      build({ channelGuild: null }).service.scheduleSend(GUILD, input(), API, { dryRun: true }),
     ).rejects.toEqual(refusal(ErrorCode.DISCORD_CHANNEL_NOT_FOUND));
+  });
+
+  it('lets a slash command post to a channel of another server, filed under its own', async () => {
+    const { service } = build({ channelGuild: OTHER_GUILD });
+    await expect(
+      service.scheduleSend(GUILD, input(), SLASH, { dryRun: true }),
+    ).resolves.toMatchObject({ kind: 'SEND', channelId: CHANNEL });
+  });
+
+  it('answers alike for a channel in another server and one the bot cannot see, for the API', async () => {
+    const elsewhere = build({ channelGuild: OTHER_GUILD, access: 'missing-permissions' });
+    await expect(
+      elsewhere.service.scheduleSend(GUILD, input(), API, { dryRun: true }),
+    ).rejects.toEqual(refusal(ErrorCode.DISCORD_CHANNEL_NOT_FOUND));
+    expect(elsewhere.channels.check).not.toHaveBeenCalled();
+
+    const hidden = build();
+    hidden.client.channels.fetch.mockRejectedValueOnce({ code: 50001 });
+    await expect(
+      hidden.service.scheduleSend(GUILD, input(), API, { dryRun: true }),
+    ).rejects.toEqual(refusal(ErrorCode.DISCORD_CHANNEL_NOT_FOUND));
+
+    const broken = build();
+    broken.client.channels.fetch.mockRejectedValueOnce(new Error('socket hang up'));
+    await expect(
+      broken.service.scheduleSend(GUILD, input(), API, { dryRun: true }),
+    ).rejects.toThrow('socket hang up');
+  });
+
+  it('refuses a moment further ahead than the horizon for the API only', async () => {
+    const { service } = build();
+    const edge = Date.now() + SCHEDULE_MAX_HORIZON_DAYS * 86_400_000;
+    const far = { ...input(), runAt: new Date(edge + 60_000) };
+    await expect(service.scheduleSend(GUILD, far, API, { dryRun: true })).rejects.toEqual(
+      refusal(ErrorCode.SCHEDULE_TOO_FAR),
+    );
+    await expect(
+      service.scheduleSend(GUILD, { ...input(), runAt: new Date(edge - 60_000) }, API, {
+        dryRun: true,
+      }),
+    ).resolves.toMatchObject({ kind: 'SEND' });
+    // Allowed for a slash command, as in the legacy bot.
+    await expect(service.scheduleSend(GUILD, far, SLASH, { dryRun: true })).resolves.toMatchObject({
+      kind: 'SEND',
+    });
+  });
+
+  it('refuses a server that already holds the most pending messages, for the API only', async () => {
+    const { service } = build({ pending: SCHEDULE_PENDING_MAX });
+    await expect(service.scheduleSend(GUILD, input(), API, { dryRun: true })).rejects.toEqual(
+      refusal(ErrorCode.SCHEDULE_LIMIT_REACHED),
+    );
+    await expect(
+      service.scheduleSend(GUILD, input(), SLASH, { dryRun: true }),
+    ).resolves.toMatchObject({ kind: 'SEND' });
+    const below = build({ pending: SCHEDULE_PENDING_MAX - 1 });
+    await expect(
+      below.service.scheduleSend(GUILD, input(), API, { dryRun: true }),
+    ).resolves.toMatchObject({ kind: 'SEND' });
   });
 
   it('refuses to create without a person to answer for it', async () => {
@@ -309,6 +388,35 @@ describe('ScheduleService.scheduleCopy', () => {
     resolver.fetch.mockResolvedValueOnce({ status: 'NO_ACCESS' });
     await expect(service.scheduleCopy(GUILD, input(), SLASH, dry)).rejects.toEqual(
       refusal(ErrorCode.DISCORD_MISSING_PERMISSIONS, { permission: 'view' }),
+    );
+  });
+
+  it('answers "no access" like "not found" for the API, which must not probe other servers', async () => {
+    const { service, resolver } = build();
+    resolver.fetch.mockResolvedValueOnce({ status: 'NO_ACCESS' });
+    await expect(service.scheduleCopy(GUILD, input(), API, dry)).rejects.toEqual(
+      refusal(ErrorCode.DISCORD_MESSAGE_NOT_FOUND),
+    );
+  });
+
+  it('refuses a source Discord would not let the bot post', async () => {
+    const { service, resolver } = build();
+    resolver.fetch.mockResolvedValueOnce({
+      status: 'OK',
+      message: sourceMessage({ content: 'x'.repeat(2001) }),
+    });
+    await expect(service.scheduleCopy(GUILD, input(), SLASH, dry)).rejects.toEqual(
+      refusal(ErrorCode.MESSAGE_TOO_LONG),
+    );
+    resolver.fetch.mockResolvedValueOnce({
+      status: 'OK',
+      message: sourceMessage({
+        content: '',
+        attachments: { values: () => [{ name: 'a.bin', size: 11 * 1024 * 1024 }] },
+      }),
+    });
+    await expect(service.scheduleCopy(GUILD, input(), SLASH, dry)).rejects.toEqual(
+      refusal(ErrorCode.ATTACHMENTS_TOO_LARGE),
     );
   });
 

@@ -8,6 +8,7 @@ describe('ScheduleService against Postgres', () => {
     delivered,
     jobs,
     cancelledJobs,
+    sendOptions,
     state,
     inOneHour,
     world,
@@ -52,6 +53,43 @@ describe('ScheduleService against Postgres', () => {
       expect(rest).toEqual([]);
       expect(entry).toMatchObject({ ok: true, actorDiscordId: w.userId, source: 'DISCORD' });
       expect(entry?.params).toMatchObject({ scheduleId: row.id, channelId: w.channelId });
+    });
+
+    it('queues the job with a retry wait that grows, so three attempts span minutes', async () => {
+      const w = world();
+      const { id } = await schedule(w);
+      expect(sendOptions.get(id)).toMatchObject({
+        retryLimit: 2,
+        retryDelay: 30,
+        retryBackoff: true,
+      });
+    });
+
+    it('files a message for a channel of another server under the server of the command', async () => {
+      const w = world();
+      const elsewhere = world();
+      const { id } = await db.service
+        .scheduleSend(
+          w.guildId,
+          { channelId: elsewhere.channelId, content: 'Over there', runAt: inOneHour() },
+          w.slash,
+        )
+        .then((result) => ({ id: result.schedule?.id ?? '' }));
+
+      expect(await db.service.list(w.guildId, { status: 'PENDING' })).toMatchObject([
+        { id, seq: 1, channelId: elsewhere.channelId },
+      ]);
+      expect(await db.service.list(elsewhere.guildId)).toEqual([]);
+      await expect(db.service.cancel(w.guildId, 1, w.slash)).resolves.toMatchObject({
+        code: 'CANCELED',
+      });
+      await expect(
+        db.service.scheduleSend(
+          w.guildId,
+          { channelId: elsewhere.channelId, content: 'Nope', runAt: inOneHour() },
+          await apiFor(w),
+        ),
+      ).rejects.toMatchObject({ code: 'DISCORD_CHANNEL_NOT_FOUND' });
     });
 
     it('numbers the messages of each server from 1, and concurrent ones get different numbers', async () => {

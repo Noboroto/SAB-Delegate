@@ -43,18 +43,18 @@
     "today": "Today",
     "tomorrow": "Tomorrow"
   },
-  "created": "Scheduled message {seq} for {when}.",
-  "canceled": "Canceled scheduled message {seq}.",
-  "alreadyCanceled": "Scheduled message {seq} was already canceled.",
-  "notFound": "There is no scheduled message {seq}.",
+  "created": "Job has been scheduled with id {seq} at {when}",
+  "canceled": "Job `{seq}` has been canceled",
+  "alreadyCanceled": "Job `{seq}` was already canceled",
+  "notFound": "Invalid job ID",
   "notPending": {
     "SENDING": "Scheduled message {seq} is being sent right now and can no longer be canceled.",
     "SENT": "Scheduled message {seq} was already sent and cannot be canceled.",
     "FAILED": "Scheduled message {seq} already failed and cannot be canceled."
   },
   "list": {
-    "empty": "No scheduled messages.",
-    "header": "Scheduled messages:",
+    "empty": "No job found",
+    "header": "List of jobs:",
     "entry": "## {state}[{command}] - {seq}\n**Author**: {author}\n**Description**: {description}\n**Time**: {time}\n**Created time**: {created}",
     "error": "\n**Error**: {error}",
     "state": {
@@ -79,5 +79,12 @@
     "KEY_REVOKED": "The API key that scheduled it was revoked.",
     "GAVE_UP": "Sending failed after several attempts.",
     "SEND_REJECTED": "Discord refused the message (it may be too long or not allowed)."
+  },
+  "problem": {
+    "SCHEDULE_LIMIT": "This server already has {max} scheduled messages waiting. Cancel some or wait for them to be sent.",
+    "TOO_FAR": "Messages can be scheduled at most {days} days ahead. Choose an earlier time.",
+    "EMPTY_SOURCE": "The message to copy has no text or attachment.",
+    "TOO_LONG": "The message to copy is longer than 2000 characters, which the bot cannot send.",
+    "FILES_TOO_LARGE": "The files of the message to copy are larger than the destination server accepts."
   }
 }
