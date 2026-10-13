@@ -5,4 +5,8 @@
 - Agents waiting on the lock must keep their wants-flag epoch stable; resetting it each poll loses queue position.
 - New guard tests written by an agent are often first executed by the hook: expect 1–3 failures (seen: `$'` replace pattern, inline `#` comment matched by prune regex, baseline ref stale). Run new guard specs directly before committing.
 - knip: a CLI entry (`src/tools/*/main.ts`) must be declared as a knip entry or every export it uses is "unused".
+- The hook gives up after 1800 s waiting for the lock ("gave up after 1800s … nothing ran"): it is not a code failure. Commit scripts must retry on that message (measured 2026-10-13: JudgeHub held the lock 1 h 45 m). Ask the holder session via SendMessage before treating a lock as stale.
+- The pre-commit 1000-line rule also hits spec files: split long specs with a shared non-spec harness (`*.db-harness.ts` registering hooks inside `describe`), never by duplicating setup.
+- Large waves exceed the 29-file cap: have the verify agent produce ordered `git apply --cached` patch files whose cumulative trees each typecheck; the hook's restage step leaves partially staged files alone, so hunk patches are safe.
+- Agents verifying patches in a scratch clone must NOT commit there (a commit runs the clone's hook, which waits on the lock the agent itself holds; disabling hooks is forbidden by AGENTS.md). Verify with `git apply --cached` + `git checkout-index -a` / `git write-tree` into a temp dir and typecheck that tree.
 - The shared `no-export-interface` guard covers apps/server too: internal tool types must be `z.infer` of Zod schemas (and eslint rejects schemas used only for types, so use them at runtime boundaries) or not exported.
