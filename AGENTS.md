@@ -118,7 +118,7 @@ Phiên bản đọc ở `root/package.json`, `dockerfile`, `*.compose.yml` — k
   và được nạp tự động. Subcommand nằm ở `src/commands/<tên>/` và export `{ name, addCommand, execute }`.
 - **Luôn `await`** (hoặc `return`) promise của `execute` subcommand / `reply` / `send` — promise trôi
   nổi làm lỗi thoát khỏi `try/catch` trong `interactionCreate` và có thể crash tiến trình.
-- **Bot cố ý vượt giới hạn của Discord — đó là mục đích của nó** (quyết định của chủ bot 2026-10-10).
+- **Chỗ nào bản cũ không chặn là chủ bot CHO PHÉP, không phải "vượt quyền"** (chủ bot 2026-10-10, nhắc lại 2026-10-14; `mem:lessons/discord/intentional-mention-bypass`). Đường slash không được thêm hạn chế mà bản cũ không có (kiểm quyền, lột ping @everyone/role, chặn link guild khác…), trừ thay đổi đã ghi trong plan.
   KHÔNG thêm: chặn command trong DM (`setContexts`/`setDMPermission(false)` mới), chặn link tin
   nhắn từ guild khác, kiểm thứ bậc role của người gọi, kiểm quyền người gọi trên kênh (invite…).
   Ai được dùng command chỉ do `setDefaultMemberPermissions` hiện có quyết định. Vẫn validate input
