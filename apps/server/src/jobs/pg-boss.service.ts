@@ -61,6 +61,15 @@ export function buildPgBossOptions(
   };
 }
 
+/** Delays are in seconds, as pg-boss reads them. */
+type SendOptions = {
+  id: string;
+  startAfter?: Date;
+  retryLimit?: number;
+  retryDelay?: number;
+  retryBackoff?: boolean;
+};
+
 /**
  * The only door to pg-boss: modules enqueue and register workers through here.
  *
@@ -89,7 +98,7 @@ export class PgBossService implements OnApplicationBootstrap, OnModuleDestroy {
 
   constructor(
     @Inject(PGBOSS_OPTIONS) options: ConstructorOptions,
-    @Inject(PGBOSS_WORKERS_ENABLED) private readonly workersEnabled: boolean,
+    @Inject(PGBOSS_WORKERS_ENABLED) readonly workersEnabled: boolean,
     @Inject(PGBOSS_CONNECT_RETRY) private readonly retry: ConnectRetryPolicy,
   ) {
     this.boss = new PgBoss(options);
@@ -169,11 +178,7 @@ export class PgBossService implements OnApplicationBootstrap, OnModuleDestroy {
    * null). Ids are never generated here. Throws while the database is down;
    * the caller decides what that means for its own row.
    */
-  async send(
-    queue: QueueName,
-    data: object,
-    options: { id: string; startAfter?: Date },
-  ): Promise<string | null> {
+  async send(queue: QueueName, data: object, options: SendOptions): Promise<string | null> {
     await this.ensureQueue(queue);
     return this.boss.send(queue, data, options);
   }

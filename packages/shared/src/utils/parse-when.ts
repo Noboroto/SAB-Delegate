@@ -73,6 +73,8 @@ function fromIct(parts: IctParts): Date | null {
 
 const TIME_OF_DAY = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/;
 const RELATIVE = /^(?:(\d{1,4})h)?(?:(\d{1,4})m)?(?:(\d{1,5})s)?$/;
+/** The longest wait for a leap day: 2096 has one, 2100 does not, 2104 does. */
+const MAX_YEAR_GAP = 8;
 const DAY_MONTH_YEAR = /^(\d{1,2})[/.-](\d{1,2})(?:[/.-](\d{4}))?$/;
 
 const TODAY = new Set(['today', 'hôm nay', 'hom nay']);
@@ -127,17 +129,18 @@ function resolveDay(date: string | null | undefined, now: Date): DayResult {
 
   // No year: the next time this date comes round. A date that already passed
   // this year means next year, which is what "05/01" typed in December intends.
-  const thisYear = { year: today.year, month, day };
-  const start = fromIct({ ...thisYear, hour: 0, minute: 0, second: 0 });
-  if (start === null) return { error: 'NONEXISTENT_DATE' };
+  // 29/02 skips ahead to the next leap year; the gap is at most 8 years
+  // (2096 to 2104), so a day missing from every year in range is not on the
+  // calendar at all (31/02).
   const todayStart = fromIct({ ...today, hour: 0, minute: 0, second: 0 });
-  if (todayStart !== null && start.getTime() < todayStart.getTime()) {
-    const nextYear = { year: today.year + 1, month, day };
-    return fromIct({ ...nextYear, hour: 0, minute: 0, second: 0 }) === null
-      ? { error: 'NONEXISTENT_DATE' }
-      : { day: nextYear };
+  for (let year = today.year; year <= today.year + MAX_YEAR_GAP; year += 1) {
+    const start = fromIct({ year, month, day, hour: 0, minute: 0, second: 0 });
+    if (start === null) continue;
+    if (todayStart === null || start.getTime() >= todayStart.getTime()) {
+      return { day: { year, month, day } };
+    }
   }
-  return { day: thisYear };
+  return { error: 'NONEXISTENT_DATE' };
 }
 
 /**

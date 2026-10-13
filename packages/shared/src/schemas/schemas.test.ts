@@ -13,7 +13,7 @@ import { SnowflakeSchema } from './snowflake.js';
 describe('SnowflakeSchema', () => {
   it('accepts 17 to 20 digits and trims surrounding whitespace', () => {
     expect(SnowflakeSchema.parse('1'.repeat(17))).toBe('1'.repeat(17));
-    expect(SnowflakeSchema.parse('9'.repeat(20))).toBe('9'.repeat(20));
+    expect(SnowflakeSchema.parse('1'.repeat(20))).toBe('1'.repeat(20));
     expect(SnowflakeSchema.parse(' 123456789012345678 ')).toBe('123456789012345678');
   });
 

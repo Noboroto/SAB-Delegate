@@ -12,6 +12,10 @@
   "DISCORD_CHANNEL_NOT_FOUND": "Không tìm thấy kênh, hoặc bot không truy cập được kênh đó.",
   "DISCORD_MESSAGE_NOT_FOUND": "Không tìm thấy tin nhắn.",
   "VALIDATION_FAILED": "Một số giá trị không hợp lệ. Hãy kiểm tra lại những gì đã nhập.",
+  "SCHEDULE_LIMIT_REACHED": "Server này đã đạt số tin nhắn hẹn giờ tối đa đang chờ. Hãy huỷ bớt hoặc chờ chúng được gửi.",
+  "SCHEDULE_TOO_FAR": "Thời điểm này quá xa. Hãy chọn thời điểm sớm hơn.",
+  "MESSAGE_TOO_LONG": "Tin nhắn dài hơn 2000 ký tự nên bot không gửi được.",
+  "ATTACHMENTS_TOO_LARGE": "Tệp lớn hơn mức server đích cho phép.",
   "RATE_LIMITED": "Bạn thao tác quá nhanh. Vui lòng đợi một lát rồi thử lại.",
   "INTERNAL": "Đã có lỗi xảy ra. Vui lòng thử lại sau.",
   "invalidLink": {

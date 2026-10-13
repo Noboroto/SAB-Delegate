@@ -96,6 +96,17 @@ describe('parseWhen with a date', () => {
     expect(iso(at('08:00', '29/02/2028'))).toBe('2028-02-29T01:00:00.000Z');
   });
 
+  it('rolls 29/02 without a year to the next leap year', () => {
+    expect(iso(at('08:00', '29/02'))).toBe('2028-02-29T01:00:00.000Z');
+    // The leap day of this year has passed, so the next one is four years on.
+    const afterLeapDay = new Date('2028-03-01T03:00:00.000Z');
+    expect(iso(at('08:00', '29/02', afterLeapDay))).toBe('2032-02-29T01:00:00.000Z');
+    // 2100 is not a leap year: the wait from 2097 is seven years.
+    const before2100 = new Date('2097-01-01T03:00:00.000Z');
+    expect(iso(at('08:00', '29/02', before2100))).toBe('2104-02-29T01:00:00.000Z');
+    expect(at('08:00', '31/02')).toEqual({ error: 'NONEXISTENT_DATE' });
+  });
+
   it('refuses a date in the past', () => {
     expect(at('08:00', '12/10/2026')).toEqual({ error: 'PAST' });
     expect(at('08:00', '01/01/2020')).toEqual({ error: 'PAST' });
