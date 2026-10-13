@@ -7,6 +7,7 @@ import { MentionModule } from './mention/mention.module.js';
 import { MessagingModule } from './messaging/messaging.module.js';
 import { NoteModule } from './note/note.module.js';
 import { ReactionsModule } from './reactions/reactions.module.js';
+import { RoleAssignModule } from './role-assign/role-assign.module.js';
 import { ScheduleModule } from './schedule/schedule.module.js';
 import { SystemModule } from './system/system.module.js';
 import { WordGameModule } from './word-game/word-game.module.js';
@@ -24,6 +25,7 @@ describe('featureModules', () => {
       ScheduleModule,
       MessagingModule,
       MentionModule,
+      RoleAssignModule,
     ]);
     expect(featureModules({})).toEqual(DISCORD_FEATURE_MODULES);
     expect(featureModules({ MIGRATION_PENDING: '' })).toEqual(DISCORD_FEATURE_MODULES);

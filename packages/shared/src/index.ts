@@ -199,6 +199,21 @@ export {
   type MentionStatus,
 } from './schemas/mention.js';
 export {
+  ROLE_ASSIGN_MAX_USER_IDS,
+  ROLE_ASSIGN_REASON_MAX_LENGTH,
+  ROLE_ASSIGN_SAMPLE_SIZE,
+  RoleAssignFailureSchema,
+  RoleAssignMembersInputSchema,
+  RoleAssignReactorsInputSchema,
+  RoleAssignResultSchema,
+  RoleAssignStatusSchema,
+  type RoleAssignFailure,
+  type RoleAssignMembersInput,
+  type RoleAssignReactorsInput,
+  type RoleAssignResult,
+  type RoleAssignStatus,
+} from './schemas/role-assign.js';
+export {
   formatDiscordTimestamp,
   formatIctDate,
   formatWhenIct,

@@ -1,0 +1,17 @@
+{
+  "commands": {
+    "list": { "description": "Give or take a role for many members, by a list of ids" },
+    "byReaction": { "description": "Give or take a role for everyone who reacted to a message" },
+    "idsOption": { "description": "Member ids or mentions, separated by commas or spaces" },
+    "membersOfRoleOption": { "description": "Also take every member who holds this role" },
+    "roleOption": { "description": "The role to give or take" },
+    "isRemoveOption": { "description": "Take the role instead of giving it (default: no)" },
+    "messageLinkOption": { "description": "Link of the message (right-click, Copy Message Link)" },
+    "emojiOption": { "description": "The emoji to look for; pick one from the suggestions" }
+  },
+  "done": "Done: changed the role for {count} member(s).",
+  "skipped": "{count} id(s) are not members of this server and were left out.",
+  "failed": "Failed for {count}:\n{lines}",
+  "noReactors": "No one reacted with that emoji.",
+  "noTargets": "Give at least one member id, or a role to take the members from."
+}

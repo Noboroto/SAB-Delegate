@@ -1,0 +1,23 @@
+{
+  "commands": {
+    "list": { "description": "Gán hoặc gỡ vai trò cho nhiều thành viên theo danh sách mã" },
+    "byReaction": {
+      "description": "Gán hoặc gỡ vai trò cho mọi người đã thả cảm xúc vào tin nhắn"
+    },
+    "idsOption": {
+      "description": "Mã hoặc mention thành viên, cách nhau bằng dấu phẩy hoặc dấu cách"
+    },
+    "membersOfRoleOption": { "description": "Lấy thêm mọi thành viên đang có vai trò này" },
+    "roleOption": { "description": "Vai trò cần gán hoặc gỡ" },
+    "isRemoveOption": { "description": "Gỡ vai trò thay vì gán (mặc định: không)" },
+    "messageLinkOption": {
+      "description": "Liên kết tin nhắn (nhấn chuột phải, Sao chép liên kết)"
+    },
+    "emojiOption": { "description": "Cảm xúc cần tìm; hãy chọn một mục trong gợi ý" }
+  },
+  "done": "Xong: đã đổi vai trò cho {count} thành viên.",
+  "skipped": "{count} mã không phải thành viên của máy chủ này nên đã bị bỏ qua.",
+  "failed": "Thất bại với {count}:\n{lines}",
+  "noReactors": "Chưa có ai thả cảm xúc đó.",
+  "noTargets": "Hãy nhập ít nhất một mã thành viên, hoặc một vai trò để lấy thành viên."
+}

@@ -15,6 +15,7 @@ import { MentionService } from './modules/mention/mention.service.js';
 import { MessagingService } from './modules/messaging/messaging.service.js';
 import { NoteService } from './modules/note/note.service.js';
 import { AutoReactListener } from './modules/reactions/auto-react.listener.js';
+import { RoleAssignService } from './modules/role-assign/role-assign.service.js';
 import { ScheduleService } from './modules/schedule/schedule.service.js';
 import { SystemService } from './modules/system/system.service.js';
 import { WordGameService } from './modules/word-game/word-game.service.js';
@@ -94,6 +95,7 @@ describe('AppModule', () => {
       ScheduleService,
       MessagingService,
       MentionService,
+      RoleAssignService,
     ]) {
       expect(moduleRef.get(provider, { strict: false }), provider.name).toBeDefined();
     }
