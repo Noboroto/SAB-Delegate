@@ -5,7 +5,7 @@ import { CommandsService } from 'necord';
 import { AppStateService } from '../app-state/app-state.service.js';
 import { errorLabel } from '../prisma/pool-factory.js';
 import { DISCORD_ENV, type DiscordEnv } from './boot-guard.js';
-import { commandHash, commandsInSync, type CommandPayload } from './command-hash.js';
+import { commandHash, commandSetDifference, type CommandPayload } from './command-hash.js';
 
 export type RegistrationScope = { kind: 'global' } | { kind: 'guild'; guildId: string };
 
@@ -22,6 +22,7 @@ type CommandSource = {
   getGuildCommands(guildId: string): Array<{ toJSON(): unknown }>;
 };
 type Route = `/${string}`;
+const WITH_LOCALIZATIONS = new URLSearchParams({ with_localizations: 'true' });
 
 /** Pause before each retry of the registration that follows a wipe (so up to four attempts). */
 type RetryBackoff = {
@@ -112,10 +113,12 @@ export class CommandRegistrar {
 
       if ((await this.appState.get(key)) === hash) {
         const remote = await this.fetchRemote(route);
-        if (remote === undefined || commandsInSync(payload, remote)) {
+        const difference = remote === undefined ? undefined : commandSetDifference(payload, remote);
+        if (difference === undefined) {
           this.logger.log(`Slash commands unchanged (${payload.length}, ${describeScope(scope)})`);
           return 'unchanged';
         }
+        this.logger.debug(`First difference from Discord's command set: ${difference}`);
         this.logger.warn(
           `Discord holds a different ${describeScope(scope)} command set than the recorded one; registering again`,
         );
@@ -199,7 +202,9 @@ export class CommandRegistrar {
   /** `undefined` when Discord could not be asked; the recorded hash then decides. */
   private async fetchRemote(route: Route): Promise<unknown> {
     try {
-      return await this.client.rest.get(route);
+      // Without this Discord omits every localisation map, and any localised
+      // command would look changed on each boot.
+      return await this.client.rest.get(route, { query: WITH_LOCALIZATIONS });
     } catch (error) {
       this.logger.warn(`Could not read the registered commands (${errorLabel(error)})`);
       return undefined;

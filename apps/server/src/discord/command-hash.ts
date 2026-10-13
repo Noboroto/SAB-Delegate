@@ -129,25 +129,53 @@ function projectCommand(command: Json, wanted: Json | undefined): Json {
   return out;
 }
 
+/** First path where two projected values differ; names only, never values, so it is safe to log. */
+function firstPathDifference(a: unknown, b: unknown, path: string): string | undefined {
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (a.length !== b.length) return `${path}.length`;
+    for (let i = 0; i < a.length; i += 1) {
+      const found = firstPathDifference(a[i], b[i], `${path}[${String(i)}]`);
+      if (found !== undefined) return found;
+    }
+    return undefined;
+  }
+  if (isRecord(a) && isRecord(b)) {
+    for (const key of [...new Set([...Object.keys(a), ...Object.keys(b)])].sort()) {
+      const found = firstPathDifference(a[key], b[key], `${path}.${key}`);
+      if (found !== undefined) return found;
+    }
+    return undefined;
+  }
+  return canonicalJson(a) === canonicalJson(b) ? undefined : path;
+}
+
 /**
- * Whether the commands Discord holds are what `wanted` describes: same set,
- * same names, descriptions, localisations, options and default permissions.
- * `remote` is the raw answer of `GET /applications/{id}/commands` (or the guild
- * route); anything that is not a list of commands counts as different.
+ * Where the commands Discord holds first differ from `wanted` (same set, names,
+ * descriptions, localisations, options and default permissions), or `undefined`
+ * when they match. `remote` is the raw answer of `GET /applications/{id}/commands`
+ * (or the guild route) fetched with `with_localizations=true`; anything that is
+ * not a list of commands counts as different. The result holds field names only.
  */
-export function commandsInSync(wanted: readonly CommandPayload[], remote: unknown): boolean {
-  if (!Array.isArray(remote) || !remote.every(isRecord)) return false;
-  if (remote.length !== wanted.length) return false;
+export function commandSetDifference(
+  wanted: readonly CommandPayload[],
+  remote: unknown,
+): string | undefined {
+  if (!Array.isArray(remote) || !remote.every(isRecord)) return 'response';
+  if (remote.length !== wanted.length) return 'commands.length';
 
   const remoteByKey = new Map(remote.map((command) => [commandKey(command), command] as const));
-  if (remoteByKey.size !== remote.length) return false;
+  if (remoteByKey.size !== remote.length) return 'commands.duplicate';
 
-  return (wanted as unknown as readonly Json[]).every((command) => {
+  for (const command of sortedByKey(wanted as unknown as readonly Json[])) {
     const counterpart = remoteByKey.get(commandKey(command));
-    if (counterpart === undefined) return false;
-    return (
-      canonicalJson(projectCommand(command, undefined)) ===
-      canonicalJson(projectCommand(counterpart, command))
+    const label = `commands[${String(command['name'])}]`;
+    if (counterpart === undefined) return label;
+    const found = firstPathDifference(
+      projectCommand(command, undefined),
+      projectCommand(counterpart, command),
+      label,
     );
-  });
+    if (found !== undefined) return found;
+  }
+  return undefined;
 }

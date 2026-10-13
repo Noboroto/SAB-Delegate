@@ -4,7 +4,7 @@ import { PermissionFlagsBits } from 'discord.js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AppStateService } from '../app-state/app-state.service.js';
 import type { DiscordEnv } from './boot-guard.js';
-import { commandHash, commandsInSync, type CommandPayload } from './command-hash.js';
+import { commandHash, commandSetDifference, type CommandPayload } from './command-hash.js';
 import { CommandRegistrar, toRestBody } from './command-registrar.js';
 
 const APP_ID = '111111111111111111';
@@ -69,7 +69,7 @@ type Setup = {
 function setup(options: Setup = {}) {
   const store = options.store ?? new Map<string, string>();
   const rest = {
-    get: vi.fn((_route: string) =>
+    get: vi.fn((_route: string, _init?: { query?: URLSearchParams }) =>
       options.remoteFails === true
         ? Promise.reject(new Error('connect ECONNRESET'))
         : Promise.resolve(options.remote ?? []),
@@ -143,7 +143,7 @@ describe('CommandRegistrar.registerIfChanged', () => {
     });
 
     await expect(registrar.registerIfChanged()).resolves.toBe('unchanged');
-    expect(rest.get).toHaveBeenCalledWith(GLOBAL_ROUTE);
+    expect(rest.get).toHaveBeenCalledWith(GLOBAL_ROUTE, expect.anything());
     expect(rest.put).not.toHaveBeenCalled();
   });
 
@@ -372,6 +372,133 @@ describe('CommandRegistrar.wipeAndRegister', () => {
   });
 });
 
+/** A real `GET .../guilds/{id}/commands?with_localizations=true` answer, trimmed to two commands. */
+const discordHolds = (localizedDescription: string): unknown[] => [
+  {
+    id: '1559543117625950329',
+    application_id: APP_ID,
+    version: '1559543117625950331',
+    default_member_permissions: null,
+    type: 1,
+    name: 'ping',
+    name_localizations: null,
+    description: 'Check that the bot is alive and how fast it responds',
+    description_localizations: { vi: localizedDescription },
+    guild_id: DEV_GUILD,
+    nsfw: false,
+  },
+  {
+    id: '1559543117625950330',
+    application_id: APP_ID,
+    version: '1559543117625950332',
+    default_member_permissions: '8',
+    type: 1,
+    name: 'set',
+    name_localizations: null,
+    description: 'Set configurations for this server',
+    description_localizations: { vi: 'Cấu hình cho máy chủ này' },
+    guild_id: DEV_GUILD,
+    options: [
+      {
+        type: 1,
+        name: 'log-channel',
+        description: 'Set the channel the bot logs to',
+        description_localizations: { vi: 'Đặt kênh ghi log' },
+        options: [
+          {
+            type: 7,
+            name: 'channel',
+            description: 'The channel you want to set',
+            description_localizations: { vi: 'Kênh muốn đặt' },
+            required: true,
+            channel_types: [0, 5, 10, 11, 12],
+          },
+        ],
+      },
+    ],
+    nsfw: false,
+  },
+];
+
+const realPing: Discovered = {
+  toJSON: () => ({
+    name: 'ping',
+    description: 'Check that the bot is alive and how fast it responds',
+    descriptionLocalizations: { vi: 'Kiểm tra bot' },
+  }),
+};
+const realSet: Discovered = {
+  toJSON: () => ({
+    name: 'set',
+    description: 'Set configurations for this server',
+    descriptionLocalizations: { vi: 'Cấu hình cho máy chủ này' },
+    defaultMemberPermissions: PermissionFlagsBits.Administrator,
+    options: [
+      {
+        type: 1,
+        name: 'log-channel',
+        description: 'Set the channel the bot logs to',
+        descriptionLocalizations: { vi: 'Đặt kênh ghi log' },
+        options: [
+          {
+            type: 7,
+            name: 'channel',
+            description: 'The channel you want to set',
+            descriptionLocalizations: { vi: 'Kênh muốn đặt' },
+            required: true,
+            channelTypes: [0, 5, 10, 11, 12],
+          },
+        ],
+      },
+    ],
+  }),
+};
+
+describe('registration against what Discord really returns', () => {
+  const devSetup = (remote: unknown) => {
+    const body = bodyOf([realPing, realSet]);
+    return setup({
+      appEnv: 'development',
+      devGuild: DEV_GUILD,
+      guild: [realPing, realSet],
+      store: new Map([[`commands:${APP_ID}:guild:${DEV_GUILD}`, commandHash(body)]]),
+      remote,
+    });
+  };
+
+  it('asks Discord for the localisation maps, on the guild and the global route', async () => {
+    const guild = devSetup(discordHolds('Kiểm tra bot'));
+    await guild.registrar.registerIfChanged();
+    const global = setup({
+      store: new Map([[GLOBAL_KEY, commandHash(bodyOf([pingCommand()]))]]),
+    });
+    await global.registrar.registerIfChanged();
+
+    for (const [route, init] of [...guild.rest.get.mock.calls, ...global.rest.get.mock.calls]) {
+      expect(init?.query?.get('with_localizations')).toBe('true');
+      expect([GUILD_ROUTE, GLOBAL_ROUTE]).toContain(route);
+    }
+    expect(guild.rest.get).toHaveBeenCalledTimes(1);
+    expect(global.rest.get).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not register again when the saved answer matches what we send', async () => {
+    const { registrar, rest } = devSetup(discordHolds('Kiểm tra bot'));
+    await expect(registrar.registerIfChanged()).resolves.toBe('unchanged');
+    expect(rest.put).not.toHaveBeenCalled();
+  });
+
+  it('registers again when one localised description differs, and logs only the path', async () => {
+    const debug = vi.spyOn(Logger.prototype, 'debug').mockImplementation(() => undefined);
+    const { registrar, rest } = devSetup(discordHolds('Mô tả cũ'));
+    await expect(registrar.registerIfChanged()).resolves.toBe('registered');
+    expect(rest.put).toHaveBeenCalledTimes(1);
+    const logged = debug.mock.calls.flat().join(' ');
+    expect(logged).toContain('commands[ping].description_localizations.vi');
+    expect(logged).not.toContain('Mô tả cũ');
+  });
+});
+
 describe('command hash', () => {
   const payload = bodyOf([pingCommand(), setCommand()]);
 
@@ -396,7 +523,10 @@ describe('command hash', () => {
   });
 });
 
-describe('commandsInSync', () => {
+const commandsInSync = (wanted: CommandPayload[], remote: unknown) =>
+  commandSetDifference(wanted, remote) === undefined;
+
+describe('commandSetDifference', () => {
   const payload = bodyOf([pingCommand(), setCommand()]);
 
   it('ignores what Discord adds on its own', () => {
