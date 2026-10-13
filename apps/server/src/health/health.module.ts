@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
-import { HealthController } from './health.controller.js';
+import { DiscordReadyModule } from '../discord/discord-ready.service.js';
+import { HealthController, LivenessController } from './health.controller.js';
 
-@Module({ controllers: [HealthController] })
+@Module({ imports: [DiscordReadyModule], controllers: [LivenessController, HealthController] })
 export class HealthModule {}

@@ -7,6 +7,7 @@ import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module.js';
 import { FASTIFY_OPTIONS, HELMET_OPTIONS } from './bootstrap/security-config.js';
 import { InvalidEnvError, loadEnv } from './config/env.js';
+import { BootGuardError } from './discord/boot-guard.js';
 
 // Fixed by the image, not configurable: compose and the reverse proxy point at
 // it. Not 5000 or 7000, which AirPlay holds on macOS dev machines.
@@ -21,8 +22,10 @@ async function bootstrap(): Promise<void> {
     AppModule,
     new FastifyAdapter(FASTIFY_OPTIONS),
     // Hold Nest's own boot logs until pino is installed, so they are structured
-    // and redacted like every other line.
-    { bufferLogs: true },
+    // and redacted like every other line. A failure while building the modules
+    // (an unverifiable bot token, an unreachable database) rejects here and is
+    // reported and exited below, instead of Nest calling process.abort().
+    { bufferLogs: true, abortOnError: false },
   );
   app.useLogger(app.get(Logger));
 
@@ -41,8 +44,8 @@ async function bootstrap(): Promise<void> {
 }
 
 bootstrap().catch((error: unknown) => {
-  // Only variable names: an environment error must never echo a value.
-  if (error instanceof InvalidEnvError) {
+  // Only variable names and public application ids: neither error echoes a value.
+  if (error instanceof InvalidEnvError || error instanceof BootGuardError) {
     console.error(error.message);
   } else {
     console.error(error);

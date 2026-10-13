@@ -4,6 +4,8 @@ import { Injectable, Optional, type Type } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { AppModule } from './app.module.js';
+import { IDENTITY_REST } from './discord/boot-guard.js';
+import { DiscordReadyService } from './discord/discord-ready.service.js';
 import { HealthController } from './health/health.controller.js';
 
 const marker = (label: string) => `marker-${label}-${randomBytes(6).toString('hex')}`;
@@ -44,7 +46,12 @@ describe('AppModule', () => {
 
   beforeAll(async () => {
     for (const [name, value] of Object.entries(testEnv)) vi.stubEnv(name, value);
-    moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    // The identity check is the one Discord call made while the container is
+    // built; a real one here would send the marker token to the live API.
+    moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+      .overrideProvider(IDENTITY_REST)
+      .useValue({ get: () => Promise.resolve({ id: testEnv['DISCORD_CLIENT_ID'] }) })
+      .compile();
   });
 
   afterAll(async () => {
@@ -54,6 +61,10 @@ describe('AppModule', () => {
 
   it('compiles and resolves its controller through the container', () => {
     expect(moduleRef.get(HealthController)).toBeInstanceOf(HealthController);
+  });
+
+  it('holds the Discord gate closed until the gateway reports ready', () => {
+    expect(moduleRef.get(DiscordReadyService).isReady()).toBe(false);
   });
 
   it('gives every controller and provider constructor dependency a resolvable type', () => {
@@ -85,7 +96,10 @@ describe('AppModule', () => {
   it('refuses to compile when the environment is invalid, naming the variable only', async () => {
     vi.stubEnv('DISCORD_TOKEN', '');
     try {
-      const attempt = Test.createTestingModule({ imports: [AppModule] }).compile();
+      const attempt = Test.createTestingModule({ imports: [AppModule] })
+        .overrideProvider(IDENTITY_REST)
+        .useValue({ get: () => Promise.resolve({ id: testEnv['DISCORD_CLIENT_ID'] }) })
+        .compile();
       await expect(attempt).rejects.toThrow('DISCORD_TOKEN');
       await expect(attempt).rejects.not.toThrow(testEnv['POSTGRES_PASSWORD'] ?? '');
     } finally {

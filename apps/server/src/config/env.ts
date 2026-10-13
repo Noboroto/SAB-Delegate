@@ -28,6 +28,10 @@ export const envSchema = z
     DISCORD_DEV_GUILD_ID: snowflake.optional(),
     ADMIN_GUILD_ID: snowflake,
     MIGRATION_PENDING: flag.default(false),
+    // One-shot: wipe this environment's slash commands and register them again
+    // at the next boot. Read once; it has to be unset afterwards or every boot
+    // wipes.
+    COMMANDS_FORCE_RESET: flag.default(false),
     POSTGRES_HOST: z.string().min(1).optional(),
     POSTGRES_PORT: integerInRange(1, 65535).optional(),
     POSTGRES_DB: z.string().min(1),

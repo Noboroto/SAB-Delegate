@@ -5,7 +5,9 @@
 # apps on the deploy host use, so its layers are already present there.
 ARG NODE_IMAGE=node:24.21.0-alpine3.23@sha256:9ec4a2e289874ed0d722e1772ec2de45d2801541db8612f3638b26f128c69ac2
 
-# ── shared-build: compile the @sab/shared workspace package ──────────────────
+# ── shared-build: workspace install plus the @sab/shared sources ────────────
+# Not compiled here: @sab/shared imports Zod schemas that `prisma generate`
+# writes into it, so the one build of the package happens in `gen`.
 FROM ${NODE_IMAGE} AS shared-build
 # Must match `packageManager` in the root package.json.
 RUN npm install -g pnpm@12.3.4
@@ -24,12 +26,11 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
 	pnpm install --frozen-lockfile --no-prod --filter @sab/shared...
 COPY tsconfig.base.json ./
 COPY packages/shared ./packages/shared
-RUN pnpm --filter @sab/shared run build
 
 # ── gen: Prisma client and generated Zod schemas, from a clean tree ──────────
 # Generated files are gitignored and the ignore file keeps host copies out of the
 # context, so nothing stale from a developer machine can reach the image. The
-# Zod schemas land inside @sab/shared, which is then compiled once more.
+# Zod schemas land inside @sab/shared, which is then compiled.
 FROM shared-build AS gen
 COPY apps/server/package.json ./apps/server/
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
@@ -102,9 +103,14 @@ ENV NODE_ENV=production
 COPY --from=deploy --chown=node:node /out/server/ ./
 USER node
 EXPOSE 3100
-# start-period covers the worst-case boot: Prisma and pg-boss each spend up to
-# ~15 s of connect retries plus 5 s connect timeouts before the server listens.
-HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+# Readiness, not liveness: /health answers 200 only once Postgres replies and the
+# bot is logged in to Discord (or the deploy is in migration-pending mode), so a
+# new container is not declared up before its gateway session. /health/live is
+# the process-only probe. start-period covers the worst-case boot (Prisma and
+# pg-boss each spend up to ~15 s of connect retries plus 5 s connect timeouts,
+# then the login); start-interval probes quickly inside it so a healthy boot is
+# reported within seconds.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --start-interval=3s --retries=3 \
 	CMD wget -q -O /dev/null http://127.0.0.1:3100/health || exit 1
 # node directly rather than through pnpm: SIGTERM from `docker stop` must reach
 # the process that runs the shutdown hooks.

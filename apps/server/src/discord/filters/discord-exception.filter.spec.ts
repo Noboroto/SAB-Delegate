@@ -1,0 +1,316 @@
+import 'reflect-metadata';
+import { randomBytes } from 'node:crypto';
+import { Logger } from '@nestjs/common';
+import { EXCEPTION_FILTERS_METADATA } from '@nestjs/common/constants';
+import { ExecutionContextHost } from '@nestjs/core/helpers/execution-context-host';
+import { ErrorCode, MESSAGES } from '@sab/shared';
+import { MessageFlags } from 'discord.js';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { GuildLocaleService } from '../../i18n/guild-locale.service.js';
+import { DiscordCommands } from '../decorators/discord-commands.decorator.js';
+import { BOT_LOG_CHANNEL_NAME, ErrorReporter } from '../error-reporter.service.js';
+import { CommandError, DiscordExceptionFilter } from './discord-exception.filter.js';
+
+const ADMIN_GUILD = '333333333333333333';
+const token = `marker-${randomBytes(8).toString('hex')}`;
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+function silenceLogs() {
+  for (const method of ['error', 'warn', 'log'] as const) {
+    vi.spyOn(Logger.prototype, method).mockImplementation(() => undefined);
+  }
+}
+
+describe('ErrorReporter', () => {
+  function build(options: {
+    channelName?: string;
+    guildId?: string;
+    send?: ReturnType<typeof vi.fn>;
+    textBased?: boolean;
+  }) {
+    const send = options.send ?? vi.fn().mockResolvedValue(undefined);
+    const channel = {
+      name: options.channelName ?? BOT_LOG_CHANNEL_NAME,
+      isTextBased: () => options.textBased ?? true,
+      send,
+    };
+    const client = {
+      guilds: {
+        cache: {
+          get: (id: string) =>
+            id === (options.guildId ?? ADMIN_GUILD)
+              ? {
+                  channels: {
+                    cache: {
+                      find: (predicate: (c: typeof channel) => boolean) =>
+                        [channel].find(predicate),
+                    },
+                  },
+                }
+              : undefined,
+        },
+      },
+    };
+    const reporter = new ErrorReporter(client, {
+      ADMIN_GUILD_ID: ADMIN_GUILD,
+      DISCORD_TOKEN: token,
+    });
+    return { reporter, send };
+  }
+
+  it('posts the title, then the stack in a code fence cut to 1900 characters', async () => {
+    silenceLogs();
+    const { reporter, send } = build({});
+    const error = new Error('boom');
+    error.stack = `Error: boom\n${'    at somewhere (file.ts:1:1)\n'.repeat(500)}`;
+
+    await reporter.report('Error in SetCommands.logChannel', error);
+
+    expect(send).toHaveBeenCalledTimes(2);
+    expect(send.mock.calls[0]?.[0]).toEqual({ content: 'Error in SetCommands.logChannel' });
+    const detail = (send.mock.calls[1]?.[0] as { content: string }).content;
+    expect(detail.startsWith('```\nError: boom')).toBe(true);
+    expect(detail.endsWith('\n```')).toBe(true);
+    expect(detail.length).toBeLessThanOrEqual(1900 + '```\n'.length + '\n```'.length);
+    expect(detail.length).toBeLessThanOrEqual(2000);
+  });
+
+  it('keeps a very long title within the message limit', async () => {
+    silenceLogs();
+    const { reporter, send } = build({});
+    await reporter.report('t'.repeat(5000), new Error('x'));
+    expect((send.mock.calls[0]?.[0] as { content: string }).content.length).toBeLessThanOrEqual(
+      2000,
+    );
+  });
+
+  it('does nothing and does not throw when there is no bot-log channel', async () => {
+    silenceLogs();
+    const { reporter, send } = build({ channelName: 'general' });
+    await expect(reporter.report('title', new Error('x'))).resolves.toBeUndefined();
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it('looks only in the admin guild', async () => {
+    silenceLogs();
+    const { reporter, send } = build({ guildId: '444444444444444444' });
+    await reporter.report('title', new Error('x'));
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it('does not throw when the post itself fails', async () => {
+    silenceLogs();
+    const { reporter } = build({ send: vi.fn().mockRejectedValue(new Error('Missing Access')) });
+    await expect(reporter.report('title', new Error('x'))).resolves.toBeUndefined();
+  });
+
+  it('reports a thrown non-Error value', async () => {
+    silenceLogs();
+    const { reporter, send } = build({});
+    await reporter.report('title', { reason: 'plain object' });
+    expect((send.mock.calls[1]?.[0] as { content: string }).content).toContain('plain object');
+  });
+
+  it('keeps the bot token out of the channel', async () => {
+    silenceLogs();
+    const { reporter, send } = build({});
+    await reporter.report('title', new Error(`request failed with ${token}`));
+    const posted = send.mock.calls
+      .map(([message]) => (message as { content: string }).content)
+      .join('\n');
+    expect(posted).not.toContain(token);
+    expect(posted).toContain('[redacted]');
+  });
+
+  it('only logs once the process is shutting down', async () => {
+    silenceLogs();
+    const { reporter, send } = build({});
+    reporter.onModuleDestroy();
+    await reporter.report('title', new Error('x'));
+    expect(send).not.toHaveBeenCalled();
+  });
+});
+
+describe('DiscordExceptionFilter', () => {
+  const secret = 'internal detail that must never reach the user';
+
+  type FakeInteraction = ReturnType<typeof interactionOf>;
+  function interactionOf(state: {
+    replied?: boolean;
+    deferred?: boolean;
+    repliable?: boolean;
+    autocomplete?: boolean;
+  }) {
+    return {
+      guildId: ADMIN_GUILD,
+      locale: 'en-US',
+      replied: state.replied ?? false,
+      deferred: state.deferred ?? false,
+      isRepliable: () => state.repliable ?? true,
+      isAutocomplete: () => state.autocomplete ?? false,
+      reply: vi.fn().mockResolvedValue(undefined),
+      editReply: vi.fn().mockResolvedValue(undefined),
+      followUp: vi.fn().mockResolvedValue(undefined),
+      respond: vi.fn().mockResolvedValue(undefined),
+    };
+  }
+
+  function build(locale = 'en') {
+    const report = vi.fn().mockResolvedValue(undefined);
+    const resolve = vi.fn().mockResolvedValue(locale);
+    const filter = new DiscordExceptionFilter(
+      { report } as unknown as ErrorReporter,
+      { resolve } as unknown as GuildLocaleService,
+    );
+    return { filter, report, resolve };
+  }
+
+  function hostOf(context: unknown) {
+    class SetCommands {}
+    const host = new ExecutionContextHost([[context], {}], SetCommands, function logChannel() {});
+    host.setType('necord');
+    return host;
+  }
+
+  const sent = (interaction: FakeInteraction) =>
+    JSON.stringify([
+      interaction.reply.mock.calls,
+      interaction.editReply.mock.calls,
+      interaction.followUp.mock.calls,
+    ]);
+
+  it('replies ephemerally with a generic sentence when nothing was sent yet', async () => {
+    silenceLogs();
+    const { filter, report } = build();
+    const interaction = interactionOf({});
+
+    await filter.catch(new Error(secret), hostOf(interaction));
+
+    expect(interaction.reply).toHaveBeenCalledWith({
+      content: MESSAGES.en.common.commandFailed,
+      flags: MessageFlags.Ephemeral,
+    });
+    expect(interaction.editReply).not.toHaveBeenCalled();
+    expect(interaction.followUp).not.toHaveBeenCalled();
+    expect(sent(interaction)).not.toContain(secret);
+    expect(report).toHaveBeenCalledWith('Error in SetCommands.logChannel', expect.any(Error));
+  });
+
+  it('edits the placeholder of a deferred reply', async () => {
+    silenceLogs();
+    const { filter } = build();
+    const interaction = interactionOf({ deferred: true });
+    await filter.catch(new Error(secret), hostOf(interaction));
+    expect(interaction.editReply).toHaveBeenCalledWith({
+      content: MESSAGES.en.common.commandFailed,
+    });
+    expect(interaction.reply).not.toHaveBeenCalled();
+  });
+
+  it('follows up when a reply was already sent, also after a deferred one', async () => {
+    silenceLogs();
+    const { filter } = build();
+    for (const state of [{ replied: true }, { replied: true, deferred: true }]) {
+      const interaction = interactionOf(state);
+      await filter.catch(new Error(secret), hostOf(interaction));
+      expect(interaction.followUp).toHaveBeenCalledWith({
+        content: MESSAGES.en.common.commandFailed,
+        flags: MessageFlags.Ephemeral,
+      });
+      expect(interaction.reply).not.toHaveBeenCalled();
+      expect(interaction.editReply).not.toHaveBeenCalled();
+    }
+  });
+
+  it('answers in the language of the guild', async () => {
+    silenceLogs();
+    const { filter, resolve } = build('vi');
+    const interaction = interactionOf({});
+    await filter.catch(new Error(secret), hostOf(interaction));
+    expect(resolve).toHaveBeenCalledWith(ADMIN_GUILD, interaction);
+    expect(interaction.reply).toHaveBeenCalledWith(
+      expect.objectContaining({ content: MESSAGES.vi.common.commandFailed }),
+    );
+  });
+
+  it('only reports when the interaction cannot be replied to', async () => {
+    silenceLogs();
+    const { filter, report } = build();
+    const interaction = interactionOf({ repliable: false });
+    await filter.catch(new Error(secret), hostOf(interaction));
+    expect(sent(interaction)).toBe('[[],[],[]]');
+    expect(report).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports a listener error that has no interaction at all', async () => {
+    silenceLogs();
+    const { filter, report } = build();
+    await expect(
+      filter.catch(new Error(secret), hostOf({ content: 'a message' })),
+    ).resolves.toBeUndefined();
+    expect(report).toHaveBeenCalledTimes(1);
+  });
+
+  it('answers a failed autocomplete with an empty list', async () => {
+    silenceLogs();
+    const { filter } = build();
+    const interaction = interactionOf({ autocomplete: true, repliable: false });
+    await filter.catch(new Error(secret), hostOf(interaction));
+    expect(interaction.respond).toHaveBeenCalledWith([]);
+  });
+
+  it('tells the user what is wrong with a CommandError and does not report it', async () => {
+    silenceLogs();
+    const { filter, report } = build();
+    const interaction = interactionOf({});
+    await filter.catch(new CommandError(ErrorCode.VALIDATION_FAILED), hostOf(interaction));
+    expect(interaction.reply).toHaveBeenCalledWith({
+      content: MESSAGES.en.errors.VALIDATION_FAILED,
+      flags: MessageFlags.Ephemeral,
+    });
+    expect(report).not.toHaveBeenCalled();
+  });
+
+  it.each([10062, 40060])(
+    'only logs a dead interaction (%i): no reply, no report',
+    async (code) => {
+      silenceLogs();
+      const { filter, report } = build();
+      const interaction = interactionOf({});
+      await filter.catch(
+        Object.assign(new Error('Unknown interaction'), { code }),
+        hostOf(interaction),
+      );
+      expect(sent(interaction)).toBe('[[],[],[]]');
+      expect(report).not.toHaveBeenCalled();
+    },
+  );
+
+  it('never throws, even when answering or the language lookup fails', async () => {
+    silenceLogs();
+    const failing = interactionOf({});
+    failing.reply.mockRejectedValue(
+      Object.assign(new Error('already acknowledged'), { code: 40060 }),
+    );
+    await expect(build().filter.catch(new Error(secret), hostOf(failing))).resolves.toBeUndefined();
+
+    const broken = build();
+    broken.resolve.mockRejectedValue(new Error('db down'));
+    await expect(
+      broken.filter.catch(new Error(secret), hostOf(interactionOf({}))),
+    ).resolves.toBeUndefined();
+  });
+});
+
+describe('DiscordCommands', () => {
+  it('attaches the exception filter to the class', () => {
+    @DiscordCommands()
+    class Commands {}
+    expect(Reflect.getMetadata(EXCEPTION_FILTERS_METADATA, Commands)).toEqual([
+      DiscordExceptionFilter,
+    ]);
+  });
+});
