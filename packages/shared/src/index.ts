@@ -6,6 +6,7 @@
 export { z } from 'zod';
 
 export { ErrorCode, ErrorCodeSchema } from './errors/error-code.js';
+export { escapeLike } from './utils/escape-like.js';
 export { partialWithoutDefaults } from './utils/partial-without-defaults.js';
 export { isValidMonthDay } from './utils/month-day.js';
 export { SnowflakeSchema, type Snowflake } from './schemas/snowflake.js';
@@ -71,6 +72,22 @@ export {
   type BirthdayRemoveResult,
   type BirthdaySelector,
 } from './schemas/birthday.js';
+export {
+  NOTE_CONTENT_MAX_LENGTH,
+  NOTE_TOPIC_MAX_LENGTH,
+  NoteContentSchema,
+  NoteKeySchema,
+  NoteRemovePlanSchema,
+  NoteRemoveResultSchema,
+  NoteSchema,
+  NoteTopicSchema,
+  NoteUpsertSchema,
+  type Note,
+  type NoteKey,
+  type NoteRemovePlan,
+  type NoteRemoveResult,
+  type NoteUpsert,
+} from './schemas/note.js';
 export { splitMessage } from './utils/split-message.js';
 export { parseSnowflakes } from './utils/snowflakes.js';
 export {

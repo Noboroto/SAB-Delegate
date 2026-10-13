@@ -1,0 +1,18 @@
+{
+  "commands": {
+    "add": { "description": "Lưu ghi chú theo vai trò; chủ đề đã có sẽ bị thay thế" },
+    "get": { "description": "Xem các ghi chú đã lưu của một vai trò" },
+    "remove": { "description": "Xoá ghi chú theo vai trò và chủ đề" },
+    "roleOption": { "description": "Vai trò của ghi chú" },
+    "topicOption": { "description": "Chủ đề của ghi chú (phân biệt hoa thường)" },
+    "contentOption": { "description": "Nội dung ghi chú; bỏ trống để nhập trong hộp thoại" }
+  },
+  "saved": "Đã lưu ghi chú cho @{role} với chủ đề {topic}.",
+  "removed": "Đã xoá ghi chú của @{role} với chủ đề {topic}.",
+  "list": "Ghi chú của @{role}:\n{notes}",
+  "modal": {
+    "title": "Thêm ghi chú",
+    "topicLabel": "Chủ đề",
+    "contentLabel": "Nội dung"
+  }
+}

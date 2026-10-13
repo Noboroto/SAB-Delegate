@@ -11,6 +11,8 @@ import { BirthdayCommands } from './modules/birthday/birthday.commands.js';
 import { BirthdayCron } from './modules/birthday/birthday.cron.js';
 import { BirthdayService } from './modules/birthday/birthday.service.js';
 import { GuildConfigService } from './modules/guild-config/guild-config.service.js';
+import { NoteService } from './modules/note/note.service.js';
+import { AutoReactListener } from './modules/reactions/auto-react.listener.js';
 import { SystemService } from './modules/system/system.service.js';
 import { HealthController } from './health/health.controller.js';
 
@@ -82,6 +84,8 @@ describe('AppModule', () => {
       BirthdayService,
       BirthdayCommands,
       BirthdayCron,
+      NoteService,
+      AutoReactListener,
     ]) {
       expect(moduleRef.get(provider, { strict: false }), provider.name).toBeDefined();
     }
@@ -144,7 +148,7 @@ describe('AppModule while a migration is pending', () => {
     // imported again under the pending environment; classes from the top-level
     // imports would be different identities and prove nothing.
     vi.resetModules();
-    const [{ AppModule: PendingAppModule }, config, system, access, health, birthday] =
+    const [{ AppModule: PendingAppModule }, config, system, access, health, birthday, note] =
       await Promise.all([
         import('./app.module.js'),
         import('./modules/guild-config/guild-config.service.js'),
@@ -152,6 +156,7 @@ describe('AppModule while a migration is pending', () => {
         import('./common/guild-access/guild-access.service.js'),
         import('./health/health.controller.js'),
         import('./modules/birthday/birthday.service.js'),
+        import('./modules/note/note.service.js'),
       ]);
     moduleRef = await Test.createTestingModule({ imports: [PendingAppModule] }).compile();
 
@@ -160,6 +165,7 @@ describe('AppModule while a migration is pending', () => {
       system.SystemService,
       access.GuildAccessService,
       birthday.BirthdayService,
+      note.NoteService,
     ]) {
       expect(() => moduleRef?.get(provider, { strict: false }), provider.name).toThrow();
     }

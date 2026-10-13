@@ -1,0 +1,18 @@
+{
+  "commands": {
+    "add": { "description": "Save a note by role; an existing topic is replaced" },
+    "get": { "description": "Show the saved notes of a role" },
+    "remove": { "description": "Remove a note by role and topic" },
+    "roleOption": { "description": "The role the note belongs to" },
+    "topicOption": { "description": "Topic of the note (case-sensitive)" },
+    "contentOption": { "description": "Text of the note; leave empty to write it in a dialog" }
+  },
+  "saved": "Saved the note for @{role} with topic {topic}.",
+  "removed": "Removed the note of @{role} with topic {topic}.",
+  "list": "Notes for @{role}:\n{notes}",
+  "modal": {
+    "title": "Add a note",
+    "topicLabel": "Topic",
+    "contentLabel": "Content"
+  }
+}

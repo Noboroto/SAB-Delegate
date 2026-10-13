@@ -58,6 +58,12 @@ describe('sanitizeAuditParams', () => {
     expect(clean.scopes).toHaveLength(50);
   });
 
+  it('keeps the note topic and drops note content', () => {
+    expect(sanitizeAuditParams({ topic: 'Quy tắc', content: 'secret body' })).toEqual({
+      topic: 'Quy tắc',
+    });
+  });
+
   it('does not follow nesting past the depth limit', () => {
     const deep = { before: { after: { before: { after: { before: { count: 1 } } } } } };
     expect(JSON.stringify(sanitizeAuditParams(deep))).not.toContain('count');

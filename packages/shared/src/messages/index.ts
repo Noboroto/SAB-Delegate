@@ -5,12 +5,14 @@ import enCommands from './en/commands.json';
 import enCommon from './en/common.json';
 import enErrors from './en/errors.json';
 import enGuildConfig from './en/guild-config.json';
+import enNote from './en/note.json';
 import enSystem from './en/system.json';
 import viBirthday from './vi/birthday.json';
 import viCommands from './vi/commands.json';
 import viCommon from './vi/common.json';
 import viErrors from './vi/errors.json';
 import viGuildConfig from './vi/guild-config.json';
+import viNote from './vi/note.json';
 import viSystem from './vi/system.json';
 
 /** Discord rejects a command or option description longer than this. */
@@ -24,6 +26,7 @@ export const MessageNamespaceSchema = z.enum([
   'system',
   'guild-config',
   'birthday',
+  'note',
 ]);
 
 export type MessageNamespace = z.infer<typeof MessageNamespaceSchema>;
@@ -40,6 +43,7 @@ export const MESSAGES = {
     system: viSystem,
     'guild-config': viGuildConfig,
     birthday: viBirthday,
+    note: viNote,
   },
   en: {
     common: enCommon,
@@ -48,5 +52,6 @@ export const MESSAGES = {
     system: enSystem,
     'guild-config': enGuildConfig,
     birthday: enBirthday,
+    note: enNote,
   },
 } satisfies Record<Locale, Record<MessageNamespace, object>>;

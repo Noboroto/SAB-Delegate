@@ -45,6 +45,7 @@ const PARAM_KEYS: ReadonlySet<string> = new Set([
   'month',
   'day',
   'emoji',
+  'topic',
   'kind',
   'mode',
   'scopes',
