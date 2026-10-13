@@ -1,43 +1,180 @@
 # Production stack, deployed by Coolify on every push to main.
 #
+# Three services, one image family (apps/server/Dockerfile):
+#   sab-release  one-shot: dumps a non-empty database, applies migrations, then
+#                exits. The server waits for it to finish successfully.
+#   sab-server   the Discord bot.
+#   sab-backup   daily dump, outside the server process.
+#
+# Postgres is a separate Coolify resource (deploy/postgres.compose.yml). Coolify
+# deletes and recreates every container of a compose app on each deploy, so the
+# database must not live here. The three services reach it over the external
+# network `sab-db`, created by hand once (`docker network create sab-db`), by the
+# alias `sab-postgres`. Nothing else joins that network.
+#
 # Coolify specifics:
-#   * No `networks:` block. Coolify gives each resource its own network and
-#     registers every compose service name as an alias there.
 #   * No `container_name:`, named volumes or `${VAR:?}`: Coolify 4.3 overrides or
-#     mangles all three.
+#     mangles all three. Required variables are checked by the server at boot.
 #   * CPU is bounded only through deploy.resources; a service-level `cpus:` with
 #     a different value makes compose reject the whole file.
+#   * No `ports:`. Nothing here is published to the host.
+#   * Every service lists its variables by name under `environment:`; there is no
+#     env_file. Coolify turns each `${NAME}` into a variable of the resource, so a
+#     service only ever sees what it is listed to receive. The legacy TOKENS
+#     variable stays in the Coolify resource until the rollback window closes but
+#     is deliberately listed nowhere.
 #
-# Builds from source. root/pnpm-lock.yaml is committed and installed with
-# --frozen-lockfile, so every build installs exactly the locked versions.
-#
-# Data: the sqlite files are an absolute bind mount under /srv/appdata, the
-# host's location for persistent data, so they survive redeploys and do not
-# depend on Coolify's per-application directory.
+# Data: bind mounts are absolute directories under /srv/appdata, the host's
+# location for persistent data. Create /srv/appdata/sab-delegate/backups (mode
+# 0700) before the first deploy. Directories, not single files: a file mount
+# keeps the old inode after a git pull.
+networks:
+  sab-db:
+    external: true
+    name: sab-db
+
 services:
-  bot:
+  sab-release:
     build:
       context: .
-      dockerfile: dockerfile
-    restart: always
-    env_file:
-      - .env
+      dockerfile: apps/server/Dockerfile
+      target: release
+    # Never pull: the image is built here, and a registry lookup of the
+    # locally-built name only slows the deploy down.
+    pull_policy: never
+    # A finished one-shot must not be restarted, and Coolify then leaves it out
+    # of the app's health status.
+    restart: 'no'
+    networks:
+      - default
+      - sab-db
+    environment:
+      POSTGRES_HOST: sab-postgres
+      POSTGRES_PORT: '5432'
+      POSTGRES_DB: ${POSTGRES_DB}
+      # The runtime role's name: the release job grants it data access.
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_MIGRATE_USER: ${POSTGRES_MIGRATE_USER}
+      POSTGRES_MIGRATE_PASSWORD: ${POSTGRES_MIGRATE_PASSWORD}
+      BACKUP_DIR: /backups
+      BACKUP_ENABLED: ${BACKUP_ENABLED:-true}
+      BACKUP_KEEP_PRE_MIGRATE: ${BACKUP_KEEP_PRE_MIGRATE:-5}
     volumes:
-      - /srv/appdata/sab-delegate/files:/usr/files:rw
-      - /etc/timezone:/etc/timezone:ro
-      - /etc/localtime:/etc/localtime:ro
+      - /srv/appdata/sab-delegate/backups:/backups:rw
+    deploy:
+      resources:
+        limits:
+          cpus: '1.00'
+          memory: 512M
+
+  sab-server:
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+      target: runner
+    pull_policy: never
+    # Map form on purpose: the list form does not wait for completion.
+    depends_on:
+      sab-release:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    networks:
+      - default
+      - sab-db
+    stop_signal: SIGTERM
+    # Longer than the 30 s pg-boss drain, so a deploy finishes in-flight jobs
+    # instead of killing them.
+    stop_grace_period: 45s
+    # Readiness: green only once Postgres answers and the bot is logged in to
+    # Discord (or the deploy is deliberately in migration-pending mode).
+    # start_interval probes quickly inside start_period so a healthy boot is
+    # reported within seconds.
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1:3100/health']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+      start_interval: 3s
+    environment:
+      APP_ENV: ${APP_ENV}
+      DISCORD_TOKEN: ${DISCORD_TOKEN}
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID}
+      DISCORD_ALLOWED_APP_IDS: ${DISCORD_ALLOWED_APP_IDS}
+      ADMIN_GUILD_ID: ${ADMIN_GUILD_ID}
+      MIGRATION_PENDING: ${MIGRATION_PENDING:-false}
+      COMMANDS_FORCE_RESET: ${COMMANDS_FORCE_RESET:-false}
+      POSTGRES_HOST: sab-postgres
+      POSTGRES_PORT: '5432'
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_POOL_MAX: ${DB_POOL_MAX:-10}
+      PGBOSS_POOL_MAX: ${PGBOSS_POOL_MAX:-4}
+      PGBOSS_WORKERS_ENABLED: ${PGBOSS_WORKERS_ENABLED:-true}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    volumes:
+      # TEMPORARY: the legacy sqlite files, read-only, for the one-off quick.db
+      # import (docker exec into this container). Remove this line, and the
+      # directory on the host, once the rollback window has closed.
+      - /srv/appdata/sab-delegate/files-final:/legacy:ro
+    # Starting values; tune from the measured RSS.
+    deploy:
+      resources:
+        limits:
+          cpus: '1.00'
+          memory: 768M
+
+  sab-backup:
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+      target: release
+    pull_policy: never
+    depends_on:
+      sab-release:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    # Only the database network: the dump job has no reason to reach anything else.
+    networks:
+      - sab-db
+    # A sleep loop instead of crond: no dependence on how crond passes the
+    # environment or reads TZ. It sleeps until the next 03:00 Asia/Ho_Chi_Minh
+    # (the TZ below, read from tzdata in the image), runs the dump, and a failed
+    # dump is logged and retried the next day rather than ending the container.
+    # `$$` is compose's escape for a literal `$` the shell expands.
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        while :; do
+          h=$$(date +%H); m=$$(date +%M); s=$$(date +%S)
+          elapsed=$$(( $${h#0} * 3600 + $${m#0} * 60 + $${s#0} ))
+          wait=$$(( (10800 - elapsed + 86400) % 86400 ))
+          echo "backup: next daily dump in $${wait}s"
+          sleep "$$wait"
+          /bin/sh /app/apps/server/scripts/backup.sh daily || echo "backup: daily dump failed" >&2
+          sleep 60
+        done
+    healthcheck:
+      test: ['CMD-SHELL', 'pidof sh >/dev/null']
+      interval: 60s
+      timeout: 5s
+      retries: 3
+    environment:
+      TZ: Asia/Ho_Chi_Minh
+      POSTGRES_HOST: sab-postgres
+      POSTGRES_PORT: '5432'
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_BACKUP_USER: ${POSTGRES_BACKUP_USER}
+      POSTGRES_BACKUP_PASSWORD: ${POSTGRES_BACKUP_PASSWORD}
+      BACKUP_DIR: /backups
+      BACKUP_ENABLED: ${BACKUP_ENABLED:-true}
+      BACKUP_KEEP_DAILY: ${BACKUP_KEEP_DAILY:-14}
+    volumes:
+      - /srv/appdata/sab-delegate/backups:/backups:rw
     deploy:
       resources:
         limits:
           cpus: '0.50'
-          memory: 512M
-        reservations:
-          cpus: '0.25'
           memory: 256M
-    environment:
-      - NOTE_DB_PATH=/usr/files/note.sqlite
-      - WORD_DB_PATH=/usr/files/word.sqlite
-      - DICT_DB_PATH=/usr/files/dict.sqlite
-      - CONFIG_DB_PATH=/usr/files/config.sqlite
-      - BIRTHDAY_DB_PATH=/usr/files/birthday.sqlite
-      - TOKENS=${TOKENS}

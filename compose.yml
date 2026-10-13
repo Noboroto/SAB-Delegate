@@ -1,21 +1,89 @@
-# Local development: `docker compose up --build` from the repo root.
-# Production runs from coolify.compose.yml.
+# Local development stack: `docker compose up --build` from the repo root, with
+# the variables below in a gitignored .env file (compose reads it for
+# interpolation). Production runs from coolify.compose.yml.
 #
-# Uses a TZ variable instead of mounting /etc/timezone, which macOS does not
-# have; Node reads TZ through its bundled ICU data.
+# Talks to a SAB Dev Discord application and a test guild only. APP_ENV is
+# development, which the server refuses to combine with a production
+# application id (DISCORD_ALLOWED_APP_IDS), so a production token pasted here
+# fails at boot instead of logging the real bot in twice.
+#
+# Same chain as production: Postgres, then the release job (migrations), then the
+# server. Postgres is published on loopback only, for local tooling.
+name: sab-dev
+
 services:
-  bot:
+  sab-postgres:
+    image: postgres:18.6@sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336
+    command: ['postgres', '-c', 'timezone=UTC', '-c', 'log_timezone=UTC']
+    environment:
+      POSTGRES_USER: ${POSTGRES_SUPERUSER}
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      # Read by deploy/initdb/01-roles.sh on the first start.
+      POSTGRES_MIGRATE_USER: ${POSTGRES_MIGRATE_USER}
+      POSTGRES_MIGRATE_PASSWORD: ${POSTGRES_MIGRATE_PASSWORD}
+      POSTGRES_RUNTIME_USER: ${POSTGRES_USER}
+      POSTGRES_RUNTIME_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_BACKUP_USER: ${POSTGRES_BACKUP_USER}
+      POSTGRES_BACKUP_PASSWORD: ${POSTGRES_BACKUP_PASSWORD}
+    ports:
+      - '127.0.0.1:5452:5432'
+    volumes:
+      - sab-dev-postgres:/var/lib/postgresql
+      - ./deploy/initdb:/docker-entrypoint-initdb.d:ro
+    shm_size: 256m
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  sab-release:
     build:
       context: .
-      dockerfile: dockerfile
-    env_file:
-      - .env
-    volumes:
-      - ./root/files:/usr/files:rw
+      dockerfile: apps/server/Dockerfile
+      target: release
+    restart: 'no'
+    depends_on:
+      sab-postgres:
+        condition: service_healthy
     environment:
-      - TZ=Asia/Ho_Chi_Minh
-      - NOTE_DB_PATH=/usr/files/note.sqlite
-      - WORD_DB_PATH=/usr/files/word.sqlite
-      - DICT_DB_PATH=/usr/files/dict.sqlite
-      - CONFIG_DB_PATH=/usr/files/config.sqlite
-      - BIRTHDAY_DB_PATH=/usr/files/birthday.sqlite
+      POSTGRES_HOST: sab-postgres
+      POSTGRES_PORT: '5432'
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_MIGRATE_USER: ${POSTGRES_MIGRATE_USER}
+      POSTGRES_MIGRATE_PASSWORD: ${POSTGRES_MIGRATE_PASSWORD}
+      # Dumps need a backup directory; local development has no use for them.
+      BACKUP_ENABLED: 'false'
+
+  sab-server:
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+      target: runner
+    restart: unless-stopped
+    depends_on:
+      sab-release:
+        condition: service_completed_successfully
+    ports:
+      - '127.0.0.1:3100:3100'
+    stop_grace_period: 45s
+    environment:
+      APP_ENV: development
+      DISCORD_TOKEN: ${DISCORD_TOKEN}
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID}
+      DISCORD_ALLOWED_APP_IDS: ${DISCORD_ALLOWED_APP_IDS}
+      DISCORD_DEV_GUILD_ID: ${DISCORD_DEV_GUILD_ID}
+      ADMIN_GUILD_ID: ${ADMIN_GUILD_ID}
+      MIGRATION_PENDING: ${MIGRATION_PENDING:-false}
+      POSTGRES_HOST: sab-postgres
+      POSTGRES_PORT: '5432'
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      LOG_LEVEL: ${LOG_LEVEL:-debug}
+
+volumes:
+  # Throwaway development data; `docker compose down -v` discards it.
+  sab-dev-postgres:

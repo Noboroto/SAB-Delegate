@@ -48,14 +48,22 @@ RUN pnpm --filter @sab/server run db:generate \
 # ── release: one-shot migration job (never serves traffic) ───────────────────
 # Kept ahead of `runner` on purpose: a build without --target builds the LAST
 # stage, and that must stay the runtime image.
-# Runs as root: it will write dumps to a host bind mount whose ownership the
-# host decides, and unlike the runner it is short-lived with no listener.
+# Runs as root: it writes dumps to a host bind mount whose ownership the host
+# decides, and unlike the runner it is short-lived with no listener.
+# One image, three jobs: the release step (default ENTRYPOINT), the scheduled
+# daily dump (compose overrides the entrypoint and runs busybox crond) and the
+# restore drill. The runtime image stays free of the PG client on purpose: the
+# server never dumps, and backups run outside it.
 FROM gen AS release
 # pg_dump refuses to dump a server newer than itself; keep this on the same
-# major as the postgres image the stack runs.
-RUN apk add --no-cache postgresql18-client
+# major as the postgres image the stack runs. tzdata lets crond read the
+# Asia/Ho_Chi_Minh schedule from TZ; without it musl silently falls back to UTC
+# and the daily dump would run at 10:00 local time.
+RUN apk add --no-cache postgresql18-client tzdata
+# Fail the image build when the client is not the major the server runs.
+RUN pg_dump --version | grep -q ' 18\.' && pg_restore --version | grep -q ' 18\.'
 WORKDIR /app/apps/server
-COPY apps/server/scripts/release.sh apps/server/scripts/install-pgboss.mjs ./scripts/
+COPY apps/server/scripts/release.sh apps/server/scripts/backup.sh apps/server/scripts/restore-drill.sh apps/server/scripts/install-pgboss.mjs ./scripts/
 ENTRYPOINT ["/bin/sh", "/app/apps/server/scripts/release.sh"]
 
 # ── deploy: compiled server plus its production dependencies only ────────────

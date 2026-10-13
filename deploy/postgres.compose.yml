@@ -1,0 +1,59 @@
+# Content of the Coolify resource that runs Postgres, kept apart from the app
+# stack: Coolify deletes and recreates every container of a compose app on each
+# deploy, and the database must not restart with the code.
+#
+# One-time host setup (outside this file):
+#   docker network create sab-db
+#   mkdir -p /srv/appdata/sab-delegate/postgres
+# After the first start, create the application roles once with
+# deploy/initdb/01-roles.sh (usage in that file's header). Only the superuser's
+# credentials belong to this resource; the three application roles' passwords
+# live in the app resource and are passed to that script at run time.
+#
+# The image is Debian, not Alpine, on purpose: glibc case mapping and collation
+# are what `lower()` on Vietnamese words relies on, and changing collation later
+# means a dump and reindex. Pinned by digest, because a new major upgrades the
+# data directory in place with no way back; uuidv7() needs 18.
+networks:
+  sab-db:
+    external: true
+    name: sab-db
+
+services:
+  sab-postgres:
+    image: postgres:18.6@sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336
+    restart: unless-stopped
+    # UTC session and log time zone: a session in another zone shifts timestamptz
+    # values written by the application.
+    command: ['postgres', '-c', 'timezone=UTC', '-c', 'log_timezone=UTC']
+    networks:
+      default: {}
+      sab-db:
+        # The only name the application uses. A generic `postgres` alias could
+        # collide with another stack on a shared network.
+        aliases:
+          - sab-postgres
+    environment:
+      # The container's own superuser. The application never connects as it.
+      POSTGRES_USER: ${POSTGRES_SUPERUSER}
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      # PG 18 keeps its cluster under /var/lib/postgresql/<major>/docker. Mounting
+      # /var/lib/postgresql/data, as for 17 and older, would start an empty
+      # cluster beside the real one.
+      - /srv/appdata/sab-delegate/postgres:/var/lib/postgresql:rw
+    shm_size: 256m
+    stop_grace_period: 60s
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+      start_interval: 2s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.00'
+          memory: 1G

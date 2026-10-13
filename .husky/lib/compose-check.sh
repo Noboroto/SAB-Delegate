@@ -1,21 +1,30 @@
 #!/usr/bin/env bash
 
-# Validates every compose file the way Coolify will parse it. They declare
-# `env_file: .env`, which is gitignored and absent in a clean checkout, so the
-# check runs on copies next to an empty .env with placeholder values; nothing
-# real is read or printed.
+# Validates every compose file the way Coolify will parse it, on copies in a
+# scratch directory with a placeholder for every variable the files reference;
+# nothing real is read, and `config -q` prints nothing. Relative build contexts
+# and mounts are not resolved by `config`, so flattening the files is harmless.
 compose_check() {
-  local root tmp file
+  local root tmp file name var
   root=$(git rev-parse --show-toplevel)
   tmp=$(mktemp -d)
   trap 'rm -rf "$tmp"' RETURN
+  local files=(compose.yml coolify.compose.yml deploy/postgres.compose.yml deploy/local-smoke.compose.yml docker/test-db.compose.yml)
+
   : >"$tmp/.env"
-  for file in compose.yml coolify.compose.yml docker/test-db.compose.yml; do
+  for file in "${files[@]}"; do
     [[ -f "$root/$file" ]] || continue
-    # Flattened: the copy sits next to the empty .env, not in a docker/ subtree.
+    # Names only: `${NAME}`, `${NAME:-default}`.
+    grep -oE '\$\{[A-Z][A-Z0-9_]*' "$root/$file" | sed 's/^\${//' || true
+  done | sort -u | while read -r var; do
+    printf '%s=placeholder\n' "$var"
+  done >"$tmp/.env"
+
+  for file in "${files[@]}"; do
+    [[ -f "$root/$file" ]] || continue
     name=$(basename "$file")
     cp "$root/$file" "$tmp/$name"
-    (cd "$tmp" && TOKENS=placeholder docker compose -f "$name" config -q)
+    (cd "$tmp" && docker compose -f "$name" config -q)
     echo "  $file: valid"
   done
 }

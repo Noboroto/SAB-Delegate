@@ -8,5 +8,5 @@
     "tsBuildInfoFile": "./dist/tsconfig.build.tsbuildinfo"
   },
   "include": ["src"],
-  "exclude": ["dist", "src/**/*.spec.ts"]
+  "exclude": ["dist", "src/**/*.spec.ts", "src/**/*.db-harness.ts"]
 }

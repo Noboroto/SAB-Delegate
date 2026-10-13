@@ -3,7 +3,12 @@
   "ignoreBinaries": ["gitleaks"],
   "workspaces": {
     ".": {
-      "entry": ["knip.json", "scripts/*.test.ts", "scripts/*.db.spec.ts"],
+      "entry": [
+        "knip.json",
+        "scripts/*.test.ts",
+        "scripts/*.db.spec.ts",
+        "scripts/clear-legacy-commands.mjs"
+      ],
       "project": ["*.{ts,mjs}", "scripts/**/*.{ts,mjs}"]
     },
     "apps/server": {
