@@ -3,6 +3,7 @@ import { GuildAccessModule } from '../common/guild-access/guild-access.module.js
 import { BirthdayModule } from './birthday/birthday.module.js';
 import { DISCORD_FEATURE_MODULES, featureModules } from './feature-modules.js';
 import { GuildConfigModule } from './guild-config/guild-config.module.js';
+import { MentionModule } from './mention/mention.module.js';
 import { MessagingModule } from './messaging/messaging.module.js';
 import { NoteModule } from './note/note.module.js';
 import { ReactionsModule } from './reactions/reactions.module.js';
@@ -22,6 +23,7 @@ describe('featureModules', () => {
       WordGameModule,
       ScheduleModule,
       MessagingModule,
+      MentionModule,
     ]);
     expect(featureModules({})).toEqual(DISCORD_FEATURE_MODULES);
     expect(featureModules({ MIGRATION_PENDING: '' })).toEqual(DISCORD_FEATURE_MODULES);

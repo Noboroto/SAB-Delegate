@@ -1,0 +1,38 @@
+{
+  "commands": {
+    "byReaction": { "description": "Mention everyone who reacted to a message with an emoji" },
+    "notReact": { "description": "Mention the members who did not react to a message" },
+    "everyone": { "description": "Send a message with @everyone in the current thread" },
+    "messageLinkOption": { "description": "Link of the message (right-click, Copy Message Link)" },
+    "emojiOption": { "description": "The emoji to look for; pick one from the suggestions" },
+    "replyMessageOption": { "description": "Link of a message to reply to with the list" },
+    "contentOption": { "description": "Text added after the list" },
+    "everyoneContentOption": { "description": "Text added after the @everyone line" },
+    "roleOption": { "description": "Only members with this role are expected to react" },
+    "isReplyOption": { "description": "Reply to the message itself with the list (default: no)" },
+    "includeBotsOption": { "description": "Also list bots (default: no)" },
+    "onlyInChannelOption": {
+      "description": "Only members who can see the channel; false takes the whole role (default: yes)"
+    }
+  },
+  "contextMenu": {
+    "nonReactors": { "name": "Mention non-reactors" }
+  },
+  "author": "(author)",
+  "reactors": {
+    "header": "Reply to {user}, there are {count} user(s) who [reacted to the message]({url}) with {emoji}:"
+  },
+  "nonReactors": {
+    "header": "Reply to {user}, there are {count} user(s) who [did not react to the message]({url}):"
+  },
+  "everyone": {
+    "header": "{user} mentioned @everyone"
+  },
+  "noReactors": "No one reacted with that emoji.",
+  "allReacted": "Everyone in the role reacted to the message.",
+  "unsupportedChannel": "This does not work in voice or stage channels, or in a channel that holds no messages.",
+  "notAThread": "This command can only be used in a thread.",
+  "replyNotFound": "The message to reply to was not found.",
+  "sent": "Sent!",
+  "sendFailed": "Cannot send: {reason}"
+}

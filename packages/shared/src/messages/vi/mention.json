@@ -1,0 +1,42 @@
+{
+  "commands": {
+    "byReaction": { "description": "Nhắc mọi người đã thả một cảm xúc vào tin nhắn" },
+    "notReact": { "description": "Nhắc các thành viên chưa thả cảm xúc vào tin nhắn" },
+    "everyone": { "description": "Gửi tin nhắn có @everyone trong luồng hiện tại" },
+    "messageLinkOption": {
+      "description": "Liên kết tin nhắn (nhấn chuột phải, Sao chép liên kết)"
+    },
+    "emojiOption": { "description": "Cảm xúc cần tìm; hãy chọn một mục trong gợi ý" },
+    "replyMessageOption": { "description": "Liên kết tin nhắn để trả lời bằng danh sách" },
+    "contentOption": { "description": "Nội dung thêm vào sau danh sách" },
+    "everyoneContentOption": { "description": "Nội dung thêm vào sau dòng @everyone" },
+    "roleOption": { "description": "Chỉ những thành viên có vai trò này được kỳ vọng thả cảm xúc" },
+    "isReplyOption": {
+      "description": "Trả lời chính tin nhắn đó bằng danh sách (mặc định: không)"
+    },
+    "includeBotsOption": { "description": "Nhắc cả bot (mặc định: không)" },
+    "onlyInChannelOption": {
+      "description": "Chỉ người xem được kênh; false lấy cả vai trò (mặc định: có)"
+    }
+  },
+  "contextMenu": {
+    "nonReactors": { "name": "Nhắc người chưa thả cảm xúc" }
+  },
+  "author": "(tác giả)",
+  "reactors": {
+    "header": "Gửi {user}, có {count} người đã [thả cảm xúc vào tin nhắn]({url}) với {emoji}:"
+  },
+  "nonReactors": {
+    "header": "Gửi {user}, có {count} người chưa [thả cảm xúc vào tin nhắn]({url}):"
+  },
+  "everyone": {
+    "header": "{user} đã nhắc @everyone"
+  },
+  "noReactors": "Chưa có ai thả cảm xúc đó.",
+  "allReacted": "Mọi người trong vai trò đều đã thả cảm xúc vào tin nhắn.",
+  "unsupportedChannel": "Không dùng được trong kênh thoại, kênh sân khấu hoặc kênh không chứa tin nhắn.",
+  "notAThread": "Lệnh này chỉ dùng được trong một luồng.",
+  "replyNotFound": "Không tìm thấy tin nhắn cần trả lời.",
+  "sent": "Đã gửi!",
+  "sendFailed": "Không gửi được: {reason}"
+}
