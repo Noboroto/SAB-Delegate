@@ -6,6 +6,7 @@ import { GuildConfigModule } from './guild-config/guild-config.module.js';
 import { MessagingModule } from './messaging/messaging.module.js';
 import { NoteModule } from './note/note.module.js';
 import { ReactionsModule } from './reactions/reactions.module.js';
+import { ScheduleModule } from './schedule/schedule.module.js';
 import { SystemModule } from './system/system.module.js';
 import { WordGameModule } from './word-game/word-game.module.js';
 
@@ -24,6 +25,7 @@ export const DISCORD_FEATURE_MODULES: readonly Type[] = [
   NoteModule,
   ReactionsModule,
   WordGameModule,
+  ScheduleModule,
   MessagingModule,
 ];
 

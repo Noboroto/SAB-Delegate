@@ -1,0 +1,83 @@
+{
+  "commands": {
+    "send": {
+      "description": "Hẹn giờ gửi một tin nhắn, theo giờ Việt Nam (UTC+7)"
+    },
+    "copy": {
+      "description": "Hẹn giờ sao chép một tin nhắn, theo giờ Việt Nam (UTC+7)"
+    },
+    "get": {
+      "description": "Xem các tin nhắn đã hẹn giờ của máy chủ này"
+    },
+    "cancel": {
+      "description": "Huỷ một tin nhắn đã hẹn giờ"
+    },
+    "messageOption": {
+      "description": "Nội dung cần gửi; bỏ trống để nhập trong hộp thoại"
+    },
+    "messageLinkOption": {
+      "description": "Liên kết tin nhắn sẽ được sao chép đúng giờ hẹn"
+    },
+    "timeOption": {
+      "description": "Giờ: 14:30, hoặc tính từ bây giờ: 30m, 2h, 1h30m"
+    },
+    "dateOption": {
+      "description": "Ngày: today, tomorrow, 20/10 hoặc 20/10/2026 (mặc định: hôm nay)"
+    },
+    "destinationOption": {
+      "description": "Kênh sẽ nhận tin (mặc định: kênh này)"
+    },
+    "idOption": {
+      "description": "Số của tin nhắn hẹn giờ cần huỷ"
+    }
+  },
+  "when": {
+    "TIME_REQUIRED": "Hãy nhập giờ, ví dụ 14:30 hoặc 30m.",
+    "INVALID_TIME": "Không đọc được {input} thành giờ. Dùng 14:30, hoặc khoảng tính từ bây giờ như 30m, 2h, 1h30m.",
+    "INVALID_DATE": "Không đọc được {input} thành ngày. Dùng today, tomorrow, 20/10 hoặc 20/10/2026.",
+    "NONEXISTENT_DATE": "{input} không phải một ngày có trong lịch.",
+    "RELATIVE_WITH_DATE": "Giờ dạng 30m đã tính từ bây giờ rồi; hãy bỏ trống ngày.",
+    "PAST": "Thời điểm này đã qua: {input}. Hãy chọn một giờ muộn hơn."
+  },
+  "autocomplete": {
+    "today": "Hôm nay",
+    "tomorrow": "Ngày mai"
+  },
+  "created": "Đã hẹn giờ tin nhắn số {seq} vào {when}.",
+  "canceled": "Đã huỷ tin nhắn hẹn giờ số {seq}.",
+  "alreadyCanceled": "Tin nhắn hẹn giờ số {seq} đã được huỷ từ trước.",
+  "notFound": "Không có tin nhắn hẹn giờ số {seq}.",
+  "notPending": {
+    "SENDING": "Tin nhắn hẹn giờ số {seq} đang được gửi nên không huỷ được nữa.",
+    "SENT": "Tin nhắn hẹn giờ số {seq} đã được gửi nên không huỷ được.",
+    "FAILED": "Tin nhắn hẹn giờ số {seq} đã thất bại nên không huỷ được."
+  },
+  "list": {
+    "empty": "Chưa có tin nhắn hẹn giờ nào.",
+    "header": "Danh sách tin nhắn hẹn giờ:",
+    "entry": "## {state}[{command}] - {seq}\n**Người tạo**: {author}\n**Mô tả**: {description}\n**Giờ gửi**: {time}\n**Tạo lúc**: {created}",
+    "error": "\n**Lỗi**: {error}",
+    "state": {
+      "CANCELED": "(Đã huỷ)",
+      "SENT": "(Đã gửi)",
+      "FAILED": "(Thất bại)"
+    },
+    "descriptionSend": "Gửi tin nhắn đến {channel}: {content}",
+    "descriptionCopy": "Sao chép từ {source} đến {channel}"
+  },
+  "modal": {
+    "title": "Tin nhắn hẹn giờ",
+    "label": "Nội dung"
+  },
+  "failure": {
+    "SOURCE_GONE": "Tin nhắn cần sao chép không còn nữa.",
+    "SOURCE_EMPTY": "Tin nhắn cần sao chép không có chữ hay tệp.",
+    "CHANNEL_GONE": "Kênh nhận tin đã mất hoặc bot không thấy được kênh đó.",
+    "NO_PERMISSION": "Bot không được phép gửi tin trong kênh nhận.",
+    "GUILD_MISMATCH": "Tin nhắn cần sao chép không thuộc máy chủ này.",
+    "CREATOR_LOST_ACCESS": "Người đã hẹn giờ không còn quyền quản lý máy chủ này.",
+    "KEY_REVOKED": "Khoá API đã hẹn giờ tin này đã bị thu hồi.",
+    "GAVE_UP": "Gửi thất bại sau nhiều lần thử.",
+    "SEND_REJECTED": "Discord từ chối tin nhắn này (có thể quá dài hoặc không được phép)."
+  }
+}

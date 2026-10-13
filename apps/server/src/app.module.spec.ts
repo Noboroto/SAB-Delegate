@@ -14,6 +14,7 @@ import { GuildConfigService } from './modules/guild-config/guild-config.service.
 import { MessagingService } from './modules/messaging/messaging.service.js';
 import { NoteService } from './modules/note/note.service.js';
 import { AutoReactListener } from './modules/reactions/auto-react.listener.js';
+import { ScheduleService } from './modules/schedule/schedule.service.js';
 import { SystemService } from './modules/system/system.service.js';
 import { WordGameService } from './modules/word-game/word-game.service.js';
 import { HealthController } from './health/health.controller.js';
@@ -89,6 +90,7 @@ describe('AppModule', () => {
       NoteService,
       AutoReactListener,
       WordGameService,
+      ScheduleService,
       MessagingService,
     ]) {
       expect(moduleRef.get(provider, { strict: false }), provider.name).toBeDefined();

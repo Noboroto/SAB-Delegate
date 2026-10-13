@@ -120,6 +120,34 @@ export {
   type WordSubmitResult,
 } from './schemas/word-game.js';
 export {
+  ALLOWED_MENTIONS_ALL,
+  ALLOWED_MENTIONS_NONE,
+  AllowedMentionsSchema,
+  RunAtSchema,
+  SCHEDULE_AUTOCOMPLETE_MAX,
+  SCHEDULE_DESCRIPTION_MAX_LENGTH,
+  SCHEDULE_LIST_MAX,
+  ScheduleCancelByKeyResultSchema,
+  ScheduleCancelResultSchema,
+  ScheduleCopyInputSchema,
+  ScheduleCreateResultSchema,
+  ScheduleFailureSchema,
+  ScheduleListQuerySchema,
+  SchedulePendingChoiceSchema,
+  ScheduleSendInputSchema,
+  ScheduledMessageViewSchema,
+  type AllowedMentions,
+  type ScheduleCancelByKeyResult,
+  type ScheduleCancelResult,
+  type ScheduleCopyInput,
+  type ScheduleCreateResult,
+  type ScheduleFailure,
+  type ScheduleListQuery,
+  type SchedulePendingChoice,
+  type ScheduleSendInput,
+  type ScheduledMessageView,
+} from './schemas/schedule.js';
+export {
   CopyMessageResultSchema,
   CopyMessageSchema,
   CreateReactionPollResultSchema,
@@ -149,6 +177,14 @@ export {
   type SendMessage,
   type SendMessageResult,
 } from './schemas/messaging.js';
+export {
+  formatDiscordTimestamp,
+  formatIctDate,
+  formatWhenIct,
+  parseWhen,
+  toIct,
+  type ParseWhenError,
+} from './utils/parse-when.js';
 export { splitMessage } from './utils/split-message.js';
 export { parseSnowflakes } from './utils/snowflakes.js';
 export {

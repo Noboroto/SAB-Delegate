@@ -1,0 +1,83 @@
+{
+  "commands": {
+    "send": {
+      "description": "Schedule a message to be sent later, in Vietnam time (UTC+7)"
+    },
+    "copy": {
+      "description": "Schedule a copy of a message to be sent later, in Vietnam time (UTC+7)"
+    },
+    "get": {
+      "description": "List the scheduled messages of this server"
+    },
+    "cancel": {
+      "description": "Cancel a scheduled message"
+    },
+    "messageOption": {
+      "description": "Text to send; leave empty to write it in a dialog"
+    },
+    "messageLinkOption": {
+      "description": "Link of the message to copy at the scheduled time"
+    },
+    "timeOption": {
+      "description": "Time: 14:30, or counted from now: 30m, 2h, 1h30m"
+    },
+    "dateOption": {
+      "description": "Date: today, tomorrow, 20/10 or 20/10/2026 (default: today)"
+    },
+    "destinationOption": {
+      "description": "Channel to send it to (default: this channel)"
+    },
+    "idOption": {
+      "description": "Number of the scheduled message to cancel"
+    }
+  },
+  "when": {
+    "TIME_REQUIRED": "Enter a time, for example 14:30 or 30m.",
+    "INVALID_TIME": "Cannot read {input} as a time. Use 14:30, or a span from now such as 30m, 2h or 1h30m.",
+    "INVALID_DATE": "Cannot read {input} as a date. Use today, tomorrow, 20/10 or 20/10/2026.",
+    "NONEXISTENT_DATE": "{input} is not a day on the calendar.",
+    "RELATIVE_WITH_DATE": "A time like 30m already counts from now; leave the date empty.",
+    "PAST": "That moment has already passed: {input}. Choose a later time."
+  },
+  "autocomplete": {
+    "today": "Today",
+    "tomorrow": "Tomorrow"
+  },
+  "created": "Scheduled message {seq} for {when}.",
+  "canceled": "Canceled scheduled message {seq}.",
+  "alreadyCanceled": "Scheduled message {seq} was already canceled.",
+  "notFound": "There is no scheduled message {seq}.",
+  "notPending": {
+    "SENDING": "Scheduled message {seq} is being sent right now and can no longer be canceled.",
+    "SENT": "Scheduled message {seq} was already sent and cannot be canceled.",
+    "FAILED": "Scheduled message {seq} already failed and cannot be canceled."
+  },
+  "list": {
+    "empty": "No scheduled messages.",
+    "header": "Scheduled messages:",
+    "entry": "## {state}[{command}] - {seq}\n**Author**: {author}\n**Description**: {description}\n**Time**: {time}\n**Created time**: {created}",
+    "error": "\n**Error**: {error}",
+    "state": {
+      "CANCELED": "(End)",
+      "SENT": "(Sent)",
+      "FAILED": "(Failed)"
+    },
+    "descriptionSend": "Send message to {channel}: {content}",
+    "descriptionCopy": "Copy from {source} to {channel}"
+  },
+  "modal": {
+    "title": "Scheduled message",
+    "label": "Message"
+  },
+  "failure": {
+    "SOURCE_GONE": "The message to copy no longer exists.",
+    "SOURCE_EMPTY": "The message to copy has no text or files.",
+    "CHANNEL_GONE": "The destination channel is gone or the bot cannot see it.",
+    "NO_PERMISSION": "The bot may not send messages in the destination channel.",
+    "GUILD_MISMATCH": "The message to copy is not from this server.",
+    "CREATOR_LOST_ACCESS": "The person who scheduled it can no longer manage this server.",
+    "KEY_REVOKED": "The API key that scheduled it was revoked.",
+    "GAVE_UP": "Sending failed after several attempts.",
+    "SEND_REJECTED": "Discord refused the message (it may be too long or not allowed)."
+  }
+}
