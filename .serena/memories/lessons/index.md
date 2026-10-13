@@ -9,6 +9,7 @@
 - `mem:lessons/discord/multi-client-dedupe` — mọi event chạy một lần cho mỗi bot: `claimOnce` trước khi ghi DB/gửi tin; cờ sinh nhật phải có năm; unhandledRejection không làm chết tiến trình.
 - `mem:lessons/deploy/base-image-reuse` — base `node:24.21.0-alpine3.23@sha256:9ec4…` đã có layer trên host (QR-Production-Manager) → tái dùng; cách so diffIDs; tránh `chmod -R` nhân đôi layer.
 - `mem:lessons/deploy/coolify-host-images-and-build-cache` — đo 2026-10-13: một builder BuildKit chung, Coolify prune HẰNG ĐÊM (force) nên không có cache qua ngày; SAB-Store cùng digest node; giữ `postgres:18.6` Debian (không alpine/musl) vì `lower()` tiếng Việt; hỏi session Coolify trước khi ghim base image.
+- `mem:lessons/deploy/low-downtime-deploy` — học từ JudgeHub 2026-10-13: Coolify dựng lại cả stack, bot 1 token không blue-green được → build trước dừng sau, build tuần tự + `df`, tránh 23:30–00:30, release `service_completed_successfully` (map), thứ tự migration theo loại, healthcheck readiness (Discord ready), grace 45 s, mount thư mục, đo stop→Ready.
 - `mem:lessons/discord/bypass-by-design` — bot CỐ Ý vượt giới hạn Discord: không thêm chặn DM, chặn link guild khác, kiểm thứ bậc role, kiểm quyền invite của người gọi.
 - `mem:lessons/dashboard/access-rule` — dashboard chỉ cho người có Manage Server (ManageGuild/Admin/owner) ở guild có bot; kiểm phía bot mỗi request. Ngoại lệ có chủ đích của bypass-by-design.
 - `mem:lessons/process/package-first` — luật chủ repo: tìm package chuyên dụng trước khi tự viết; tự viết phải ghi lý do loại từng package (AGENTS.md §9).
