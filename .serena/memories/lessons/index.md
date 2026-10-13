@@ -8,6 +8,7 @@
 - `mem:lessons/tooling/pnpm-and-runtime` — pnpm 12 `allowBuilds` (onlyBuiltDependencies bị bỏ qua), better-sqlite3 13 cần Node ≥22, TS ghim 6.0 vì typescript-eslint, tsconfig cho TS 6, tsx thay ts-node, dotenv quiet, ESLint flat config.
 - `mem:lessons/discord/multi-client-dedupe` — mọi event chạy một lần cho mỗi bot: `claimOnce` trước khi ghi DB/gửi tin; cờ sinh nhật phải có năm; unhandledRejection không làm chết tiến trình.
 - `mem:lessons/deploy/base-image-reuse` — base `node:24.21.0-alpine3.23@sha256:9ec4…` đã có layer trên host (QR-Production-Manager) → tái dùng; cách so diffIDs; tránh `chmod -R` nhân đôi layer.
+- `mem:lessons/deploy/coolify-host-images-and-build-cache` — đo 2026-10-13: một builder BuildKit chung, Coolify prune HẰNG ĐÊM (force) nên không có cache qua ngày; SAB-Store cùng digest node; giữ `postgres:18.6` Debian (không alpine/musl) vì `lower()` tiếng Việt; hỏi session Coolify trước khi ghim base image.
 - `mem:lessons/discord/bypass-by-design` — bot CỐ Ý vượt giới hạn Discord: không thêm chặn DM, chặn link guild khác, kiểm thứ bậc role, kiểm quyền invite của người gọi.
 - `mem:lessons/dashboard/access-rule` — dashboard chỉ cho người có Manage Server (ManageGuild/Admin/owner) ở guild có bot; kiểm phía bot mỗi request. Ngoại lệ có chủ đích của bypass-by-design.
 - `mem:lessons/process/package-first` — luật chủ repo: tìm package chuyên dụng trước khi tự viết; tự viết phải ghi lý do loại từng package (AGENTS.md §9).
