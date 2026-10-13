@@ -1,0 +1,9 @@
+{
+  "commands": {
+    "roleOption": { "description": "Role whose members you want to check" },
+    "voiceChannelOption": { "description": "Voice channel to check (default: the one you are in)" }
+  },
+  "noVoiceChannel": "You are not in a voice channel. Join one, or choose the channel to check.",
+  "report": "Channel {channel}, role **@{role}** has **{total, plural, one {# member} other {# members}}**.\n**{present}** present, **{absent}** absent.\n\n**Present members**\n{presentList}\n\n**Absent members**\n{absentList}",
+  "none": "(none)"
+}

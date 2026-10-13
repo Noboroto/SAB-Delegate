@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import type { Locale } from '../utils/locale.js';
+import enActivity from './en/activity.json';
+import enAttendance from './en/attendance.json';
 import enBirthday from './en/birthday.json';
 import enCommands from './en/commands.json';
 import enCommon from './en/common.json';
@@ -14,6 +16,8 @@ import enSchedule from './en/schedule.json';
 import enSystem from './en/system.json';
 import enThread from './en/thread.json';
 import enWordGame from './en/word-game.json';
+import viActivity from './vi/activity.json';
+import viAttendance from './vi/attendance.json';
 import viBirthday from './vi/birthday.json';
 import viCommands from './vi/commands.json';
 import viCommon from './vi/common.json';
@@ -48,6 +52,8 @@ export const MessageNamespaceSchema = z.enum([
   'role-assign',
   'thread',
   'purge',
+  'activity',
+  'attendance',
 ]);
 
 export type MessageNamespace = z.infer<typeof MessageNamespaceSchema>;
@@ -72,6 +78,8 @@ export const MESSAGES = {
     'role-assign': viRoleAssign,
     thread: viThread,
     purge: viPurge,
+    activity: viActivity,
+    attendance: viAttendance,
   },
   en: {
     common: enCommon,
@@ -88,5 +96,7 @@ export const MESSAGES = {
     'role-assign': enRoleAssign,
     thread: enThread,
     purge: enPurge,
+    activity: enActivity,
+    attendance: enAttendance,
   },
 } satisfies Record<Locale, Record<MessageNamespace, object>>;

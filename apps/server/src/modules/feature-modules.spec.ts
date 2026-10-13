@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { GuildAccessModule } from '../common/guild-access/guild-access.module.js';
+import { ActivityModule } from './activity/activity.module.js';
+import { AttendanceModule } from './attendance/attendance.module.js';
 import { BirthdayModule } from './birthday/birthday.module.js';
 import { DISCORD_FEATURE_MODULES, featureModules } from './feature-modules.js';
 import { GuildConfigModule } from './guild-config/guild-config.module.js';
@@ -30,6 +32,8 @@ describe('featureModules', () => {
       RoleAssignModule,
       ThreadModule,
       PurgeModule,
+      ActivityModule,
+      AttendanceModule,
     ]);
     expect(featureModules({})).toEqual(DISCORD_FEATURE_MODULES);
     expect(featureModules({ MIGRATION_PENDING: '' })).toEqual(DISCORD_FEATURE_MODULES);

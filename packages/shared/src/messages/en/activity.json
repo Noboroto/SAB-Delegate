@@ -1,0 +1,12 @@
+{
+  "commands": {
+    "emojiOption": { "description": "Emoji shown in the channel names" },
+    "nameOption": { "description": "Name of the activity" },
+    "shortNameOption": { "description": "Short name of exactly 3 characters" },
+    "categoryOption": {
+      "description": "Category for the new channels (default: the one set for this server)"
+    }
+  },
+  "created": "Created activity \"{name}\":\n- Roles: {roles}\n- {general}\n- {threadOnly}\n- {voice}",
+  "noCategory": "There is no category to put the channels in. Choose one with the category option, or set a default category for this server in the dashboard."
+}

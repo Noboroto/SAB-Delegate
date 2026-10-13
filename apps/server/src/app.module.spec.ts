@@ -7,6 +7,8 @@ import { AppModule } from './app.module.js';
 import { IDENTITY_REST } from './discord/boot-guard.js';
 import { DiscordReadyService } from './discord/discord-ready.service.js';
 import { GuildAccessService } from './common/guild-access/guild-access.service.js';
+import { ActivityService } from './modules/activity/activity.service.js';
+import { AttendanceService } from './modules/attendance/attendance.service.js';
 import { BirthdayCommands } from './modules/birthday/birthday.commands.js';
 import { BirthdayCron } from './modules/birthday/birthday.cron.js';
 import { BirthdayService } from './modules/birthday/birthday.service.js';
@@ -102,6 +104,8 @@ describe('AppModule', () => {
       ThreadService,
       PrivateThreadService,
       PurgeService,
+      ActivityService,
+      AttendanceService,
     ]) {
       expect(moduleRef.get(provider, { strict: false }), provider.name).toBeDefined();
     }

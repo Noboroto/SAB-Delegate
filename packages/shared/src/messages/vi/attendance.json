@@ -1,0 +1,9 @@
+{
+  "commands": {
+    "roleOption": { "description": "Vai trò có các thành viên cần điểm danh" },
+    "voiceChannelOption": { "description": "Kênh thoại cần kiểm tra (mặc định: kênh bạn đang ở)" }
+  },
+  "noVoiceChannel": "Bạn chưa ở trong kênh thoại nào. Hãy vào một kênh, hoặc chọn kênh cần kiểm tra.",
+  "report": "Kênh {channel}, vai trò **@{role}** có **{total, plural, other {# thành viên}}**.\n**{present}** có mặt, **{absent}** vắng mặt.\n\n**Thành viên có mặt**\n{presentList}\n\n**Thành viên vắng mặt**\n{absentList}",
+  "none": "(không có)"
+}

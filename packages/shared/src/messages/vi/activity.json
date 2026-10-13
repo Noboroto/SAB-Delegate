@@ -1,0 +1,12 @@
+{
+  "commands": {
+    "emojiOption": { "description": "Emoji hiển thị trong tên các kênh" },
+    "nameOption": { "description": "Tên của hoạt động" },
+    "shortNameOption": { "description": "Tên viết tắt gồm đúng 3 ký tự" },
+    "categoryOption": {
+      "description": "Danh mục cho các kênh mới (mặc định: danh mục đã đặt cho máy chủ)"
+    }
+  },
+  "created": "Đã tạo hoạt động \"{name}\":\n- Vai trò: {roles}\n- {general}\n- {threadOnly}\n- {voice}",
+  "noCategory": "Chưa có danh mục để đặt các kênh. Hãy chọn danh mục ở tuỳ chọn category, hoặc đặt danh mục mặc định cho máy chủ trong bảng điều khiển."
+}

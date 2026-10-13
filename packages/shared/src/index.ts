@@ -268,6 +268,23 @@ export {
   type PurgeStatus,
 } from './schemas/purge.js';
 export {
+  ACTIVITY_EMOJI_MAX_LENGTH,
+  ACTIVITY_NAME_MAX_LENGTH,
+  ACTIVITY_SHORT_NAME_LENGTH,
+  ActivityCreateResultSchema,
+  ActivityCreateSchema,
+  type ActivityCreate,
+  type ActivityCreateResult,
+} from './schemas/activity.js';
+export {
+  AttendanceCheckSchema,
+  AttendanceMemberSchema,
+  AttendanceResultSchema,
+  type AttendanceCheck,
+  type AttendanceMember,
+  type AttendanceResult,
+} from './schemas/attendance.js';
+export {
   formatDiscordTimestamp,
   formatIctDate,
   formatWhenIct,
