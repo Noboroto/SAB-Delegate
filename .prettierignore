@@ -14,3 +14,7 @@ root
 # stay formatted.
 scripts/*.mjs
 apps/*/scripts
+
+# Editor settings and runtime data are not source.
+/.vscode
+/files

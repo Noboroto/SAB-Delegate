@@ -16,29 +16,25 @@ set -euo pipefail
 # (exception: bare "CLAUDE.md" references — this repo has no CLAUDE.md, but a
 # line explaining that still has to be committable).
 MSG_FILE="$1"
-MSG=$(cat "$MSG_FILE")
 
-# Remove the CLAUDE.md token itself (not the whole line) so a line like
-# "see CLAUDE.md" still exposes any OTHER remaining "Claude" mention.
-STRIPPED=$(echo "$MSG" | sed -E 's/CLAUDE\.md//Ig')
+# Only what the author wrote is checked. Git appends "#" comment lines (staged
+# paths, branch) and, for `commit -v`, a scissors line followed by the whole
+# diff; a diff that merely contains one of the words below must not block an
+# otherwise clean message. The CLAUDE.md token itself (not the whole line) is
+# removed so a line like "see CLAUDE.md" still exposes any OTHER remaining
+# "Claude" mention.
+STRIPPED=$(
+  sed '/^# -* >8 -*$/,$d' "$MSG_FILE" |
+    git stripspace --strip-comments |
+    sed -E 's/CLAUDE\.md//Ig'
+)
 
-if echo "$STRIPPED" | grep -iq 'claude'; then
-  echo "ERROR: Commit message contains 'Claude'. Remove it before committing."
-  echo "       (References to CLAUDE.md are allowed.)"
-  exit 1
-fi
-
-if echo "$STRIPPED" | grep -iq 'anthropic'; then
-  echo "ERROR: Commit message contains 'Anthropic'. Remove it before committing."
-  exit 1
-fi
-
-if echo "$STRIPPED" | grep -iq 'codex'; then
-  echo "ERROR: Commit message contains 'Codex'. Remove it before committing."
-  exit 1
-fi
-
-if echo "$STRIPPED" | grep -iq 'chatgpt'; then
-  echo "ERROR: Commit message contains 'ChatGPT'. Remove it before committing."
-  exit 1
-fi
+for word in claude anthropic codex chatgpt; do
+  if grep -iq "$word" <<<"$STRIPPED"; then
+    echo "ERROR: Commit message contains '$word'. Remove it before committing."
+    if [[ "$word" == claude ]]; then
+      echo "       (References to CLAUDE.md are allowed.)"
+    fi
+    exit 1
+  fi
+done

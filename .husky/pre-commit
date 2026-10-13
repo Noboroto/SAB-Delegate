@@ -152,11 +152,13 @@ if [[ "$ROOT_GATED" != true && "$WORKSPACE_GATED" != true && "$INFRA_TOUCHED" !=
   exit 0
 fi
 
-if [[ "$ROOT_GATED" == true || "$WORKSPACE_GATED" == true ]]; then
-  # shellcheck source=lib/heavy-lock.sh
-  source "$(dirname "${BASH_SOURCE[0]}")/lib/heavy-lock.sh"
-  heavy_lock_hook SAB-Delegate pre-commit "$0" "$@"
-fi
+# Everything past the markdown exit runs a vitest process at least (the repo
+# guards), so it waits for the machine-wide heavy lock. Every cheap check above
+# (file cap, line rule, secret scan, classification) needs no lock and is simply
+# repeated by the re-run under it.
+# shellcheck source=lib/heavy-lock.sh
+source "$(dirname "${BASH_SOURCE[0]}")/lib/heavy-lock.sh"
+heavy_lock_hook SAB-Delegate pre-commit "$0" "$@"
 
 # A hook that fails to parse silently disables the only quality gate.
 hooks_syntax_check() {
@@ -202,15 +204,18 @@ classify_staged() {
   done
 }
 
-# Workspace gates, cheapest to most expensive: prettier -> eslint -> typecheck
-# -> knip -> vitest. knip runs before the suite so an unused export fails in
-# seconds, not after the full run.
+# Workspace gates, cheapest refusal first: prettier -> typecheck -> eslint ->
+# knip -> vitest. Type-aware eslint builds the same TypeScript programs as tsc
+# and takes several times longer, so a type error must not wait behind it.
+# Typecheck cannot move above generate-deps: it reads the built shared package
+# and would answer from the previous build. knip runs before the suite so an
+# unused export fails in seconds, not after the full run.
 if [[ "$WORKSPACE_GATED" == true ]]; then
   WORKSPACE_FORMATTABLE=()
   for file in "${STAGED_FILES[@]}"; do
     case "$file" in
       root/*) ;;
-      *.ts | *.tsx | *.mts | *.cts | *.mjs | *.cjs)
+      *.ts | *.tsx | *.mts | *.cts | *.js | *.jsx | *.mjs | *.cjs | *.json)
         # A deleted file is in the staged set but cannot be formatted or re-added.
         if [[ -e "$file" ]]; then
           WORKSPACE_FORMATTABLE+=("$file")
@@ -231,13 +236,22 @@ if [[ "$WORKSPACE_GATED" == true ]]; then
   # Taken after prettier --write so its own edits are not read as concurrent
   # ones; the stamp is written only if the tree is still identical at the end.
   gate_stamp_begin
+  # `prettier --write` never fails, so on its own it proves nothing about the
+  # bytes just keyed: a file saved while it ran would be stamped as formatted
+  # and pre-push would skip its check. Checking after keying closes that window.
+  run_step "prettier (workspace, check only)" pnpm formatter:check
 
   # Generated once here; the flag makes every nested pnpm call skip it.
   run_step "generate deps" pnpm generate:deps
   export SAB_DEPS_READY=1
 
-  run_step "eslint (workspace, --max-warnings 0)" pnpm lint
   run_step "typecheck (workspace)" pnpm typecheck
+  # Single-threaded (`--concurrency off`, set in the lint script) on purpose:
+  # eslint peak memory follows the worker count. Measured on the shared 16 GB Mac
+  # against a larger type-aware monorepo: one thread ~4.4 GB / 49 s, two ~7.4 GB / 36 s, four ~8.0 GB / 46 s, auto past
+  # 21 GB. The few seconds saved are not worth leaving under 35% of the shared
+  # machine free for the next heavy job.
+  run_step "eslint (workspace, --max-warnings 0)" pnpm lint
   run_step "knip (unused files, exports, dependencies)" pnpm knip
   run_step "vitest (workspace)" pnpm test
   suite_stamp_write

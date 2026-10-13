@@ -22,6 +22,10 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib/compose-check.sh"
 trap on_hook_failure ERR
 
 ZERO_SHA="0000000000000000000000000000000000000000"
+# The stamps vouch for the worktree, which is HEAD's content at best; pushing
+# any other commit earns no skip (see worktree_matches_head in lib/gate-stamp.sh).
+HEAD_SHA="$(git rev-parse HEAD)"
+PUSH_IS_HEAD=true
 PUSHED_FILES=()
 
 HOOK_TMP="$(mktemp -d)"
@@ -65,6 +69,8 @@ while read -r local_ref local_sha remote_ref remote_sha; do
     range="$remote_sha..$local_sha"
     scan_scope="$remote_sha..$local_sha"
   fi
+
+  [[ "$local_sha" == "$HEAD_SHA" ]] || PUSH_IS_HEAD=false
 
   # Before the markdown-only exit below: a token pasted into a doc leaks as
   # surely as one in code.
@@ -127,18 +133,22 @@ STAMP_PENDING=false
 # pre-commit already cleared these exact bytes. Prettier only checks here: a
 # push has nothing to re-stage into. The stamp says nothing about root/, so the
 # legacy gates below run whenever the range touches it.
-if gate_stamp_is_current; then
+if [[ "$PUSH_IS_HEAD" == true ]] && gate_stamp_is_current; then
   echo "✓ workspace gates: skipped - working tree is byte-identical to what pre-commit already cleared (lib/gate-stamp.sh)"
 elif [[ "$WORKSPACE_TOUCHED" == true ]]; then
-  run_step "prettier (workspace, check only)" pnpm formatter:check
+  # Keyed before the check, so the check proves the keyed bytes are formatted.
   gate_stamp_begin
+  run_step "prettier (workspace, check only)" pnpm formatter:check
   # Generated once here; the flag makes every nested pnpm call skip it.
   run_step "generate deps" pnpm generate:deps
   export SAB_DEPS_READY=1
-  run_step "eslint (workspace, --max-warnings 0)" pnpm lint
+  # Typecheck before eslint: type-aware eslint builds the same programs and is
+  # several times slower, so a type error must not wait behind it. Eslint stays
+  # single-threaded (see pre-commit) to keep the shared machine's memory free.
   run_step "typecheck (workspace)" pnpm typecheck
+  run_step "eslint (workspace, --max-warnings 0)" pnpm lint
   run_step "knip (unused files, exports, dependencies)" pnpm knip
-  if suite_stamp_is_current; then
+  if [[ "$PUSH_IS_HEAD" == true ]] && suite_stamp_is_current; then
     echo "✓ vitest (workspace): skipped - the full suite already passed on these exact bytes"
   else
     run_step "vitest (workspace)" pnpm test

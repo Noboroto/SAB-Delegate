@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-# Lets pre-push skip the workspace gates (prettier, typecheck, eslint) pre-commit
-# already proved on the exact same bytes. The legacy root/ gates are never
-# skipped by it: they run whenever root/ is part of the change.
+# Lets pre-push skip the workspace gates (prettier, typecheck, eslint, knip, the
+# suite) pre-commit already proved on the exact same bytes. The legacy root/
+# gates are never skipped by it: they run whenever root/ is part of the change.
 #
 # Why this is not a weakened gate: prettier, tsc and eslint all read the WORKING
 # TREE from disk, not git history. A commit that changes HEAD but not one byte
@@ -22,7 +22,7 @@
 #
 # GATE_SET is part of the stamp so that editing which checks the hooks run
 # invalidates every existing stamp. Bump it whenever the covered steps change.
-GATE_SET="v2:prettier+typecheck+eslint"
+GATE_SET="v3:prettier+typecheck+eslint+knip+vitest"
 
 gate_stamp_file() {
   printf '%s/content-gate-stamp' "$(git rev-parse --git-dir)"
@@ -33,18 +33,51 @@ gate_stamp_file() {
 # generated trees (packages/shared/src/generated, packages/shared/dist) are derived from
 # tracked inputs, and the hooks regenerate them before any gate runs.
 gate_stamp_key() {
-  local list
-  list="$(mktemp)"
+  local list rc=0
+  list="$(mktemp)" || return 1
+  # `if` rather than `[[ ... ]] && printf`: under `set -e` + pipefail a loop
+  # whose LAST iteration skips a file would exit 1 and fail the hook spuriously.
+  # `sort -z` is load-bearing: `git ls-files -c -o` emits cached and untracked
+  # paths in different positions, so `git add` of a new file would reorder the
+  # list and change the key with not one byte changed on disk. LC_ALL=C keeps
+  # the order independent of the developer's locale.
   git ls-files -c -o --exclude-standard -z |
     while IFS= read -r -d '' f; do
       if [[ -f "$f" ]]; then printf '%s\0' "$f"; fi
-    done | LC_ALL=C sort -z -u > "$list"
+    done | LC_ALL=C sort -z -u >"$list" || rc=$?
   {
     printf '%s\n' "$GATE_SET"
-    tr '\0' '\n' < "$list"
-    xargs -0 -n 200 git hash-object -- < "$list"
-  } | git hash-object --stdin
+    tr '\0' '\n' <"$list"
+    # stdin redirection, not `xargs -a`: that flag is a GNU extension and BSD
+    # xargs on macOS rejects it.
+    xargs -0 -n 200 git hash-object -- <"$list"
+  } | git hash-object --stdin || rc=$?
+  # A pipeline that half-died (truncated file list, failed hash) still prints a
+  # plausible hash computed over fewer inputs; the status must survive `rm` so
+  # callers refuse the key instead of stamping it.
   rm -f "$list"
+  return "$rc"
+}
+
+# A stamp vouches for the WORKTREE, but a push sends COMMITS; the two are the
+# same bytes only when nothing is left uncommitted. With `git add -p` the gates
+# can pass on a tree whose unstaged hunk fixes the staged one, and the commit
+# then carries only the broken half. So a stamp is written only when the
+# worktree equals the index, and honoured only when it equals HEAD.
+# Output is captured before testing it: a failing `git` (index lock,
+# corruption) prints nothing, and an inline `[[ -z "$(...)" ]]` would read that
+# as a clean tree.
+worktree_matches_index() {
+  local untracked
+  git diff --quiet || return 1
+  untracked="$(git ls-files -o --exclude-standard)" || return 1
+  [[ -z "$untracked" ]]
+}
+
+worktree_matches_head() {
+  local status
+  status="$(git status --porcelain --untracked-files=all)" || return 1
+  [[ -z "$status" ]]
 }
 
 # The key is read once before the first gate (gate_stamp_begin) and once more
@@ -57,14 +90,19 @@ GATE_STAMP_BEFORE=""
 # before the first gate, so the formatter's own edits are not mistaken for
 # concurrent ones.
 gate_stamp_begin() {
-  GATE_STAMP_BEFORE="$(gate_stamp_key)"
+  GATE_STAMP_BEFORE="$(gate_stamp_key)" || GATE_STAMP_BEFORE=""
 }
 
 # Echoes the key to record, or nothing when the tree moved (or no begin call).
 gate_stamp_stable_key() {
   local after
-  after="$(gate_stamp_key)"
-  if [[ -z "$GATE_STAMP_BEFORE" || "$after" != "$GATE_STAMP_BEFORE" ]]; then
+  # A key that cannot be computed costs the stamp, never the commit or push.
+  after="$(gate_stamp_key)" || after=""
+  if ! worktree_matches_index; then
+    echo "⚠ working tree differs from the index; no stamp recorded (the next push re-runs the gates)" >&2
+    return 0
+  fi
+  if [[ -z "$GATE_STAMP_BEFORE" || -z "$after" || "$after" != "$GATE_STAMP_BEFORE" ]]; then
     echo "⚠ working tree changed while the gates ran; no stamp recorded (the next push re-runs them)" >&2
     return 0
   fi
@@ -85,23 +123,25 @@ gate_stamp_is_current() {
   local f key
   f="$(gate_stamp_file)"
   [[ -f "$f" ]] || return 1
+  worktree_matches_head || return 1
+  # Captured, not inlined into the comparison: inside `$( )` the producer's exit
+  # status is discarded. Empty is rejected too: an interrupted write can leave a
+  # 0-byte stamp, and "" == "" would read as a match.
   key="$(gate_stamp_key)" || return 1
   [[ -n "$key" && "$(cat "$f")" == "$key" ]]
 }
 
-# The same argument, applied to the test suite — which is where the time
-# actually is. Vitest reads the WORKING TREE exactly like the three gates above,
-# so a full suite that just passed on this content cannot come out differently
-# when re-run on the identical content one `git commit` later.
+# The same argument, applied to the test suite - which is where the time
+# actually is. Vitest reads the WORKING TREE exactly like the gates above, so a
+# full suite that just passed on this content cannot come out differently when
+# re-run on the identical content one `git commit` later.
 #
-# Kept as a SEPARATE stamp rather than folded into GATE_SET, because the two are
-# earned differently: pre-commit clears the three content gates on every
-# commit, but only runs the FULL suite on the RUN_ALL_TESTS path; every other
-# commit runs a narrow `vitest related`. Writing one combined stamp would let a
-# narrow run license a skip of the full suite. So this stamp is written ONLY
-# where the full suite actually ran, and any commit that did not run it simply
-# leaves the stamp stale, which fails closed into running the suite.
-SUITE_SET="v2:vitest-full-suite"
+# Kept as a SEPARATE stamp rather than folded into GATE_SET, because it is
+# earned separately: it is written ONLY right after the full suite passed. A
+# path that ran something narrower (or nothing) leaves it stale, which fails
+# closed into running the suite, instead of letting a narrow run license a skip
+# of the full one.
+SUITE_SET="v3:vitest-full-suite"
 
 suite_stamp_file() {
   printf '%s/full-suite-stamp' "$(git rev-parse --git-dir)"
@@ -112,7 +152,8 @@ suite_stamp_file() {
 suite_stamp_key() {
   local content_key="${1:-}"
   if [[ -z "$content_key" ]]; then
-    content_key="$(gate_stamp_key)"
+    content_key="$(gate_stamp_key)" || return 1
+    [[ -n "$content_key" ]] || return 1
   fi
   {
     printf '%s\n' "$SUITE_SET"
@@ -132,6 +173,7 @@ suite_stamp_is_current() {
   local f key
   f="$(suite_stamp_file)"
   [[ -f "$f" ]] || return 1
+  worktree_matches_head || return 1
   key="$(suite_stamp_key)" || return 1
   [[ -n "$key" && "$(cat "$f")" == "$key" ]]
 }
