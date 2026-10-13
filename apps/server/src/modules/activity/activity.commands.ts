@@ -95,6 +95,19 @@ export class ActivityCommands {
     if (guildId === null) throw new ServiceError(ErrorCode.GUILD_NOT_FOUND);
 
     const t = translatorFor(await this.locales.resolve(guildId, interaction));
+    // Judged on the trimmed text, which is what is used, and said specifically.
+    const refusal =
+      emoji.trim() === ''
+        ? t('activity.emojiEmpty')
+        : name.trim() === ''
+          ? t('activity.nameEmpty')
+          : shortName.trim().length !== ACTIVITY_SHORT_NAME_LENGTH
+            ? t('activity.shortNameInvalid', { length: ACTIVITY_SHORT_NAME_LENGTH })
+            : null;
+    if (refusal !== null) {
+      await replyInChunks(interaction, refusal, { ephemeral: true });
+      return;
+    }
     // Settled before anything is deferred or created, so the refusal is a
     // quick private answer and no role is made for nothing.
     const categoryId = await this.activities.resolveCategoryId(guildId, category?.id);

@@ -5,6 +5,7 @@ import {
   REACTION_EMOJI_MAX_LENGTH,
   splitMessage,
   type ActorContext,
+  type IntroductionResult,
 } from '@sab/shared';
 import {
   ChannelType,
@@ -26,7 +27,7 @@ import {
 import { ServiceError } from '../../common/errors/service-error.js';
 import { CommandGroup } from '../../discord/command-groups.js';
 import { DiscordCommands } from '../../discord/decorators/discord-commands.decorator.js';
-import { replyInChunks } from '../../discord/helpers/reply.js';
+import { discordErrorCode, replyInChunks } from '../../discord/helpers/reply.js';
 import { ReactionAutocompleteInterceptor } from '../../discord/interceptors/reaction-autocomplete.interceptor.js';
 import { DiscordReactionService } from '../../discord/services/discord-reaction.service.js';
 import { MessageResolver } from '../../discord/services/message-resolver.service.js';
@@ -172,6 +173,20 @@ async function sendChunked(
   for (const piece of tail) await rest(chunk(piece));
 }
 
+/** Unknown Channel, Missing Access, Missing Permissions: the intro channel cannot be read. */
+const UNREADABLE_CODES: ReadonlySet<number> = new Set([10003, 50001, 50013]);
+
+function isUnreadableChannel(error: unknown): boolean {
+  if (error instanceof ServiceError) {
+    return (
+      error.code === ErrorCode.DISCORD_CHANNEL_NOT_FOUND ||
+      error.code === ErrorCode.DISCORD_MISSING_PERMISSIONS
+    );
+  }
+  const code = discordErrorCode(error);
+  return code !== undefined && UNREADABLE_CODES.has(code);
+}
+
 /** The commands are offered in direct messages too (see AGENTS.md); a server-only one has no server there. */
 function guildOf(interaction: { readonly guildId: string | null }): string {
   if (interaction.guildId === null) throw new ServiceError(ErrorCode.GUILD_NOT_FOUND);
@@ -212,8 +227,17 @@ export class InfoCommands {
     // Reading up to 10000 messages outlasts the 3 s window for a first reply.
     await interaction.deferReply();
 
-    const result = await this.info.getIntroduction(guildId, { userId: user.id });
     const t = translatorFor(await this.locales.resolve(guildId, interaction));
+    let result: IntroductionResult;
+    try {
+      result = await this.info.getIntroduction(guildId, { userId: user.id });
+    } catch (error) {
+      // The channel is set but the bot cannot read it: say so, as the old command did.
+      if (!isUnreadableChannel(error)) throw error;
+      this.logger.warn(`/get intro could not read the intro channel (${errorLabel(error)})`);
+      await interaction.editReply({ content: t('info.intro.unreadable') });
+      return;
+    }
     switch (result.status) {
       case 'NO_CHANNEL':
         // A setting problem is for the person who ran the command, not the room.
@@ -249,9 +273,24 @@ export class InfoCommands {
     @Context() [interaction]: SlashCommandContext,
     @Options() { messageLink, emoji, mention, replyMessage, content }: IdByReactionOptions,
   ): Promise<void> {
+    // Whether the list goes to another message is known from the options, so
+    // the placeholder is made first: reading two links can outlast the 3 s window.
+    const privateAnswer =
+      replyMessage !== undefined && replyMessage !== null && replyMessage.trim() !== '';
+    await interaction.deferReply(privateAnswer ? { flags: MessageFlags.Ephemeral } : {});
+
     const t = translatorFor(await this.locales.resolve(interaction.guildId, interaction));
     const channelId = interaction.channelId ?? undefined;
-    const sayPrivately = (text: string) => replyInChunks(interaction, text, { ephemeral: true });
+    // A problem is for the person who ran the command: a public placeholder
+    // cannot be made private, so it goes and the problem follows privately.
+    const sayPrivately = async (text: string): Promise<void> => {
+      if (privateAnswer) {
+        await interaction.editReply({ content: text });
+        return;
+      }
+      await interaction.deleteReply();
+      await interaction.followUp({ content: text, flags: MessageFlags.Ephemeral });
+    };
 
     // A link into another server is followed on purpose: the bot works across
     // every server it is in (see AGENTS.md).
@@ -277,17 +316,14 @@ export class InfoCommands {
     }
 
     const reaction = emoji.trim();
-    // The cache answers, so a typo is refused before anything is deferred.
+    // The cache answers, so a typo costs no paging.
     if (!this.reactions.hasReaction(message, reaction)) {
       await sayPrivately(t('info.reactors.none'));
       return;
     }
 
-    // Paging through thousands of reactors outlives the 3 s window. The list
-    // goes to a channel message when replying elsewhere, so the answer to the
-    // command is then private.
-    await interaction.deferReply(target === undefined ? {} : { flags: MessageFlags.Ephemeral });
-
+    // The list goes to a channel message when replying elsewhere, so the answer
+    // to the command is then private (the placeholder was made that way).
     const { url, userIds } = await this.info.listReactorIds(message.guildId, {
       channelId: message.channelId,
       messageId: message.id,

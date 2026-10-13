@@ -164,10 +164,16 @@ export class ThreadCommands {
     @Options() { name, message, isPrivate, destination }: ThreadCreateOptions,
   ): Promise<void> {
     const guildId = guildOf(interaction);
+    const t = translatorFor(await this.locales.resolve(guildId, interaction));
+    // Settled before anything is deferred, so the refusal is a quick private answer.
+    const blank = name.trim() === '' ? 'nameEmpty' : message.trim() === '' ? 'messageEmpty' : null;
+    if (blank !== null) {
+      await replyInChunks(interaction, t(`thread.create.${blank}`), { ephemeral: true });
+      return;
+    }
+
     // Creating the thread and posting in it outlast the 3 s window for a first reply.
     await interaction.deferReply();
-
-    const t = translatorFor(await this.locales.resolve(guildId, interaction));
     const result = await this.threads.create(
       guildId,
       {
@@ -219,7 +225,7 @@ export class ThreadCommands {
       actorOf(interaction),
     );
     const t = translatorFor(await this.locales.resolve(guildId, interaction));
-    await replyInChunks(interaction, batchText(t, result, channelId, oldPrefix.trim()), {
+    await replyInChunks(interaction, batchText(t, result, channelId, oldPrefix), {
       ephemeral: true,
     });
   }
@@ -240,7 +246,6 @@ export class ThreadCommands {
     const input = { channelId, prefix };
     const actor = actorOf(interaction);
     const t = translatorFor(await this.locales.resolve(guildId, interaction));
-    const cleanPrefix = prefix.trim();
 
     const plan = await this.threads.deleteByPrefix(guildId, input, actor, { dryRun: true });
     if (plan.status !== 'OK') {
@@ -250,7 +255,7 @@ export class ThreadCommands {
     if (plan.count === 0) {
       await showResult(
         interaction,
-        t('thread.prefix.noMatch', { channel: `<#${channelId}>`, prefix: cleanPrefix }),
+        t('thread.prefix.noMatch', { channel: `<#${channelId}>`, prefix }),
       );
       return;
     }
@@ -263,7 +268,7 @@ export class ThreadCommands {
       prompt: t('thread.delete.prompt', {
         count: plan.count,
         channel: `<#${channelId}>`,
-        prefix: cleanPrefix,
+        prefix,
         list: names.join('\n'),
       }),
       confirmLabel: t('purge.confirm.confirmButton'),
@@ -275,7 +280,7 @@ export class ThreadCommands {
     if (outcome !== 'confirmed') return;
 
     const result = await this.threads.deleteByPrefix(guildId, input, actor, { dryRun: false });
-    await showResult(interaction, batchText(t, result, channelId, cleanPrefix));
+    await showResult(interaction, batchText(t, result, channelId, prefix));
   }
 }
 

@@ -165,6 +165,11 @@ export class PrivateThreadCommands {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     const t = translatorFor(await this.locales.resolve(guildId, interaction));
 
+    if (message !== undefined && message.trim() === '') {
+      await replyInChunks(interaction, t('thread.privateThread.messageEmpty'), { ephemeral: true });
+      return;
+    }
+
     const userIds = parseSnowflakes(ids ?? '');
     if (userIds.length === 0 && role === undefined) {
       await replyInChunks(interaction, t('thread.privateThread.needsIdsOrRole'), {
@@ -201,6 +206,11 @@ export class PrivateThreadCommands {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     const t = translatorFor(await this.locales.resolve(guildId, interaction));
 
+    if (message !== undefined && message.trim() === '') {
+      await replyInChunks(interaction, t('thread.privateThread.messageEmpty'), { ephemeral: true });
+      return;
+    }
+
     // A bare message id means "in this channel"; the service reads a full reference.
     const ref = parseMessageRef(messageLink, { channelId: interaction.channelId });
     const result = await this.privateThreads.createPrivateThreadsFromReactors(
@@ -213,6 +223,8 @@ export class PrivateThreadCommands {
         emoji,
       },
       actorOf(interaction),
+      // A link into another server is followed, allowed as in the legacy bot.
+      { crossGuild: true },
     );
     await replyInChunks(interaction, resultText(t, result, emoji.trim()), { ephemeral: true });
   }

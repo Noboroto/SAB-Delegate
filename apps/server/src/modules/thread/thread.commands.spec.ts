@@ -134,6 +134,22 @@ describe('/thread create', () => {
     );
   });
 
+  it.each([
+    [{ name: '   ' }, 'Thread name must not be empty!'],
+    [{ message: ' \n ' }, 'The message must not be empty.'],
+  ])('says what is blank instead of a generic failure (%o)', async (blank, expected) => {
+    const { commands, threads, interaction } = build();
+
+    await commands.onCreate([interaction] as never, { ...options, ...blank });
+
+    expect(interaction.reply).toHaveBeenCalledWith({
+      content: expected,
+      flags: MessageFlags.Ephemeral,
+    });
+    expect(interaction.deferReply).not.toHaveBeenCalled();
+    expect(threads.create).not.toHaveBeenCalled();
+  });
+
   it('is refused outside a server before anything is deferred', async () => {
     const { commands, interaction } = build();
     interaction.guildId = null;
@@ -175,13 +191,23 @@ describe('/thread edit-prefix', () => {
     expect(text).toContain('A-locked: Missing Permissions');
   });
 
+  it('renames at once, without a confirmation, as the legacy command did', async () => {
+    const { commands, threads, interaction } = build();
+    threads.renameByPrefix.mockResolvedValue({ status: 'OK', count: 1, done: 1, failures: [] });
+
+    await commands.onEditPrefix([interaction] as never, options);
+
+    expect(threads.renameByPrefix).toHaveBeenCalledTimes(1);
+    expect(threads.renameByPrefix.mock.calls[0]![3]).toBeUndefined();
+  });
+
   it('says when no active thread matches', async () => {
     const { commands, threads, interaction } = build();
     threads.renameByPrefix.mockResolvedValue({ status: 'OK', count: 0, done: 0, failures: [] });
 
     await commands.onEditPrefix([interaction] as never, options);
 
-    expect(lastText(interaction)).toBe(`No active thread in <#${CHANNEL}> starts with \`A-\`.`);
+    expect(lastText(interaction)).toBe(`No active thread in <#${CHANNEL}> starts with \` A- \`.`);
   });
 
   it('says when the channel has no threads to list', async () => {

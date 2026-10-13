@@ -8,5 +8,8 @@
     }
   },
   "created": "Created activity \"{name}\":\n- Roles: {roles}\n- {general}\n- {threadOnly}\n- {voice}",
-  "noCategory": "There is no category to put the channels in. Choose one with the category option, or set a default category for this server in the dashboard."
+  "noCategory": "There is no category to put the channels in. Choose one with the category option, or set a default category for this server in the dashboard.",
+  "emojiEmpty": "The emoji must not be empty.",
+  "nameEmpty": "The activity name must not be empty.",
+  "shortNameInvalid": "The short name must be exactly {length} characters, not counting spaces at the ends."
 }

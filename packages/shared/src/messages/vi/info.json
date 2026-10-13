@@ -20,6 +20,7 @@
   },
   "intro": {
     "noChannel": "Máy chủ này chưa đặt kênh giới thiệu.",
+    "unreadable": "Không đọc được kênh giới thiệu, hãy kiểm tra quyền của bot.",
     "notFound": "Thành viên này không có bài giới thiệu nào trong {count, number} tin nhắn gần nhất.",
     "found": "Đến [bài giới thiệu]({url}) của {user}:\n\n{content}"
   },

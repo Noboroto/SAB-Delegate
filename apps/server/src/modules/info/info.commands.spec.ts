@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { GuildLocaleService } from '../../i18n/guild-locale.service.js';
 import type { DiscordReactionService } from '../../discord/services/discord-reaction.service.js';
 import type { MessageResolver } from '../../discord/services/message-resolver.service.js';
+import { ServiceError } from '../../common/errors/service-error.js';
 import { InfoCommands } from './info.commands.js';
 import type { InfoService } from './info.service.js';
 
@@ -118,6 +119,26 @@ describe('/get intro', () => {
       flags: MessageFlags.Ephemeral,
     });
     expect(target.editReply).not.toHaveBeenCalled();
+  });
+
+  it.each([[ErrorCode.DISCORD_CHANNEL_NOT_FOUND], [ErrorCode.DISCORD_MISSING_PERMISSIONS]])(
+    'says the intro channel cannot be read, in the old words, for %s',
+    async (code) => {
+      const { commands, info, interaction } = build();
+      info.getIntroduction.mockRejectedValue(new ServiceError(code));
+      const target = interaction();
+      await commands.onIntro([target] as never, OPTIONS);
+
+      expect(contentOf(target.editReply)).toBe(
+        "Cannot read the introduction channel, check the bot's permissions.",
+      );
+    },
+  );
+
+  it('leaves other failures to the error filter', async () => {
+    const { commands, info, interaction } = build();
+    info.getIntroduction.mockRejectedValue(new TypeError('boom'));
+    await expect(commands.onIntro([interaction()] as never, OPTIONS)).rejects.toThrow(TypeError);
   });
 
   it('splits a long introduction into messages of at most 2000 characters', async () => {
@@ -268,21 +289,34 @@ describe('/get id-by-reaction', () => {
       .mockResolvedValueOnce({ status: 'NOT_FOUND' });
     const target = interaction();
     await commands.onIdByReaction([target] as never, { ...OPTIONS, replyMessage: 'reply-link' });
-    expect(target.deferReply).not.toHaveBeenCalled();
-    expect(target.reply).toHaveBeenCalledWith({
-      content: MESSAGES.en.info.reactors.replyNotFound,
-      flags: MessageFlags.Ephemeral,
-    });
+    expect(target.deferReply).toHaveBeenCalledWith({ flags: MessageFlags.Ephemeral });
+    expect(target.deleteReply).not.toHaveBeenCalled();
+    expect(contentOf(target.editReply)).toBe(MESSAGES.en.info.reactors.replyNotFound);
   });
 
-  it('refuses privately, before deferring, an emoji nobody used', async () => {
+  it('defers before it reads either link, which can outlast the 3 s window', async () => {
+    const { commands, resolver, message, interaction } = build();
+    resolver.fetch
+      .mockResolvedValueOnce({ status: 'OK', message })
+      .mockResolvedValueOnce({ status: 'OK', message });
+    const target = interaction();
+    await commands.onIdByReaction([target] as never, { ...OPTIONS, replyMessage: 'reply-link' });
+
+    const deferredAt = target.deferReply.mock.invocationCallOrder[0] ?? Infinity;
+    expect(resolver.fetch).toHaveBeenCalledTimes(2);
+    for (const read of resolver.fetch.mock.invocationCallOrder) {
+      expect(deferredAt).toBeLessThan(read);
+    }
+  });
+
+  it('replaces the public placeholder with a private refusal for an emoji nobody used', async () => {
     const { commands, reactions, info, interaction } = build();
     reactions.hasReaction.mockReturnValue(false);
     const target = interaction();
     await commands.onIdByReaction([target] as never, OPTIONS);
-    expect(target.deferReply).not.toHaveBeenCalled();
     expect(info.listReactorIds).not.toHaveBeenCalled();
-    expect(target.reply).toHaveBeenCalledWith({
+    expect(target.deleteReply).toHaveBeenCalledTimes(1);
+    expect(target.followUp).toHaveBeenCalledWith({
       content: MESSAGES.en.info.reactors.none,
       flags: MessageFlags.Ephemeral,
     });
@@ -293,7 +327,7 @@ describe('/get id-by-reaction', () => {
     resolver.fetch.mockResolvedValue({ status: 'INVALID_LINK', reason: 'MALFORMED' });
     const target = interaction();
     await commands.onIdByReaction([target] as never, OPTIONS);
-    expect(target.reply).toHaveBeenCalledWith({
+    expect(target.followUp).toHaveBeenCalledWith({
       content: MESSAGES.en.errors.invalidLink.MALFORMED,
       flags: MessageFlags.Ephemeral,
     });

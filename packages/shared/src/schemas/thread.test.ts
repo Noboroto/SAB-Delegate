@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { MESSAGE_MAX_LENGTH } from '../constants/limits.js';
 import {
   PRIVATE_THREAD_MAX_MEMBERS,
   PrivateThreadCreateSchema,
   PrivateThreadFromReactorsSchema,
+  THREAD_BYLINE_MAX_LENGTH,
   THREAD_MESSAGE_MAX_LENGTH,
   THREAD_NAME_MAX_LENGTH,
   ThreadCreateSchema,
@@ -61,6 +63,17 @@ describe('ThreadCreateSchema', () => {
     ).toBe(true);
   });
 
+  it('leaves room for the longest byline and the blank line, so the first post always fits', () => {
+    const parsed = ThreadCreateSchema.parse({
+      channelId: CHANNEL,
+      name: 'n',
+      message: 'x'.repeat(THREAD_MESSAGE_MAX_LENGTH),
+      byline: 'b'.repeat(THREAD_BYLINE_MAX_LENGTH),
+    });
+    const content = `${parsed.byline}\n\n${parsed.message}`;
+    expect(content.length).toBeLessThanOrEqual(MESSAGE_MAX_LENGTH);
+  });
+
   it('refuses a channel that is not a snowflake', () => {
     expect(
       ThreadCreateSchema.safeParse({ channelId: '<#123>', name: 'n', message: 'm' }).success,
@@ -69,14 +82,15 @@ describe('ThreadCreateSchema', () => {
 });
 
 describe('ThreadRenameSchema and ThreadDeleteSchema', () => {
-  it('trims the prefixes and refuses an empty old prefix', () => {
+  it('keeps the prefixes exactly as typed and refuses an empty old prefix', () => {
     expect(
       ThreadRenameSchema.parse({ channelId: CHANNEL, oldPrefix: ' A- ', newPrefix: ' B- ' }),
-    ).toEqual({ channelId: CHANNEL, oldPrefix: 'A-', newPrefix: 'B-' });
+    ).toEqual({ channelId: CHANNEL, oldPrefix: ' A- ', newPrefix: ' B- ' });
+    expect(ThreadDeleteSchema.parse({ channelId: CHANNEL, prefix: 'A- ' }).prefix).toBe('A- ');
     expect(
-      ThreadRenameSchema.safeParse({ channelId: CHANNEL, oldPrefix: '  ', newPrefix: 'B' }).success,
+      ThreadRenameSchema.safeParse({ channelId: CHANNEL, oldPrefix: '', newPrefix: 'B' }).success,
     ).toBe(false);
-    expect(ThreadDeleteSchema.safeParse({ channelId: CHANNEL, prefix: ' ' }).success).toBe(false);
+    expect(ThreadDeleteSchema.safeParse({ channelId: CHANNEL, prefix: '' }).success).toBe(false);
   });
 
   it('allows an empty new prefix, which removes the prefix', () => {

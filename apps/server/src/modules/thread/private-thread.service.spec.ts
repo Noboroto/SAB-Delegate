@@ -36,6 +36,8 @@ type Setup = {
   type?: ChannelType;
   guildId?: string;
   createFailureFor?: string;
+  /** Posting the first message fails after the thread and its members exist. */
+  sendFails?: boolean;
 };
 
 function build(setup: Setup = {}) {
@@ -44,6 +46,7 @@ function build(setup: Setup = {}) {
     name: string;
     add: ReturnType<typeof vi.fn>;
     send: ReturnType<typeof vi.fn>;
+    remove: ReturnType<typeof vi.fn>;
   }> = [];
   let active = 0;
   let peak = 0;
@@ -60,9 +63,17 @@ function build(setup: Setup = {}) {
       const thread = {
         name: options.name,
         members: { add: vi.fn().mockResolvedValue(undefined) },
-        send: vi.fn().mockResolvedValue(undefined),
+        send: setup.sendFails
+          ? vi.fn().mockRejectedValue(discordError(50013, 'Missing Permissions'))
+          : vi.fn().mockResolvedValue(undefined),
+        delete: vi.fn().mockResolvedValue(undefined),
       };
-      opened.push({ name: options.name, add: thread.members.add, send: thread.send });
+      opened.push({
+        name: options.name,
+        add: thread.members.add,
+        send: thread.send,
+        remove: thread.delete,
+      });
       return thread;
     }),
   };
@@ -119,7 +130,7 @@ describe('PrivateThreadService.createPrivateThreads', () => {
     expect(opened[0]!.add.mock.calls.map(([id]) => id as string)).toEqual([ALICE, INVOKER]);
     expect(opened[0]!.send).toHaveBeenCalledWith({
       content: 'Welcome!',
-      allowedMentions: { parse: [] },
+      allowedMentions: { parse: ['users', 'roles'] },
     });
     expect(audit.record).toHaveBeenCalledWith({
       guildId: GUILD,
@@ -127,6 +138,38 @@ describe('PrivateThreadService.createPrivateThreads', () => {
       action: AUDIT_ACTIONS.privateThreadCreate,
       params: { channelId: CHANNEL, count: 2, failed: 0, total: 2 },
     });
+  });
+
+  it('pings nobody from the message of a caller that is not a slash command', async () => {
+    const { service, opened } = build();
+    await service.createPrivateThreads(
+      GUILD,
+      { ...request, userIds: [ALICE] },
+      { source: 'HTTP', userId: INVOKER },
+    );
+    expect(opened[0]!.send).toHaveBeenCalledWith(
+      expect.objectContaining({ allowedMentions: { parse: [] } }),
+    );
+  });
+
+  it('removes a thread whose first message could not be posted, and reports the member', async () => {
+    const { service, opened } = build({ sendFails: true });
+
+    const result = await service.createPrivateThreads(
+      GUILD,
+      { ...request, userIds: [ALICE] },
+      ACTOR,
+    );
+
+    expect(result).toMatchObject({ total: 1, created: 0 });
+    expect(result.failures).toEqual([{ userId: ALICE, reason: 'Missing Permissions' }]);
+    expect(opened[0]!.remove).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the thread of a member that worked', async () => {
+    const { service, opened } = build();
+    await service.createPrivateThreads(GUILD, { ...request, userIds: [ALICE] }, ACTOR);
+    expect(opened[0]!.remove).not.toHaveBeenCalled();
   });
 
   it('adds the invoker once when the invoker is also on the list', async () => {
@@ -275,7 +318,7 @@ describe('PrivateThreadService.createPrivateThreadsFromReactors', () => {
 
   it('opens a thread for each person who reacted with the emoji', async () => {
     const { service, messages, reactions, opened } = build();
-    const message = { id: 'message' };
+    const message = { id: 'message', guildId: GUILD };
     messages.fetch.mockResolvedValue({ status: 'OK', message });
     reactions.fetchReactorIds.mockResolvedValue([ALICE, BOB]);
 
@@ -287,9 +330,36 @@ describe('PrivateThreadService.createPrivateThreadsFromReactors', () => {
     expect(opened).toHaveLength(2);
   });
 
+  it('refuses a message from another server unless the caller allows it', async () => {
+    const strict = build();
+    strict.messages.fetch.mockResolvedValue({
+      status: 'OK',
+      message: { id: 'message', guildId: '900000000000000009' },
+    });
+    strict.reactions.fetchReactorIds.mockResolvedValue([ALICE]);
+    await expect(
+      strict.service.createPrivateThreadsFromReactors(GUILD, byReaction, ACTOR),
+    ).rejects.toMatchObject({ code: ErrorCode.DISCORD_CHANNEL_NOT_FOUND });
+    expect(strict.reactions.fetchReactorIds).not.toHaveBeenCalled();
+
+    const lenient = build();
+    lenient.messages.fetch.mockResolvedValue({
+      status: 'OK',
+      message: { id: 'message', guildId: '900000000000000009' },
+    });
+    lenient.reactions.fetchReactorIds.mockResolvedValue([ALICE]);
+    const result = await lenient.service.createPrivateThreadsFromReactors(
+      GUILD,
+      byReaction,
+      ACTOR,
+      { crossGuild: true },
+    );
+    expect(result).toMatchObject({ status: 'OK', created: 1 });
+  });
+
   it('says so, and opens nothing, when nobody reacted', async () => {
     const { service, messages, reactions, threads, guild } = build();
-    messages.fetch.mockResolvedValue({ status: 'OK', message: {} });
+    messages.fetch.mockResolvedValue({ status: 'OK', message: { guildId: GUILD } });
     reactions.fetchReactorIds.mockResolvedValue([]);
 
     const result = await service.createPrivateThreadsFromReactors(GUILD, byReaction, ACTOR);

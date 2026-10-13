@@ -101,6 +101,19 @@ describe('/private-thread list', () => {
     });
   });
 
+  it('says a blank message is blank instead of sending an empty thread', async () => {
+    const { commands, service, interaction } = build();
+
+    await commands.onList([interaction] as never, {
+      prefix: 'Team',
+      ids: ALICE,
+      message: '  ',
+    });
+
+    expect(text(interaction)).toBe('The message must not be empty.');
+    expect(service.createPrivateThreads).not.toHaveBeenCalled();
+  });
+
   it('asks for ids or a role when there is nothing to work from', async () => {
     const { commands, service, interaction } = build();
 
@@ -164,6 +177,7 @@ describe('/private-thread by-reaction', () => {
         emoji: ' 👍 ',
       },
       { source: 'DISCORD', userId: USER },
+      { crossGuild: true },
     );
   });
 

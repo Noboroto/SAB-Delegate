@@ -8,5 +8,8 @@
     }
   },
   "created": "Đã tạo hoạt động \"{name}\":\n- Vai trò: {roles}\n- {general}\n- {threadOnly}\n- {voice}",
-  "noCategory": "Chưa có danh mục để đặt các kênh. Hãy chọn danh mục ở tuỳ chọn category, hoặc đặt danh mục mặc định cho máy chủ trong bảng điều khiển."
+  "noCategory": "Chưa có danh mục để đặt các kênh. Hãy chọn danh mục ở tuỳ chọn category, hoặc đặt danh mục mặc định cho máy chủ trong bảng điều khiển.",
+  "emojiEmpty": "Biểu tượng cảm xúc không được để trống.",
+  "nameEmpty": "Tên hoạt động không được để trống.",
+  "shortNameInvalid": "Tên viết tắt phải đúng {length} ký tự, không tính khoảng trắng ở hai đầu."
 }

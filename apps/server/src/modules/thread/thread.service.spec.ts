@@ -1,5 +1,11 @@
 import 'reflect-metadata';
-import { AUDIT_ACTIONS, ErrorCode, THREAD_NAME_MAX_LENGTH, type ActorContext } from '@sab/shared';
+import {
+  AUDIT_ACTIONS,
+  ErrorCode,
+  THREAD_MESSAGE_MAX_LENGTH,
+  THREAD_NAME_MAX_LENGTH,
+  type ActorContext,
+} from '@sab/shared';
 import { ChannelType, Collection, ThreadAutoArchiveDuration } from 'discord.js';
 import { describe, expect, it, vi } from 'vitest';
 import type { AuditService } from '../../common/audit/audit.service.js';
@@ -86,7 +92,7 @@ describe('ThreadService.create', () => {
     });
     expect(created.send).toHaveBeenCalledWith({
       content: '<@3> created this thread.\n\nHello everyone',
-      allowedMentions: { parse: [] },
+      allowedMentions: { parse: ['users', 'roles'] },
     });
     expect(audit.record).toHaveBeenCalledWith({
       guildId: GUILD,
@@ -102,6 +108,34 @@ describe('ThreadService.create', () => {
     expect(created.send).toHaveBeenCalledWith(
       expect.objectContaining({ content: 'Hello everyone' }),
     );
+  });
+
+  it('pings nobody from the post of a caller that is not a slash command', async () => {
+    const { service, created } = build();
+    await service.create(GUILD, body, { source: 'HTTP', userId: USER });
+    expect(created.send).toHaveBeenCalledWith(
+      expect.objectContaining({ allowedMentions: { parse: [] } }),
+    );
+  });
+
+  it('removes the thread it made when the first post cannot be sent', async () => {
+    const { service, created } = build();
+    created.send.mockRejectedValue(discordError(50013, 'Missing Permissions'));
+
+    await expect(service.create(GUILD, body, ACTOR)).rejects.toMatchObject({
+      code: ErrorCode.DISCORD_MISSING_PERMISSIONS,
+    });
+    expect(created.delete).toHaveBeenCalledTimes(1);
+  });
+
+  it('still reports the failed post when the unfinished thread cannot be removed either', async () => {
+    const { service, created } = build();
+    created.send.mockRejectedValue(discordError(50013, 'Missing Permissions'));
+    created.delete.mockRejectedValue(discordError(50013, 'Missing Permissions'));
+
+    await expect(service.create(GUILD, body, ACTOR)).rejects.toMatchObject({
+      code: ErrorCode.DISCORD_MISSING_PERMISSIONS,
+    });
   });
 
   it('makes a private thread in a text channel when asked', async () => {
@@ -141,7 +175,10 @@ describe('ThreadService.create', () => {
     const options = threads.create.mock.calls[0]![0];
     expect(options).toMatchObject({
       name: 'Planning',
-      message: { content: 'By me.\n\nHello everyone', allowedMentions: { parse: [] } },
+      message: {
+        content: 'By me.\n\nHello everyone',
+        allowedMentions: { parse: ['users', 'roles'] },
+      },
     });
     expect(options).not.toHaveProperty('type');
     expect(created.send).not.toHaveBeenCalled();
@@ -173,7 +210,8 @@ describe('ThreadService.create', () => {
       { ...body, name: '   ' },
       { ...body, message: '  \n ' },
       { ...body, name: 'x'.repeat(THREAD_NAME_MAX_LENGTH + 1) },
-      { ...body, message: 'x'.repeat(1901) },
+      { ...body, message: 'x'.repeat(THREAD_MESSAGE_MAX_LENGTH + 1) },
+      { ...body, message: 'x'.repeat(1899) },
     ]) {
       await expect(service.create(GUILD, bad, ACTOR)).rejects.toMatchObject({
         code: ErrorCode.VALIDATION_FAILED,
@@ -212,6 +250,22 @@ describe('ThreadService.renameByPrefix', () => {
       action: AUDIT_ACTIONS.threadRename,
       params: { channelId: CHANNEL, count: 2, failed: 0, total: 2 },
     });
+  });
+
+  it('matches the prefix exactly, spaces included', async () => {
+    const spaced = fakeThread(1, 'A- one');
+    const tight = fakeThread(2, 'A-two');
+    const { service } = build({ active: [spaced, tight] });
+
+    const result = await service.renameByPrefix(
+      GUILD,
+      { ...input, oldPrefix: 'A- ', newPrefix: 'Z-' },
+      ACTOR,
+    );
+
+    expect(result).toMatchObject({ count: 1, done: 1 });
+    expect(spaced.name).toBe('Z-one');
+    expect(tight.setName).not.toHaveBeenCalled();
   });
 
   it('previews without renaming or auditing, naming the new names', async () => {
@@ -325,7 +379,7 @@ describe('ThreadService.renameByPrefix', () => {
   it('rejects an empty old prefix', async () => {
     const { service } = build();
     await expect(
-      service.renameByPrefix(GUILD, { ...input, oldPrefix: '   ' }, ACTOR),
+      service.renameByPrefix(GUILD, { ...input, oldPrefix: '' }, ACTOR),
     ).rejects.toMatchObject({ code: ErrorCode.VALIDATION_FAILED });
   });
 });

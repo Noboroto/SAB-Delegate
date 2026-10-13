@@ -18,6 +18,7 @@
   },
   "intro": {
     "noChannel": "No introduction channel is set for this server.",
+    "unreadable": "Cannot read the introduction channel, check the bot's permissions.",
     "notFound": "This member has no introduction in the last {count, number} messages.",
     "found": "Jump to the [introduction]({url}) of {user}:\n\n{content}"
   },

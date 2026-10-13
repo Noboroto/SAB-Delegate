@@ -6,15 +6,16 @@ import { SnowflakeSchema } from './snowflake.js';
 /** Discord rejects a thread name longer than this. */
 export const THREAD_NAME_MAX_LENGTH = 100;
 
-/**
- * The first post of a thread, before the line that says who made it. The
- * limit leaves room for that line (a mention and a short sentence) inside the
- * 2000 characters one message may hold.
- */
-export const THREAD_MESSAGE_MAX_LENGTH = 1900;
-
 /** The line put above the first post is built by the interface and must stay short. */
 export const THREAD_BYLINE_MAX_LENGTH = 100;
+
+/**
+ * The first post of a thread, before the line that says who made it. The line
+ * and the blank line after it (2 characters) are added to the message, and the
+ * whole must stay inside the 2000 characters one message may hold, so the
+ * limit is what is left once the longest line is taken out.
+ */
+export const THREAD_MESSAGE_MAX_LENGTH = MESSAGE_MAX_LENGTH - THREAD_BYLINE_MAX_LENGTH - 2;
 
 /**
  * A private thread is named `<prefix>-<username>`, a username takes up to 32
@@ -89,9 +90,10 @@ export type ThreadCreateResult = z.infer<typeof ThreadCreateResultSchema>;
 /** Input of `ThreadService.renameByPrefix`: only the leading prefix of each name is replaced. */
 export const ThreadRenameSchema = z.object({
   channelId: SnowflakeSchema,
-  oldPrefix: z.string().trim().min(1).max(THREAD_NAME_MAX_LENGTH),
+  /** Matched exactly (no trimming): a space at the end of a prefix is part of it. */
+  oldPrefix: z.string().min(1).max(THREAD_NAME_MAX_LENGTH),
   /** May be empty: that removes the prefix. */
-  newPrefix: z.string().trim().max(THREAD_NAME_MAX_LENGTH),
+  newPrefix: z.string().max(THREAD_NAME_MAX_LENGTH),
 });
 
 export type ThreadRename = z.infer<typeof ThreadRenameSchema>;
@@ -99,7 +101,8 @@ export type ThreadRename = z.infer<typeof ThreadRenameSchema>;
 /** Input of `ThreadService.deleteByPrefix`. */
 export const ThreadDeleteSchema = z.object({
   channelId: SnowflakeSchema,
-  prefix: z.string().trim().min(1).max(THREAD_NAME_MAX_LENGTH),
+  /** Matched exactly (no trimming). */
+  prefix: z.string().min(1).max(THREAD_NAME_MAX_LENGTH),
 });
 
 export type ThreadDelete = z.infer<typeof ThreadDeleteSchema>;

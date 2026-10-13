@@ -15,6 +15,12 @@ import { GuildConfigService } from '../guild-config/guild-config.service.js';
 import { fetchGuild, fetchGuildChannel } from '../../discord/helpers/discord-lookup.js';
 import { buildActivityOverwrites } from './activity.overwrites.js';
 
+/**
+ * The category the previous bot always used. Servers that never set a default
+ * keep getting it, but only where it exists (a server without it has none).
+ */
+export const LEGACY_ACTIVITY_CATEGORY_ID = '1046973611199697022';
+
 /** Voice channel of an activity: room for a whole event. */
 const VOICE_USER_LIMIT = 99;
 
@@ -41,15 +47,34 @@ export class ActivityService {
 
   /**
    * The category the channels go in: the one asked for, else the server's
-   * default; `null` when neither exists. A server the bot has never recorded
-   * simply has no default.
+   * default, else the category the previous bot hardcoded when this server has
+   * it; `null` when none exists. A server the bot has never recorded simply has
+   * no default.
    */
   async resolveCategoryId(guildId: string, requested?: string): Promise<string | null> {
     if (requested !== undefined) return parseSnowflake(requested);
+    const configured = await this.configuredCategoryId(guildId);
+    if (configured !== null) return configured;
+    return (await this.hasLegacyCategory(guildId)) ? LEGACY_ACTIVITY_CATEGORY_ID : null;
+  }
+
+  private async configuredCategoryId(guildId: string): Promise<string | null> {
     try {
       return (await this.guilds.get(guildId)).activityCategoryId;
     } catch (error) {
       if (error instanceof ServiceError && error.code === ErrorCode.GUILD_NOT_FOUND) return null;
+      throw error;
+    }
+  }
+
+  /** Whether the old hardcoded category is a category of this server; any lookup refusal means no. */
+  private async hasLegacyCategory(guildId: string): Promise<boolean> {
+    try {
+      const guild = await fetchGuild(this.client, guildId);
+      const channel = await fetchGuildChannel(this.client, guild, LEGACY_ACTIVITY_CATEGORY_ID);
+      return channel.type === ChannelType.GuildCategory;
+    } catch (error) {
+      if (error instanceof ServiceError) return false;
       throw error;
     }
   }

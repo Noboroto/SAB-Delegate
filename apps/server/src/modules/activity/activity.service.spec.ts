@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { AuditService } from '../../common/audit/audit.service.js';
 import { ServiceError } from '../../common/errors/service-error.js';
 import type { GuildConfigService } from '../guild-config/guild-config.service.js';
-import { ActivityService } from './activity.service.js';
+import { ActivityService, LEGACY_ACTIVITY_CATEGORY_ID } from './activity.service.js';
 
 const GUILD = '100000000000000001';
 const CATEGORY = '100000000000000009';
@@ -156,18 +156,18 @@ describe('ActivityService.createActivity', () => {
     expect(config.get).not.toHaveBeenCalled();
   });
 
-  it.each([{ configured: null }, { unknownGuild: true }])(
-    'refuses, creating nothing, when there is no category at all (%j)',
-    async (options) => {
-      const { service, guild, audit } = build(options);
-      await expect(service.createActivity(GUILD, INPUT, ACTOR)).rejects.toEqual(
-        failsWith(ErrorCode.VALIDATION_FAILED),
-      );
-      expect(guild.roles.create).not.toHaveBeenCalled();
-      expect(guild.channels.create).not.toHaveBeenCalled();
-      expect(audit.record).not.toHaveBeenCalled();
-    },
-  );
+  it.each([
+    { configured: null, category: null },
+    { unknownGuild: true, category: null },
+  ])('refuses, creating nothing, when there is no category at all (%j)', async (options) => {
+    const { service, guild, audit } = build(options);
+    await expect(service.createActivity(GUILD, INPUT, ACTOR)).rejects.toEqual(
+      failsWith(ErrorCode.VALIDATION_FAILED),
+    );
+    expect(guild.roles.create).not.toHaveBeenCalled();
+    expect(guild.channels.create).not.toHaveBeenCalled();
+    expect(audit.record).not.toHaveBeenCalled();
+  });
 
   it('refuses a category that is not one, or belongs to another server', async () => {
     const wrongType = build({ category: { type: ChannelType.GuildText, guildId: GUILD } });
@@ -237,7 +237,49 @@ describe('ActivityService.resolveCategoryId', () => {
   it('returns the asked-for category, the default, or null', async () => {
     expect(await build().service.resolveCategoryId(GUILD, CATEGORY)).toBe(CATEGORY);
     expect(await build({ configured: CATEGORY }).service.resolveCategoryId(GUILD)).toBe(CATEGORY);
-    expect(await build({ configured: null }).service.resolveCategoryId(GUILD)).toBeNull();
-    expect(await build({ unknownGuild: true }).service.resolveCategoryId(GUILD)).toBeNull();
+    expect(
+      await build({ configured: null, category: null }).service.resolveCategoryId(GUILD),
+    ).toBeNull();
+    expect(
+      await build({ unknownGuild: true, category: null }).service.resolveCategoryId(GUILD),
+    ).toBeNull();
+  });
+
+  it('falls back to the category the previous bot hardcoded when this server has it', async () => {
+    expect(await build({ configured: null }).service.resolveCategoryId(GUILD)).toBe(
+      LEGACY_ACTIVITY_CATEGORY_ID,
+    );
+    expect(await build({ unknownGuild: true }).service.resolveCategoryId(GUILD)).toBe(
+      LEGACY_ACTIVITY_CATEGORY_ID,
+    );
+  });
+
+  it('looks the hardcoded category up in this server, not anywhere', async () => {
+    const { service, client } = build({ configured: null });
+    await service.resolveCategoryId(GUILD);
+    expect(client.channels.fetch).toHaveBeenCalledWith(LEGACY_ACTIVITY_CATEGORY_ID);
+  });
+
+  it.each([
+    { category: { type: ChannelType.GuildText, guildId: GUILD } },
+    { category: { type: ChannelType.GuildCategory, guildId: '100000000000000777' } },
+  ])('does not fall back to a hardcoded id that is not a category here (%j)', async (options) => {
+    expect(
+      await build({ configured: null, ...options }).service.resolveCategoryId(GUILD),
+    ).toBeNull();
+  });
+
+  it('does not fall back to the hardcoded category when the server has its own default', async () => {
+    const { service, client } = build({ configured: CATEGORY });
+    expect(await service.resolveCategoryId(GUILD)).toBe(CATEGORY);
+    expect(client.channels.fetch).not.toHaveBeenCalled();
+  });
+
+  it('treats a hardcoded category the bot cannot see as absent', async () => {
+    const { service, client } = build({ configured: null });
+    client.channels.fetch.mockRejectedValue(
+      Object.assign(new Error('Unknown Channel'), { code: 10003 }),
+    );
+    expect(await service.resolveCategoryId(GUILD)).toBeNull();
   });
 });

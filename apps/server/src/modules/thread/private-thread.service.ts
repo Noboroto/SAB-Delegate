@@ -20,10 +20,14 @@ import {
   type GuildMember,
   type Snowflake,
   type TextChannel,
+  type ThreadChannel,
 } from 'discord.js';
 import pLimit from 'p-limit';
 import { AuditService } from '../../common/audit/audit.service.js';
 import { ServiceError } from '../../common/errors/service-error.js';
+import { mentionsForActor } from '../../discord/helpers/allowed-mentions.js';
+import { fetchGuildMembers } from '../../discord/helpers/guild-members.js';
+import { assertInGuild } from '../../discord/helpers/message-target.js';
 import { DiscordReactionService } from '../../discord/services/discord-reaction.service.js';
 import { MessageResolver } from '../../discord/services/message-resolver.service.js';
 import { errorLabel } from '../../prisma/pool-factory.js';
@@ -36,6 +40,15 @@ import { guildChannel, reasonFor } from './thread.service.js';
 
 /** Threads opened at once; Discord rate limits thread creation per channel. */
 const CREATE_CONCURRENCY = 3;
+
+type FromReactorsOptions = {
+  /**
+   * Allow the message that is read for reactors to be in another server, as
+   * the slash command does (allowed, as in the legacy bot). An API caller may
+   * not read outside the server it was given.
+   */
+  crossGuild?: boolean;
+};
 
 type Base = { channelId: string; prefix: string; message: string };
 
@@ -92,6 +105,7 @@ export class PrivateThreadService {
     guildId: string,
     input: unknown,
     actor: ActorContext,
+    opts: FromReactorsOptions = {},
   ): Promise<PrivateThreadResult> {
     const id = parseSnowflake(guildId);
     const parsed = PrivateThreadFromReactorsSchema.safeParse(input);
@@ -102,12 +116,12 @@ export class PrivateThreadService {
       const channel = await this.textChannel(id, base.channelId);
       if (channel === null) return outcome('CHANNEL_NOT_TEXT');
 
-      // A link into another server is followed on purpose: the bot works across
-      // every server it is in.
       const found = await this.messages.fetch(messageLink);
       if (found.status === 'INVALID_LINK') return outcome('INVALID_LINK', found.reason);
       if (found.status === 'NOT_FOUND') return outcome('MESSAGE_NOT_FOUND');
       if (found.status === 'NO_ACCESS') return outcome('NO_ACCESS');
+
+      if (opts.crossGuild !== true) assertInGuild(found.message, id);
 
       const userIds = await this.reactions.fetchReactorIds(found.message, emoji);
       return await this.open(id, channel, base, userIds, undefined, actor);
@@ -133,7 +147,7 @@ export class PrivateThreadService {
     if (userIds.length === 0 && roleId === undefined) return outcome('NO_MEMBERS');
 
     // The cache only holds members seen so far; the full list needs a fetch.
-    const members = await channel.guild.members.fetch();
+    const members = await fetchGuildMembers(channel.guild);
     const wanted = new Set(userIds);
     if (roleId !== undefined) {
       for (const member of members.values()) {
@@ -173,6 +187,7 @@ export class PrivateThreadService {
     if (member === undefined) {
       return { userId, reason: THREAD_FAILURE_REASON.memberNotFound };
     }
+    let created: ThreadChannel | undefined;
     try {
       const thread = await channel.threads.create({
         type: ChannelType.PrivateThread,
@@ -181,15 +196,30 @@ export class PrivateThreadService {
         reason: reasonFor(`Create thread for ${base.prefix}`, actor),
         invitable: false,
       });
+      created = thread;
       await thread.members.add(member.id);
       if (actor.userId !== undefined && actor.userId !== member.id) {
         await thread.members.add(actor.userId);
       }
-      await thread.send({ content: base.message, allowedMentions: { parse: [] } });
+      await thread.send({
+        content: base.message,
+        allowedMentions: mentionsForActor(actor, ['users', 'roles']),
+      });
       return null;
     } catch (error) {
       this.logger.warn(`Could not open a private thread for ${userId} (${failureLabel(error)})`);
+      // A thread that never got its member or message would sit empty for a week.
+      if (created !== undefined) await this.discard(created, actor);
       return { userId, reason: failureReason(error) };
+    }
+  }
+
+  /** Removes a thread this call made but could not finish; a failure to remove it is logged for a person. */
+  private async discard(thread: ThreadChannel, actor: ActorContext): Promise<void> {
+    try {
+      await thread.delete(reasonFor('Create private thread failed', actor));
+    } catch (error) {
+      this.logger.error(`Could not remove unfinished thread ${thread.id} (${failureLabel(error)})`);
     }
   }
 

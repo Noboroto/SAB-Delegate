@@ -15,6 +15,8 @@
   },
   "create": {
     "byline": "{user} created this thread.",
+    "nameEmpty": "Thread name must not be empty!",
+    "messageEmpty": "The message must not be empty.",
     "done": "Created thread {thread}.",
     "CHANNEL_CANNOT_HOLD_THREADS": "Threads cannot be created in this channel. Pick a text, announcement or forum channel.",
     "PRIVATE_NEEDS_TEXT_CHANNEL": "Private threads can only be created in text channels!"
@@ -51,6 +53,7 @@
       "emojiOption": { "description": "Only members who reacted with this emoji" }
     },
     "defaultMessage": "New thread is created",
+    "messageEmpty": "The message must not be empty.",
     "done": "Done {created}/{total} thread(s)!",
     "errorsHeader": "Errors:",
     "failure": "{user}: {reason}",

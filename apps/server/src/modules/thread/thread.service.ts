@@ -32,6 +32,7 @@ import {
 import { AuditService } from '../../common/audit/audit.service.js';
 import { ServiceError } from '../../common/errors/service-error.js';
 import { errorLabel } from '../../prisma/pool-factory.js';
+import { mentionsForActor } from '../../discord/helpers/allowed-mentions.js';
 import {
   failureLabel,
   failureReason,
@@ -99,6 +100,9 @@ export class ThreadService {
     try {
       const channel = guildChannel(await this.client.channels.fetch(channelId), id);
       const content = byline === undefined ? message : `${byline}\n\n${message}`;
+      // A person at a slash command pings what the post names, as the old bot
+      // did; any other caller's text pings nobody.
+      const allowedMentions = mentionsForActor(actor, ['users', 'roles']);
       const options = {
         name,
         autoArchiveDuration: ThreadAutoArchiveDuration.OneWeek,
@@ -111,7 +115,7 @@ export class ThreadService {
         // The first post is created together with the thread.
         thread = await channel.threads.create({
           ...options,
-          message: { content, allowedMentions: { parse: [] } },
+          message: { content, allowedMentions },
         });
         kind = 'forum';
       } else if (channel.type === ChannelType.GuildText) {
@@ -135,10 +139,27 @@ export class ThreadService {
         threadId: thread.id,
         kind,
       });
-      if (kind !== 'forum') await thread.send({ content, allowedMentions: { parse: [] } });
+      if (kind !== 'forum') {
+        try {
+          await thread.send({ content, allowedMentions });
+        } catch (error) {
+          // An empty thread nobody asked for would be left behind otherwise.
+          await this.discard(thread, actor);
+          throw error;
+        }
+      }
       return { status: 'CREATED', threadId: thread.id };
     } catch (error) {
       throw toServiceError(error);
+    }
+  }
+
+  /** Removes a thread this call made but could not finish; a failure to remove it is logged for a person. */
+  private async discard(thread: ThreadChannel, actor: ActorContext): Promise<void> {
+    try {
+      await thread.delete(reasonFor('Create thread failed', actor));
+    } catch (error) {
+      this.logger.error(`Could not remove unfinished thread ${thread.id} (${failureLabel(error)})`);
     }
   }
 
