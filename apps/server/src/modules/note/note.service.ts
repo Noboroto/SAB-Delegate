@@ -11,6 +11,7 @@ import {
   type Note,
   type NoteRemovePlan,
   type NoteRemoveResult,
+  type NoteUpsertPlan,
 } from '@sab/shared';
 import { AuditService } from '../../common/audit/audit.service.js';
 import { ServiceError } from '../../common/errors/service-error.js';
@@ -18,6 +19,7 @@ import { PrismaService } from '../../prisma/prisma.service.js';
 import { GuildConfigService } from '../guild-config/guild-config.service.js';
 
 type RemoveOptions = { dryRun?: boolean };
+type UpsertOptions = { dryRun?: boolean };
 
 /** Discord shows at most this many suggestions. */
 const TOPICS_DEFAULT_LIMIT = 25;
@@ -57,13 +59,45 @@ export class NoteService {
   /**
    * Saves a note; a note with the same role and topic is replaced. The write
    * and its audit row commit together. The audit row names the role and topic
-   * but never the text.
+   * but never the text. With `dryRun` it reports whether the note would be
+   * created or replaced and writes nothing, not even an audit row.
    */
-  async upsert(guildId: string, input: unknown, actor: ActorContext): Promise<Note> {
+  upsert(
+    guildId: string,
+    input: unknown,
+    actor: ActorContext,
+    opts: { dryRun: true },
+  ): Promise<NoteUpsertPlan>;
+  upsert(
+    guildId: string,
+    input: unknown,
+    actor: ActorContext,
+    opts?: { dryRun?: false },
+  ): Promise<Note>;
+  upsert(
+    guildId: string,
+    input: unknown,
+    actor: ActorContext,
+    opts?: UpsertOptions,
+  ): Promise<Note | NoteUpsertPlan>;
+  async upsert(
+    guildId: string,
+    input: unknown,
+    actor: ActorContext,
+    opts: UpsertOptions = {},
+  ): Promise<Note | NoteUpsertPlan> {
     const id = parseSnowflake(guildId);
     const parsed = NoteUpsertSchema.safeParse(input);
     if (!parsed.success) throw new ServiceError(ErrorCode.VALIDATION_FAILED);
     const { roleId, topic, content } = parsed.data;
+
+    if (opts.dryRun === true) {
+      const existing = await this.prisma.noteEntry.findFirst({
+        where: { guild: { discordId: id }, roleId, topic },
+        select: { id: true },
+      });
+      return { action: existing === null ? 'CREATE' : 'REPLACE', roleId, topic };
+    }
 
     return this.prisma.$transaction(async (tx) => {
       const guild = await this.guilds.ensureGuild(id, undefined, tx);
@@ -112,6 +146,43 @@ export class NoteService {
       select: NOTE_SELECT,
       orderBy: [{ roleId: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
     });
+  }
+
+  /**
+   * One page of the server's notes (grouped by role, as `listAll`), with the
+   * total the page is cut from. `roleId` narrows to one role; `q` keeps notes
+   * whose topic or content contains it, ignoring case. The search is escaped: it
+   * is typed by a person and must not act as a pattern. Paging and filtering run
+   * in the database.
+   */
+  async listPage(
+    guildId: string,
+    query: { roleId?: string; q?: string; page: number; limit: number },
+  ): Promise<{ items: Note[]; total: number }> {
+    const id = parseSnowflake(guildId);
+    const role = query.roleId === undefined ? undefined : parseSnowflake(query.roleId);
+    const { page, limit } = query;
+    if (!Number.isInteger(page) || page < 1 || !Number.isInteger(limit) || limit < 1) {
+      throw new ServiceError(ErrorCode.VALIDATION_FAILED);
+    }
+    const needle = query.q?.trim() ?? '';
+    const contains = { contains: escapeLike(needle), mode: 'insensitive' as const };
+    const where = {
+      guild: { discordId: id },
+      ...(role === undefined ? {} : { roleId: role }),
+      ...(needle === '' ? {} : { OR: [{ topic: contains }, { content: contains }] }),
+    } satisfies Prisma.NoteEntryWhereInput;
+    const [items, total] = await Promise.all([
+      this.prisma.noteEntry.findMany({
+        where,
+        select: NOTE_SELECT,
+        orderBy: [{ roleId: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.noteEntry.count({ where }),
+    ]);
+    return { items, total };
   }
 
   /**

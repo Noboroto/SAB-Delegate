@@ -30,6 +30,7 @@ function build() {
       ),
     findFirst: vi.fn().mockResolvedValue(null),
     findMany: vi.fn().mockResolvedValue([]),
+    count: vi.fn().mockResolvedValue(0),
     deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
   };
   const prisma = { noteEntry, $transaction: vi.fn() };
@@ -122,6 +123,36 @@ describe('NoteService.upsert', () => {
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
+  it('with dryRun says CREATE or REPLACE and writes nothing, not even an audit row', async () => {
+    const { service, prisma, noteEntry, audit } = build();
+    const input = { roleId: ROLE, topic: 'Rules', content: 'text' };
+    await expect(service.upsert(GUILD, input, ACTOR, { dryRun: true })).resolves.toEqual({
+      action: 'CREATE',
+      roleId: ROLE,
+      topic: 'Rules',
+    });
+    noteEntry.findFirst.mockResolvedValueOnce({ id: 'row-1' });
+    await expect(service.upsert(GUILD, input, ACTOR, { dryRun: true })).resolves.toMatchObject({
+      action: 'REPLACE',
+    });
+    expect(noteEntry.findFirst).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        where: { guild: { discordId: GUILD }, roleId: ROLE, topic: 'Rules' },
+      }),
+    );
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(noteEntry.upsert).not.toHaveBeenCalled();
+    expect(audit.record).not.toHaveBeenCalled();
+  });
+
+  it('refuses invalid input in a dryRun too', async () => {
+    const { service, noteEntry } = build();
+    await expect(
+      service.upsert(GUILD, { roleId: ROLE, topic: 't', content: ' ' }, ACTOR, { dryRun: true }),
+    ).rejects.toEqual(failsWith(ErrorCode.VALIDATION_FAILED));
+    expect(noteEntry.findFirst).not.toHaveBeenCalled();
+  });
+
   it('lets a failing audit write fail the save, as both run on the transaction client', async () => {
     const failing = build();
     failing.audit.record.mockRejectedValue(new Error('audit down'));
@@ -171,6 +202,59 @@ describe('NoteService reads', () => {
     );
     await expect(service.listAll('x')).rejects.toEqual(failsWith(ErrorCode.VALIDATION_FAILED));
     await expect(service.listTopics(GUILD, 'role')).rejects.toEqual(
+      failsWith(ErrorCode.VALIDATION_FAILED),
+    );
+  });
+});
+
+describe('NoteService.listPage', () => {
+  it('pages and counts in the database with the same filter, in list order', async () => {
+    const { service, noteEntry } = build();
+    noteEntry.findMany.mockResolvedValue([{ topic: 'a' }]);
+    noteEntry.count.mockResolvedValue(41);
+    await expect(service.listPage(GUILD, { page: 3, limit: 10 })).resolves.toEqual({
+      items: [{ topic: 'a' }],
+      total: 41,
+    });
+    const where = { guild: { discordId: GUILD } };
+    expect(noteEntry.findMany).toHaveBeenCalledWith({
+      where,
+      select: { roleId: true, topic: true, content: true, updatedAt: true },
+      orderBy: [{ roleId: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
+      skip: 20,
+      take: 10,
+    });
+    expect(noteEntry.count).toHaveBeenCalledWith({ where });
+  });
+
+  it('narrows to a role and searches topic or content, ignoring case, with the text escaped', async () => {
+    const { service, noteEntry } = build();
+    await service.listPage(GUILD, { roleId: ROLE, q: ' 50%_off ', page: 1, limit: 5 });
+    const contains = { contains: '50\\%\\_off', mode: 'insensitive' };
+    const where = {
+      guild: { discordId: GUILD },
+      roleId: ROLE,
+      OR: [{ topic: contains }, { content: contains }],
+    };
+    expect(noteEntry.findMany).toHaveBeenCalledWith(expect.objectContaining({ where }));
+    expect(noteEntry.count).toHaveBeenCalledWith({ where });
+  });
+
+  it('ignores a blank search and refuses a bad page, limit or id', async () => {
+    const { service, noteEntry } = build();
+    await service.listPage(GUILD, { q: '   ', page: 1, limit: 5 });
+    expect(noteEntry.count).toHaveBeenCalledWith({ where: { guild: { discordId: GUILD } } });
+    for (const query of [
+      { page: 0, limit: 5 },
+      { page: 1, limit: 0 },
+      { page: 1.5, limit: 5 },
+      { roleId: 'x', page: 1, limit: 5 },
+    ]) {
+      await expect(service.listPage(GUILD, query)).rejects.toEqual(
+        failsWith(ErrorCode.VALIDATION_FAILED),
+      );
+    }
+    await expect(service.listPage('x', { page: 1, limit: 5 })).rejects.toEqual(
       failsWith(ErrorCode.VALIDATION_FAILED),
     );
   });

@@ -45,6 +45,15 @@ export const NoteUpsertSchema = NoteSchema.pick({ roleId: true, topic: true, con
 
 export type NoteUpsert = z.infer<typeof NoteUpsertSchema>;
 
+/** What a dry-run of a save reports: whether the note would be created or its content replaced. */
+export const NoteUpsertPlanSchema = z.object({
+  action: z.enum(['CREATE', 'REPLACE']),
+  roleId: SnowflakeSchema,
+  topic: z.string(),
+});
+
+export type NoteUpsertPlan = z.infer<typeof NoteUpsertPlanSchema>;
+
 /** What a dry-run of a removal reports: how many notes would go, and which. */
 export const NoteRemovePlanSchema = z.object({
   count: z.number().int().min(0),

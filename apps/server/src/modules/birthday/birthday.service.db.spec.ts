@@ -182,6 +182,46 @@ describe('BirthdayService against Postgres', () => {
       );
     });
 
+    it('pages the list in the database in list order, and previews an add without a trace', async () => {
+      const { guildId } = await seed(0);
+      const person = (studentId: string, month: number, day: number, discordId: string) => ({
+        studentId,
+        name: studentId,
+        discordId,
+        month,
+        day,
+      });
+      await service.importRows(
+        guildId,
+        [
+          person('B', 3, 15, '600000000000000002'),
+          person('A', 1, 5, '600000000000000001'),
+          person('C', 3, 15, '600000000000000003'),
+          person('D', 3, 2, '600000000000000004'),
+        ],
+        ACTOR,
+      );
+      const first = await service.listPage(guildId, { page: 1, limit: 3 });
+      expect(first.total).toBe(4);
+      expect(first.items.map((entry) => entry.studentId)).toEqual(['A', 'D', 'B']);
+      const second = await service.listPage(guildId, { page: 2, limit: 3 });
+      expect(second.items.map((entry) => entry.studentId)).toEqual(['C']);
+      const march = await service.listPage(guildId, { month: 3, page: 1, limit: 2 });
+      expect(march.total).toBe(3);
+      expect(march.items.map((entry) => entry.studentId)).toEqual(['D', 'B']);
+
+      const entry = person('E', 6, 1, '600000000000000005');
+      await expect(service.add(guildId, entry, ACTOR, { dryRun: true })).resolves.toEqual({
+        code: 'ADDED',
+      });
+      await expect(
+        service.add(guildId, person('A', 6, 1, '600000000000000006'), ACTOR, { dryRun: true }),
+      ).resolves.toEqual({ code: 'DUPLICATE_ID' });
+      expect((await service.listPage(guildId, { page: 1, limit: 10 })).total).toBe(4);
+      const page = await audit.list({ guildId, action: AUDIT_ACTIONS.birthdayAdd });
+      expect(page.items).toHaveLength(0);
+    });
+
     it('audits an import with its counts, and a dry run leaves no trace', async () => {
       const { guildId } = await seed(2);
       const before = await prisma.birthdayEntry.count({ where: { guild: { discordId: guildId } } });

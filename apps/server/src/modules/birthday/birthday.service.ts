@@ -170,12 +170,58 @@ export class BirthdayService {
     });
   }
 
-  /** Adds one person. A student ID the server already has is left alone: `DUPLICATE_ID`. */
-  async add(guildId: string, entry: unknown, actor: ActorContext): Promise<BirthdayAddResult> {
+  /**
+   * One page of the list, in the order the list prints, with the total the page
+   * is cut from. Paging and the month filter run in the database.
+   */
+  async listPage(
+    guildId: string,
+    query: { month?: number; page: number; limit: number },
+  ): Promise<{ items: BirthdayEntryView[]; total: number }> {
+    const id = parseGuildId(guildId);
+    const { month, page, limit } = query;
+    if (month !== undefined && !(Number.isInteger(month) && month >= 1 && month <= 12)) {
+      throw new ServiceError(ErrorCode.VALIDATION_FAILED);
+    }
+    if (!Number.isInteger(page) || page < 1 || !Number.isInteger(limit) || limit < 1) {
+      throw new ServiceError(ErrorCode.VALIDATION_FAILED);
+    }
+    const where = { guild: { discordId: id }, ...(month === undefined ? {} : { month }) };
+    const [items, total] = await Promise.all([
+      this.prisma.birthdayEntry.findMany({
+        where,
+        select: ENTRY_VIEW,
+        orderBy: ENTRY_ORDER,
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.birthdayEntry.count({ where }),
+    ]);
+    return { items, total };
+  }
+
+  /**
+   * Adds one person. A student ID the server already has is left alone:
+   * `DUPLICATE_ID`. With `dryRun` it reports which of the two would happen and
+   * writes nothing, not even an audit row.
+   */
+  async add(
+    guildId: string,
+    entry: unknown,
+    actor: ActorContext,
+    opts: { dryRun?: boolean } = {},
+  ): Promise<BirthdayAddResult> {
     const id = parseGuildId(guildId);
     const parsed = BirthdayAddSchema.safeParse(entry);
     if (!parsed.success) throw new ServiceError(ErrorCode.VALIDATION_FAILED);
     const person = parsed.data;
+
+    if (opts.dryRun === true) {
+      const taken = await this.prisma.birthdayEntry.count({
+        where: { guild: { discordId: id }, studentId: person.studentId },
+      });
+      return { code: taken > 0 ? 'DUPLICATE_ID' : 'ADDED' };
+    }
 
     return this.prisma.$transaction(async (tx) => {
       const guild = await this.guilds.ensureGuild(id, undefined, tx);

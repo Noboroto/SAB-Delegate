@@ -243,6 +243,64 @@ describe('BirthdayService.list and add', () => {
     await expect(service.list(GUILD, { month: 1.5 })).rejects.toBeInstanceOf(ServiceError);
   });
 
+  it('pages and counts in the database, in the order the list prints', async () => {
+    const { service, entry } = build({ matches: 7 });
+    const result = await service.listPage(GUILD, { month: 3, page: 2, limit: 5 });
+    expect(result.total).toBe(7);
+    const where = { guild: { discordId: GUILD }, month: 3 };
+    expect(entry.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where,
+        orderBy: [{ month: 'asc' }, { day: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
+        skip: 5,
+        take: 5,
+      }),
+    );
+    expect(entry.count).toHaveBeenCalledWith({ where });
+  });
+
+  it('refuses a bad month, page or limit when paging', async () => {
+    const { service, entry } = build();
+    for (const query of [
+      { month: 13, page: 1, limit: 5 },
+      { page: 0, limit: 5 },
+      { page: 1, limit: 0 },
+      { page: 1, limit: 2.5 },
+    ]) {
+      await expect(service.listPage(GUILD, query)).rejects.toMatchObject({
+        code: ErrorCode.VALIDATION_FAILED,
+      });
+    }
+    expect(entry.findMany).not.toHaveBeenCalled();
+  });
+
+  it('with dryRun says ADDED or DUPLICATE_ID and writes nothing, not even an audit row', async () => {
+    const free = build({ matches: 0 });
+    await expect(
+      free.service.add(GUILD, person('SE1', ANN), ACTOR, { dryRun: true }),
+    ).resolves.toEqual({ code: 'ADDED' });
+    expect(free.entry.count).toHaveBeenCalledWith({
+      where: { guild: { discordId: GUILD }, studentId: 'SE1' },
+    });
+    const taken = build({ matches: 1 });
+    await expect(
+      taken.service.add(GUILD, person('SE1', ANN), ACTOR, { dryRun: true }),
+    ).resolves.toEqual({ code: 'DUPLICATE_ID' });
+    for (const run of [free, taken]) {
+      expect(run.prisma.$transaction).not.toHaveBeenCalled();
+      expect(run.entry.createMany).not.toHaveBeenCalled();
+      expect(run.audit.record).not.toHaveBeenCalled();
+    }
+  });
+
+  it('refuses an invalid person in a dryRun too', async () => {
+    const { service, entry } = build();
+    await expect(
+      service.add(GUILD, { ...person('SE1', ANN), month: 2, day: 30 }, ACTOR, { dryRun: true }),
+    ).rejects.toMatchObject({ code: ErrorCode.VALIDATION_FAILED });
+    expect(entry.count).not.toHaveBeenCalled();
+  });
+
   it('answers DUPLICATE_ID without an audit row when the student ID exists', async () => {
     const { service, entry, audit } = build();
     entry.createMany.mockResolvedValueOnce({ count: 0 });

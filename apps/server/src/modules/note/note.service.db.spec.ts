@@ -116,6 +116,57 @@ describe('NoteService against Postgres', () => {
     await expect(service.listTopics(guildId, ROLE, 'nothing matches')).resolves.toEqual([]);
   });
 
+  it('pages and searches notes in the database, with the total and a literal search', async () => {
+    const guildId = newGuild();
+    for (const [roleId, topic, content] of [
+      [ROLE, 'Rules', 'Be kind'],
+      [ROLE, 'Links', '100% DOCS'],
+      [ROLE, 'Rota', 'weekly'],
+      [OTHER_ROLE, 'Docs', 'wiki'],
+    ] as const) {
+      await service.upsert(guildId, { roleId, topic, content }, ACTOR);
+    }
+    const first = await service.listPage(guildId, { page: 1, limit: 3 });
+    expect(first.total).toBe(4);
+    expect(first.items).toHaveLength(3);
+    const second = await service.listPage(guildId, { page: 2, limit: 3 });
+    expect(second.items).toHaveLength(1);
+    expect([...first.items, ...second.items].map((note) => note.topic).sort()).toEqual([
+      'Docs',
+      'Links',
+      'Rota',
+      'Rules',
+    ]);
+
+    const docs = await service.listPage(guildId, { q: 'docs', page: 1, limit: 10 });
+    expect(docs.items.map((note) => note.topic).sort()).toEqual(['Docs', 'Links']);
+    const inRole = await service.listPage(guildId, { roleId: ROLE, q: 'docs', page: 1, limit: 10 });
+    expect(inRole).toMatchObject({ total: 1, items: [{ topic: 'Links' }] });
+    await expect(service.listPage(guildId, { q: '%', page: 1, limit: 10 })).resolves.toMatchObject({
+      total: 1,
+      items: [{ topic: 'Links' }],
+    });
+    await expect(service.listPage(newGuild(), { page: 1, limit: 10 })).resolves.toEqual({
+      items: [],
+      total: 0,
+    });
+  });
+
+  it('previews a save as CREATE or REPLACE without a row or an audit entry', async () => {
+    const guildId = newGuild();
+    const input = { roleId: ROLE, topic: 'Rules', content: 'text' };
+    await expect(service.upsert(guildId, input, ACTOR, { dryRun: true })).resolves.toMatchObject({
+      action: 'CREATE',
+    });
+    await expect(prisma.guild.count({ where: { discordId: guildId } })).resolves.toBe(0);
+    await service.upsert(guildId, input, ACTOR);
+    await expect(
+      service.upsert(guildId, { ...input, content: 'other' }, ACTOR, { dryRun: true }),
+    ).resolves.toMatchObject({ action: 'REPLACE' });
+    expect((await service.get(guildId, ROLE, 'Rules'))?.content).toBe('text');
+    expect(await auditRows(guildId, AUDIT_ACTIONS.noteUpsert)).toHaveLength(1);
+  });
+
   it('returns at most 25 suggestions', async () => {
     const guildId = newGuild();
     for (let index = 0; index < 30; index += 1) {
