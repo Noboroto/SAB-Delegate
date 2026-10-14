@@ -109,7 +109,7 @@ Ai dùng: mọi người.
 | --- | --- | --- | --- | --- |
 | `intro` `user` | Tìm bài giới thiệu mới nhất của user trong kênh giới thiệu (quét tối đa 10000 tin gần nhất) | Công khai; chưa đặt kênh thì báo riêng | Không | — |
 | `id-by-reaction` `message-link` `emoji` `[mention]` `[reply-message]` `[content]` | Liệt kê id người đã thả emoji | Công khai; riêng nếu có `reply-message` (danh sách gửi vào tin kia) | Chỉ khi `mention` bật: ping những người đó | — |
-| `id-by-role` `role` `[in-this-channel]` | Liệt kê id thành viên của vai trò | Công khai | Không | ⚠ cần kiểm: bản cũ tự chặn người không có quyền Quản lý vai trò; code mới không kiểm gì (ai thấy lệnh là dùng được) |
+| `id-by-role` `role` `[in-this-channel]` | Liệt kê id thành viên của vai trò | Công khai | Không | Bản cũ tự chặn người không có quyền Quản lý vai trò; bản mới bỏ chặn, ai thấy lệnh là dùng được (chủ bot chốt 2026-10-14) |
 | `invite-link` `[channel]` | Tạo lời mời không hết hạn, gửi DM cho người gọi (DM đóng thì hiện link trong câu trả lời riêng) | Riêng | Không | — |
 
 Link tin nhắn của guild khác được theo ở `id-by-reaction`.
@@ -216,5 +216,4 @@ Bản cũ không có. Không đặt guild-only. Mọi menu mở hộp thoại ho
 
 Khác biệt đã duyệt trong kế hoạch (nội dung tuỳ chọn mở hộp thoại, `members-of-role`, `ids` tuỳ chọn khi có `role`, lịch hẹn lưu DB và `/scheduler get` chỉ liệt kê lịch chờ) đã ghi ở từng lệnh. Còn lại cần chủ bot xác nhận:
 
-1. `/get id-by-role`: bản cũ TỰ CHẶN người không có quyền Quản lý vai trò; kế hoạch (2026-10-11) quyết định bỏ chặn này, nên bản mới ai thấy lệnh cũng dùng được. Đây là chỗ bản mới MỞ RỘNG so với bản cũ — giữ hay khôi phục chặn?
-2. Giới hạn 500 lịch chờ mỗi guild và tối đa 366 ngày chỉ áp cho REST/MCP (Release 2); lệnh slash không bị giới hạn, như bản cũ.
+1. Giới hạn 500 lịch chờ mỗi guild và tối đa 366 ngày chỉ áp cho REST/MCP (Release 2); lệnh slash không bị giới hạn, như bản cũ.
