@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { ErrorCode, SnowflakeSchema, canManageGuild } from '@sab/shared';
+import { ErrorCode, SnowflakeSchema, canManageGuild, type GuildPickerItem } from '@sab/shared';
 import { Client } from 'discord.js';
 import { LRUCache } from 'lru-cache';
 import { discordErrorCode } from '../../discord/helpers/reply.js';
 import { ServiceError } from '../errors/service-error.js';
+import { UserGuildsClient } from './user-guilds.client.js';
 
 /** Upper bound on remembered (guild, user) pairs; a flood of new keys evicts the oldest. */
 export const GUILD_ACCESS_CACHE_MAX = 5000;
@@ -11,6 +12,9 @@ export const GUILD_ACCESS_CACHE_MAX = 5000;
 export const GUILD_ACCESS_ALLOW_TTL_MS = 30_000;
 /** Refusals are remembered only briefly: enough to absorb a retry loop, short enough not to lock out a user who was just promoted. */
 export const GUILD_ACCESS_DENY_TTL_MS = 5_000;
+
+/** Remembered server lists (one per person); a flood of new people evicts the oldest. */
+const USER_GUILDS_CACHE_MAX = 1000;
 
 /**
  * How long an infrastructure failure (Discord rate limit or outage, network)
@@ -33,7 +37,7 @@ const NETWORK_ERROR_NAMES: ReadonlySet<string> = new Set([
  * Discord rate limiting (429), a Discord outage (5xx), or the request never
  * completing. Not "the answer is no": the caller has to see a server error.
  */
-function isInfrastructureError(error: unknown): error is Error {
+export function isInfrastructureError(error: unknown): error is Error {
   if (!(error instanceof Error)) return false;
   const { status, code, name } = error as { status?: unknown; code?: unknown; name?: unknown };
   if (typeof status === 'number') return status === 429 || status >= 500;
@@ -91,8 +95,22 @@ export class GuildAccessService {
   });
   /** Concurrent checks for one pair share a single Discord request. */
   private readonly inFlight = new Map<string, Promise<boolean>>();
+  /**
+   * A person's OAuth server list for the picker. Kept as long as an allowed
+   * answer, so reloading the picker does not ask Discord each time; only a
+   * convenience filter, the guard still checks every request.
+   */
+  private readonly userGuilds = new LRUCache<string, GuildPickerItem[]>({
+    max: USER_GUILDS_CACHE_MAX,
+    ttl: GUILD_ACCESS_ALLOW_TTL_MS,
+    perf: { now: () => performance.now() },
+  });
+  private readonly userGuildsInFlight = new Map<string, Promise<GuildPickerItem[]>>();
 
-  constructor(private readonly client: Client) {}
+  constructor(
+    private readonly client: Client,
+    private readonly oauthGuilds: UserGuildsClient,
+  ) {}
 
   /** Number of remembered answers; never above `GUILD_ACCESS_CACHE_MAX`. */
   get cacheSize(): number {
@@ -148,6 +166,36 @@ export class GuildAccessService {
     options: GuildAccessOptions = {},
   ): Promise<void> {
     if (!(await this.canManage(userId, guildId, options))) throw new GuildNotFoundError();
+  }
+
+  /**
+   * The servers for the picker: the ones the person may manage (from Discord's
+   * list for their login, with permission bits) that the bot is also in. No
+   * request goes through the bot, so a person in many servers cannot spend the
+   * bot's REST budget. Failures of the OAuth call are thrown as they are.
+   */
+  async listManageableGuilds(userId: string, accessToken: string): Promise<GuildPickerItem[]> {
+    if (!SnowflakeSchema.safeParse(userId).success) return [];
+    const mine = await this.oauthGuildsOf(userId, accessToken);
+    return mine.filter((guild) => this.client.guilds.cache.has(guild.id));
+  }
+
+  private oauthGuildsOf(userId: string, accessToken: string): Promise<GuildPickerItem[]> {
+    const cached = this.userGuilds.get(userId);
+    if (cached !== undefined) return Promise.resolve(cached);
+    const running = this.userGuildsInFlight.get(userId);
+    if (running !== undefined) return running;
+
+    const pending = this.oauthGuilds.manageableGuilds(accessToken).then((guilds) => {
+      this.userGuilds.set(userId, guilds);
+      return guilds;
+    });
+    this.userGuildsInFlight.set(userId, pending);
+    const release = (): void => {
+      if (this.userGuildsInFlight.get(userId) === pending) this.userGuildsInFlight.delete(userId);
+    };
+    void pending.then(release, release);
+    return pending;
   }
 
   /** Asks Discord. Failures other than "not a member" are thrown as they are and never cached as an answer. */

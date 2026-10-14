@@ -15,6 +15,7 @@ export { escapeLike } from './utils/escape-like.js';
 export { partialWithoutDefaults } from './utils/partial-without-defaults.js';
 export { isValidMonthDay } from './utils/month-day.js';
 export { SnowflakeSchema, type Snowflake } from './schemas/snowflake.js';
+export { GuildPickerItemSchema, MeSchema, type GuildPickerItem, type Me } from './schemas/me.js';
 export {
   PAGE_SIZE_DEFAULT,
   PAGE_SIZE_MAX,

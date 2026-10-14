@@ -1,0 +1,222 @@
+import 'reflect-metadata';
+import { randomBytes } from 'node:crypto';
+import cookie from '@fastify/cookie';
+import rateLimit from '@fastify/rate-limit';
+import { Global, Module } from '@nestjs/common';
+import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
+import { Test } from '@nestjs/testing';
+import { ErrorCode, GuildPickerItemSchema, z, type GuildPickerItem } from '@sab/shared';
+import { Client, DiscordAPIError, RateLimitError } from 'discord.js';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { REST_SETTINGS } from '../../auth/better-auth.js';
+import type { PrincipalRequest } from '../../auth/principal.decorator.js';
+import { SessionService } from '../../auth/session.service.js';
+import { ServiceError } from '../../common/errors/service-error.js';
+import { UserGuildsClient } from '../../common/guild-access/user-guilds.client.js';
+import {
+  GUILD_LIST_RATE_LIMIT,
+  rateLimitOptions,
+} from '../../common/rate-limit/rate-limit.util.js';
+import type { RestSettings } from '../../config/env.js';
+import { MeModule, meModules } from './me.module.js';
+
+const ORIGIN = 'https://bot.example.test';
+const USER = '200000000000000001';
+const BOT_GUILD = '100000000000000001';
+const BOT_GUILD_2 = '100000000000000002';
+const NO_BOT_GUILD = '100000000000000003';
+const settings: RestSettings = {
+  appUrl: ORIGIN,
+  discordClientId: '1'.repeat(18),
+  discordClientSecret: `cs-${randomBytes(8).toString('hex')}`,
+  authSecret: randomBytes(32).toString('base64'),
+  trustedProxies: [],
+};
+const ACCESS_TOKEN = `at-${randomBytes(8).toString('hex')}`;
+
+const item = (id: string): GuildPickerItem => ({ id, name: `server ${id}`, icon: null });
+
+/** Stands in for the cookie login: `x-user` is the signed-in account, `x-token` the Discord token. */
+const sessions = {
+  principalOf: (request: PrincipalRequest) => {
+    const user = request.headers['x-user'];
+    return Promise.resolve(
+      typeof user === 'string' ? { discordUserId: user, createdAt: new Date() } : null,
+    );
+  },
+  requirePrincipal: async (request: PrincipalRequest) => {
+    const principal = await sessions.principalOf(request);
+    if (principal === null) {
+      const { ApiError } = await import('../../common/errors/http-error.js');
+      throw new ApiError(ErrorCode.AUTH_UNAUTHENTICATED);
+    }
+    request.principal = principal;
+    return principal;
+  },
+  discordAccessToken: (headers: Record<string, unknown>) =>
+    Promise.resolve(typeof headers['x-token'] === 'string' ? headers['x-token'] : null),
+};
+
+const oauth = { manageableGuilds: vi.fn<(token: string) => Promise<GuildPickerItem[]>>() };
+
+@Global()
+@Module({
+  providers: [
+    {
+      provide: Client,
+      useValue: {
+        guilds: {
+          cache: new Map([
+            [BOT_GUILD, {}],
+            [BOT_GUILD_2, {}],
+          ]),
+        },
+      },
+    },
+  ],
+  exports: [Client],
+})
+class FakeDiscordModule {}
+
+let app: NestFastifyApplication;
+
+beforeAll(async () => {
+  const moduleRef = await Test.createTestingModule({ imports: [FakeDiscordModule, MeModule] })
+    .overrideProvider(REST_SETTINGS)
+    .useValue(settings)
+    .overrideProvider(SessionService)
+    .useValue(sessions)
+    .overrideProvider(UserGuildsClient)
+    .useValue(oauth)
+    .compile();
+  app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
+  await app.register(cookie);
+  await app.register(rateLimit, rateLimitOptions(sessions));
+  await app.init();
+  await app.getHttpAdapter().getInstance().ready();
+});
+
+afterAll(async () => {
+  await app.close();
+});
+
+beforeEach(() => {
+  oauth.manageableGuilds.mockReset();
+});
+
+const asUser = (id: string, extra: Record<string, string> = {}) => ({ 'x-user': id, ...extra });
+
+describe('GET /api/me', () => {
+  it('answers 401 without a login', async () => {
+    const response = await app.inject({ method: 'GET', url: '/api/me' });
+    expect(response.statusCode).toBe(401);
+    expect(response.json<{ code: string }>().code).toBe('AUTH_UNAUTHENTICATED');
+  });
+
+  it('returns the Discord account and nothing else of the session', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/me',
+      headers: asUser(randomId(1)),
+    });
+    expect(response.json()).toEqual({ discordUserId: randomId(1) });
+  });
+});
+
+function randomId(n: number): string {
+  return String(500_000_000_000_000_000n + BigInt(n));
+}
+
+describe('GET /api/guilds', () => {
+  // The server list is remembered per person, so each test is a new person.
+  let next = 1000;
+  const picker = (token = ACCESS_TOKEN) => ({
+    method: 'GET' as const,
+    url: '/api/guilds',
+    headers: asUser(randomId(next++), { 'x-token': token }),
+  });
+
+  it('lists only the servers the person manages that the bot is also in', async () => {
+    oauth.manageableGuilds.mockResolvedValue([
+      item(BOT_GUILD),
+      item(NO_BOT_GUILD),
+      item(BOT_GUILD_2),
+    ]);
+    const response = await app.inject(picker());
+    expect(response.statusCode).toBe(200);
+    expect(z.array(GuildPickerItemSchema).parse(response.json())).toEqual([
+      item(BOT_GUILD),
+      item(BOT_GUILD_2),
+    ]);
+    expect(response.body).not.toContain(NO_BOT_GUILD);
+    expect(oauth.manageableGuilds).toHaveBeenCalledWith(ACCESS_TOKEN);
+  });
+
+  it('answers 401 without a login and asks to sign in again when the login holds no Discord token', async () => {
+    expect((await app.inject({ method: 'GET', url: '/api/guilds' })).statusCode).toBe(401);
+    const noToken = await app.inject({ method: 'GET', url: '/api/guilds', headers: asUser(USER) });
+    expect(noToken.statusCode).toBe(403);
+    expect(noToken.json<{ code: string }>().code).toBe('AUTH_REAUTH_REQUIRED');
+  });
+
+  it('asks to sign in again when Discord rejects the token', async () => {
+    oauth.manageableGuilds.mockRejectedValue(new ServiceError(ErrorCode.AUTH_REAUTH_REQUIRED));
+    const response = await app.inject(picker());
+    expect(response.statusCode).toBe(403);
+    expect(response.json<{ code: string }>().code).toBe('AUTH_REAUTH_REQUIRED');
+  });
+
+  it('answers 429 and 502, never 500, when Discord limits or fails', async () => {
+    oauth.manageableGuilds.mockRejectedValueOnce(
+      new RateLimitError({
+        timeToReset: 1,
+        limit: 1,
+        method: 'GET',
+        hash: 'h',
+        url: '/x',
+        route: '/x',
+        majorParameter: 'm',
+        global: false,
+        retryAfter: 1,
+        sublimitTimeout: 0,
+        scope: 'user',
+      }),
+    );
+    const limited = await app.inject(picker('t1'));
+    expect(limited.statusCode).toBe(429);
+    expect(limited.json<{ code: string }>().code).toBe('RATE_LIMITED');
+
+    oauth.manageableGuilds.mockRejectedValueOnce(
+      new DiscordAPIError({ message: 'down', code: 0 }, 0, 503, 'GET', '/x', {}),
+    );
+    const failed = await app.inject({
+      method: 'GET',
+      url: '/api/guilds',
+      headers: asUser(randomId(7), { 'x-token': 't2' }),
+    });
+    expect(failed.statusCode).toBe(502);
+    expect(failed.json<{ code: string }>().code).toBe('DISCORD_API_ERROR');
+  });
+
+  it('has its own small bucket per person', async () => {
+    oauth.manageableGuilds.mockResolvedValue([]);
+    const person = asUser(randomId(99), { 'x-token': 't3' });
+    const call = () => app.inject({ method: 'GET', url: '/api/guilds', headers: person });
+    for (let i = 0; i < GUILD_LIST_RATE_LIMIT.max; i++) expect((await call()).statusCode).toBe(200);
+    expect((await call()).statusCode).toBe(429);
+    const me = await app.inject({ method: 'GET', url: '/api/me', headers: person });
+    expect(me.statusCode).toBe(200);
+  });
+});
+
+describe('meModules', () => {
+  it('loads the caller routes when REST is on and the bot is logged in', () => {
+    expect(meModules({ APP_URL: ORIGIN })).toEqual([MeModule]);
+    expect(meModules({ APP_URL: ORIGIN, MIGRATION_PENDING: 'false' })).toEqual([MeModule]);
+  });
+
+  it('leaves them out while REST is off or a migration is pending', () => {
+    expect(meModules({})).toEqual([]);
+    expect(meModules({ APP_URL: ORIGIN, MIGRATION_PENDING: 'true' })).toEqual([]);
+  });
+});

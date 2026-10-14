@@ -39,14 +39,21 @@ export class SessionService {
   }
 
   /**
-   * The principal of this request, resolved once: guards that run one after
-   * another (session, fresh login, manage-guild) share the decryption.
+   * The principal of this request, or `null`, resolved once: the rate limiter,
+   * the guards that run one after another (session, fresh login, manage-guild)
+   * and the handler share the decryption. Only a found principal is kept.
    */
-  async requirePrincipal(request: PrincipalRequest): Promise<SessionPrincipal> {
+  async principalOf(request: PrincipalRequest): Promise<SessionPrincipal | null> {
     if (request.principal !== undefined) return request.principal;
     const principal = await this.getPrincipal(request.headers);
+    if (principal !== null) request.principal = principal;
+    return principal;
+  }
+
+  /** Like `principalOf`, but 401 `AUTH_UNAUTHENTICATED` when there is no valid login. */
+  async requirePrincipal(request: PrincipalRequest): Promise<SessionPrincipal> {
+    const principal = await this.principalOf(request);
     if (principal === null) throw new ApiError(ErrorCode.AUTH_UNAUTHENTICATED);
-    request.principal = principal;
     return principal;
   }
 

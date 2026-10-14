@@ -1,5 +1,6 @@
 import { Module, type Type } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
+import { AllExceptionsFilter } from '../common/filters/all-exceptions.filter.js';
 import { InvalidEnvError, loadEnv, restSettingsOf } from '../config/env.js';
 import { AUTH, REST_SETTINGS, createAuth } from './better-auth.js';
 import { OriginGuard } from './origin.guard.js';
@@ -41,6 +42,8 @@ export function authModules(
     FreshAuthGuard,
     // Global: a route added later cannot forget the CSRF check.
     { provide: APP_GUARD, useClass: OriginGuard },
+    // Global: every REST failure leaves as { code, message, details? }.
+    { provide: APP_FILTER, useClass: AllExceptionsFilter },
   ],
   exports: [AUTH, REST_SETTINGS, SessionService, SessionGuard, FreshAuthGuard],
 })

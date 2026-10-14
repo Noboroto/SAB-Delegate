@@ -1,5 +1,5 @@
 import { HttpException } from '@nestjs/common';
-import type { ApiErrorBody, ErrorCode } from '@sab/shared';
+import { ErrorCode, type ApiErrorBody } from '@sab/shared';
 import { translatorFor } from '../../i18n/translator.js';
 import type { ServiceErrorParams } from './service-error.js';
 
@@ -32,12 +32,34 @@ const STATUS_BY_CODE: Readonly<Record<ErrorCode, number>> = {
 };
 
 /**
+ * Whether the bot is in a server, or whether a person may manage it, must not
+ * be learnable from the answer: both collapse into the one "not found" code
+ * (and so the one status and message) on the way out.
+ */
+function publicCode(code: ErrorCode): ErrorCode {
+  return code === ErrorCode.GUILD_ACCESS_DENIED || code === ErrorCode.GUILD_BOT_MISSING
+    ? ErrorCode.GUILD_NOT_FOUND
+    : code;
+}
+
+/** The HTTP status a code is answered with. */
+export function statusOf(code: ErrorCode): number {
+  return STATUS_BY_CODE[publicCode(code)];
+}
+
+/**
  * The body of an error response: the code and its English text. Built from
  * the catalog only, so nothing from a thrown error's own message (table names,
  * paths, upstream text) can reach a client.
  */
-export function errorBody(code: ErrorCode, params?: ServiceErrorParams): ApiErrorBody {
-  return { code, message: translatorFor('en')(`errors.${code}`, params) };
+export function errorBody(
+  code: ErrorCode,
+  params?: ServiceErrorParams,
+  details?: ApiErrorBody['details'],
+): ApiErrorBody {
+  const shown = publicCode(code);
+  const message = translatorFor('en')(`errors.${shown}`, shown === code ? params : undefined);
+  return details === undefined ? { code: shown, message } : { code: shown, message, details };
 }
 
 /** An `HttpException` whose body is already the `{ code, message }` contract. */
@@ -45,7 +67,30 @@ export class ApiError extends HttpException {
   constructor(
     readonly code: ErrorCode,
     params?: ServiceErrorParams,
+    details?: ApiErrorBody['details'],
   ) {
-    super(errorBody(code, params), STATUS_BY_CODE[code]);
+    super(errorBody(code, params, details), statusOf(code));
   }
+}
+
+type ValidationIssue = {
+  message: string;
+  path?: ReadonlyArray<PropertyKey | { key: PropertyKey }>;
+};
+
+/**
+ * The `exceptionFactory` of the global validation pipe: a 400 with the
+ * offending field paths and the schema's own wording. The messages come from
+ * our schemas (never an echo of the submitted value), so the client can point
+ * at the field.
+ */
+export function validationFailed(issues: readonly ValidationIssue[]): ApiError {
+  return new ApiError(ErrorCode.VALIDATION_FAILED, undefined, {
+    issues: issues.map((issue) => ({
+      path: (issue.path ?? [])
+        .map((segment) => String(typeof segment === 'object' ? segment.key : segment))
+        .join('.'),
+      message: issue.message,
+    })),
+  });
 }

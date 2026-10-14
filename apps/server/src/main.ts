@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import cookie from '@fastify/cookie';
 import helmet from '@fastify/helmet';
+import rateLimit from '@fastify/rate-limit';
 import { StandardSchemaValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
@@ -8,7 +9,10 @@ import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module.js';
 import { mountAuth } from './auth/auth.handler.js';
 import { AUTH, type Auth } from './auth/better-auth.js';
+import { SessionService } from './auth/session.service.js';
 import { fastifyOptions, HELMET_OPTIONS } from './bootstrap/security-config.js';
+import { validationFailed } from './common/errors/http-error.js';
+import { rateLimitOptions } from './common/rate-limit/rate-limit.util.js';
 import { InvalidEnvError, loadEnv, restSettingsOf } from './config/env.js';
 import { BootGuardError } from './discord/boot-guard.js';
 
@@ -38,13 +42,15 @@ async function bootstrap(): Promise<void> {
     // Parses the Cookie header for `OriginGuard`; Better Auth reads the raw
     // header itself and sets its own cookies.
     await app.register(cookie);
+    // Before the auth route is added, so sign-in attempts are counted too.
+    await app.register(rateLimit, rateLimitOptions(app.get(SessionService)));
     mountAuth(app.getHttpAdapter().getInstance(), app.get<Auth>(AUTH));
   }
 
   // Nest 12's native Standard Schema pipe: `@Body({ schema })` takes a schema
   // from '@sab/shared' directly. Fields the schema does not declare are
   // stripped, an invalid body is a 400.
-  app.useGlobalPipes(new StandardSchemaValidationPipe());
+  app.useGlobalPipes(new StandardSchemaValidationPipe({ exceptionFactory: validationFailed }));
 
   // Nest listens for SIGTERM/SIGINT, runs the module destroy hooks, closes the
   // HTTP server and re-raises the signal, so the process exits cleanly.

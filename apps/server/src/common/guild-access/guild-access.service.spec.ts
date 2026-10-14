@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import type { GuildPickerItem } from '@sab/shared';
 import type { Client } from 'discord.js';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -34,7 +35,11 @@ function setup({ bits = MANAGE_GUILD, inGuild = true }: Setup = {}) {
   const client = {
     guilds: { cache: new Map(inGuild ? [[GUILD, guild]] : []) },
   } as unknown as Client;
-  return { service: new GuildAccessService(client), fetch, state, client, guild };
+  const manageableGuilds = vi.fn((_accessToken: string) => Promise.resolve<GuildPickerItem[]>([]));
+  const service = new GuildAccessService(client, {
+    manageableGuilds,
+  });
+  return { service, fetch, state, client, guild, manageableGuilds };
 }
 
 beforeEach(() => {
@@ -235,5 +240,62 @@ describe('GuildAccessService.assertManageGuild', () => {
     await expect(service.assertManageGuild(USER, GUILD, { fresh: true })).rejects.toBeInstanceOf(
       GuildNotFoundError,
     );
+  });
+});
+
+describe('GuildAccessService.listManageableGuilds', () => {
+  const TOKEN = 'token-for-the-picker';
+  const OTHER_GUILD = '100000000000000002';
+  const item = (id: string): GuildPickerItem => ({ id, name: `server ${id}`, icon: null });
+
+  it('keeps the servers the person manages that the bot is also in', async () => {
+    const { service, manageableGuilds } = setup();
+    manageableGuilds.mockResolvedValue([item(GUILD), item(OTHER_GUILD)]);
+    // The bot knows GUILD only; OTHER_GUILD must not appear, nor reveal anything.
+    expect(await service.listManageableGuilds(USER, TOKEN)).toEqual([item(GUILD)]);
+    expect(manageableGuilds).toHaveBeenCalledWith(TOKEN);
+  });
+
+  it('is empty when none of the person servers has the bot', async () => {
+    const { service, manageableGuilds } = setup({ inGuild: false });
+    manageableGuilds.mockResolvedValue([item(GUILD)]);
+    expect(await service.listManageableGuilds(USER, TOKEN)).toEqual([]);
+  });
+
+  it('asks Discord once per 30 seconds for one person, and shares concurrent calls', async () => {
+    const { service, manageableGuilds } = setup();
+    manageableGuilds.mockResolvedValue([item(GUILD)]);
+    await Promise.all([
+      service.listManageableGuilds(USER, TOKEN),
+      service.listManageableGuilds(USER, TOKEN),
+    ]);
+    await service.listManageableGuilds(USER, TOKEN);
+    expect(manageableGuilds).toHaveBeenCalledTimes(1);
+
+    vi.advanceTimersByTime(GUILD_ACCESS_ALLOW_TTL_MS + 1);
+    await service.listManageableGuilds(USER, TOKEN);
+    expect(manageableGuilds).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not share a list between two people', async () => {
+    const { service, manageableGuilds } = setup();
+    manageableGuilds.mockResolvedValue([item(GUILD)]);
+    await service.listManageableGuilds(USER, TOKEN);
+    await service.listManageableGuilds(OWNER, TOKEN);
+    expect(manageableGuilds).toHaveBeenCalledTimes(2);
+  });
+
+  it('refuses an id that is not a snowflake without calling Discord', async () => {
+    const { service, manageableGuilds } = setup();
+    expect(await service.listManageableGuilds('not-an-id', TOKEN)).toEqual([]);
+    expect(manageableGuilds).not.toHaveBeenCalled();
+  });
+
+  it('throws a failure as it is and asks again next time', async () => {
+    const { service, manageableGuilds } = setup();
+    const failure = new Error('rate limited');
+    manageableGuilds.mockRejectedValueOnce(failure).mockResolvedValue([item(GUILD)]);
+    await expect(service.listManageableGuilds(USER, TOKEN)).rejects.toBe(failure);
+    expect(await service.listManageableGuilds(USER, TOKEN)).toEqual([item(GUILD)]);
   });
 });
