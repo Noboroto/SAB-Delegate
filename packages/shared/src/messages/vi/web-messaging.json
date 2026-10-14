@@ -1,0 +1,69 @@
+{
+  "title": "Tin nhắn của bot",
+  "subtitle": "Gửi, sao chép, thả biểu cảm, tạo bình chọn và sửa tin nhắn do bot đăng.",
+  "tabs": {
+    "send": "Gửi tin",
+    "copy": "Sao chép tin",
+    "react": "Thả biểu cảm",
+    "poll": "Bình chọn",
+    "edit": "Sửa tin của bot"
+  },
+  "fields": {
+    "channel": "Kênh",
+    "content": "Nội dung"
+  },
+  "ref": {
+    "hint": "Dán liên kết tin nhắn (chuột phải vào tin nhắn trên Discord, chọn Sao chép liên kết tin nhắn).",
+    "problem": {
+      "malformed": "Đây không phải liên kết tin nhắn Discord.",
+      "channelRequired": "Hãy dán cả liên kết tin nhắn, không chỉ mã số của tin."
+    }
+  },
+  "send": {
+    "replyTo": "Trả lời một tin nhắn (không bắt buộc)",
+    "action": "Xem trước và gửi",
+    "modalTitle": "Gửi tin nhắn này?",
+    "confirm": "Gửi tin",
+    "pings": "Tin này sẽ nhắc tới: {list}.",
+    "done": "Đã gửi tin nhắn."
+  },
+  "copy": {
+    "source": "Tin nhắn cần sao chép",
+    "channel": "Kênh nhận bản sao",
+    "action": "Sao chép tin",
+    "done": "Đã sao chép tin nhắn.",
+    "nothing": "Tin nhắn này không có chữ hay tệp nào để sao chép."
+  },
+  "react": {
+    "target": "Tin nhắn",
+    "emoji": "Biểu cảm",
+    "pollChoices": "Số lựa chọn đánh số thêm vào",
+    "pollChoicesHelp": "Đặt 0 nếu chỉ thả một biểu cảm; đặt từ 1 để thêm các biểu cảm 1, 2, 3… sau nó.",
+    "action": "Thả biểu cảm",
+    "done": "Đã thả {count} biểu cảm."
+  },
+  "poll": {
+    "mode": "Đăng bình chọn",
+    "modeNew": "Trên tin nhắn mới",
+    "modeExisting": "Trên tin nhắn có sẵn",
+    "message": "Tin nhắn có sẵn",
+    "choices": "Số lựa chọn",
+    "action": "Xem trước và tạo bình chọn",
+    "modalTitle": "Tạo bình chọn này?",
+    "confirm": "Tạo bình chọn",
+    "planNew": "Bot đăng một tin nhắn mới",
+    "planExisting": "Dùng tin nhắn có sẵn",
+    "planEmojis": "{count} lựa chọn sẽ được thả:",
+    "done": "Đã tạo bình chọn."
+  },
+  "edit": {
+    "message": "Tin nhắn của bot cần sửa",
+    "content": "Nội dung mới",
+    "action": "Xem trước và sửa",
+    "modalTitle": "Sửa tin nhắn này?",
+    "confirm": "Sửa tin",
+    "notBotMessage": "Đây không phải tin nhắn do bot đăng nên không sửa được.",
+    "nothingToCopy": "Không có nội dung để sửa.",
+    "done": "Đã sửa tin nhắn."
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "title": "Bot messages",
+  "subtitle": "Send, copy, react to, run a poll on and edit messages the bot posts.",
+  "tabs": {
+    "send": "Send",
+    "copy": "Copy",
+    "react": "React",
+    "poll": "Poll",
+    "edit": "Edit bot message"
+  },
+  "fields": {
+    "channel": "Channel",
+    "content": "Message text"
+  },
+  "ref": {
+    "hint": "Paste the message link (right-click the message in Discord and choose Copy Message Link).",
+    "problem": {
+      "malformed": "This is not a Discord message link.",
+      "channelRequired": "Paste the whole message link, not only the message id."
+    }
+  },
+  "send": {
+    "replyTo": "Reply to a message (optional)",
+    "action": "Preview and send",
+    "modalTitle": "Send this message?",
+    "confirm": "Send message",
+    "pings": "This message would notify: {list}.",
+    "done": "Message sent."
+  },
+  "copy": {
+    "source": "Message to copy",
+    "channel": "Channel for the copy",
+    "action": "Copy message",
+    "done": "Message copied.",
+    "nothing": "This message has no text or file to copy."
+  },
+  "react": {
+    "target": "Message",
+    "emoji": "Emoji",
+    "pollChoices": "Numbered choices to add",
+    "pollChoicesHelp": "Use 0 for the emoji alone; from 1 up, the numbers 1, 2, 3... are added after it.",
+    "action": "Add reactions",
+    "done": "{count, plural, one {# reaction added.} other {# reactions added.}}"
+  },
+  "poll": {
+    "mode": "Post the poll on",
+    "modeNew": "A new message",
+    "modeExisting": "An existing message",
+    "message": "Existing message",
+    "choices": "Number of choices",
+    "action": "Preview and create poll",
+    "modalTitle": "Create this poll?",
+    "confirm": "Create poll",
+    "planNew": "The bot posts a new message",
+    "planExisting": "Uses the existing message",
+    "planEmojis": "{count, plural, one {# choice} other {# choices}} will be added:",
+    "done": "Poll created."
+  },
+  "edit": {
+    "message": "Bot message to edit",
+    "content": "New text",
+    "action": "Preview and edit",
+    "modalTitle": "Edit this message?",
+    "confirm": "Edit message",
+    "notBotMessage": "The bot did not post this message, so it cannot be edited.",
+    "nothingToCopy": "There is no text to edit with.",
+    "done": "Message edited."
+  }
+}
