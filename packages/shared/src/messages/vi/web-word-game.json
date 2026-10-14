@@ -1,0 +1,50 @@
+{
+  "title": "Trò nối từ",
+  "subtitle": "Kênh chơi, tình trạng vòng hiện tại và các từ đã dùng.",
+  "sample": "Một vài từ sẽ bị xoá",
+  "status": {
+    "title": "Vòng hiện tại",
+    "channel": "Kênh chơi",
+    "notConfigured": "Chưa chọn kênh",
+    "state": "Trạng thái",
+    "playing": "Đang chơi",
+    "waiting": "Chờ từ đầu tiên",
+    "finished": "Đã đủ số từ",
+    "progress": "Tiến độ",
+    "count": "{count} / {max} từ",
+    "lastWord": "Từ gần nhất",
+    "noneYet": "Chưa có từ nào"
+  },
+  "reset": {
+    "action": "Bắt đầu lại vòng",
+    "modalTitle": "Bắt đầu lại vòng chơi",
+    "confirm": "Xoá từ và bắt đầu lại",
+    "notConfigured": "Máy chủ chưa chọn kênh chơi nên không có vòng nào để bắt đầu lại.",
+    "plan": "{count} từ đã dùng sẽ bị xoá và vòng chơi bắt đầu lại từ đầu.",
+    "done": "Đã bắt đầu lại vòng chơi, xoá {count} từ."
+  },
+  "config": {
+    "title": "Cài đặt trò chơi",
+    "channel": "Kênh chơi",
+    "maxWords": "Số từ tối đa mỗi vòng",
+    "maxWordsHelp": "Từ {min} đến {max}.",
+    "newRoundNote": "Đổi kênh sẽ bắt đầu một vòng mới và xoá các từ đã dùng.",
+    "save": "Lưu",
+    "saveNewRound": "Lưu và bắt đầu vòng mới",
+    "modalTitle": "Đổi kênh chơi",
+    "confirmNewRound": "Đổi kênh và xoá từ",
+    "plan": "Vòng mới bắt đầu ở kênh đã chọn, {count} từ đã dùng sẽ bị xoá.",
+    "done": "Đã lưu cài đặt trò chơi."
+  },
+  "words": {
+    "title": "Các từ đã dùng ({count})",
+    "sort": "Sắp xếp các từ",
+    "sortPlayedAsc": "Thứ tự chơi, cũ nhất trước",
+    "sortPlayedDesc": "Thứ tự chơi, mới nhất trước",
+    "sortWordAsc": "A đến Z",
+    "sortWordDesc": "Z đến A",
+    "position": "Lượt",
+    "word": "Từ",
+    "empty": "Vòng này chưa có từ nào."
+  }
+}

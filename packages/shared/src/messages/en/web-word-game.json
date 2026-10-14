@@ -1,0 +1,50 @@
+{
+  "title": "Word chain game",
+  "subtitle": "The game channel, how the current round stands and the words used so far.",
+  "sample": "A few of the words that will be cleared",
+  "status": {
+    "title": "Current round",
+    "channel": "Game channel",
+    "notConfigured": "No channel chosen",
+    "state": "State",
+    "playing": "Being played",
+    "waiting": "Waiting for the first word",
+    "finished": "Word limit reached",
+    "progress": "Progress",
+    "count": "{count} / {max, plural, one {# word} other {# words}}",
+    "lastWord": "Latest word",
+    "noneYet": "No word yet"
+  },
+  "reset": {
+    "action": "Start the round over",
+    "modalTitle": "Start the round over",
+    "confirm": "Clear the words and start over",
+    "notConfigured": "This server has no game channel, so there is no round to start over.",
+    "plan": "{count, plural, one {# used word} other {# used words}} will be cleared and the round starts again from the beginning.",
+    "done": "The round started over; {count, plural, one {# word was} other {# words were}} cleared."
+  },
+  "config": {
+    "title": "Game settings",
+    "channel": "Game channel",
+    "maxWords": "Words allowed per round",
+    "maxWordsHelp": "From {min} to {max}.",
+    "newRoundNote": "Changing the channel starts a new round and clears the words used so far.",
+    "save": "Save",
+    "saveNewRound": "Save and start a new round",
+    "modalTitle": "Change the game channel",
+    "confirmNewRound": "Change channel and clear words",
+    "plan": "A new round starts in the chosen channel and {count, plural, one {# used word} other {# used words}} will be cleared.",
+    "done": "Game settings saved."
+  },
+  "words": {
+    "title": "Words used ({count})",
+    "sort": "Order of the words",
+    "sortPlayedAsc": "Play order, oldest first",
+    "sortPlayedDesc": "Play order, newest first",
+    "sortWordAsc": "A to Z",
+    "sortWordDesc": "Z to A",
+    "position": "Turn",
+    "word": "Word",
+    "empty": "No word has been played in this round."
+  }
+}
