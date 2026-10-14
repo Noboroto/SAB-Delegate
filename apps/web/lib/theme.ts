@@ -1,4 +1,5 @@
-export type ThemeMode = 'light' | 'dark' | 'system';
+export const THEME_MODES = ['light', 'dark', 'system'] as const;
+export type ThemeMode = (typeof THEME_MODES)[number];
 export type ResolvedTheme = 'light' | 'dark';
 
 export const THEME_MODE_COOKIE = 'theme-mode';
@@ -7,7 +8,7 @@ export const THEME_RESOLVED_COOKIE = 'theme';
 export const THEME_COOKIE_MAX_AGE_SECONDS = 365 * 24 * 60 * 60;
 
 export function parseThemeMode(value: string | undefined): ThemeMode {
-  return value === 'light' || value === 'dark' || value === 'system' ? value : 'system';
+  return THEME_MODES.find((mode) => mode === value) ?? 'system';
 }
 
 export function parseResolvedTheme(value: string | undefined): ResolvedTheme {

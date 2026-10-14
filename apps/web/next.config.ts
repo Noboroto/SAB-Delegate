@@ -1,5 +1,6 @@
 import type { NextConfig } from 'next';
 import createNextIntlPlugin from 'next-intl/plugin';
+import { securityHeaders } from './security-headers';
 import { serverOrigin } from './server-origin';
 
 const withNextIntl = createNextIntlPlugin('./app/i18n/request.ts');
@@ -25,9 +26,22 @@ const nextConfig: NextConfig = {
   rewrites: () =>
     Promise.resolve([{ source: '/api/:path*', destination: `${serverOrigin()}/api/:path*` }]),
   // Real 308s, not page stubs: a `redirect()` in a page answers 200 with an RSC
-  // payload and crawlers stop at that shell.
+  // payload and crawlers stop at that shell. The app has no landing page: `/`
+  // goes to the picker, which sends a signed-out visitor on to the login page.
   redirects: () =>
-    Promise.resolve([{ source: '/dashboard', destination: '/servers', permanent: true }]),
+    Promise.resolve([
+      { source: '/', destination: '/servers', permanent: true },
+      { source: '/dashboard', destination: '/servers', permanent: true },
+    ]),
+  // Pages only: `/api/*` is the Nest server's, and it sets its own (closed)
+  // policy on JSON answers.
+  headers: () =>
+    Promise.resolve([
+      {
+        source: '/((?!api/).*)',
+        headers: securityHeaders(process.env['NODE_ENV'] === 'production'),
+      },
+    ]),
 };
 
 export default withNextIntl(nextConfig);

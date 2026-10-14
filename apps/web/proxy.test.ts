@@ -22,6 +22,17 @@ describe('proxy', () => {
     expect(location.searchParams.get('next')).toBe('/servers/123?tab=logs');
   });
 
+  it('tells the page which path it renders, replacing what the browser claimed and dropping _rsc', () => {
+    const response = proxy(
+      new NextRequest('https://bot.example.test/servers/123/logs?page=2&_rsc=abc', {
+        headers: { cookie: 'better-auth.session_token=x', 'x-current-path': '/evil' },
+      }),
+    );
+    expect(response.headers.get('x-middleware-request-x-current-path')).toBe(
+      '/servers/123/logs?page=2',
+    );
+  });
+
   it('lets any request that carries a Better Auth cookie through: the server decides, not the proxy', () => {
     for (const cookie of ['better-auth.session_token=x', '__Secure-better-auth.session_data=x']) {
       expect(proxy(request('/servers', `locale=vi; ${cookie}`)).status).toBe(200);

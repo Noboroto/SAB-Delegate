@@ -6,17 +6,11 @@
     "title": "No servers yet",
     "body": "You need the Manage Server permission, and the SAB bot must already be in that server."
   },
-  "loadFailed": {
-    "title": "The server list could not be loaded",
-    "body": "Discord or SAB is not answering right now. Please try again in a few minutes.",
-    "retry": "Try again"
-  },
   "reauth": {
     "title": "Please sign in again",
     "body": "This login can no longer read your list of servers.",
     "action": "Sign in again"
   },
-  "serverInitial": "Icon of {name}",
   "userMenu": {
     "label": "Account",
     "account": "Discord account",

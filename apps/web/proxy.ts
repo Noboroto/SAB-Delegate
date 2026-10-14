@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { CURRENT_PATH_HEADER } from '@/lib/auth/safe-next';
 import {
   DEFAULT_LOCALE,
   LOCALE_COOKIE,
@@ -43,15 +44,23 @@ function isProtected(pathname: string): boolean {
  * reads back what was decided here.
  */
 export function proxy(request: NextRequest): NextResponse {
-  const { pathname, search } = request.nextUrl;
+  // Client navigations ask for the same page with Next's own `_rsc` parameter,
+  // which is not part of the address a person would return to.
+  const url = request.nextUrl.clone();
+  url.searchParams.delete('_rsc');
+  const { pathname } = url;
+  const path = `${pathname}${url.search}`;
 
   if (isProtected(pathname) && !hasLoginCookie(request)) {
     const login = new URL('/login', request.url);
-    login.searchParams.set('next', `${pathname}${search}`);
+    login.searchParams.set('next', path);
     return NextResponse.redirect(login);
   }
 
-  const response = NextResponse.next();
+  // Set, not appended: whatever the browser sent under this name is replaced.
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set(CURRENT_PATH_HEADER, path);
+  const response = NextResponse.next({ request: { headers: requestHeaders } });
   if (!isSupportedLocale(request.cookies.get(LOCALE_COOKIE)?.value)) {
     response.cookies.set(LOCALE_COOKIE, DEFAULT_LOCALE, {
       path: '/',

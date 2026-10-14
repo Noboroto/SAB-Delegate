@@ -1,5 +1,6 @@
 import { headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
+import { CURRENT_PATH_HEADER, loginPathFor } from '@/lib/auth/safe-next';
 import { serverOrigin } from '@/server-origin';
 import {
   ApiRequestError,
@@ -37,8 +38,8 @@ interface ServerFetchOptions<T> {
  * Server-component call that goes straight to the Nest server (no rewrite hop)
  * with the visitor's cookie and address chain.
  *
- * - 401: the visitor is signed out, so redirect to the login page (unless
- *   `onUnauthenticated: 'throw'`).
+ * - 401: the visitor is signed out, so redirect to the login page with the
+ *   current page as `next` (unless `onUnauthenticated: 'throw'`).
  * - 404 `GUILD_NOT_FOUND`: render the nearest `not-found.tsx`; the server gives
  *   the same answer for an unknown server, a missing bot and a missing
  *   permission, and so does this.
@@ -58,7 +59,9 @@ export async function serverFetch<T>(path: string, options: ServerFetchOptions<T
   }
   if (!res.ok) {
     const error = await toApiRequestError(res);
-    if (error.isUnauthenticated && options.onUnauthenticated !== 'throw') redirect('/login');
+    if (error.isUnauthenticated && options.onUnauthenticated !== 'throw') {
+      redirect(loginPathFor((await headers()).get(CURRENT_PATH_HEADER)));
+    }
     if (error.isGuildNotFound) notFound();
     throw error;
   }

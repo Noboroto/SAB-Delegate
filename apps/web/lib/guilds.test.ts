@@ -4,7 +4,8 @@ const fetchGuilds = vi.hoisted(() => vi.fn());
 vi.mock('@/lib/api/server-fetch', () => ({ serverFetch: fetchGuilds }));
 
 import { GUILD_SECTIONS, isGuildSection } from './guild-sections';
-import { getGuilds } from './guilds';
+import { ApiRequestError } from '@/lib/api/api-response';
+import { getGuilds, getGuildsOrReauth } from './guilds';
 
 describe('getGuilds', () => {
   it('reads the picker list from the server and parses it with the shared schema', async () => {
@@ -14,6 +15,16 @@ describe('getGuilds', () => {
     );
     await expect(getGuilds()).resolves.toEqual([{ id: '1'.repeat(18), name: 'A', icon: null }]);
     expect(fetchGuilds.mock.calls[0]?.[0]).toBe('/api/guilds');
+  });
+});
+
+describe('getGuildsOrReauth', () => {
+  it('answers null when the login cannot read the list, and rethrows any other failure', async () => {
+    fetchGuilds.mockRejectedValueOnce(new ApiRequestError(403, 'AUTH_REAUTH_REQUIRED'));
+    await expect(getGuildsOrReauth()).resolves.toBeNull();
+    const failure = new ApiRequestError(500, 'INTERNAL');
+    fetchGuilds.mockRejectedValueOnce(failure);
+    await expect(getGuildsOrReauth()).rejects.toBe(failure);
   });
 });
 

@@ -6,17 +6,11 @@
     "title": "Chưa có máy chủ nào",
     "body": "Bạn cần quyền Quản lý máy chủ, và bot SAB phải đã ở trong máy chủ đó."
   },
-  "loadFailed": {
-    "title": "Không tải được danh sách máy chủ",
-    "body": "Discord hoặc SAB tạm thời không trả lời. Hãy thử lại sau ít phút.",
-    "retry": "Thử lại"
-  },
   "reauth": {
     "title": "Cần đăng nhập lại",
     "body": "Phiên đăng nhập này không còn đọc được danh sách máy chủ của bạn.",
     "action": "Đăng nhập lại"
   },
-  "serverInitial": "Biểu tượng máy chủ {name}",
   "userMenu": {
     "label": "Tài khoản",
     "account": "Tài khoản Discord",

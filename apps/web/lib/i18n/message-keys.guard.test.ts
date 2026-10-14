@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { listWebSources } from '@/lib/code-quality/web-sources';
+import { GUILD_SECTIONS } from '@/lib/guild-sections';
+import { THEME_MODES } from '@/lib/theme';
 import { SUPPORTED_LOCALES, type SupportedLocale } from '@/lib/locale';
 
 // The translations are read from the catalog files on disk, so a key the
@@ -36,10 +38,29 @@ export function usedKeys(source: string): string[] {
   return keys;
 }
 
+/**
+ * Keys built at run time, derived from the lists the code itself iterates
+ * instead of being typed again here: the section names (`t(\`nav.${name}\`)` in
+ * the navigation, `t(section)` on the section pages), the theme modes and the
+ * languages of the two switchers.
+ */
+const DYNAMIC_KEYS = [
+  ...GUILD_SECTIONS.map((section) => ({
+    key: `servers.nav.${section}`,
+    rel: 'lib/guild-sections.ts',
+  })),
+  ...THEME_MODES.map((mode) => ({ key: `web.theme.${mode}`, rel: 'lib/theme.ts' })),
+  ...SUPPORTED_LOCALES.map((locale) => ({ key: `web.language.${locale}`, rel: 'lib/locale.ts' })),
+];
+
+/** Namespaces whose every key is owned by this app; `errors` is keyed by server error code. */
+const OWNED_NAMESPACES = ['web', 'login', 'servers'];
+
 describe('every translation key the web app asks for exists in every language', () => {
-  const used = listWebSources(['app', 'components', 'lib']).flatMap(({ rel, source }) =>
+  const literal = listWebSources(['app', 'components', 'lib']).flatMap(({ rel, source }) =>
     usedKeys(source).map((key) => ({ key, rel })),
   );
+  const used = [...literal, ...DYNAMIC_KEYS];
 
   it('finds the keys the components use', () => {
     expect(used.length).toBeGreaterThan(5);
@@ -55,6 +76,20 @@ describe('every translation key the web app asks for exists in every language', 
       if (!known.get(namespace)?.has(key)) missing.push(`${rel}: ${key}`);
     }
     expect(missing).toEqual([]);
+  });
+
+  it('has the section names the navigation builds from GUILD_SECTIONS', () => {
+    expect(DYNAMIC_KEYS.map(({ key }) => key)).toEqual(
+      expect.arrayContaining(['servers.nav.logs', 'web.theme.system', 'web.language.en']),
+    );
+  });
+
+  it('keeps no key of the app namespaces that nothing uses', () => {
+    const asked = new Set(used.map(({ key }) => key));
+    const unused = OWNED_NAMESPACES.flatMap((namespace) =>
+      [...catalogPaths('vi', namespace)].filter((key) => !asked.has(key)),
+    );
+    expect(unused).toEqual([]);
   });
 
   it('extracts literal calls only', () => {

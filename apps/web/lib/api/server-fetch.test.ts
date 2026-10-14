@@ -65,6 +65,23 @@ describe('serverFetch', () => {
     await expect(serverFetch('/api/me', { parser })).rejects.toThrow('REDIRECT:/login');
   });
 
+  it('brings the visitor back to the page they were on after signing in', async () => {
+    incoming.set('x-current-path', '/servers/123/logs?page=2');
+    fetchMock.mockResolvedValue(new Response('{}', { status: 401 }));
+    await expect(serverFetch('/api/me', { parser })).rejects.toThrow(
+      `REDIRECT:/login?next=${encodeURIComponent('/servers/123/logs?page=2')}`,
+    );
+  });
+
+  it.each(['https://evil.example/x', '//evil.example', '/login', '/servers'])(
+    'does not carry %j to the login page',
+    async (current) => {
+      incoming.set('x-current-path', current);
+      fetchMock.mockResolvedValue(new Response('{}', { status: 401 }));
+      await expect(serverFetch('/api/me', { parser })).rejects.toThrow('REDIRECT:/login');
+    },
+  );
+
   it('throws instead of redirecting when the caller is the login page', async () => {
     fetchMock.mockResolvedValue(new Response('{}', { status: 401 }));
     await expect(

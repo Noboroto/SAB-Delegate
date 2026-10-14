@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_AFTER_LOGIN, safeNextPath } from './safe-next';
+import { DEFAULT_AFTER_LOGIN, loginPathFor, safeNextPath } from './safe-next';
 
 describe('safeNextPath', () => {
   it('keeps a path on this site, query and fragment included', () => {
@@ -27,4 +27,19 @@ describe('safeNextPath', () => {
     expect(safeNextPath(['/servers/1', '//evil.example'])).toBe('/servers/1');
     expect(safeNextPath(['//evil.example', '/servers/1'])).toBe(DEFAULT_AFTER_LOGIN);
   });
+});
+
+describe('loginPathFor', () => {
+  it('carries the page being read, encoded', () => {
+    expect(loginPathFor('/servers/1/logs?a=b&c=d')).toBe(
+      `/login?next=${encodeURIComponent('/servers/1/logs?a=b&c=d')}`,
+    );
+  });
+
+  it.each([null, undefined, '', '/servers', '//evil.example', '/login'])(
+    'is the plain login page for %j',
+    (current) => {
+      expect(loginPathFor(current)).toBe('/login');
+    },
+  );
 });
