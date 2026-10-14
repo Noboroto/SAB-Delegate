@@ -64,18 +64,23 @@ function coreOverride(): string | undefined {
 
 describe('Better Auth is pinned to one exact version', () => {
   const server = readManifest('apps/server/package.json');
-  // The web app arrives in a later change; until then there is nothing to compare.
   const web = readManifest('apps/web/package.json');
   const manifests = [server, web].filter(
     (manifest): manifest is Manifest => manifest !== undefined,
   );
 
-  it('reads the server manifest', () => {
+  it('reads the server and the web manifests, which both depend on Better Auth', () => {
     expect(server?.dependencies?.['better-auth']).toBeDefined();
+    expect(web?.dependencies?.['better-auth']).toBeDefined();
   });
 
-  it('holds in the repository, whether or not the web app exists yet', () => {
+  it('holds in the repository: one exact version in both apps and in the override', () => {
+    expect(manifests).toHaveLength(2);
     expect(findProblems(manifests, coreOverride())).toEqual([]);
+  });
+
+  it('gives the web client the version the server was measured with', () => {
+    expect(web?.dependencies?.['better-auth']).toBe(server?.dependencies?.['better-auth']);
   });
 
   it('overrides @better-auth/core to the same version', () => {

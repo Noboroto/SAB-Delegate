@@ -90,3 +90,6 @@ plans/
 dist/
 *.tsbuildinfo
 **/src/generated/
+
+# Next rewrites this on every build and dev start; it is not source.
+apps/web/next-env.d.ts

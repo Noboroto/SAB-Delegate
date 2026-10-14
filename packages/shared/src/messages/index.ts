@@ -16,6 +16,7 @@ import enRoleAssign from './en/role-assign.json';
 import enSchedule from './en/schedule.json';
 import enSystem from './en/system.json';
 import enThread from './en/thread.json';
+import enWeb from './en/web.json';
 import enWordGame from './en/word-game.json';
 import viActivity from './vi/activity.json';
 import viAttendance from './vi/attendance.json';
@@ -33,6 +34,7 @@ import viRoleAssign from './vi/role-assign.json';
 import viSchedule from './vi/schedule.json';
 import viSystem from './vi/system.json';
 import viThread from './vi/thread.json';
+import viWeb from './vi/web.json';
 import viWordGame from './vi/word-game.json';
 
 /** Discord rejects a command or option description longer than this. */
@@ -57,6 +59,7 @@ export const MessageNamespaceSchema = z.enum([
   'activity',
   'attendance',
   'info',
+  'web',
 ]);
 
 export type MessageNamespace = z.infer<typeof MessageNamespaceSchema>;
@@ -84,6 +87,7 @@ export const MESSAGES = {
     activity: viActivity,
     attendance: viAttendance,
     info: viInfo,
+    web: viWeb,
   },
   en: {
     common: enCommon,
@@ -103,5 +107,6 @@ export const MESSAGES = {
     activity: enActivity,
     attendance: enAttendance,
     info: enInfo,
+    web: enWeb,
   },
 } satisfies Record<Locale, Record<MessageNamespace, object>>;

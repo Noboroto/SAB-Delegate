@@ -1,0 +1,28 @@
+{
+  "appName": "SAB Delegate",
+  "siteDescription": "The dashboard for managing the SAB bot in your Discord server.",
+  "skipToContent": "Skip to main content",
+  "loading": "Loading...",
+  "genericError": "Something went wrong. Please try again.",
+  "theme": {
+    "label": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "language": {
+    "label": "Language",
+    "vi": "Tiếng Việt",
+    "en": "English"
+  },
+  "errorPage": {
+    "title": "This page could not be loaded",
+    "body": "Something went wrong while loading this page. Please try again in a few minutes.",
+    "retry": "Try again"
+  },
+  "notFoundPage": {
+    "title": "Page not found",
+    "body": "The page you opened does not exist or has moved.",
+    "toServers": "Back to your servers"
+  }
+}

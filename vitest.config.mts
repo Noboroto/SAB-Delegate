@@ -9,6 +9,7 @@ export default defineConfig({
       'scripts/vitest.config.mts',
       'packages/shared/vitest.config.mts',
       'apps/server/vitest.config.mts',
+      'apps/web/vitest.config.mts',
     ],
   },
 });

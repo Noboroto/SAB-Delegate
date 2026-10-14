@@ -1,0 +1,28 @@
+{
+  "appName": "SAB Delegate",
+  "siteDescription": "Bảng điều khiển quản lý bot SAB cho máy chủ Discord của bạn.",
+  "skipToContent": "Chuyển đến nội dung chính",
+  "loading": "Đang tải...",
+  "genericError": "Đã có lỗi xảy ra. Vui lòng thử lại.",
+  "theme": {
+    "label": "Giao diện",
+    "light": "Sáng",
+    "dark": "Tối",
+    "system": "Theo hệ thống"
+  },
+  "language": {
+    "label": "Ngôn ngữ",
+    "vi": "Tiếng Việt",
+    "en": "English"
+  },
+  "errorPage": {
+    "title": "Không tải được trang",
+    "body": "Có sự cố khi tải trang này. Hãy thử lại sau ít phút.",
+    "retry": "Thử lại"
+  },
+  "notFoundPage": {
+    "title": "Không tìm thấy trang",
+    "body": "Trang bạn mở không tồn tại hoặc đã được chuyển đi.",
+    "toServers": "Về danh sách máy chủ"
+  }
+}

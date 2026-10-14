@@ -17,6 +17,10 @@ allowBuilds:
   # Its postinstall only prints a banner, but pnpm 12 refuses the install while
   # any build is undecided.
   necord: false
+  # next-intl's optional message-extraction watcher, which this app does not
+  # enable. Its prebuilt platform packages load without the install script
+  # (a source build only matters for platforms with no prebuilt binary).
+  '@parcel/watcher': false
 
 # necord 7 declares discord-api-types ^0.37.99 but only imports its types, and
 # discord.js 14.27 needs 0.38. One copy of 0.38 serves both.

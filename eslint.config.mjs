@@ -27,6 +27,17 @@ const NO_DIRECT_ZOD_PATHS = [
   },
 ];
 
+// Rules that exist because the browser, not the server, runs this code.
+const NO_STATIC_ANTD_FEEDBACK = {
+  name: 'antd',
+  importNames: ['message', 'notification'],
+  message:
+    "AntD's static message/notification render outside <ConfigProvider> (no theme, no translation). Use App.useApp().",
+};
+
+const NO_LOCAL_TIME_MESSAGE =
+  'Dates are shown through lib/format-datetime.ts, which reads the clock in the business time zone, not the viewer.';
+
 export default [
   {
     ignores: [
@@ -99,6 +110,38 @@ export default [
           property: 'randomUUID',
           message: 'Primary keys come from Postgres uuidv7(); do not mint ids in the app.',
         },
+      ],
+    },
+  },
+  {
+    // The web app: browser-only rules on top of the shared ones. A rule listed
+    // here replaces the root entry for these files, so the shared paths repeat.
+    files: ['apps/web/**/*.{ts,tsx,mts}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [...NO_DIRECT_ZOD_PATHS, ...NO_APP_SIDE_UUID_PATHS, NO_STATIC_ANTD_FEEDBACK],
+          patterns: [
+            {
+              group: ['zod/*'],
+              message: "Import `z` from '@sab/shared'; zod is owned by packages/shared.",
+            },
+          ],
+        },
+      ],
+      'no-restricted-properties': [
+        'error',
+        {
+          object: 'crypto',
+          property: 'randomUUID',
+          message: 'Primary keys come from Postgres uuidv7(); do not mint ids in the app.',
+        },
+        { property: 'toLocaleString', message: NO_LOCAL_TIME_MESSAGE },
+        { property: 'toLocaleDateString', message: NO_LOCAL_TIME_MESSAGE },
+        { property: 'toLocaleTimeString', message: NO_LOCAL_TIME_MESSAGE },
+        { property: 'getTimezoneOffset', message: NO_LOCAL_TIME_MESSAGE },
+        { object: 'Modal', property: 'confirm', message: 'Use App.useApp().modal.confirm.' },
       ],
     },
   },

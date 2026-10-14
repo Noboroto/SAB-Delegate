@@ -1,0 +1,15 @@
+export type ThemeMode = 'light' | 'dark' | 'system';
+export type ResolvedTheme = 'light' | 'dark';
+
+export const THEME_MODE_COOKIE = 'theme-mode';
+/** The last resolved theme, written by the client so the server can render it without a flash. */
+export const THEME_RESOLVED_COOKIE = 'theme';
+export const THEME_COOKIE_MAX_AGE_SECONDS = 365 * 24 * 60 * 60;
+
+export function parseThemeMode(value: string | undefined): ThemeMode {
+  return value === 'light' || value === 'dark' || value === 'system' ? value : 'system';
+}
+
+export function parseResolvedTheme(value: string | undefined): ResolvedTheme {
+  return value === 'dark' ? 'dark' : 'light';
+}

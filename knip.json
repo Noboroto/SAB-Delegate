@@ -17,6 +17,15 @@
       "ignoreDependencies": ["prisma-zod-generator"],
       "prisma": false
     },
+    "apps/web": {
+      "entry": [
+        "app/**/{page,layout,loading,error,not-found,route,template,default,global-error}.tsx",
+        "app/**/route.ts",
+        "app/i18n/request.ts",
+        "**/*.test.{ts,tsx}"
+      ],
+      "project": ["**/*.{ts,tsx}"]
+    },
     "packages/shared": {
       "entry": ["src/index.ts"],
       "project": ["src/**/*.ts"]

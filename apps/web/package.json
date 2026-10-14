@@ -1,0 +1,39 @@
+{
+  "name": "@sab/web",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack -p 3101",
+    "prebuild": "pnpm --workspace-root run generate:deps",
+    "build": "next build",
+    "start": "next start -p 3101",
+    "pretypecheck": "pnpm --workspace-root run generate:deps",
+    "typecheck": "tsc --noEmit",
+    "pretest": "pnpm --workspace-root run generate:deps",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@ant-design/icons": "6.3.4",
+    "@ant-design/nextjs-registry": "1.3.0",
+    "@sab/shared": "workspace:*",
+    "antd": "6.6.5",
+    "better-auth": "1.7.7",
+    "dayjs": "1.11.23",
+    "next": "16.4.0",
+    "next-intl": "4.14.9",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "7.0.1",
+    "@testing-library/react": "16.3.3",
+    "@testing-library/user-event": "14.6.7",
+    "@types/node": "24.12.0",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.1",
+    "happy-dom": "20.14.5",
+    "typescript": "6.0.3",
+    "vitest": "5.0.3"
+  }
+}
