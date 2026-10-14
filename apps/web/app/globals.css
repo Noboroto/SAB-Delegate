@@ -56,6 +56,70 @@ a {
   padding: 24px var(--page-px);
 }
 
+/* A link that looks like a button: same height token and colours as AntD's buttons. */
+.link-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--control-h);
+  padding: 0 15px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text-primary);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.link-button:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.link-button-primary {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--primary-fg);
+}
+
+.link-button-primary:hover {
+  border-color: var(--primary-hover);
+  background: var(--primary-hover);
+  color: var(--primary-fg);
+}
+
+/*
+ * Touch screens: iOS Safari zooms the page when a focused field is under 16px,
+ * and a finger needs 44px (--control-h grows to that in tokens.css). The doubled
+ * `:root` out-ranks AntD's runtime-injected rules whatever their order.
+ */
+@media (pointer: coarse) {
+  :root input:not([type='checkbox']):not([type='radio']):not([type='file']),
+  :root textarea,
+  :root select,
+  :root .ant-select-selection-item,
+  :root .ant-select-selection-placeholder {
+    font-size: 16px;
+  }
+
+  :root .ant-btn,
+  :root .ant-input,
+  :root .ant-input-affix-wrapper,
+  :root .ant-input-number,
+  :root .ant-select .ant-select-selector {
+    min-height: var(--control-h);
+  }
+
+  :root .ant-select-single .ant-select-selector {
+    height: var(--control-h);
+  }
+
+  :root .ant-select-single .ant-select-selection-item,
+  :root .ant-select-single .ant-select-selection-placeholder {
+    line-height: calc(var(--control-h) - 2px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

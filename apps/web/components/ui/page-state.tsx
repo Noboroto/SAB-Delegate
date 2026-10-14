@@ -1,7 +1,7 @@
 'use client';
 
 import { Button, Result } from 'antd';
-import Link from 'next/link';
+import { LinkButton } from './link-button';
 
 interface PageStateAction {
   label: string;
@@ -34,9 +34,9 @@ export function PageState({ status, title, body, action, headingLevel = 1 }: Pag
       subTitle={body}
       extra={
         action === undefined ? undefined : action.href !== undefined ? (
-          <Link href={action.href}>
-            <Button type="primary">{action.label}</Button>
-          </Link>
+          <LinkButton href={action.href} variant="primary">
+            {action.label}
+          </LinkButton>
         ) : (
           <Button type="primary" loading={action.loading} onClick={action.onClick}>
             {action.label}

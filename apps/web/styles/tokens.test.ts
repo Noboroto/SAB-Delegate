@@ -66,6 +66,25 @@ describe('tokens.css', () => {
   });
 });
 
+describe('touch screens', () => {
+  const globals = readFileSync(join(import.meta.dirname, '..', 'app', 'globals.css'), 'utf8');
+
+  it('grows the control height to 44px for a coarse pointer, and only there', () => {
+    const coarse = /@media \(pointer: coarse\)\s*\{\s*:root\s*\{([^}]*)\}/.exec(css);
+    expect(coarse, 'coarse-pointer block not found').not.toBeNull();
+    expect(valueOf(coarse?.[1] ?? '', '--control-h')).toBe('44px');
+    expect(valueOf(coarse?.[1] ?? '', '--control-h-sm')).toBe('44px');
+    expect(valueOf(light, '--control-h')).toBe('32px');
+  });
+
+  it('keeps fields at 16px so iOS does not zoom, and sizes AntD controls from --control-h', () => {
+    const coarse = /@media \(pointer: coarse\)\s*\{([\s\S]*?)\n\}\n/.exec(globals);
+    expect(coarse, 'coarse-pointer block not found').not.toBeNull();
+    expect(coarse?.[1]).toMatch(/font-size:\s*16px/);
+    expect(coarse?.[1]).toContain('min-height: var(--control-h)');
+  });
+});
+
 describe('tokens.css and the AntD theme agree', () => {
   it('uses one control height in CSS and in AntD, so mixed rows line up', () => {
     expect(valueOf(light, '--control-h')).toBe(`${lightTokens.controlHeight}px`);

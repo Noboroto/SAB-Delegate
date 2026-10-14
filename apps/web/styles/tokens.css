@@ -78,3 +78,11 @@
   --gray-bg: #222b29;
   --gray-fg: #9aa5a1;
 }
+
+/* Touch targets: a finger needs 44px, so every control row grows together. */
+@media (pointer: coarse) {
+  :root {
+    --control-h: 44px;
+    --control-h-sm: 44px;
+  }
+}

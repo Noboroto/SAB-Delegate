@@ -32,4 +32,13 @@ describe('PageState', () => {
     await userEvent.click(screen.getByRole('button', { name: /Go/ }));
     expect(onClick).not.toHaveBeenCalled();
   });
+
+  it('renders a link action as one link, not a button inside a link', () => {
+    const { container } = renderWithProviders(
+      <PageState status="info" title="t" body="b" action={{ label: 'Open', href: '/servers' }} />,
+    );
+    const link = screen.getByRole('link', { name: 'Open' });
+    expect(link).toHaveAttribute('href', '/servers');
+    expect(container.querySelector('a button, button a')).toBeNull();
+  });
 });
