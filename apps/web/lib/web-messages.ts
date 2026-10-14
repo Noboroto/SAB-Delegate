@@ -23,6 +23,7 @@ export const WEB_NAMESPACES = [
   'web-tools',
   'web-commands',
   'web-logs',
+  'web-api-keys',
 ] as const;
 
 export function webMessages(locale: SupportedLocale) {

@@ -3,11 +3,14 @@
 import { useState } from 'react';
 import { UserOutlined } from '@ant-design/icons';
 import { App, Button, Dropdown } from 'antd';
+import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { signOut } from '@/lib/auth/auth-client';
 
 export function UserMenu() {
   const t = useTranslations('servers.userMenu');
+  const tKeys = useTranslations('web-api-keys');
+  const router = useRouter();
   const { message } = App.useApp();
   const [leaving, setLeaving] = useState(false);
 
@@ -29,6 +32,13 @@ export function UserMenu() {
       menu={{
         items: [
           { key: 'account', label: t('account'), disabled: true },
+          // The whole row navigates: a link inside the label would only answer
+          // on its text, a small target for a finger.
+          {
+            key: 'apiKeys',
+            label: tKeys('menu'),
+            onClick: () => router.push('/account/api-keys'),
+          },
           { key: 'signOut', label: t('signOut'), onClick: () => void leave() },
         ],
       }}

@@ -1,0 +1,83 @@
+{
+  "menu": "Khoá API",
+  "pageTitle": "Khoá API",
+  "subtitle": "Khoá cho phép công cụ AI (MCP) đọc hoặc thao tác với bot thay bạn.",
+  "create": "Tạo khoá",
+  "usage": "Đang dùng {count}/{max} khoá.",
+  "limitReached": "Bạn đã dùng hết {max} khoá. Thu hồi một khoá hoặc chờ nó hết hạn để tạo thêm.",
+  "created": "Đã tạo khoá.",
+  "empty": "Chưa có khoá nào. Tạo khoá để kết nối công cụ AI.",
+  "form": {
+    "title": "Tạo khoá API",
+    "name": "Tên khoá",
+    "namePlaceholder": "Ví dụ: Claude trên laptop",
+    "nameRequired": "Hãy đặt tên cho khoá.",
+    "nameTooLong": "Tên tối đa {max} ký tự.",
+    "mode": "Quyền",
+    "modeRead": "Chỉ đọc",
+    "modeWrite": "Đọc và thay đổi",
+    "modeReadHelp": "Chỉ xem dữ liệu, không thay đổi được gì.",
+    "modeWriteHelp": "Được thay đổi dữ liệu. Sống tối đa {max} ngày và chỉ tạo được khi bạn vừa đăng nhập.",
+    "expiresInDays": "Hết hạn sau (ngày)",
+    "expiresRange": "Nhập số ngày từ 1 đến {max}.",
+    "submit": "Tạo khoá",
+    "cancel": "Huỷ",
+    "invalid": "Thông tin khoá chưa hợp lệ. Kiểm tra lại rồi thử lại."
+  },
+  "reauth": {
+    "title": "Cần đăng nhập lại",
+    "body": "Khoá có quyền thay đổi chỉ tạo được ngay sau khi bạn đăng nhập. Hãy đăng nhập lại rồi tạo khoá.",
+    "action": "Đăng nhập lại",
+    "failed": "Không bắt đầu được việc đăng nhập. Hãy thử lại."
+  },
+  "secret": {
+    "title": "Khoá của bạn đã sẵn sàng",
+    "warning": "Đây là lần duy nhất khoá hiện ra. Hãy sao chép và cất ở nơi an toàn: đóng cửa sổ này là không xem lại được.",
+    "label": "Khoá API",
+    "copy": "Sao chép khoá",
+    "copied": "Đã sao chép khoá.",
+    "copyFailed": "Không sao chép được. Hãy bôi đen khoá và sao chép bằng tay.",
+    "done": "Tôi đã lưu khoá"
+  },
+  "table": {
+    "name": "Tên",
+    "prefix": "Đầu khoá",
+    "mode": "Quyền",
+    "createdAt": "Tạo lúc",
+    "expiresAt": "Hết hạn",
+    "lastUsed": "Dùng gần nhất",
+    "status": "Trạng thái",
+    "actions": "Thao tác",
+    "neverExpires": "Không hết hạn",
+    "neverUsed": "Chưa dùng",
+    "ipUnknown": "không rõ địa chỉ"
+  },
+  "mode": {
+    "READ": "Chỉ đọc",
+    "WRITE": "Đọc và thay đổi"
+  },
+  "status": {
+    "active": "Đang dùng được",
+    "expired": "Đã hết hạn",
+    "revoked": "Đã thu hồi"
+  },
+  "revoke": {
+    "action": "Thu hồi",
+    "actionLabel": "Thu hồi khoá {name}",
+    "title": "Thu hồi khoá “{name}”?",
+    "body": "Khoá ngừng dùng được ngay. Các lịch hẹn giờ do khoá này tạo và chưa chạy sẽ bị huỷ.",
+    "confirm": "Thu hồi",
+    "cancel": "Giữ lại",
+    "done": "Đã thu hồi khoá."
+  },
+  "connect": {
+    "title": "Cách kết nối",
+    "intro": "Trong công cụ AI, thêm máy chủ MCP với địa chỉ dưới đây và gửi khoá qua tiêu đề Authorization. Đặt khoá vào biến môi trường SAB_MCP_KEY, đừng ghi khoá vào file.",
+    "urlLabel": "Địa chỉ MCP",
+    "fileLabel": "Ví dụ file .mcp.json",
+    "copyUrl": "Sao chép địa chỉ",
+    "copySnippet": "Sao chép ví dụ",
+    "copied": "Đã sao chép.",
+    "copyFailed": "Không sao chép được."
+  }
+}

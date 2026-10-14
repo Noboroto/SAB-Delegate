@@ -26,6 +26,7 @@ import enWebSettings from './en/web-settings.json';
 import enWebBirthday from './en/web-birthday.json';
 import enWebNote from './en/web-note.json';
 import enWebWordGame from './en/web-word-game.json';
+import enWebApiKeys from './en/web-api-keys.json';
 import enWebMessaging from './en/web-messaging.json';
 import enWebSchedule from './en/web-schedule.json';
 import enWebTools from './en/web-tools.json';
@@ -57,6 +58,7 @@ import viWebSettings from './vi/web-settings.json';
 import viWebBirthday from './vi/web-birthday.json';
 import viWebNote from './vi/web-note.json';
 import viWebWordGame from './vi/web-word-game.json';
+import viWebApiKeys from './vi/web-api-keys.json';
 import viWebMessaging from './vi/web-messaging.json';
 import viWebSchedule from './vi/web-schedule.json';
 import viWebTools from './vi/web-tools.json';
@@ -99,6 +101,7 @@ export const MessageNamespaceSchema = z.enum([
   'web-tools',
   'web-commands',
   'web-logs',
+  'web-api-keys',
 ]);
 
 export type MessageNamespace = z.infer<typeof MessageNamespaceSchema>;
@@ -140,6 +143,7 @@ export const MESSAGES = {
     'web-tools': viWebTools,
     'web-commands': viWebCommands,
     'web-logs': viWebLogs,
+    'web-api-keys': viWebApiKeys,
   },
   en: {
     common: enCommon,
@@ -173,5 +177,6 @@ export const MESSAGES = {
     'web-tools': enWebTools,
     'web-commands': enWebCommands,
     'web-logs': enWebLogs,
+    'web-api-keys': enWebApiKeys,
   },
 } satisfies Record<Locale, Record<MessageNamespace, object>>;

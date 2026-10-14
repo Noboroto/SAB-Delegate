@@ -114,6 +114,12 @@ a {
     height: var(--control-h);
   }
 
+  :root .ant-dropdown-menu-item {
+    display: flex;
+    align-items: center;
+    min-height: var(--control-h);
+  }
+
   :root .ant-select-single .ant-select-selection-item,
   :root .ant-select-single .ant-select-selection-placeholder {
     line-height: calc(var(--control-h) - 2px);

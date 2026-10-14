@@ -1,0 +1,83 @@
+{
+  "menu": "API keys",
+  "pageTitle": "API keys",
+  "subtitle": "Keys let AI tools (MCP) read or act on the bot for you.",
+  "create": "Create key",
+  "usage": "Using {count} of {max} keys.",
+  "limitReached": "You have used all {max} keys. Revoke one or wait for it to expire to create another.",
+  "created": "Key created.",
+  "empty": "No keys yet. Create one to connect an AI tool.",
+  "form": {
+    "title": "Create an API key",
+    "name": "Key name",
+    "namePlaceholder": "For example: Claude on my laptop",
+    "nameRequired": "Give the key a name.",
+    "nameTooLong": "The name can have at most {max} characters.",
+    "mode": "Access",
+    "modeRead": "Read only",
+    "modeWrite": "Read and change",
+    "modeReadHelp": "Can look at data but change nothing.",
+    "modeWriteHelp": "Can change data. Lasts at most {max} days and can only be created right after you sign in.",
+    "expiresInDays": "Expires after (days)",
+    "expiresRange": "Enter a number of days from 1 to {max}.",
+    "submit": "Create key",
+    "cancel": "Cancel",
+    "invalid": "The key details are not valid. Check them and try again."
+  },
+  "reauth": {
+    "title": "Sign in again",
+    "body": "A key that can change things can only be created right after you sign in. Sign in again, then create the key.",
+    "action": "Sign in again",
+    "failed": "Could not start the sign-in. Please try again."
+  },
+  "secret": {
+    "title": "Your key is ready",
+    "warning": "This is the only time the key is shown. Copy it and keep it somewhere safe: once you close this window you cannot see it again.",
+    "label": "API key",
+    "copy": "Copy key",
+    "copied": "Key copied.",
+    "copyFailed": "Could not copy. Select the key and copy it by hand.",
+    "done": "I have saved the key"
+  },
+  "table": {
+    "name": "Name",
+    "prefix": "Key start",
+    "mode": "Access",
+    "createdAt": "Created",
+    "expiresAt": "Expires",
+    "lastUsed": "Last used",
+    "status": "Status",
+    "actions": "Actions",
+    "neverExpires": "Never expires",
+    "neverUsed": "Never used",
+    "ipUnknown": "address unknown"
+  },
+  "mode": {
+    "READ": "Read only",
+    "WRITE": "Read and change"
+  },
+  "status": {
+    "active": "Active",
+    "expired": "Expired",
+    "revoked": "Revoked"
+  },
+  "revoke": {
+    "action": "Revoke",
+    "actionLabel": "Revoke key {name}",
+    "title": "Revoke the key “{name}”?",
+    "body": "The key stops working at once. Scheduled messages this key created that have not run yet are cancelled.",
+    "confirm": "Revoke",
+    "cancel": "Keep it",
+    "done": "Key revoked."
+  },
+  "connect": {
+    "title": "How to connect",
+    "intro": "In your AI tool, add an MCP server with the address below and send the key in the Authorization header. Keep the key in the SAB_MCP_KEY environment variable and never write it into a file.",
+    "urlLabel": "MCP address",
+    "fileLabel": "Example .mcp.json file",
+    "copyUrl": "Copy address",
+    "copySnippet": "Copy example",
+    "copied": "Copied.",
+    "copyFailed": "Could not copy."
+  }
+}
