@@ -1,0 +1,29 @@
+{
+  "subtitle": "The bot's health and shortcuts to the parts of this server.",
+  "status": {
+    "title": "Bot status",
+    "online": "Running",
+    "uptime": "Running for",
+    "latency": "Connection latency",
+    "latencyValue": "{ping} ms",
+    "latencyUnknown": "Not measured yet"
+  },
+  "uptime": {
+    "lessThanMinute": "Under 1 minute",
+    "minutes": "{minutes} min",
+    "hours": "{hours} h {minutes} min",
+    "days": "{days} d {hours} h {minutes} min"
+  },
+  "shortcuts": {
+    "title": "Go to",
+    "modules": "What the bot does: birthdays, notes, the word game, scheduled messages.",
+    "commands": "The commands the bot understands, with descriptions.",
+    "logs": "Who changed what on this server.",
+    "settings": "Language, channels and the bot's display name."
+  },
+  "unavailable": {
+    "title": "Could not read the bot status",
+    "body": "The bot may be restarting. Please try again in a few minutes.",
+    "retry": "Try again"
+  }
+}

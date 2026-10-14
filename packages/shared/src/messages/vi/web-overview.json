@@ -1,0 +1,29 @@
+{
+  "subtitle": "Tình trạng bot và lối tắt tới các phần của máy chủ.",
+  "status": {
+    "title": "Tình trạng bot",
+    "online": "Đang chạy",
+    "uptime": "Đã chạy liên tục",
+    "latency": "Độ trễ kết nối",
+    "latencyValue": "{ping} ms",
+    "latencyUnknown": "Chưa có số đo"
+  },
+  "uptime": {
+    "lessThanMinute": "Dưới 1 phút",
+    "minutes": "{minutes} phút",
+    "hours": "{hours} giờ {minutes} phút",
+    "days": "{days} ngày {hours} giờ {minutes} phút"
+  },
+  "shortcuts": {
+    "title": "Đi tới",
+    "modules": "Các tính năng của bot: sinh nhật, ghi chú, trò chơi nối từ, tin nhắn hẹn giờ.",
+    "commands": "Danh sách lệnh bot hiểu, kèm mô tả.",
+    "logs": "Ai đã đổi gì trên máy chủ này.",
+    "settings": "Ngôn ngữ, kênh và tên hiển thị của bot."
+  },
+  "unavailable": {
+    "title": "Chưa đọc được tình trạng bot",
+    "body": "Bot có thể đang khởi động lại. Hãy thử lại sau ít phút.",
+    "retry": "Thử lại"
+  }
+}

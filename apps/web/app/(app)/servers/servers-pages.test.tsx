@@ -5,10 +5,12 @@ import { ApiRequestError } from '@/lib/api/api-response';
 import { renderWithProviders } from '@/lib/test/render-with-providers';
 
 // The real `getGuilds` and its helpers run; only the HTTP call to the server is replaced.
-const guilds = vi.hoisted(() => ({ get: vi.fn() }));
+const guilds = vi.hoisted(() => ({ get: vi.fn(), overview: vi.fn() }));
 vi.mock('@/lib/api/server-fetch', () => ({
-  serverFetch: async (_path: string, { parser }: { parser: { parse(x: unknown): unknown } }) =>
-    parser.parse(await (guilds.get() as Promise<unknown>)),
+  serverFetch: async (path: string, { parser }: { parser: { parse(x: unknown): unknown } }) => {
+    const answer: unknown = path.endsWith('/overview') ? guilds.overview() : guilds.get();
+    return parser.parse(await answer);
+  },
 }));
 vi.mock('next-intl/server', async () => {
   const { serverTranslations } = await import('@/lib/test/server-translations');
@@ -31,7 +33,6 @@ vi.mock('@/lib/auth/auth-client', () => ({ signInWithDiscord: vi.fn(() => Promis
 
 import GuildLayout from './[guildId]/layout';
 import GuildOverviewPage from './[guildId]/page';
-import GuildSectionPage from './[guildId]/[section]/page';
 import GuildNotFound from './not-found';
 import ServersPage from './(picker)/page';
 
@@ -124,28 +125,40 @@ describe('server dashboard layout', () => {
 describe('server dashboard pages', () => {
   beforeEach(() => {
     guilds.get.mockReset();
+    guilds.overview.mockReset();
   });
 
-  it('shows a stub for a known section with its title as the page heading, and a 404 for any other path', async () => {
-    renderWithProviders(
-      await GuildSectionPage({ params: Promise.resolve({ guildId: A, section: 'logs' }) }),
-    );
-    expect(screen.getByRole('heading', { level: 1, name: 'Nhật ký' })).toBeInTheDocument();
-    await expect(
-      GuildSectionPage({ params: Promise.resolve({ guildId: A, section: 'admin' }) }),
-    ).rejects.toMatchObject(NOT_FOUND_SIGNAL);
-  });
-
-  it('names the server on its overview page', async () => {
+  it('names the server on its overview page and shows the bot status', async () => {
     guilds.get.mockResolvedValue(list);
+    guilds.overview.mockResolvedValue({ uptimeMs: 90 * 60_000, wsPing: 35 });
     renderWithProviders(await GuildOverviewPage({ params: Promise.resolve({ guildId: A }) }));
     expect(screen.getByRole('heading', { level: 1, name: 'Alpha' })).toBeInTheDocument();
+    expect(screen.getByText('1 giờ 30 phút')).toBeInTheDocument();
+    expect(screen.getByText('35 ms')).toBeInTheDocument();
+    expect(guilds.overview).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the overview page up when the bot cannot report its status', async () => {
+    guilds.get.mockResolvedValue(list);
+    guilds.overview.mockRejectedValue(new ApiRequestError(503));
+    renderWithProviders(await GuildOverviewPage({ params: Promise.resolve({ guildId: A }) }));
+    expect(screen.getByRole('heading', { level: 1, name: 'Alpha' })).toBeInTheDocument();
+    expect(screen.getByText('Chưa đọc được tình trạng bot')).toBeInTheDocument();
+  });
+
+  it('does not ask the server about a server that is not in the visitor list', async () => {
+    guilds.get.mockResolvedValue(list);
+    await expect(
+      GuildOverviewPage({ params: Promise.resolve({ guildId: '3'.repeat(18) }) }),
+    ).rejects.toMatchObject(NOT_FOUND_SIGNAL);
+    expect(guilds.overview).not.toHaveBeenCalled();
   });
 
   it('asks to sign in again on the overview page too', async () => {
     guilds.get.mockRejectedValue(REAUTH);
     renderWithProviders(await GuildOverviewPage({ params: Promise.resolve({ guildId: A }) }));
     expect(screen.getByText('Cần đăng nhập lại')).toBeInTheDocument();
+    expect(guilds.overview).not.toHaveBeenCalled();
   });
 });
 
