@@ -5,7 +5,12 @@
 // zod instance (and any `z.config` set on it) serves every schema.
 export { z } from 'zod';
 
-export { ErrorCode, ErrorCodeSchema } from './errors/error-code.js';
+export {
+  ApiErrorBodySchema,
+  ErrorCode,
+  ErrorCodeSchema,
+  type ApiErrorBody,
+} from './errors/error-code.js';
 export { escapeLike } from './utils/escape-like.js';
 export { partialWithoutDefaults } from './utils/partial-without-defaults.js';
 export { isValidMonthDay } from './utils/month-day.js';

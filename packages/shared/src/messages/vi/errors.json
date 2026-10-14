@@ -1,5 +1,7 @@
 {
-  "AUTH_REQUIRED": "Bạn cần đăng nhập để tiếp tục.",
+  "AUTH_UNAUTHENTICATED": "Bạn cần đăng nhập để tiếp tục.",
+  "AUTH_ORIGIN_REJECTED": "Yêu cầu bị từ chối vì không đến từ trang của ứng dụng. Hãy tải lại trang rồi thử lại.",
+  "AUTH_REAUTH_REQUIRED": "Hãy đăng nhập lại để xác nhận thao tác này.",
   "AUTH_FORBIDDEN": "Bạn không có quyền thực hiện thao tác này.",
   "AUTH_INVALID_API_KEY": "Khoá API không hợp lệ.",
   "AUTH_API_KEY_EXPIRED": "Khoá API đã hết hạn.",

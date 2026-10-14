@@ -1,7 +1,7 @@
 import helmet from '@fastify/helmet';
 import Fastify from 'fastify';
 import { describe, expect, it } from 'vitest';
-import { FASTIFY_OPTIONS, HELMET_OPTIONS } from './security-config.js';
+import { fastifyOptions, HELMET_OPTIONS } from './security-config.js';
 
 async function responseHeaders(): Promise<Record<string, unknown>> {
   const app = Fastify();
@@ -34,12 +34,37 @@ describe('HELMET_OPTIONS', () => {
   });
 });
 
-describe('FASTIFY_OPTIONS', () => {
+describe('fastifyOptions', () => {
   it('closes only idle keep-alive connections on shutdown', () => {
-    expect(FASTIFY_OPTIONS.forceCloseConnections).toBe('idle');
+    expect(fastifyOptions().forceCloseConnections).toBe('idle');
   });
 
-  it('does not trust forwarded headers', () => {
-    expect(FASTIFY_OPTIONS.trustProxy).toBe(false);
+  it('does not trust forwarded headers without a hop list', () => {
+    expect(fastifyOptions().trustProxy).toBe(false);
+    expect(fastifyOptions([]).trustProxy).toBe(false);
+  });
+
+  it('takes the client address from a trusted hop only', async () => {
+    const app = Fastify(fastifyOptions(['10.0.0.0/8']));
+    app.get('/', (request) => ({ ip: request.ip }));
+    try {
+      const forwarded = { 'x-forwarded-for': '203.0.113.7' };
+      const viaProxy = await app.inject({
+        method: 'GET',
+        url: '/',
+        remoteAddress: '10.1.2.3',
+        headers: forwarded,
+      });
+      expect(viaProxy.json()).toEqual({ ip: '203.0.113.7' });
+      const direct = await app.inject({
+        method: 'GET',
+        url: '/',
+        remoteAddress: '198.51.100.9',
+        headers: forwarded,
+      });
+      expect(direct.json()).toEqual({ ip: '198.51.100.9' });
+    } finally {
+      await app.close();
+    }
   });
 });

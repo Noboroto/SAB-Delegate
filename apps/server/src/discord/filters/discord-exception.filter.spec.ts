@@ -145,6 +145,32 @@ describe('ErrorReporter', () => {
     expect(posted).toContain('[redacted]');
   });
 
+  it('keeps the login secrets out of the channel', async () => {
+    silenceLogs();
+    const clientSecret = `cs-${randomBytes(8).toString('hex')}`;
+    const authSecret = randomBytes(24).toString('base64');
+    const send = vi.fn().mockResolvedValue(undefined);
+    const channel = { name: BOT_LOG_CHANNEL_NAME, isTextBased: () => true, send };
+    const guild = { channels: { cache: { find: () => channel } } };
+    const reporter = new ErrorReporter(
+      { guilds: { cache: { get: () => guild } } },
+      {
+        ADMIN_GUILD_ID: ADMIN_GUILD,
+        DISCORD_TOKEN: token,
+        DISCORD_CLIENT_SECRET: clientSecret,
+        BETTER_AUTH_SECRET: authSecret,
+        POSTGRES_PASSWORD: databasePassword,
+      },
+    );
+    await reporter.report('title', new Error(`oauth said ${clientSecret} and ${authSecret}`));
+    const posted = send.mock.calls
+      .map(([message]) => (message as { content: string }).content)
+      .join('\n');
+    expect(posted).not.toContain(clientSecret);
+    expect(posted).not.toContain(authSecret);
+    expect(posted).toContain('[redacted]');
+  });
+
   it('sends no mention to anyone', async () => {
     silenceLogs();
     const { reporter, send } = build({});

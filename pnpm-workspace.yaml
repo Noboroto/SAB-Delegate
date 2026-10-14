@@ -23,3 +23,9 @@ allowBuilds:
 peerDependencyRules:
   allowedVersions:
     necord>discord-api-types: '0.38'
+
+# One copy of the Better Auth core at the exact version the app pins. A caret
+# range inside better-auth would let a later install pull a core whose account
+# schema differs from the one the session code was measured against.
+overrides:
+  '@better-auth/core': 1.7.7

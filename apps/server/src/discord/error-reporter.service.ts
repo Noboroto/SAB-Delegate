@@ -107,7 +107,8 @@ export class ErrorReporter implements OnModuleDestroy {
     let redacted = text;
     for (const name of SECRET_ENV_NAMES) {
       const value = this.env[name];
-      if (value === '') continue;
+      // The login secrets are absent while the REST API is off.
+      if (value === undefined || value === '') continue;
       for (const form of new Set([value, encodeURIComponent(value)])) {
         redacted = redacted.replaceAll(form, '[redacted]');
       }

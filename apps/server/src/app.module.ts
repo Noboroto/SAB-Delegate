@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { LoggerModule } from 'nestjs-pino';
 import { AppStateModule } from './app-state/app-state.service.js';
+import { authModules } from './auth/auth.module.js';
 import { loadEnv } from './config/env.js';
 import { DiscordModule } from './discord/discord.module.js';
 import { HealthModule } from './health/health.module.js';
@@ -23,6 +24,7 @@ import { PrismaModule } from './prisma/prisma.module.js';
     I18nModule,
     DiscordModule.forRoot(),
     HealthModule,
+    ...authModules(),
     ...featureModules(),
   ],
 })

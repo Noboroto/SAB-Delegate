@@ -2,7 +2,14 @@ import { randomBytes } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { envSchema, InvalidEnvError, loadEnv, SECRET_ENV_NAMES, variableNames } from './env.js';
+import {
+  envSchema,
+  InvalidEnvError,
+  loadEnv,
+  restSettingsOf,
+  SECRET_ENV_NAMES,
+  variableNames,
+} from './env.js';
 
 // Generated per run: the values only need to be present and non-trivial.
 const token = `tok-${randomBytes(8).toString('hex')}`;
@@ -17,6 +24,14 @@ const productionEnv: Record<string, string> = {
   POSTGRES_DB: 'sab',
   POSTGRES_USER: 'sab_app',
   POSTGRES_PASSWORD: dbPassword,
+};
+const clientSecret = `cs-${randomBytes(12).toString('hex')}`;
+const authSecret = randomBytes(24).toString('base64');
+const restEnv = {
+  APP_URL: 'https://bot.example.test',
+  DISCORD_CLIENT_SECRET: clientSecret,
+  BETTER_AUTH_SECRET: authSecret,
+  TRUSTED_PROXY_IPS: '10.0.0.0/8,fd00::/8',
 };
 const developmentEnv = {
   ...productionEnv,
@@ -158,6 +173,98 @@ describe('loadEnv', () => {
     for (const secret of [token, dbPassword, 'not-a-snowflake', 'bad-pool-value']) {
       expect(text).not.toContain(secret);
     }
+  });
+});
+
+describe('REST settings', () => {
+  it('leaves the REST API off while APP_URL is unset', () => {
+    expect(restSettingsOf(loadEnv(productionEnv))).toBeUndefined();
+    expect(restSettingsOf(loadEnv({ ...developmentEnv }))).toBeUndefined();
+  });
+
+  it('collects the login settings once APP_URL is set', () => {
+    const settings = restSettingsOf(loadEnv({ ...productionEnv, ...restEnv }));
+    expect(settings).toEqual({
+      appUrl: 'https://bot.example.test',
+      discordClientId: '111111111111111111',
+      discordClientSecret: clientSecret,
+      authSecret,
+      trustedProxies: ['10.0.0.0/8', 'fd00::/8'],
+    });
+  });
+
+  it('reduces APP_URL to its origin and allows http outside production', () => {
+    const env = { ...developmentEnv, ...restEnv, APP_URL: 'http://localhost:3450/' };
+    expect(loadEnv(env).APP_URL).toBe('http://localhost:3450');
+    expect(
+      restSettingsOf(loadEnv({ ...env, TRUSTED_PROXY_IPS: undefined }))?.trustedProxies,
+    ).toEqual([]);
+  });
+
+  it.each([
+    ['a path', 'https://bot.example.test/app'],
+    ['a query', 'https://bot.example.test/?x=1'],
+    ['credentials', 'https://user@bot.example.test'],
+    ['another scheme', 'ftp://bot.example.test'],
+    ['plain text', 'bot.example.test'],
+  ])('rejects an APP_URL with %s', (_label, value) => {
+    expect(failureOf({ ...productionEnv, ...restEnv, APP_URL: value }).names).toEqual(['APP_URL']);
+  });
+
+  it('requires https in production only', () => {
+    const http = { ...restEnv, APP_URL: 'http://bot.example.test' };
+    expect(failureOf({ ...productionEnv, ...http }).names).toEqual(['APP_URL']);
+    expect(loadEnv({ ...developmentEnv, ...http }).APP_URL).toBe('http://bot.example.test');
+  });
+
+  it('requires both secrets once APP_URL is set', () => {
+    expect(
+      failureOf({ ...productionEnv, ...restEnv, DISCORD_CLIENT_SECRET: undefined }).names,
+    ).toEqual(['DISCORD_CLIENT_SECRET']);
+    expect(
+      failureOf({ ...productionEnv, ...restEnv, BETTER_AUTH_SECRET: undefined }).names,
+    ).toEqual(['BETTER_AUTH_SECRET']);
+  });
+
+  it('refuses a secret that is set without APP_URL instead of leaving login off', () => {
+    expect(failureOf({ ...productionEnv, BETTER_AUTH_SECRET: authSecret }).names).toEqual([
+      'APP_URL',
+    ]);
+  });
+
+  it('rejects a Better Auth secret shorter than 32 characters', () => {
+    const short = randomBytes(8).toString('hex').slice(0, 31);
+    expect(failureOf({ ...productionEnv, ...restEnv, BETTER_AUTH_SECRET: short }).names).toEqual([
+      'BETTER_AUTH_SECRET',
+    ]);
+  });
+
+  it('fails closed in production without a trusted proxy list, but not in development', () => {
+    expect(failureOf({ ...productionEnv, ...restEnv, TRUSTED_PROXY_IPS: undefined }).names).toEqual(
+      ['TRUSTED_PROXY_IPS'],
+    );
+    expect(
+      loadEnv({ ...developmentEnv, ...restEnv, TRUSTED_PROXY_IPS: undefined }).TRUSTED_PROXY_IPS,
+    ).toBeUndefined();
+  });
+
+  it.each([
+    ['a hostname', 'proxy.internal'],
+    ['a prefix past 32 on IPv4', '10.0.0.0/33'],
+    ['a prefix past 128 on IPv6', 'fd00::/129'],
+    ['a non-numeric prefix', '10.0.0.0/x'],
+    ['an empty list', ' , '],
+    ['one bad entry among good ones', '10.0.0.1,nope'],
+  ])('rejects TRUSTED_PROXY_IPS with %s', (_label, value) => {
+    expect(failureOf({ ...productionEnv, ...restEnv, TRUSTED_PROXY_IPS: value }).names).toEqual([
+      'TRUSTED_PROXY_IPS',
+    ]);
+  });
+
+  it('never puts a secret in the error', () => {
+    const error = failureOf({ ...productionEnv, ...restEnv, APP_URL: 'nope' });
+    expect(`${error.message} ${JSON.stringify(error.names)}`).not.toContain(clientSecret);
+    expect(`${error.message} ${JSON.stringify(error.names)}`).not.toContain(authSecret);
   });
 });
 

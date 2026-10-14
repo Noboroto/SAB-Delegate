@@ -1,12 +1,15 @@
 import 'reflect-metadata';
+import cookie from '@fastify/cookie';
 import helmet from '@fastify/helmet';
 import { StandardSchemaValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module.js';
-import { FASTIFY_OPTIONS, HELMET_OPTIONS } from './bootstrap/security-config.js';
-import { InvalidEnvError, loadEnv } from './config/env.js';
+import { mountAuth } from './auth/auth.handler.js';
+import { AUTH, type Auth } from './auth/better-auth.js';
+import { fastifyOptions, HELMET_OPTIONS } from './bootstrap/security-config.js';
+import { InvalidEnvError, loadEnv, restSettingsOf } from './config/env.js';
 import { BootGuardError } from './discord/boot-guard.js';
 
 // Fixed by the image, not configurable: compose and the reverse proxy point at
@@ -16,11 +19,11 @@ const HOST = '0.0.0.0';
 
 async function bootstrap(): Promise<void> {
   // Fail before opening any socket or loading the Discord client.
-  loadEnv();
+  const rest = restSettingsOf(loadEnv());
 
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    new FastifyAdapter(FASTIFY_OPTIONS),
+    new FastifyAdapter(fastifyOptions(rest?.trustedProxies)),
     // Hold Nest's own boot logs until pino is installed, so they are structured
     // and redacted like every other line. A failure while building the modules
     // (an unverifiable bot token, an unreachable database) rejects here and is
@@ -30,6 +33,13 @@ async function bootstrap(): Promise<void> {
   app.useLogger(app.get(Logger));
 
   await app.register(helmet, HELMET_OPTIONS);
+
+  if (rest !== undefined) {
+    // Parses the Cookie header for `OriginGuard`; Better Auth reads the raw
+    // header itself and sets its own cookies.
+    await app.register(cookie);
+    mountAuth(app.getHttpAdapter().getInstance(), app.get<Auth>(AUTH));
+  }
 
   // Nest 12's native Standard Schema pipe: `@Body({ schema })` takes a schema
   // from '@sab/shared' directly. Fields the schema does not declare are

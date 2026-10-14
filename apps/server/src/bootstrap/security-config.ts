@@ -1,22 +1,22 @@
 import type { FastifyHelmetOptions } from '@fastify/helmet';
 import type { FastifyServerOptions } from 'fastify';
 
-// Nothing in the release-1 environment names a trusted proxy hop, so forwarded
-// headers are not trusted and `request.ip` is the TCP peer. Trusting
-// X-Forwarded-For without a hop count lets any client pick its own address.
-// When REST is exposed behind the reverse proxy, the hop list becomes an
-// environment variable and replaces this constant, in the same change that
-// starts reading `request.ip`.
-export const FASTIFY_OPTIONS = {
-  trustProxy: false,
-  // Request logging belongs to nestjs-pino; Fastify's own logger would emit a
-  // second, unredacted line per request.
-  logger: false,
-  // Idle keep-alive sockets would otherwise hold a graceful shutdown open until
-  // the orchestrator's kill timeout; 'idle' closes only those, so a request that
-  // is still being answered finishes instead of being cut off.
-  forceCloseConnections: 'idle',
-} satisfies FastifyServerOptions;
+// Forwarded headers are trusted only from the listed proxy hops: trusting
+// X-Forwarded-For from anyone lets a client pick its own address, and trusting
+// none behind a reverse proxy makes `request.ip` the proxy for every request.
+// An empty list (bot-only release, local development) trusts nothing.
+export function fastifyOptions(trustedProxies: readonly string[] = []) {
+  return {
+    trustProxy: trustedProxies.length > 0 ? [...trustedProxies] : false,
+    // Request logging belongs to nestjs-pino; Fastify's own logger would emit a
+    // second, unredacted line per request.
+    logger: false,
+    // Idle keep-alive sockets would otherwise hold a graceful shutdown open until
+    // the orchestrator's kill timeout; 'idle' closes only those, so a request that
+    // is still being answered finishes instead of being cut off.
+    forceCloseConnections: 'idle',
+  } satisfies FastifyServerOptions;
+}
 
 // The server returns JSON and never markup, so the page-level policy is closed
 // completely. `useDefaults: false` is what makes that true: with the default

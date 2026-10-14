@@ -6,7 +6,9 @@ import { z } from 'zod';
  * written in one language and leak internals.
  */
 export const ErrorCodeSchema = z.enum([
-  'AUTH_REQUIRED',
+  'AUTH_UNAUTHENTICATED',
+  'AUTH_ORIGIN_REJECTED',
+  'AUTH_REAUTH_REQUIRED',
   'AUTH_FORBIDDEN',
   'AUTH_INVALID_API_KEY',
   'AUTH_API_KEY_EXPIRED',
@@ -31,3 +33,15 @@ export type ErrorCode = z.infer<typeof ErrorCodeSchema>;
 
 /** `ErrorCode.GUILD_NOT_FOUND` style access without repeating string literals. */
 export const ErrorCode = ErrorCodeSchema.enum;
+
+/**
+ * The JSON body of every failed REST response. `message` is English text for a
+ * log or a curl user; clients show their own translation of `code`.
+ */
+export const ApiErrorBodySchema = z.object({
+  code: ErrorCodeSchema,
+  message: z.string(),
+  details: z.record(z.string(), z.unknown()).optional(),
+});
+
+export type ApiErrorBody = z.infer<typeof ApiErrorBodySchema>;

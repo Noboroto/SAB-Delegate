@@ -1,5 +1,7 @@
 {
-  "AUTH_REQUIRED": "Sign in to continue.",
+  "AUTH_UNAUTHENTICATED": "Sign in to continue.",
+  "AUTH_ORIGIN_REJECTED": "The request was refused because it did not come from the application. Reload the page and try again.",
+  "AUTH_REAUTH_REQUIRED": "Sign in again to confirm this action.",
   "AUTH_FORBIDDEN": "You are not allowed to do this.",
   "AUTH_INVALID_API_KEY": "The API key is not valid.",
   "AUTH_API_KEY_EXPIRED": "The API key has expired.",
