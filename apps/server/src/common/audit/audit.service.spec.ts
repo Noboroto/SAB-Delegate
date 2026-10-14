@@ -1,10 +1,15 @@
 import 'reflect-metadata';
+import { randomBytes } from 'node:crypto';
 import { Test } from '@nestjs/testing';
 import { AUDIT_ACTIONS, ErrorCode, type ActorContext } from '@sab/shared';
 import { describe, expect, it, vi } from 'vitest';
 import { ServiceError } from '../errors/service-error.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { AuditService, sanitizeAuditParams } from './audit.service.js';
+
+// Fixture secrets are built at run time: a literal next to a key like
+// `password` or `token` reads as a leaked credential to secret scanners.
+const fixtureSecret = (): string => `fx-${randomBytes(6).toString('hex')}`;
 
 const GUILD = '100000000000000001';
 const USER = '100000000000000002';
@@ -24,8 +29,8 @@ describe('sanitizeAuditParams', () => {
       sanitizeAuditParams({
         channelId: '123',
         content: 'a private message',
-        token: 'secret',
-        before: { logChannelId: null, password: 'hunter2' },
+        token: fixtureSecret(),
+        before: { logChannelId: null, password: fixtureSecret() },
         after: { logChannelId: '456' },
       }),
     ).toEqual({

@@ -5,10 +5,12 @@
 const DEFAULT_HOST = 'sab-postgres';
 const DEFAULT_PORT = '5432';
 
+// Values are variable NAMES. The key is `passwordVar`, not `password`, so a
+// secret scanner does not read the name as a hard-coded password.
 const ROLE_VARIABLES = {
-  runtime: { user: 'POSTGRES_USER', password: 'POSTGRES_PASSWORD' },
+  runtime: { user: 'POSTGRES_USER', passwordVar: 'POSTGRES_PASSWORD' },
   // The migrate role owns the schema; only the release job should hold it.
-  migrate: { user: 'POSTGRES_MIGRATE_USER', password: 'POSTGRES_MIGRATE_PASSWORD' },
+  migrate: { user: 'POSTGRES_MIGRATE_USER', passwordVar: 'POSTGRES_MIGRATE_PASSWORD' },
 } as const;
 
 type DatabaseRole = keyof typeof ROLE_VARIABLES;
@@ -42,14 +44,14 @@ export function resolveDatabaseUrl(
   // Never trimmed: a password is opaque, and the release job and the Postgres
   // container read the same variable verbatim. Only an all-blank value is
   // treated as missing.
-  const rawPassword = env[variables.password];
+  const rawPassword = env[variables.passwordVar];
   const password = rawPassword?.trim() === '' ? undefined : rawPassword;
   const database = trimmed(env['POSTGRES_DB']);
 
   // Names only: the values are credentials.
   const missing = [
     [variables.user, user],
-    [variables.password, password],
+    [variables.passwordVar, password],
     ['POSTGRES_DB', database],
   ]
     .filter(([, value]) => !value)

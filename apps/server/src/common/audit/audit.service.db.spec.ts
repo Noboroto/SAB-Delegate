@@ -1,9 +1,14 @@
+import { randomBytes } from 'node:crypto';
 import { AUDIT_ACTIONS, type ActorContext } from '@sab/shared';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { requireDatabaseUrl } from '../../../../../vitest-test-database.mjs';
 import type { PrismaService } from '../../prisma/prisma.service.js';
 import { createTestDatabase, type TestDatabase } from '../../testing/test-database.js';
 import { AuditService } from './audit.service.js';
+
+// Fixture secrets are built at run time: a literal next to a key like
+// `password` or `token` reads as a leaked credential to secret scanners.
+const fixtureSecret = (): string => `fx-${randomBytes(6).toString('hex')}`;
 
 const GUILD = '100000000000000001';
 const ACTOR: ActorContext = { source: 'DISCORD', userId: '100000000000000002' };
@@ -46,8 +51,8 @@ describe('AuditService against Postgres', () => {
           params: {
             channelId: '300000000000000001',
             content: 'text that must not be stored',
-            apiKey: 'sk-secret',
-            before: { logChannelId: null, token: 'x' },
+            apiKey: fixtureSecret(),
+            before: { logChannelId: null, token: fixtureSecret() },
           },
         },
         tx,

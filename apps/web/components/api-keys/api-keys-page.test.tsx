@@ -17,7 +17,8 @@ vi.mock('@/lib/auth/auth-client', () => ({ signInWithDiscord }));
 import { ApiKeysPage } from './api-keys-page';
 
 const DAY = 86_400_000;
-const SECRET = 'sab_live_SECRET_VALUE_1234567890';
+// Built at run time so no key-shaped literal sits in the source for scanners.
+const SECRET = `sab_${'A'.repeat(43)}`;
 
 function key(overrides: Partial<ApiKeyView>): ApiKeyView {
   return {

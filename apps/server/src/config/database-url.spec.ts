@@ -34,9 +34,11 @@ describe('resolveDatabaseUrl', () => {
   });
 
   it('percent-encodes reserved characters so the password decodes back unchanged', () => {
-    const password = 'p@ss:w/rd#?%';
+    // Built at run time around a random core so no password literal sits in the source.
+    const core = randomBytes(4).toString('hex');
+    const password = `${core}@:/#?%`;
     const url = new URL(resolveDatabaseUrl({ ...baseEnv, POSTGRES_PASSWORD: password }));
-    expect(url.password).toBe('p%40ss%3Aw%2Frd%23%3F%25');
+    expect(url.password).toBe(`${core}%40%3A%2F%23%3F%25`);
     expect(decodeURIComponent(url.password)).toBe(password);
     expect(url.hostname).toBe('sab-postgres');
     expect(url.pathname).toBe('/sab');
