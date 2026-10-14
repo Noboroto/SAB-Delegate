@@ -1,0 +1,54 @@
+{
+  "title": "Cài đặt",
+  "subtitle": "Cách bot nói chuyện, nơi bot đăng tin và diện mạo của bot trong {guild}.",
+  "save": "Lưu thay đổi",
+  "saved": "Đã lưu cài đặt.",
+  "language": {
+    "title": "Ngôn ngữ của bot",
+    "description": "Ngôn ngữ bot dùng để trả lời trên máy chủ này.",
+    "label": "Ngôn ngữ",
+    "vi": "Tiếng Việt",
+    "en": "English"
+  },
+  "channels": {
+    "title": "Kênh",
+    "description": "Nơi bot đăng tin. Xoá lựa chọn của một kênh để tắt tin đăng của tính năng đó.",
+    "intro": "Kênh giới thiệu",
+    "log": "Kênh nhật ký",
+    "birthday": "Kênh sinh nhật",
+    "word": "Kênh trò nối từ",
+    "activity": "Danh mục hoạt động",
+    "wordMax": "Trò nối từ: số từ tối đa trong một chuỗi",
+    "wordMaxHelp": "Tối thiểu {min}."
+  },
+  "botProfile": {
+    "title": "Tên và ảnh của bot",
+    "description": "Diện mạo của bot chỉ trên máy chủ này. Các máy chủ khác không bị ảnh hưởng.",
+    "nick": "Tên trên máy chủ này",
+    "nickPlaceholder": "Để trống để dùng tên gốc của bot",
+    "nickHelp": "Tối đa {max} ký tự.",
+    "avatar": "Ảnh trên máy chủ này",
+    "avatarPick": "Chọn ảnh",
+    "avatarPickAgain": "Chọn ảnh khác",
+    "avatarHelp": "PNG, JPEG hoặc GIF, tối đa {size} KB. Discord chỉ cho đổi ảnh khoảng một lần mỗi phút.",
+    "avatarCurrent": "Ảnh hiện tại",
+    "avatarNew": "Ảnh mới (chưa lưu)",
+    "avatarDefault": "Ảnh gốc của bot",
+    "avatarDiscard": "Bỏ ảnh mới",
+    "save": "Lưu tên và ảnh",
+    "saved": "Đã cập nhật tên và ảnh của bot.",
+    "restoreNick": "Dùng lại tên gốc của bot",
+    "restoreNickDone": "Bot đã dùng lại tên gốc.",
+    "restoreAvatar": "Dùng lại ảnh gốc của bot",
+    "restoreAvatarDone": "Bot đã dùng lại ảnh gốc.",
+    "restoreAvatarConfirm": "Dùng lại ảnh gốc của bot? Ảnh riêng hiện tại sẽ bị xoá và không khôi phục lại được.",
+    "restoreAvatarConfirmOk": "Dùng ảnh gốc",
+    "unavailable": "Chưa đọc được tên và ảnh của bot. Hãy thử lại sau ít phút.",
+    "retry": "Thử lại",
+    "fileErrors": {
+      "type": "Tệp này không phải ảnh PNG, JPEG hoặc GIF.",
+      "size": "Ảnh lớn hơn {size} KB. Hãy chọn ảnh nhỏ hơn.",
+      "read": "Không đọc được tệp. Hãy chọn lại."
+    }
+  }
+}

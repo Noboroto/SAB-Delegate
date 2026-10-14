@@ -1,0 +1,54 @@
+{
+  "title": "Settings",
+  "subtitle": "How the bot speaks, where it posts and how it looks in {guild}.",
+  "save": "Save changes",
+  "saved": "Settings saved.",
+  "language": {
+    "title": "Bot language",
+    "description": "The language the bot answers in on this server.",
+    "label": "Language",
+    "vi": "Tiếng Việt",
+    "en": "English"
+  },
+  "channels": {
+    "title": "Channels",
+    "description": "Where the bot posts. Clear a channel to turn that feature's posts off.",
+    "intro": "Introductions channel",
+    "log": "Log channel",
+    "birthday": "Birthday channel",
+    "word": "Word game channel",
+    "activity": "Activity category",
+    "wordMax": "Word game: most words in a chain",
+    "wordMaxHelp": "At least {min}."
+  },
+  "botProfile": {
+    "title": "Bot name and picture",
+    "description": "How the bot looks on this server only. Other servers are not affected.",
+    "nick": "Name on this server",
+    "nickPlaceholder": "Leave empty for the bot's own name",
+    "nickHelp": "Up to {max} characters.",
+    "avatar": "Picture on this server",
+    "avatarPick": "Choose a picture",
+    "avatarPickAgain": "Choose another picture",
+    "avatarHelp": "PNG, JPEG or GIF, up to {size} KB. Discord lets the picture change about once a minute.",
+    "avatarCurrent": "Current picture",
+    "avatarNew": "New picture (not saved yet)",
+    "avatarDefault": "The bot's own picture",
+    "avatarDiscard": "Discard the new picture",
+    "save": "Save name and picture",
+    "saved": "The bot's name and picture are updated.",
+    "restoreNick": "Use the bot's own name",
+    "restoreNickDone": "The bot uses its own name again.",
+    "restoreAvatar": "Use the bot's own picture",
+    "restoreAvatarDone": "The bot uses its own picture again.",
+    "restoreAvatarConfirm": "Use the bot's own picture? The current server picture is deleted and cannot be brought back.",
+    "restoreAvatarConfirmOk": "Use own picture",
+    "unavailable": "The bot's name and picture cannot be read right now. Try again in a moment.",
+    "retry": "Try again",
+    "fileErrors": {
+      "type": "That file is not a PNG, JPEG or GIF picture.",
+      "size": "That picture is larger than {size} KB. Choose a smaller one.",
+      "read": "The file could not be read. Choose it again."
+    }
+  }
+}
