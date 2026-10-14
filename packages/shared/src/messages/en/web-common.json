@@ -1,0 +1,22 @@
+{
+  "retry": "Try again",
+  "cancel": "Cancel",
+  "picker": {
+    "channelPlaceholder": "Select a channel",
+    "rolePlaceholder": "Select a role",
+    "memberPlaceholder": "Type a name to find a member",
+    "memberHint": "Type a username or nickname to find a member.",
+    "memberBot": "bot",
+    "noResults": "No results.",
+    "loading": "Loading the list...",
+    "loadFailed": "Could not load the list."
+  },
+  "dryRun": {
+    "title": "What will happen",
+    "loading": "Preparing the plan..."
+  },
+  "confirm": {
+    "refreshPlan": "Review the plan again",
+    "expired": "This plan is out of date. Review the plan again before you confirm."
+  }
+}

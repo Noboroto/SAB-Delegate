@@ -20,6 +20,17 @@ import enSystem from './en/system.json';
 import enThread from './en/thread.json';
 import enWeb from './en/web.json';
 import enWordGame from './en/word-game.json';
+import enWebCommon from './en/web-common.json';
+import enWebOverview from './en/web-overview.json';
+import enWebSettings from './en/web-settings.json';
+import enWebBirthday from './en/web-birthday.json';
+import enWebNote from './en/web-note.json';
+import enWebWordGame from './en/web-word-game.json';
+import enWebMessaging from './en/web-messaging.json';
+import enWebSchedule from './en/web-schedule.json';
+import enWebTools from './en/web-tools.json';
+import enWebCommands from './en/web-commands.json';
+import enWebLogs from './en/web-logs.json';
 import viActivity from './vi/activity.json';
 import viAttendance from './vi/attendance.json';
 import viBirthday from './vi/birthday.json';
@@ -40,6 +51,17 @@ import viSystem from './vi/system.json';
 import viThread from './vi/thread.json';
 import viWeb from './vi/web.json';
 import viWordGame from './vi/word-game.json';
+import viWebCommon from './vi/web-common.json';
+import viWebOverview from './vi/web-overview.json';
+import viWebSettings from './vi/web-settings.json';
+import viWebBirthday from './vi/web-birthday.json';
+import viWebNote from './vi/web-note.json';
+import viWebWordGame from './vi/web-word-game.json';
+import viWebMessaging from './vi/web-messaging.json';
+import viWebSchedule from './vi/web-schedule.json';
+import viWebTools from './vi/web-tools.json';
+import viWebCommands from './vi/web-commands.json';
+import viWebLogs from './vi/web-logs.json';
 
 /** Discord rejects a command or option description longer than this. */
 export const COMMAND_DESCRIPTION_MAX_LENGTH = 100;
@@ -66,6 +88,17 @@ export const MessageNamespaceSchema = z.enum([
   'web',
   'login',
   'servers',
+  'web-common',
+  'web-overview',
+  'web-settings',
+  'web-birthday',
+  'web-note',
+  'web-word-game',
+  'web-messaging',
+  'web-schedule',
+  'web-tools',
+  'web-commands',
+  'web-logs',
 ]);
 
 export type MessageNamespace = z.infer<typeof MessageNamespaceSchema>;
@@ -96,6 +129,17 @@ export const MESSAGES = {
     web: viWeb,
     login: viLogin,
     servers: viServers,
+    'web-common': viWebCommon,
+    'web-overview': viWebOverview,
+    'web-settings': viWebSettings,
+    'web-birthday': viWebBirthday,
+    'web-note': viWebNote,
+    'web-word-game': viWebWordGame,
+    'web-messaging': viWebMessaging,
+    'web-schedule': viWebSchedule,
+    'web-tools': viWebTools,
+    'web-commands': viWebCommands,
+    'web-logs': viWebLogs,
   },
   en: {
     common: enCommon,
@@ -118,5 +162,16 @@ export const MESSAGES = {
     web: enWeb,
     login: enLogin,
     servers: enServers,
+    'web-common': enWebCommon,
+    'web-overview': enWebOverview,
+    'web-settings': enWebSettings,
+    'web-birthday': enWebBirthday,
+    'web-note': enWebNote,
+    'web-word-game': enWebWordGame,
+    'web-messaging': enWebMessaging,
+    'web-schedule': enWebSchedule,
+    'web-tools': enWebTools,
+    'web-commands': enWebCommands,
+    'web-logs': enWebLogs,
   },
 } satisfies Record<Locale, Record<MessageNamespace, object>>;

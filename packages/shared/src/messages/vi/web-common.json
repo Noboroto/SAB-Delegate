@@ -1,0 +1,22 @@
+{
+  "retry": "Thử lại",
+  "cancel": "Huỷ",
+  "picker": {
+    "channelPlaceholder": "Chọn kênh",
+    "rolePlaceholder": "Chọn vai trò",
+    "memberPlaceholder": "Gõ tên để tìm thành viên",
+    "memberHint": "Gõ tên hoặc biệt danh để tìm thành viên.",
+    "memberBot": "bot",
+    "noResults": "Không có kết quả.",
+    "loading": "Đang tải danh sách...",
+    "loadFailed": "Không tải được danh sách."
+  },
+  "dryRun": {
+    "title": "Kế hoạch sẽ thực hiện",
+    "loading": "Đang chuẩn bị kế hoạch..."
+  },
+  "confirm": {
+    "refreshPlan": "Xem lại kế hoạch",
+    "expired": "Kế hoạch này đã cũ. Hãy xem lại kế hoạch trước khi xác nhận."
+  }
+}

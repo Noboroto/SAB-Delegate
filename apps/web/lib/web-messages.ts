@@ -7,7 +7,23 @@ import type { SupportedLocale } from '@/lib/locale';
  * the bot's own strings (command descriptions, replies) are left out. `errors`
  * holds the translation of every server `ErrorCode`.
  */
-export const WEB_NAMESPACES = ['web', 'login', 'servers', 'errors'] as const;
+export const WEB_NAMESPACES = [
+  'web',
+  'login',
+  'servers',
+  'errors',
+  'web-common',
+  'web-overview',
+  'web-settings',
+  'web-birthday',
+  'web-note',
+  'web-word-game',
+  'web-messaging',
+  'web-schedule',
+  'web-tools',
+  'web-commands',
+  'web-logs',
+] as const;
 
 export function webMessages(locale: SupportedLocale) {
   const catalog = MESSAGES[locale];
