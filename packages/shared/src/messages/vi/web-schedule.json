@@ -1,0 +1,56 @@
+{
+  "title": "Hẹn giờ gửi tin",
+  "subtitle": "Bot sẽ gửi tin nhắn vào kênh đã chọn đúng giờ hẹn (giờ Việt Nam).",
+  "create": {
+    "title": "Hẹn một tin nhắn",
+    "kind": "Loại tin",
+    "kindSend": "Gửi chữ",
+    "kindCopy": "Sao chép một tin",
+    "channel": "Kênh",
+    "content": "Nội dung",
+    "source": "Tin nhắn cần sao chép",
+    "sourceHelp": "Dán liên kết tin nhắn Discord. Bot sao chép nội dung vào lúc gửi.",
+    "date": "Ngày",
+    "datePlaceholder": "ngày/tháng/năm, ví dụ 25/10/2026",
+    "dateHelp": "Để trống là hôm nay. Nhập hôm nay, ngày mai, ngày/tháng (25/10) hoặc ngày/tháng/năm (25/10/2026).",
+    "time": "Giờ",
+    "timePlaceholder": "giờ:phút, ví dụ 21:30",
+    "timeHelp": "Ví dụ 21:30, hoặc 30m, 1h30m tính từ bây giờ.",
+    "action": "Hẹn giờ gửi",
+    "done": "Đã hẹn gửi lúc {when}.",
+    "errors": {
+      "channelRequired": "Hãy chọn kênh.",
+      "contentRequired": "Hãy nhập nội dung tin nhắn.",
+      "sourceInvalid": "Hãy dán liên kết tin nhắn Discord.",
+      "timeRequired": "Hãy nhập giờ gửi.",
+      "invalidTime": "Giờ không hợp lệ. Nhập dạng 21:30, 30m hoặc 1h30m.",
+      "invalidDate": "Ngày không hợp lệ. Nhập hôm nay, ngày mai, dd/MM hoặc dd/MM/yyyy.",
+      "nonexistentDate": "Ngày này không có trong lịch.",
+      "relativeWithDate": "Giờ tính từ bây giờ (như 30m) không đi kèm ngày. Hãy xoá ngày hoặc nhập giờ cụ thể.",
+      "past": "Thời điểm này đã qua. Hãy chọn một lúc trong tương lai.",
+      "tooFar": "Chỉ hẹn được trong vòng một năm tới."
+    }
+  },
+  "table": {
+    "title": "Đang chờ gửi ({count})",
+    "empty": "Chưa có tin nào đang chờ. Hẹn một tin bằng biểu mẫu bên cạnh.",
+    "number": "Số",
+    "when": "Giờ gửi",
+    "channel": "Kênh",
+    "what": "Nội dung",
+    "actions": "Thao tác",
+    "kindSend": "Chữ",
+    "kindCopy": "Bản sao",
+    "copyOf": "Sao chép tin {source}"
+  },
+  "cancel": {
+    "action": "Huỷ lịch {seq}",
+    "modalTitle": "Huỷ lịch số {seq}",
+    "confirm": "Huỷ lịch này",
+    "planCanceled": "Lịch số {seq} sẽ bị huỷ và tin nhắn sẽ không được gửi.",
+    "planAlready": "Lịch số {seq} đã được huỷ từ trước, không cần làm gì thêm.",
+    "planNotPending": "Lịch số {seq} đã gửi, đã lỗi hoặc đang được gửi nên không huỷ được.",
+    "planNotFound": "Không tìm thấy lịch số {seq}.",
+    "done": "Đã huỷ lịch số {seq}."
+  }
+}

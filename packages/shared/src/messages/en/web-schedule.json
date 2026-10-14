@@ -1,0 +1,56 @@
+{
+  "title": "Scheduled messages",
+  "subtitle": "The bot sends the message to the chosen channel at the time you set (Vietnam time).",
+  "create": {
+    "title": "Schedule a message",
+    "kind": "Kind",
+    "kindSend": "Send text",
+    "kindCopy": "Copy a message",
+    "channel": "Channel",
+    "content": "Message text",
+    "source": "Message to copy",
+    "sourceHelp": "Paste a Discord message link. The bot copies the message when it sends.",
+    "date": "Date",
+    "datePlaceholder": "day/month/year, e.g. 25/10/2026",
+    "dateHelp": "Leave empty for today. Enter today, tomorrow, or a date as day/month (25/10) or day/month/year (25/10/2026). The day comes first.",
+    "time": "Time",
+    "timePlaceholder": "hours:minutes, e.g. 21:30",
+    "timeHelp": "For example 21:30, or 30m, 1h30m from now.",
+    "action": "Schedule",
+    "done": "Scheduled for {when}.",
+    "errors": {
+      "channelRequired": "Choose a channel.",
+      "contentRequired": "Enter the message text.",
+      "sourceInvalid": "Paste a Discord message link.",
+      "timeRequired": "Enter the time to send.",
+      "invalidTime": "This time is not valid. Use a form like 21:30, 30m or 1h30m.",
+      "invalidDate": "This date is not valid. Enter today, tomorrow, dd/MM or dd/MM/yyyy.",
+      "nonexistentDate": "This day is not on the calendar.",
+      "relativeWithDate": "A time from now (like 30m) does not go with a date. Clear the date or enter a clock time.",
+      "past": "This moment has already passed. Choose a time in the future.",
+      "tooFar": "Messages can only be scheduled up to a year ahead."
+    }
+  },
+  "table": {
+    "title": "Waiting to be sent ({count})",
+    "empty": "Nothing is waiting. Schedule a message with the form beside this list.",
+    "number": "No.",
+    "when": "Sends at",
+    "channel": "Channel",
+    "what": "Message",
+    "actions": "Actions",
+    "kindSend": "Text",
+    "kindCopy": "Copy",
+    "copyOf": "Copy of message {source}"
+  },
+  "cancel": {
+    "action": "Cancel schedule {seq}",
+    "modalTitle": "Cancel schedule {seq}",
+    "confirm": "Cancel this schedule",
+    "planCanceled": "Schedule {seq} will be canceled and its message will not be sent.",
+    "planAlready": "Schedule {seq} was already canceled; nothing more to do.",
+    "planNotPending": "Schedule {seq} was already sent, failed or is being sent, so it cannot be canceled.",
+    "planNotFound": "Schedule {seq} was not found.",
+    "done": "Schedule {seq} canceled."
+  }
+}
