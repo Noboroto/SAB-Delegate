@@ -23,6 +23,7 @@ describe('ChannelAccessService', () => {
     allow?: bigint[];
     noPermissions?: boolean;
     meCached?: boolean;
+    guildId?: string;
   }) {
     const me = { id: 'bot' };
     const fetchMe = vi.fn().mockResolvedValue(me);
@@ -40,6 +41,7 @@ describe('ChannelAccessService', () => {
         isDMBased: () => options.dm ?? false,
         isThread: () => options.thread ?? false,
         permissionsFor,
+        guildId: options.guildId,
         guild: { members: { me: options.meCached === false ? null : me, fetchMe } },
       },
     };
@@ -106,6 +108,37 @@ describe('ChannelAccessService', () => {
     expect(await failing(10003).check(CHANNEL_ID, 'read')).toBe('not-found');
     expect(await failing(50001).check(CHANNEL_ID, 'read')).toBe('missing-permissions');
     await expect(failing(50035).check(CHANNEL_ID, 'read')).rejects.toThrow('50035');
+  });
+
+  describe('scoped to a server', () => {
+    const GUILD_ID = '300000000000000001';
+    const OTHER_GUILD_ID = '300000000000000002';
+    const allow = [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages];
+
+    it('accepts a channel of that server', async () => {
+      const own = channel({ allow, guildId: GUILD_ID });
+      expect(await serviceFor(own.value).check(CHANNEL_ID, 'send', GUILD_ID)).toBe('ok');
+    });
+
+    it('answers not-found for a channel of another server, even one the bot could post in', async () => {
+      const foreign = channel({ allow, guildId: OTHER_GUILD_ID });
+      expect(await serviceFor(foreign.value).check(CHANNEL_ID, 'send', GUILD_ID)).toBe('not-found');
+      expect(foreign.permissionsFor).not.toHaveBeenCalled();
+    });
+
+    it('does not tell a channel the bot may not see from a missing one', async () => {
+      const failing = (code: number) =>
+        new ChannelAccessService(clientOf(vi.fn().mockRejectedValue(apiError(code))));
+      expect(await failing(10003).check(CHANNEL_ID, 'read', GUILD_ID)).toBe('not-found');
+      expect(await failing(50001).check(CHANNEL_ID, 'read', GUILD_ID)).toBe('not-found');
+    });
+
+    it('still reports missing permissions inside the server itself', async () => {
+      const own = channel({ allow: [PermissionFlagsBits.ViewChannel], guildId: GUILD_ID });
+      expect(await serviceFor(own.value).check(CHANNEL_ID, 'send', GUILD_ID)).toBe(
+        'missing-permissions',
+      );
+    });
   });
 });
 

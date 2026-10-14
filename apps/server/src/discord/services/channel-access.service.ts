@@ -30,18 +30,27 @@ export class ChannelAccessService {
    * `send`: can see the channel and post in it (in a thread: post in threads).
    * `read`: can see the channel and read its history. Failures other than
    * "unknown channel" and "missing access" are thrown.
+   *
+   * With `guildId` the channel must belong to that server, and every way of
+   * not being able to see it from there answers `not-found`: another server's
+   * channel, a missing one and one the bot has no access to look the same, so
+   * the answer cannot be used to probe which ids exist elsewhere. Without it
+   * (the slash commands) any channel the bot can see is accepted.
    */
-  async check(channelId: string, need: ChannelNeed): Promise<ChannelAccess> {
+  async check(channelId: string, need: ChannelNeed, guildId?: string): Promise<ChannelAccess> {
     let channel;
     try {
       channel = await this.client.channels.fetch(channelId);
     } catch (error) {
       const code = discordErrorCode(error);
       if (code === UNKNOWN_CHANNEL_CODE) return 'not-found';
-      if (code === MISSING_ACCESS_CODE) return 'missing-permissions';
+      if (code === MISSING_ACCESS_CODE) {
+        return guildId === undefined ? 'missing-permissions' : 'not-found';
+      }
       throw error;
     }
     if (!channel || channel.isDMBased() || !('permissionsFor' in channel)) return 'not-found';
+    if (guildId !== undefined && channel.guildId !== guildId) return 'not-found';
 
     const me = channel.guild.members.me ?? (await channel.guild.members.fetchMe());
     const permissions = channel.permissionsFor(me);

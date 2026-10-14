@@ -7,13 +7,19 @@ import {
   BirthdayImportProblemSchema,
   BirthdayImportResultSchema,
   BirthdayImportSchema,
+  BirthdaySelectorSchema,
 } from './birthday.js';
 import { GuildSettingsPatchSchema } from './guild-config.js';
 import { SEARCH_MAX_LENGTH } from './list-query.js';
+import { MentionNonReactorsInputSchema, MentionReactorsInputSchema } from './mention.js';
 import { CreateReactionPollSchema, MessageContentSchema, SendMessageSchema } from './messaging.js';
+import { NoteKeySchema } from './note.js';
 import { PAGE_SIZE_MAX } from './pagination.js';
+import { PurgeLastSchema, PurgeRangeSchema } from './purge.js';
+import { RoleAssignMembersInputSchema, RoleAssignReactorsInputSchema } from './role-assign.js';
 import { SCHEDULE_LIST_MAX, ScheduleCopyInputSchema, ScheduleSendInputSchema } from './schedule.js';
 import { SnowflakeSchema } from './snowflake.js';
+import { ThreadCreateSchema, ThreadDeleteSchema, ThreadRenameSchema } from './thread.js';
 import { WordGameConfigSchema } from './word-game.js';
 
 /*
@@ -37,7 +43,7 @@ const dryRunField = z.boolean().default(false);
  * The two flags of a destructive call in a query string, for routes that have
  * no body. The caller adds `requireConfirmation` so that neither flag is a 400.
  */
-export const destructiveQueryShape = {
+const destructiveQueryShape = {
   dryRun: QueryFlagSchema,
   confirm: QueryFlagSchema,
 } as const;
@@ -45,7 +51,36 @@ export const destructiveQueryShape = {
 /** A write that can be previewed but needs no confirmation. */
 const dryRunBodyShape = { dryRun: dryRunField } as const;
 
+/** The two flags of a destructive call in a JSON body. */
+const destructiveBodyShape = { dryRun: dryRunField, confirm: z.boolean().default(false) } as const;
+
+/**
+ * A destructive request either asks for a preview or confirms the real run:
+ * sending neither is a 400 on `confirm`, so a stray request cannot delete
+ * anything.
+ */
+export function requireConfirmation<T extends z.ZodType<{ dryRun: boolean; confirm: boolean }>>(
+  schema: T,
+): T {
+  return schema.refine(({ dryRun, confirm }) => dryRun || confirm, {
+    message: 'confirm must be true to run; send dryRun to preview',
+    path: ['confirm'],
+  });
+}
+
 // ---- birthdays -----------------------------------------------------------------
+
+/**
+ * Removal names exactly one person, by student ID or by Discord user. The
+ * slash command lets a student ID win when both are given; over HTTP both (or
+ * neither) is a mistake worth a 400 instead of a guess.
+ */
+export const BirthdayRemoveQuerySchema = requireConfirmation(
+  BirthdaySelectorSchema.extend(destructiveQueryShape).refine(
+    ({ studentId, discordId }) => (studentId === undefined) !== (discordId === undefined),
+    { message: 'send exactly one of studentId or discordId', path: ['studentId'] },
+  ),
+);
 
 export const BirthdayListQuerySchema = z.object({
   month: z.coerce.number().int().min(1).max(12).optional(),
@@ -74,9 +109,15 @@ export type BirthdayImportReport = z.infer<typeof BirthdayImportReportSchema>;
 
 export const NoteListQuerySchema = z.object({ roleId: SnowflakeSchema.optional() });
 
+export const NoteDeleteQuerySchema = requireConfirmation(
+  NoteKeySchema.extend(destructiveQueryShape),
+);
+
 // ---- word game -----------------------------------------------------------------
 
 export const WordGameConfigRequestSchema = WordGameConfigSchema.safeExtend(dryRunBodyShape);
+
+export const WordGameResetRequestSchema = requireConfirmation(z.object(destructiveBodyShape));
 
 // ---- schedules -----------------------------------------------------------------
 
@@ -104,6 +145,8 @@ export const ScheduleCreateRequestSchema = z.discriminatedUnion('kind', [
 
 export type ScheduleCreateRequest = z.infer<typeof ScheduleCreateRequestSchema>;
 
+export const ScheduleCancelQuerySchema = requireConfirmation(z.object(destructiveQueryShape));
+
 /** A query string carries text, hence the coercion the service's own schema does not do. */
 export const ScheduleListRequestSchema = z.object({
   status: ScheduledStatusSchema.optional(),
@@ -126,6 +169,42 @@ export const EditBotMessageRequestSchema = z.object({
   content: MessageContentSchema,
   ...dryRunBodyShape,
 });
+
+// ---- mentions, threads, purge, role assignment --------------------------------
+
+export const MentionReactorsRequestSchema = MentionReactorsInputSchema.extend(dryRunBodyShape);
+
+export const MentionNonReactorsRequestSchema =
+  MentionNonReactorsInputSchema.extend(dryRunBodyShape);
+
+/**
+ * The opening line naming who made the thread is built by the slash command;
+ * an API caller cannot write one, so `byline` is not accepted.
+ */
+export const ThreadCreateRequestSchema = ThreadCreateSchema.omit({ byline: true });
+
+export const ThreadRenameRequestSchema = requireConfirmation(
+  ThreadRenameSchema.extend(destructiveBodyShape),
+);
+
+export const ThreadDeleteRequestSchema = requireConfirmation(
+  ThreadDeleteSchema.extend(destructiveBodyShape),
+);
+
+export const PurgeRequestSchema = requireConfirmation(
+  z.discriminatedUnion('mode', [
+    PurgeRangeSchema.extend({ mode: z.literal('range'), ...destructiveBodyShape }),
+    PurgeLastSchema.extend({ mode: z.literal('last'), ...destructiveBodyShape }),
+  ]),
+);
+
+export const RoleAssignMembersRequestSchema = requireConfirmation(
+  RoleAssignMembersInputSchema.safeExtend(destructiveBodyShape),
+);
+
+export const RoleAssignReactorsRequestSchema = requireConfirmation(
+  RoleAssignReactorsInputSchema.safeExtend(destructiveBodyShape),
+);
 
 // ---- settings ------------------------------------------------------------------
 
@@ -156,7 +235,8 @@ export type BotProfile = z.infer<typeof BotProfileSchema>;
  */
 export const BotProfileSetRequestSchema = z
   .object({
-    nick: z.string().trim().min(1).max(BOT_NICK_MAX_LENGTH).optional(),
+    // `null` clears the nickname, so the bot shows its default name again.
+    nick: z.string().trim().min(1).max(BOT_NICK_MAX_LENGTH).nullable().optional(),
     avatar: z
       .string()
       .min(1)
@@ -225,6 +305,23 @@ export const AuditLogPageSchema = z.object({
 export type AuditLogPage = z.infer<typeof AuditLogPageSchema>;
 
 export const CommandsQuerySchema = z.object({ locale: LocaleSchema.default(DEFAULT_LOCALE) });
+
+/** A subcommand reached through its full path, e.g. `birthday remove`. */
+const CommandCatalogSubcommandSchema = z.object({
+  name: z.string(),
+  description: z.string(),
+});
+
+export const CommandCatalogEntrySchema = z.object({
+  name: z.string(),
+  description: z.string(),
+  /** Discord's default-permission bit set as a decimal string; null when everyone may use it. */
+  defaultMemberPermissions: z.string().nullable(),
+  guildOnly: z.boolean(),
+  subcommands: z.array(CommandCatalogSubcommandSchema),
+});
+
+export type CommandCatalogEntry = z.infer<typeof CommandCatalogEntrySchema>;
 
 // ---- Discord lookups for the dashboard's pickers -------------------------------
 

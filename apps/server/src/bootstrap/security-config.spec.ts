@@ -1,7 +1,8 @@
 import helmet from '@fastify/helmet';
 import Fastify from 'fastify';
 import { describe, expect, it } from 'vitest';
-import { fastifyOptions, HELMET_OPTIONS } from './security-config.js';
+import { BIRTHDAY_CSV_MAX_BYTES } from '../modules/birthday/birthday.csv.js';
+import { fastifyOptions, HELMET_OPTIONS, REST_BODY_LIMIT_BYTES } from './security-config.js';
 
 async function responseHeaders(): Promise<Record<string, unknown>> {
   const app = Fastify();
@@ -35,6 +36,21 @@ describe('HELMET_OPTIONS', () => {
 });
 
 describe('fastifyOptions', () => {
+  it('takes a JSON body that wraps a CSV at the import limit, and still refuses a huge one', async () => {
+    const app = Fastify(fastifyOptions());
+    app.post('/', (request) => ({ bytes: JSON.stringify(request.body).length }));
+    try {
+      // Every line break becomes two characters in the JSON text.
+      const csv = 'a\n'.repeat(BIRTHDAY_CSV_MAX_BYTES / 2);
+      const post = (payload: object) => app.inject({ method: 'POST', url: '/', payload });
+      expect((await post({ csv })).statusCode).toBe(200);
+      const huge = await post({ csv: 'x'.repeat(REST_BODY_LIMIT_BYTES) });
+      expect(huge.statusCode).toBe(413);
+    } finally {
+      await app.close();
+    }
+  });
+
   it('closes only idle keep-alive connections on shutdown', () => {
     expect(fastifyOptions().forceCloseConnections).toBe('idle');
   });

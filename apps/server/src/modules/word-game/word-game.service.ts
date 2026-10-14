@@ -294,7 +294,9 @@ export class WordGameService {
     const { channelId, maxWords } = parsed.data;
     const restarts = channelId !== undefined;
 
-    if (channelId !== undefined) await this.guilds.assertChannelUsable('wordChannelId', channelId);
+    if (channelId !== undefined) {
+      await this.guilds.assertChannelUsable('wordChannelId', channelId, { guildId: id, actor });
+    }
 
     if (opts.dryRun === true) {
       const game = await this.loadGame(this.prisma, id);

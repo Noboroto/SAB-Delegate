@@ -70,6 +70,13 @@ type GuildAccessOptions = {
    * `GUILD_ACCESS_ALLOW_TTL_MS`.
    */
   fresh?: boolean;
+  /**
+   * The person's Discord login token, resolved only when a check has to reach
+   * Discord. With it, a server missing from the person's own server list is
+   * refused before any lookup, so the time taken cannot tell a server the bot
+   * is in from one it is not. `null` means the login holds no token.
+   */
+  oauthToken?: () => Promise<string | null>;
 };
 
 /**
@@ -120,7 +127,7 @@ export class GuildAccessService {
   async canManage(
     userId: string,
     guildId: string,
-    { fresh = false }: GuildAccessOptions = {},
+    { fresh = false, oauthToken }: GuildAccessOptions = {},
   ): Promise<boolean> {
     // Ids reach Discord's REST paths; refuse anything that is not a snowflake.
     if (!SnowflakeSchema.safeParse(userId).success || !SnowflakeSchema.safeParse(guildId).success) {
@@ -137,7 +144,7 @@ export class GuildAccessService {
     const running = this.inFlight.get(key);
     if (running !== undefined) return running;
 
-    const pending = this.lookup(userId, guildId).then(
+    const pending = this.lookup(userId, guildId, oauthToken).then(
       (allowed) => {
         this.cache.set(key, allowed, {
           ttl: allowed ? GUILD_ACCESS_ALLOW_TTL_MS : GUILD_ACCESS_DENY_TTL_MS,
@@ -199,7 +206,17 @@ export class GuildAccessService {
   }
 
   /** Asks Discord. Failures other than "not a member" are thrown as they are and never cached as an answer. */
-  private async lookup(userId: string, guildId: string): Promise<boolean> {
+  private async lookup(
+    userId: string,
+    guildId: string,
+    oauthToken: GuildAccessOptions['oauthToken'],
+  ): Promise<boolean> {
+    if (oauthToken !== undefined) {
+      const token = await oauthToken();
+      if (token === null) throw new ServiceError(ErrorCode.AUTH_REAUTH_REQUIRED);
+      const mine = await this.oauthGuildsOf(userId, token);
+      if (!mine.some((candidate) => candidate.id === guildId)) return false;
+    }
     const guild = this.client.guilds.cache.get(guildId);
     if (guild === undefined) return false;
 

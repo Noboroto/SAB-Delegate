@@ -214,6 +214,46 @@ describe('GuildAccessService.canManage', () => {
   });
 });
 
+describe('GuildAccessService with the person own server list', () => {
+  const oauthToken = () => Promise.resolve<string | null>('token');
+  const listed = (ids: string[]) =>
+    vi.fn((_accessToken: string) =>
+      Promise.resolve<GuildPickerItem[]>(ids.map((id) => ({ id, name: id, icon: null }))),
+    );
+
+  it('refuses a server missing from the list without any member lookup', async () => {
+    const { service, fetch, manageableGuilds } = setup();
+    manageableGuilds.mockImplementation(listed(['100000000000000777']));
+    expect(await service.canManage(USER, GUILD, { oauthToken })).toBe(false);
+    expect(fetch).not.toHaveBeenCalled();
+    expect(manageableGuilds).toHaveBeenCalledWith('token');
+  });
+
+  it('still asks Discord about the member for a listed server, and a fresh write asks again', async () => {
+    const { service, fetch, manageableGuilds } = setup();
+    manageableGuilds.mockImplementation(listed([GUILD]));
+    expect(await service.canManage(USER, GUILD, { oauthToken })).toBe(true);
+    expect(await service.canManage(USER, GUILD, { oauthToken, fresh: true })).toBe(true);
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not resolve the token when an answer is already cached', async () => {
+    const { service, manageableGuilds } = setup();
+    manageableGuilds.mockImplementation(listed([GUILD]));
+    await service.canManage(USER, GUILD, { oauthToken });
+    const lazy = vi.fn(oauthToken);
+    await service.canManage(USER, GUILD, { oauthToken: lazy });
+    expect(lazy).not.toHaveBeenCalled();
+  });
+
+  it('asks for a new login when the session has no token', async () => {
+    const { service } = setup();
+    await expect(
+      service.canManage(USER, GUILD, { oauthToken: () => Promise.resolve(null) }),
+    ).rejects.toMatchObject({ code: 'AUTH_REAUTH_REQUIRED' });
+  });
+});
+
 describe('GuildAccessService.assertManageGuild', () => {
   it('resolves for a manager', async () => {
     await expect(setup().service.assertManageGuild(USER, GUILD)).resolves.toBeUndefined();

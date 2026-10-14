@@ -227,7 +227,7 @@ export class GuildConfigService {
     }
     const changes = parsed.data;
 
-    await this.assertChannelsUsable(changes);
+    await this.assertChannelsUsable(changes, id, actor);
 
     if (opts.dryRun === true) {
       const before = toSettings(await this.readRow(this.prisma, id));
@@ -279,10 +279,21 @@ export class GuildConfigService {
    *
    * A slash command calls this before it defers, so a refusal is a quick
    * private answer; `patch` repeats it for the callers that do not.
+   *
+   * Pass `scope` for callers other than a slash command (REST, MCP): the
+   * channel must then belong to that server, and another server's channel is
+   * indistinguishable from a missing one.
    */
-  async assertChannelUsable(setting: ChannelSetting, channelId: string): Promise<void> {
+  async assertChannelUsable(
+    setting: ChannelSetting,
+    channelId: string,
+    scope?: { guildId: string; actor: ActorContext },
+  ): Promise<void> {
     const need = setting === 'introChannelId' ? 'read' : 'send';
-    const access = await this.channelAccess.check(channelId, need);
+    const access =
+      scope === undefined || scope.actor.source === 'DISCORD'
+        ? await this.channelAccess.check(channelId, need)
+        : await this.channelAccess.check(channelId, need, scope.guildId);
     if (access === 'ok') return;
     if (access === 'not-found') throw new ServiceError(ErrorCode.DISCORD_CHANNEL_NOT_FOUND);
     throw new ServiceError(ErrorCode.DISCORD_MISSING_PERMISSIONS, {
@@ -292,11 +303,13 @@ export class GuildConfigService {
 
   private async assertChannelsUsable(
     changes: Partial<Record<ChannelSetting, string | null>>,
+    guildId: string,
+    actor: ActorContext,
   ): Promise<void> {
     for (const setting of CHANNEL_SETTINGS) {
       const channelId = changes[setting];
       if (channelId === undefined || channelId === null) continue;
-      await this.assertChannelUsable(setting, channelId);
+      await this.assertChannelUsable(setting, channelId, { guildId, actor });
     }
   }
 }

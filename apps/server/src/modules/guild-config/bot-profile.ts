@@ -143,7 +143,10 @@ export class BotProfileService {
     return { dryRun: false, changes, profile: await this.readProfile(guild) };
   }
 
-  private async edit(guild: Guild, change: { nick: string } | { avatar: string }): Promise<void> {
+  private async edit(
+    guild: Guild,
+    change: { nick: string | null } | { avatar: string },
+  ): Promise<void> {
     try {
       await guild.members.editMe(change);
     } catch (error) {

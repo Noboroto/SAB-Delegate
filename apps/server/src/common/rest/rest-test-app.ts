@@ -7,6 +7,7 @@ import { ErrorCode } from '@sab/shared';
 import { expect, vi } from 'vitest';
 import type { PrincipalRequest } from '../../auth/principal.decorator.js';
 import { SessionService } from '../../auth/session.service.js';
+import { fastifyOptions } from '../../bootstrap/security-config.js';
 import { ApiError, validationFailed } from '../errors/http-error.js';
 import { AllExceptionsFilter } from '../filters/all-exceptions.filter.js';
 import { GuildAccessService, GuildNotFoundError } from '../guild-access/guild-access.service.js';
@@ -51,7 +52,9 @@ export async function createRestApp(controllers: Type[], providers: Provider[]) 
       ...providers,
     ],
   }).compile();
-  const app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
+  const app = moduleRef.createNestApplication<NestFastifyApplication>(
+    new FastifyAdapter(fastifyOptions()),
+  );
   await app.init();
   await app.getHttpAdapter().getInstance().ready();
   return { app, assertManageGuild, consume };
@@ -75,9 +78,11 @@ export async function expectGuarded(test: RestTestApp, call: Call): Promise<void
   expect(refused.statusCode).toBe(404);
   expect(refused.json<{ code: string }>().code).toBe('GUILD_NOT_FOUND');
   // The permission is asked about this person and this server, with a fresh answer for writes.
-  expect(test.assertManageGuild).toHaveBeenLastCalledWith(USER, GUILD, {
-    fresh: call.method !== 'GET',
-  });
+  expect(test.assertManageGuild).toHaveBeenLastCalledWith(
+    USER,
+    GUILD,
+    expect.objectContaining({ fresh: call.method !== 'GET' }),
+  );
 }
 
 /** A body that fails validation answers the 400 `{ code, message, details.issues[] }` contract. */

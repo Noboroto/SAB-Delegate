@@ -4,7 +4,7 @@ import { ApiError } from '../common/errors/http-error.js';
 import type { PrincipalRequest } from './principal.decorator.js';
 import { SessionService } from './session.service.js';
 
-/** How recent the login must be for the actions that can do lasting damage. */
+/** How recent the login must be where `FreshAuthGuard` is applied. */
 export const FRESH_AUTH_WINDOW_MS = 5 * 60_000;
 
 /** 401 `AUTH_UNAUTHENTICATED` unless the request carries a valid login; leaves the principal on the request. */
@@ -20,9 +20,12 @@ export class SessionGuard implements CanActivate {
 
 /**
  * 401 without a login, 403 `AUTH_REAUTH_REQUIRED` when the login is older than
- * five minutes. A stateless cookie cannot be revoked, so what bounds a stolen
- * one is asking for a new Discord login before the actions that matter; the web
- * app answers this code by sending the person through Discord again.
+ * five minutes. A stateless cookie cannot be revoked, so a stolen one stays
+ * usable until it expires; this guard narrows that for the one action that
+ * outlives a login, creating a write API key. No route uses it yet: the
+ * destructive dashboard routes are bounded by the 8 hour lifetime and the fresh
+ * Manage Server check of `ManageGuildGuard`. The web app answers this code by
+ * sending the person through Discord again.
  */
 @Injectable()
 export class FreshAuthGuard implements CanActivate {

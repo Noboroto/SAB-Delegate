@@ -44,13 +44,21 @@ describe('ManageGuildGuard', () => {
   it('lets a manager through and asks about this caller and this server', async () => {
     const { run, assertManageGuild } = setup();
     expect(await run('GET')).toBe(true);
-    expect(assertManageGuild).toHaveBeenCalledWith(USER, GUILD, { fresh: false });
+    expect(assertManageGuild).toHaveBeenCalledWith(
+      USER,
+      GUILD,
+      expect.objectContaining({ fresh: false }),
+    );
   });
 
   it.each(['POST', 'PATCH', 'PUT', 'DELETE'])('asks Discord again for %s', async (method) => {
     const { run, assertManageGuild } = setup();
     await run(method);
-    expect(assertManageGuild).toHaveBeenCalledWith(USER, GUILD, { fresh: true });
+    expect(assertManageGuild).toHaveBeenCalledWith(
+      USER,
+      GUILD,
+      expect.objectContaining({ fresh: true }),
+    );
   });
 
   it('answers 401 before looking at the server when nobody is signed in', async () => {
@@ -92,6 +100,8 @@ describe('ManageGuildGuard on a route', () => {
   const BOT_GUILD = '100000000000000009';
   const STRANGER_GUILD = '100000000000000008';
   const rights = new Map<string, bigint>();
+  /** The servers each person's own Discord login lists as manageable. */
+  const lists = new Map<string, string[]>();
   const fetchMember = vi.fn(({ user }: { user: string }) => {
     const bits = rights.get(user);
     if (bits === undefined) {
@@ -119,6 +129,12 @@ describe('ManageGuildGuard on a route', () => {
   }
 
   const sessions = {
+    discordAccessToken: (headers: Record<string, unknown>) =>
+      Promise.resolve(
+        typeof headers['x-user'] === 'string' && headers['x-no-token'] === undefined
+          ? headers['x-user']
+          : null,
+      ),
     requirePrincipal: (request: { headers: Record<string, unknown> }) => {
       const user = request.headers['x-user'];
       return typeof user === 'string'
@@ -133,7 +149,14 @@ describe('ManageGuildGuard on a route', () => {
       controllers: [Probe],
       providers: [
         GuildAccessService,
-        { provide: UserGuildsClient, useValue: {} },
+        {
+          provide: UserGuildsClient,
+          useValue: {
+            // The fake token is the user id.
+            manageableGuilds: (token: string) =>
+              Promise.resolve((lists.get(token) ?? []).map((id) => ({ id, name: id, icon: null }))),
+          },
+        },
         { provide: Client, useValue: client },
         { provide: SessionService, useValue: sessions },
         { provide: APP_FILTER, useClass: AllExceptionsFilter },
@@ -148,6 +171,7 @@ describe('ManageGuildGuard on a route', () => {
   });
   beforeEach(() => {
     rights.clear();
+    lists.clear();
     fetchMember.mockClear();
   });
 
@@ -163,6 +187,7 @@ describe('ManageGuildGuard on a route', () => {
     const outsider = '700000000000000002';
     rights.set(manager, MANAGE_GUILD);
     rights.set(outsider, 0n);
+    lists.set(manager, [BOT_GUILD, STRANGER_GUILD]);
 
     expect((await call('GET', BOT_GUILD, undefined)).statusCode).toBe(401);
     expect((await call('GET', BOT_GUILD, manager)).statusCode).toBe(200);
@@ -181,6 +206,7 @@ describe('ManageGuildGuard on a route', () => {
   it('lets a read use a recent answer but makes a write ask Discord again', async () => {
     const user = '700000000000000010';
     rights.set(user, MANAGE_GUILD);
+    lists.set(user, [BOT_GUILD]);
     expect((await call('GET', BOT_GUILD, user)).statusCode).toBe(200);
 
     rights.set(user, 0n);
@@ -189,5 +215,27 @@ describe('ManageGuildGuard on a route', () => {
     const write = await call('POST', BOT_GUILD, user);
     expect(write.statusCode).toBe(404);
     expect(fetchMember).toHaveBeenCalledTimes(2);
+  });
+
+  it('refuses a server outside the caller own list without asking Discord about the member', async () => {
+    const user = '700000000000000020';
+    // The right exists on the server, but the person's login does not list it.
+    rights.set(user, MANAGE_GUILD);
+    lists.set(user, [STRANGER_GUILD]);
+
+    const response = await call('GET', BOT_GUILD, user);
+    expect(response.statusCode).toBe(404);
+    expect(JSON.parse(response.body)).toMatchObject({ code: 'GUILD_NOT_FOUND' });
+    expect(fetchMember).not.toHaveBeenCalled();
+  });
+
+  it('asks for a new login when the session holds no Discord token', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/guilds/${BOT_GUILD}/probe`,
+      headers: { 'x-user': '700000000000000021', 'x-no-token': '1' },
+    });
+    expect(response.statusCode).toBe(403);
+    expect(JSON.parse(response.body)).toMatchObject({ code: 'AUTH_REAUTH_REQUIRED' });
   });
 });

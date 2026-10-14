@@ -456,7 +456,10 @@ describe('WordGameService.configure', () => {
     await expect(service.configure(GUILD, { channelId: OTHER_CHANNEL }, ACTOR)).rejects.toBe(
       refusal,
     );
-    expect(guilds.assertChannelUsable).toHaveBeenCalledWith('wordChannelId', OTHER_CHANNEL);
+    expect(guilds.assertChannelUsable).toHaveBeenCalledWith('wordChannelId', OTHER_CHANNEL, {
+      guildId: GUILD,
+      actor: ACTOR,
+    });
     expect(prisma.$transaction).not.toHaveBeenCalled();
     expect(audit.record).not.toHaveBeenCalled();
   });

@@ -2,7 +2,7 @@ import { betterAuth } from 'better-auth';
 import { APIError, createAuthMiddleware } from 'better-auth/api';
 import type { RestSettings } from '../config/env.js';
 
-/** Absolute lifetime of a login. Writes that matter ask for a newer one (`FreshAuthGuard`). */
+/** Absolute lifetime of a login. */
 export const SESSION_TTL_SECONDS = 8 * 60 * 60;
 
 /**
@@ -41,8 +41,11 @@ const PROTECTED_USER_FIELDS = ['name', 'image', 'discordId'] as const;
  * forces `cookieCache` (jwe) and `storeAccountCookie`; the Discord access token
  * used for the server picker stays in the encrypted `account_data` cookie and
  * is read server-side only (`SessionService.discordAccessToken`). A stolen
- * cookie cannot be revoked before it expires; the 8 hour lifetime and the
- * fresh-login requirement on important writes bound that.
+ * cookie cannot be revoked before it expires; the 8 hour lifetime bounds that.
+ * The routes of the dashboard rely on that lifetime and on a fresh Manage
+ * Server check per write (`ManageGuildGuard`). `FreshAuthGuard` (login at most
+ * five minutes old) is not on those routes; it is meant for creating a write
+ * API key, which does not exist yet.
  */
 export function createAuth(settings: RestSettings) {
   return betterAuth({

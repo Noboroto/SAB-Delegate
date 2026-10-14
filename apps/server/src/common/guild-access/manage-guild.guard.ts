@@ -11,7 +11,9 @@ const SAFE_METHODS: ReadonlySet<string> = new Set(['GET', 'HEAD', 'OPTIONS']);
  * in (401) and must hold Manage Server in that guild on Discord's side. A
  * server that does not exist, one the bot is not in and one the caller may not
  * manage all answer the same 404 `GUILD_NOT_FOUND`, so the response cannot be
- * used to learn which servers the bot has joined.
+ * used to learn which servers the bot has joined. A server outside the
+ * caller's own Discord server list is refused before the member lookup, so the
+ * response time does not give it away either.
  *
  * Reads accept a permission answer up to 30 seconds old; every other method
  * asks Discord again (`fresh`), so a revoked right stops writes at once. The
@@ -34,6 +36,7 @@ export class ManageGuildGuard implements CanActivate {
 
     await this.access.assertManageGuild(principal.discordUserId, guildId.data, {
       fresh: !SAFE_METHODS.has(request.method),
+      oauthToken: () => this.sessions.discordAccessToken(request.headers),
     });
     return true;
   }

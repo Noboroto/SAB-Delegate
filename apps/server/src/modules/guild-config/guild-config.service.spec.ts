@@ -87,6 +87,28 @@ describe('GuildConfigService.patch validation', () => {
     ]);
   });
 
+  it('scopes the channel check to the server for callers other than a slash command', async () => {
+    const { access, service } = build();
+    const rest: ActorContext = { source: 'HTTP', userId: '100000000000000002' };
+    await service.patch(GUILD, { logChannelId: CHANNEL }, rest);
+    expect(access.check).toHaveBeenCalledWith(CHANNEL, 'send', GUILD);
+    await service.patch(GUILD, { introChannelId: CHANNEL }, rest, { dryRun: true });
+    expect(access.check).toHaveBeenLastCalledWith(CHANNEL, 'read', GUILD);
+  });
+
+  it('answers a channel of another server like a missing one and writes nothing', async () => {
+    const { access, prisma, audit, service } = build();
+    access.check.mockImplementation((_id: string, _need: string, guildId?: string) =>
+      Promise.resolve(guildId === undefined ? 'ok' : 'not-found'),
+    );
+    const rest: ActorContext = { source: 'HTTP', userId: '100000000000000002' };
+    await expect(service.patch(GUILD, { logChannelId: CHANNEL }, rest)).rejects.toEqual(
+      failsWith(ErrorCode.DISCORD_CHANNEL_NOT_FOUND),
+    );
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(audit.record).not.toHaveBeenCalled();
+  });
+
   it('does not ask Discord anything to clear a channel', async () => {
     const { access, service } = build();
     await service.patch(GUILD, { logChannelId: null }, ACTOR);

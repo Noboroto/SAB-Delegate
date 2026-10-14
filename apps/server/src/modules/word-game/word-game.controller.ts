@@ -13,6 +13,7 @@ import {
   WordGameConfigRequestSchema,
   WordGameConfigResultSchema,
   WordGameInfoSchema,
+  WordGameResetRequestSchema,
   WordGameResetResultSchema,
   WordGameWordsPageSchema,
   WordGameWordsQuerySchema,
@@ -24,11 +25,8 @@ import {
 } from '@sab/shared';
 import { Principal, type SessionPrincipal } from '../../auth/principal.decorator.js';
 import { ManageGuildGuard } from '../../common/guild-access/manage-guild.guard.js';
-import { destructiveFlags, requireConfirmation } from '../../common/rest/rest-support.js';
 import { httpActor } from '../../common/rest/rest-wiring.js';
 import { WordGameService } from './word-game.service.js';
-
-const ResetBodySchema = requireConfirmation(z.object(destructiveFlags));
 
 @Controller('api/guilds/:guildId/word-game')
 @UseGuards(ManageGuildGuard)
@@ -67,7 +65,7 @@ export class WordGameController {
   async reset(
     @Param('guildId') guildId: string,
     @Principal() principal: SessionPrincipal,
-    @Body({ schema: ResetBodySchema }) body: z.output<typeof ResetBodySchema>,
+    @Body({ schema: WordGameResetRequestSchema }) body: z.output<typeof WordGameResetRequestSchema>,
   ): Promise<WordGameResetResult> {
     return WordGameResetResultSchema.parse(
       await this.game.reset(guildId, httpActor(principal), { dryRun: body.dryRun }),

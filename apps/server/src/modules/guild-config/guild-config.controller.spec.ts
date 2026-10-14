@@ -142,6 +142,23 @@ describe('bot-profile routes', () => {
   });
 });
 
+describe('bot nickname reset', () => {
+  const url = `${base}/bot-profile`;
+
+  it('PATCH accepts nick null and passes it on', async () => {
+    const response = await test.app.inject({
+      method: 'PATCH',
+      url,
+      headers: asUser(),
+      payload: { nick: null },
+    });
+    expect(response.statusCode).toBe(200);
+    expect(profiles.setBotProfile).toHaveBeenLastCalledWith(GUILD, { nick: null }, HTTP_ACTOR, {
+      dryRun: false,
+    });
+  });
+});
+
 describe('BotProfileService', () => {
   const ACTOR: ActorContext = { source: 'HTTP', userId: snowflake(900) };
   const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]);
@@ -176,6 +193,14 @@ describe('BotProfileService', () => {
       changes: ['nick'],
       profile: { nick: 'Sabi', avatarUrl: 'https://cdn.example.test/a.png' },
     });
+    expect(audit.record).toHaveBeenCalledTimes(1);
+  });
+
+  it('clears the nickname with null and records it as a nick change', async () => {
+    const { service, members, audit } = build();
+    const result = await service.setBotProfile(GUILD, { nick: null }, ACTOR);
+    expect(members.editMe).toHaveBeenCalledWith({ nick: null });
+    expect(result.changes).toEqual(['nick']);
     expect(audit.record).toHaveBeenCalledTimes(1);
   });
 
