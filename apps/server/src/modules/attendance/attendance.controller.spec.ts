@@ -60,9 +60,11 @@ describe('GET attendance', () => {
     });
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual(RESULT);
-    expect(test.assertManageGuild).toHaveBeenLastCalledWith(expect.any(String), GUILD, {
-      fresh: false,
-    });
+    expect(test.assertManageGuild).toHaveBeenLastCalledWith(
+      expect.any(String),
+      GUILD,
+      expect.objectContaining({ fresh: false }),
+    );
     expect(service.checkByRole).toHaveBeenCalledWith(GUILD, QUERY);
   });
 });

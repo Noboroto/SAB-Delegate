@@ -10,6 +10,7 @@ import {
   type RestTestApp,
 } from '../../common/rest/rest-test-app.js';
 import { BirthdayController } from './birthday.controller.js';
+import { BIRTHDAY_CSV_MAX_BYTES } from './birthday.csv.js';
 import { BirthdayService } from './birthday.service.js';
 
 const service = { list: vi.fn(), add: vi.fn(), remove: vi.fn(), importRows: vi.fn() };
@@ -139,6 +140,21 @@ describe('DELETE birthdays', () => {
   it('rejects a flag that is not true or false', async () => {
     await expectInvalid(test, { method: 'DELETE', url: url('studentId=a&confirm=yes') }, 'confirm');
   });
+
+  it('needs exactly one of studentId and discordId, never both or neither', async () => {
+    const both = `studentId=SE000001&discordId=${snowflake(77)}&confirm=true`;
+    await expectInvalid(test, { method: 'DELETE', url: url(both) }, 'studentId');
+    await expectInvalid(test, { method: 'DELETE', url: url('confirm=true') }, 'studentId');
+    await expectInvalid(test, { method: 'DELETE', url: url('dryRun=true') }, 'studentId');
+    expect(service.remove).not.toHaveBeenCalled();
+
+    const byDiscord = await test.app.inject({
+      method: 'DELETE',
+      url: url(`discordId=${snowflake(77)}&confirm=true`),
+      headers: asUser(),
+    });
+    expect(byDiscord.statusCode).toBe(200);
+  });
 });
 
 describe('POST birthdays/import', () => {
@@ -173,6 +189,23 @@ describe('POST birthdays/import', () => {
       HTTP_ACTOR,
       { dryRun: false },
     );
+  });
+
+  it('names CSV_TOO_LARGE for a file over the limit instead of a generic body-size error', async () => {
+    // Newlines double in the JSON text, so this body is well past 1 MiB.
+    const big = 'a\n'.repeat(BIRTHDAY_CSV_MAX_BYTES / 2 + 1);
+    const response = await test.app.inject({
+      method: 'POST',
+      url: `${base}/import`,
+      headers: asUser(),
+      payload: { csv: big },
+    });
+    expect(response.statusCode).toBe(400);
+    expect(response.json<{ code: string; details: { reason: string } }>()).toMatchObject({
+      code: 'VALIDATION_FAILED',
+      details: { reason: 'CSV_TOO_LARGE' },
+    });
+    expect(service.importRows).not.toHaveBeenCalled();
   });
 
   it('wants exactly one of csv and rows, and a CSV with the right header', async () => {

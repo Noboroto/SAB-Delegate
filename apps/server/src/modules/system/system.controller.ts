@@ -2,10 +2,12 @@ import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import {
   AuditLogPageSchema,
   AuditLogsQuerySchema,
+  CommandCatalogEntrySchema,
   CommandsQuerySchema,
   LookupMembersQuerySchema,
   SystemOverviewSchema,
   type AuditLogPage,
+  type CommandCatalogEntry,
   type LookupChannel,
   type LookupMember,
   type LookupRole,
@@ -14,7 +16,7 @@ import {
 } from '@sab/shared';
 import { AuditService } from '../../common/audit/audit.service.js';
 import { ManageGuildGuard } from '../../common/guild-access/manage-guild.guard.js';
-import { CommandsCatalogService, type CommandCatalogEntry } from './commands-catalog.service.js';
+import { CommandsCatalogService } from './commands-catalog.service.js';
 import { DiscordLookupService } from './discord-lookup.service.js';
 import { SystemService } from './system.service.js';
 
@@ -49,7 +51,7 @@ export class SystemController {
   commands(
     @Query({ schema: CommandsQuerySchema }) query: z.output<typeof CommandsQuerySchema>,
   ): CommandCatalogEntry[] {
-    return this.catalog.list(query.locale);
+    return z.array(CommandCatalogEntrySchema).parse(this.catalog.list(query.locale));
   }
 
   @Get('discord/channels')

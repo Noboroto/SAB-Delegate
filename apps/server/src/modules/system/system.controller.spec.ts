@@ -114,6 +114,29 @@ describe('GET commands', () => {
     expect(catalog.list.mock.calls).toEqual([['vi'], ['en']]);
     await expectInvalid(test, get('commands?locale=fr'), 'locale');
   });
+
+  it('answers only the fields of the catalog schema', async () => {
+    catalog.list.mockReturnValue([
+      {
+        name: 'poll',
+        description: 'Make a poll',
+        defaultMemberPermissions: null,
+        guildOnly: true,
+        subcommands: [{ name: 'poll add', description: 'Add', handlerId: 'x' }],
+        applicationId: 'internal',
+      },
+    ]);
+    const response = await send('commands');
+    expect(response.json()).toEqual([
+      {
+        name: 'poll',
+        description: 'Make a poll',
+        defaultMemberPermissions: null,
+        guildOnly: true,
+        subcommands: [{ name: 'poll add', description: 'Add' }],
+      },
+    ]);
+  });
 });
 
 describe('Discord lookups', () => {

@@ -5,10 +5,10 @@ import {
   PrivateThreadResultSchema,
   ThreadBatchPlanSchema,
   ThreadBatchResultSchema,
+  ThreadCreateRequestSchema,
   ThreadCreateResultSchema,
-  ThreadCreateSchema,
-  ThreadDeleteSchema,
-  ThreadRenameSchema,
+  ThreadDeleteRequestSchema,
+  ThreadRenameRequestSchema,
   type PrivateThreadResult,
   type ThreadBatchPlan,
   type ThreadBatchResult,
@@ -19,15 +19,8 @@ import { Principal, type SessionPrincipal } from '../../auth/principal.decorator
 import { ManageGuildGuard } from '../../common/guild-access/manage-guild.guard.js';
 import { GuildActionLimiter } from '../../common/limiter/guild-action.limiter.js';
 import { httpActor } from '../../common/rest/rest-wiring.js';
-import { destructiveFlags, requireConfirmation } from '../../common/rest/rest-support.js';
 import { PrivateThreadService } from './private-thread.service.js';
 import { ThreadService } from './thread.service.js';
-
-// The opening line naming who made the thread is built by the slash command;
-// an API caller cannot write one (`byline` is not accepted).
-const CreateBodySchema = ThreadCreateSchema.omit({ byline: true });
-const RenameBodySchema = requireConfirmation(ThreadRenameSchema.extend(destructiveFlags));
-const DeleteBodySchema = requireConfirmation(ThreadDeleteSchema.extend(destructiveFlags));
 
 /**
  * Threads. Creating posts a first message, so it spends the server's message
@@ -49,7 +42,7 @@ export class ThreadController {
   async create(
     @Param('guildId') guildId: string,
     @Principal() principal: SessionPrincipal,
-    @Body({ schema: CreateBodySchema }) body: z.infer<typeof CreateBodySchema>,
+    @Body({ schema: ThreadCreateRequestSchema }) body: z.infer<typeof ThreadCreateRequestSchema>,
   ): Promise<ThreadCreateResult> {
     this.limiter.consume(guildId, 'message');
     const result = await this.threads.create(guildId, body, httpActor(principal));
@@ -61,7 +54,7 @@ export class ThreadController {
   async rename(
     @Param('guildId') guildId: string,
     @Principal() principal: SessionPrincipal,
-    @Body({ schema: RenameBodySchema }) body: z.infer<typeof RenameBodySchema>,
+    @Body({ schema: ThreadRenameRequestSchema }) body: z.infer<typeof ThreadRenameRequestSchema>,
   ): Promise<ThreadBatchPlan | ThreadBatchResult> {
     const outcome = await this.threads.renameByPrefix(guildId, body, httpActor(principal), {
       dryRun: body.dryRun,
@@ -76,7 +69,7 @@ export class ThreadController {
   async remove(
     @Param('guildId') guildId: string,
     @Principal() principal: SessionPrincipal,
-    @Body({ schema: DeleteBodySchema }) body: z.infer<typeof DeleteBodySchema>,
+    @Body({ schema: ThreadDeleteRequestSchema }) body: z.infer<typeof ThreadDeleteRequestSchema>,
   ): Promise<ThreadBatchPlan | ThreadBatchResult> {
     const outcome = await this.threads.deleteByPrefix(guildId, body, httpActor(principal), {
       dryRun: body.dryRun,

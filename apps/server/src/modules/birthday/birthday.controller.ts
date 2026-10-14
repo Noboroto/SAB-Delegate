@@ -16,10 +16,9 @@ import {
   BirthdayImportReportSchema,
   BirthdayImportRequestSchema,
   BirthdayListQuerySchema,
+  BirthdayRemoveQuerySchema,
   BirthdayRemoveResultSchema,
-  BirthdaySelectorSchema,
   ErrorCode,
-  destructiveQueryShape,
   z,
   type BirthdayAdd,
   type BirthdayAddResult,
@@ -31,12 +30,9 @@ import {
 import { Principal, type SessionPrincipal } from '../../auth/principal.decorator.js';
 import { ApiError } from '../../common/errors/http-error.js';
 import { ManageGuildGuard } from '../../common/guild-access/manage-guild.guard.js';
-import { requireConfirmation } from '../../common/rest/rest-support.js';
 import { httpActor } from '../../common/rest/rest-wiring.js';
 import { BIRTHDAY_CSV_MAX_BYTES, parseBirthdayCsv } from './birthday.csv.js';
 import { BirthdayService } from './birthday.service.js';
-
-const RemoveQuerySchema = requireConfirmation(BirthdaySelectorSchema.extend(destructiveQueryShape));
 
 type ImportRequest = z.output<typeof BirthdayImportRequestSchema>;
 
@@ -90,7 +86,7 @@ export class BirthdayController {
   async remove(
     @Param('guildId') guildId: string,
     @Principal() principal: SessionPrincipal,
-    @Query({ schema: RemoveQuerySchema }) query: z.output<typeof RemoveQuerySchema>,
+    @Query({ schema: BirthdayRemoveQuerySchema }) query: z.output<typeof BirthdayRemoveQuerySchema>,
   ): Promise<BirthdayRemoveResult> {
     const { studentId, discordId, dryRun } = query;
     return BirthdayRemoveResultSchema.parse(

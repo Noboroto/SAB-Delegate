@@ -1,12 +1,12 @@
 import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
 import {
+  ScheduleCancelQuerySchema,
   ScheduleCancelResultSchema,
   ScheduleCreateRequestSchema,
   ScheduleCreateResultSchema,
   ScheduleListRequestSchema,
   ScheduleSeqParamSchema,
   ScheduledMessageViewSchema,
-  destructiveQueryShape,
   z,
   type ScheduleCancelResult,
   type ScheduleCreateResult,
@@ -15,11 +15,8 @@ import {
 import { Principal, type SessionPrincipal } from '../../auth/principal.decorator.js';
 import { ManageGuildGuard } from '../../common/guild-access/manage-guild.guard.js';
 import { GuildActionLimiter } from '../../common/limiter/guild-action.limiter.js';
-import { requireConfirmation } from '../../common/rest/rest-support.js';
 import { httpActor } from '../../common/rest/rest-wiring.js';
 import { ScheduleService } from './schedule.service.js';
-
-const CancelQuerySchema = requireConfirmation(z.object(destructiveQueryShape));
 
 /** Messages the bot sends later. The API never schedules a ping and only reads sources in the same server. */
 @Controller('api/guilds/:guildId/schedules')
@@ -63,7 +60,7 @@ export class ScheduleController {
     @Param('guildId') guildId: string,
     @Param({ schema: ScheduleSeqParamSchema }) params: z.output<typeof ScheduleSeqParamSchema>,
     @Principal() principal: SessionPrincipal,
-    @Query({ schema: CancelQuerySchema }) query: z.output<typeof CancelQuerySchema>,
+    @Query({ schema: ScheduleCancelQuerySchema }) query: z.output<typeof ScheduleCancelQuerySchema>,
   ): Promise<ScheduleCancelResult> {
     return ScheduleCancelResultSchema.parse(
       await this.schedules.cancel(guildId, params.id, httpActor(principal), {

@@ -104,6 +104,12 @@ describe('POST messages/send', () => {
     });
     expect(response.json()).toMatchObject({ messageId: null, dryRun: true });
     expect(service.sendMessage.mock.calls[0]?.[3]).toEqual({ dryRun: true });
+    expect(test.consume).not.toHaveBeenCalled();
+  });
+
+  it('spends no allowance on a request that fails validation', async () => {
+    await test.app.inject({ ...post('send', { content: 'hello' }), headers: asUser() });
+    expect(test.consume).not.toHaveBeenCalled();
   });
 
   it('answers 429 when the server used up its allowance, without calling the service', async () => {
@@ -151,6 +157,11 @@ describe('POST messages/copy, react and poll', () => {
     expect(service.createReactionPoll).toHaveBeenCalledWith(GUILD, body, HTTP_ACTOR, {
       dryRun: true,
     });
+    expect(test.consume).not.toHaveBeenCalled();
+
+    await test.app.inject({ ...post('poll', body), headers: asUser() });
+    expect(test.consume).toHaveBeenCalledTimes(1);
+    expect(test.consume).toHaveBeenCalledWith(GUILD, 'message');
   });
 });
 
@@ -182,6 +193,12 @@ describe('PATCH messages/:channelId/:messageId', () => {
       HTTP_ACTOR,
       { dryRun: true },
     );
+    expect(test.consume).not.toHaveBeenCalled();
+  });
+
+  it('spends the message allowance on a real edit', async () => {
+    await test.app.inject({ method: 'PATCH', url, headers: asUser(), payload: { content: 'new' } });
+    expect(test.consume).toHaveBeenCalledTimes(1);
     expect(test.consume).toHaveBeenCalledWith(GUILD, 'message');
   });
 });

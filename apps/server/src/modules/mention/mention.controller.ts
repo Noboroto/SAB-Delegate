@@ -1,20 +1,16 @@
 import { Body, Controller, HttpCode, Param, Post, UseGuards } from '@nestjs/common';
 import {
-  MentionNonReactorsInputSchema,
-  MentionReactorsInputSchema,
+  MentionNonReactorsRequestSchema,
+  MentionReactorsRequestSchema,
   MentionResultSchema,
-  z,
   type MentionResult,
+  type z,
 } from '@sab/shared';
 import { Principal, type SessionPrincipal } from '../../auth/principal.decorator.js';
 import { ManageGuildGuard } from '../../common/guild-access/manage-guild.guard.js';
 import { GuildActionLimiter } from '../../common/limiter/guild-action.limiter.js';
 import { httpActor } from '../../common/rest/rest-wiring.js';
 import { MentionService } from './mention.service.js';
-
-const dryRunFlag = { dryRun: z.boolean().default(false) };
-const ReactorsBodySchema = MentionReactorsInputSchema.extend(dryRunFlag);
-const NonReactorsBodySchema = MentionNonReactorsInputSchema.extend(dryRunFlag);
 
 /**
  * Lists people for a message. Over HTTP the service never pings anybody and
@@ -35,7 +31,8 @@ export class MentionController {
   async reactors(
     @Param('guildId') guildId: string,
     @Principal() principal: SessionPrincipal,
-    @Body({ schema: ReactorsBodySchema }) body: z.infer<typeof ReactorsBodySchema>,
+    @Body({ schema: MentionReactorsRequestSchema })
+    body: z.infer<typeof MentionReactorsRequestSchema>,
   ): Promise<MentionResult> {
     if (!body.dryRun && body.replyTo !== undefined) this.limiter.consume(guildId, 'message');
     const result = await this.mentions.mentionReactors(guildId, body, httpActor(principal), {
@@ -49,7 +46,8 @@ export class MentionController {
   async nonReactors(
     @Param('guildId') guildId: string,
     @Principal() principal: SessionPrincipal,
-    @Body({ schema: NonReactorsBodySchema }) body: z.infer<typeof NonReactorsBodySchema>,
+    @Body({ schema: MentionNonReactorsRequestSchema })
+    body: z.infer<typeof MentionNonReactorsRequestSchema>,
   ): Promise<MentionResult> {
     if (!body.dryRun && body.reply) this.limiter.consume(guildId, 'message');
     const result = await this.mentions.mentionNonReactors(guildId, body, httpActor(principal), {

@@ -1,25 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { z, type Locale } from '@sab/shared';
+import { CommandCatalogEntrySchema, type CommandCatalogEntry, type Locale } from '@sab/shared';
 import { CommandsService } from 'necord';
 import { DISCORD_ENV, type DiscordEnv } from '../../discord/boot-guard.js';
 import { toRestBody } from '../../discord/command-registrar.js';
-
-/** A subcommand reached through its full path, e.g. `birthday remove`. */
-const CommandCatalogSubcommandSchema = z.object({
-  name: z.string(),
-  description: z.string(),
-});
-
-const CommandCatalogEntrySchema = z.object({
-  name: z.string(),
-  description: z.string(),
-  /** Discord's default-permission bit set as a decimal string; null when everyone may use it. */
-  defaultMemberPermissions: z.string().nullable(),
-  guildOnly: z.boolean(),
-  subcommands: z.array(CommandCatalogSubcommandSchema),
-});
-
-export type CommandCatalogEntry = z.infer<typeof CommandCatalogEntrySchema>;
 
 type Discovered = { toJSON(): unknown };
 type CommandSource = {
@@ -53,7 +36,7 @@ function collectSubcommands(
   path: string,
   options: unknown,
   locale: Locale,
-): Array<z.infer<typeof CommandCatalogSubcommandSchema>> {
+): CommandCatalogEntry['subcommands'] {
   if (!Array.isArray(options)) return [];
   return options.filter(isRecord).flatMap((option) => {
     const name = typeof option['name'] === 'string' ? option['name'] : '';

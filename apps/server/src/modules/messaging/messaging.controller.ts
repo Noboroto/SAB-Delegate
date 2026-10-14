@@ -28,8 +28,9 @@ import { httpActor } from '../../common/rest/rest-wiring.js';
 import { MessagingService } from './messaging.service.js';
 
 /**
- * What the bot posts, copies, edits and reacts to. Every action spends the
- * server's message allowance first, so a busy dashboard cannot use up the
+ * What the bot posts, copies, edits and reacts to. Every action that really
+ * posts spends the server's message allowance first (a `dryRun` preview sends
+ * nothing and spends none), so a busy dashboard cannot use up the
  * bot's Discord limits. The API never pings and stays inside the path server
  * (the service enforces both for a non-slash caller).
  */
@@ -48,7 +49,7 @@ export class MessagingController {
     @Principal() principal: SessionPrincipal,
     @Body({ schema: SendMessageRequestSchema }) body: z.output<typeof SendMessageRequestSchema>,
   ): Promise<SendMessageResult> {
-    this.limiter.consume(guildId, 'message');
+    if (!body.dryRun) this.limiter.consume(guildId, 'message');
     const { dryRun, ...input } = body;
     return SendMessageResultSchema.parse(
       await this.messaging.sendMessage(guildId, input, httpActor(principal), { dryRun }),
@@ -89,7 +90,7 @@ export class MessagingController {
     @Body({ schema: CreateReactionPollRequestSchema })
     body: z.output<typeof CreateReactionPollRequestSchema>,
   ): Promise<CreateReactionPollResult> {
-    this.limiter.consume(guildId, 'message');
+    if (!body.dryRun) this.limiter.consume(guildId, 'message');
     const { dryRun, ...input } = body;
     return CreateReactionPollResultSchema.parse(
       await this.messaging.createReactionPoll(guildId, input, httpActor(principal), { dryRun }),
@@ -105,7 +106,7 @@ export class MessagingController {
     @Body({ schema: EditBotMessageRequestSchema })
     body: z.output<typeof EditBotMessageRequestSchema>,
   ): Promise<EditBotMessageResult> {
-    this.limiter.consume(guildId, 'message');
+    if (!body.dryRun) this.limiter.consume(guildId, 'message');
     return EditBotMessageResultSchema.parse(
       await this.messaging.editBotMessage(
         guildId,

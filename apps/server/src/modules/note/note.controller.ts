@@ -10,11 +10,12 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import {
-  NoteKeySchema,
+  NoteDeleteQuerySchema,
   NoteListQuerySchema,
+  NoteRemovePlanSchema,
+  NoteRemoveResultSchema,
   NoteSchema,
   NoteUpsertSchema,
-  destructiveQueryShape,
   z,
   type Note,
   type NoteRemovePlan,
@@ -23,11 +24,8 @@ import {
 } from '@sab/shared';
 import { Principal, type SessionPrincipal } from '../../auth/principal.decorator.js';
 import { ManageGuildGuard } from '../../common/guild-access/manage-guild.guard.js';
-import { requireConfirmation } from '../../common/rest/rest-support.js';
 import { httpActor } from '../../common/rest/rest-wiring.js';
 import { NoteService } from './note.service.js';
-
-const DeleteQuerySchema = requireConfirmation(NoteKeySchema.extend(destructiveQueryShape));
 
 /** A note is named by its role and topic within the server in the route, never by a key of the row. */
 @Controller('api/guilds/:guildId/notes')
@@ -71,9 +69,12 @@ export class NoteController {
   async remove(
     @Param('guildId') guildId: string,
     @Principal() principal: SessionPrincipal,
-    @Query({ schema: DeleteQuerySchema }) query: z.output<typeof DeleteQuerySchema>,
+    @Query({ schema: NoteDeleteQuerySchema }) query: z.output<typeof NoteDeleteQuerySchema>,
   ): Promise<NoteRemovePlan | NoteRemoveResult> {
     const { roleId, topic, dryRun } = query;
-    return this.notes.remove(guildId, { roleId, topic }, httpActor(principal), { dryRun });
+    const outcome = await this.notes.remove(guildId, { roleId, topic }, httpActor(principal), {
+      dryRun,
+    });
+    return dryRun ? NoteRemovePlanSchema.parse(outcome) : NoteRemoveResultSchema.parse(outcome);
   }
 }

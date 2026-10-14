@@ -1,7 +1,7 @@
 import { Body, Controller, HttpCode, Param, Post, UseGuards } from '@nestjs/common';
 import {
-  RoleAssignMembersInputSchema,
-  RoleAssignReactorsInputSchema,
+  RoleAssignMembersRequestSchema,
+  RoleAssignReactorsRequestSchema,
   RoleAssignResultSchema,
   type RoleAssignResult,
   type z,
@@ -9,15 +9,7 @@ import {
 import { Principal, type SessionPrincipal } from '../../auth/principal.decorator.js';
 import { ManageGuildGuard } from '../../common/guild-access/manage-guild.guard.js';
 import { httpActor } from '../../common/rest/rest-wiring.js';
-import { destructiveFlags, requireConfirmation } from '../../common/rest/rest-support.js';
 import { RoleAssignService } from './role-assign.service.js';
-
-const MembersBodySchema = requireConfirmation(
-  RoleAssignMembersInputSchema.safeExtend(destructiveFlags),
-);
-const ReactorsBodySchema = requireConfirmation(
-  RoleAssignReactorsInputSchema.safeExtend(destructiveFlags),
-);
 
 /**
  * Gives or takes a role for many members at once. Changing roles is hard to
@@ -35,7 +27,8 @@ export class RoleAssignController {
   async members(
     @Param('guildId') guildId: string,
     @Principal() principal: SessionPrincipal,
-    @Body({ schema: MembersBodySchema }) body: z.infer<typeof MembersBodySchema>,
+    @Body({ schema: RoleAssignMembersRequestSchema })
+    body: z.infer<typeof RoleAssignMembersRequestSchema>,
   ): Promise<RoleAssignResult> {
     const result = await this.roleAssign.applyToMembers(guildId, body, httpActor(principal), {
       dryRun: body.dryRun,
@@ -48,7 +41,8 @@ export class RoleAssignController {
   async reactors(
     @Param('guildId') guildId: string,
     @Principal() principal: SessionPrincipal,
-    @Body({ schema: ReactorsBodySchema }) body: z.infer<typeof ReactorsBodySchema>,
+    @Body({ schema: RoleAssignReactorsRequestSchema })
+    body: z.infer<typeof RoleAssignReactorsRequestSchema>,
   ): Promise<RoleAssignResult> {
     const result = await this.roleAssign.applyToReactors(guildId, body, httpActor(principal), {
       dryRun: body.dryRun,

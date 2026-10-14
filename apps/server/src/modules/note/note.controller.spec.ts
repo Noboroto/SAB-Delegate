@@ -130,4 +130,22 @@ describe('DELETE notes', () => {
       },
     );
   });
+
+  it('answers only the fields of the plan and result schemas', async () => {
+    service.remove.mockResolvedValueOnce({ count: 2, sample: [], guildKey: 'internal' });
+    const plan = await test.app.inject({
+      method: 'DELETE',
+      url: `${base}?${key}&dryRun=true`,
+      headers: asUser(),
+    });
+    expect(plan.json()).toEqual({ count: 2, sample: [] });
+
+    service.remove.mockResolvedValueOnce({ count: 1, guildKey: 'internal' });
+    const done = await test.app.inject({
+      method: 'DELETE',
+      url: `${base}?${key}&confirm=true`,
+      headers: asUser(),
+    });
+    expect(done.json()).toEqual({ count: 1 });
+  });
 });
