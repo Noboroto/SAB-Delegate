@@ -80,4 +80,5 @@ Thứ tự quan trọng vì job đang chạy vẫn dùng client và pool:
 - Số đo thật và gói đã loại: `docs/stack-decisions.md`.
 - Vận hành, backup, đăng ký lại lệnh: `docs/deployment.md`.
 - Thay bot cũ: `docs/cutover-runbook.md`.
+- Giao diện MCP cho AI agent (khoá, tool, xác nhận): `docs/mcp.md`.
 - Luật cứng và bài học đã đo: `AGENTS.md` và serena `mem:lessons/index`.
