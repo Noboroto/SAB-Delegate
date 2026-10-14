@@ -50,6 +50,23 @@ export {
   canManageGuild,
   type CanManageGuildInput,
 } from './permissions/can-manage-guild.js';
+export { PrincipalSchema, type Principal } from './permissions/principal.js';
+export {
+  API_KEY_MAX_ACTIVE,
+  API_KEY_NAME_MAX_LENGTH,
+  API_KEY_READ_DEFAULT_DAYS,
+  API_KEY_READ_MAX_DAYS,
+  API_KEY_WRITE_DEFAULT_DAYS,
+  API_KEY_WRITE_MAX_DAYS,
+  ApiKeyMintResultSchema,
+  ApiKeyMintSchema,
+  ApiKeyModeSchema,
+  ApiKeyViewSchema,
+  type ApiKeyMint,
+  type ApiKeyMintInput,
+  type ApiKeyMintResult,
+  type ApiKeyView,
+} from './schemas/api-key.js';
 export {
   GuildSettingsDryRunSchema,
   GuildSettingsPatchSchema,
@@ -89,6 +106,7 @@ export {
   NoteContentSchema,
   NoteKeySchema,
   NoteRemovePlanSchema,
+  NoteUpsertPlanSchema,
   NoteRemoveResultSchema,
   NoteSchema,
   NoteTopicSchema,
@@ -96,6 +114,7 @@ export {
   type Note,
   type NoteKey,
   type NoteRemovePlan,
+  type NoteUpsertPlan,
   type NoteRemoveResult,
   type NoteUpsert,
 } from './schemas/note.js';

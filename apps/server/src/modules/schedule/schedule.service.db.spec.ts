@@ -304,6 +304,98 @@ describe('ScheduleService against Postgres', () => {
     });
   });
 
+  describe('a key that is revoked while a message is being scheduled', () => {
+    const tick = () => new Promise<void>((resolve) => setTimeout(resolve, 300));
+    const keyActor = (userId: string, apiKeyId: string): ActorContext => ({
+      source: 'MCP',
+      userId,
+      apiKeyId,
+    });
+    const create = (w: ReturnType<typeof world>, actor: ActorContext) =>
+      db.service.scheduleSend(
+        w.guildId,
+        { channelId: w.channelId, content: 'late', runAt: inOneHour() },
+        actor,
+      );
+    const countRows = (w: ReturnType<typeof world>) =>
+      db.prisma.scheduledMessage.count({ where: { guild: { discordId: w.guildId } } });
+
+    it('refuses a key that is already revoked or expired and stores nothing', async () => {
+      const w = world();
+      const revoked = await mintKey(w.userId);
+      await db.prisma.apiKey.update({ where: { id: revoked }, data: { revokedAt: new Date() } });
+      await expect(create(w, keyActor(w.userId, revoked))).rejects.toMatchObject({
+        code: 'AUTH_INVALID_API_KEY',
+      });
+      const expired = await mintKey(w.userId);
+      await db.prisma.apiKey.update({
+        where: { id: expired },
+        data: { expiresAt: new Date(Date.now() - 1000) },
+      });
+      await expect(create(w, keyActor(w.userId, expired))).rejects.toMatchObject({
+        code: 'AUTH_API_KEY_EXPIRED',
+      });
+      expect(await countRows(w)).toBe(0);
+    });
+
+    it('waits for a revoke that is in flight and is then refused', async () => {
+      const w = world();
+      const keyId = await mintKey(w.userId);
+      let release = (): void => undefined;
+      const gate = new Promise<void>((resolve) => (release = resolve));
+      let locked = (): void => undefined;
+      const lockTaken = new Promise<void>((resolve) => (locked = resolve));
+      const revoking = db.prisma.$transaction(async (tx) => {
+        await tx.apiKey.updateMany({ where: { id: keyId }, data: { revokedAt: new Date() } });
+        locked();
+        await gate;
+      });
+      await lockTaken;
+
+      let outcome: 'pending' | 'created' | 'refused' = 'pending';
+      const creating = create(w, keyActor(w.userId, keyId)).then(
+        () => (outcome = 'created'),
+        () => (outcome = 'refused'),
+      );
+      await tick();
+      expect(outcome).toBe('pending');
+
+      release();
+      await revoking;
+      await creating;
+      expect(outcome).toBe('refused');
+      expect(await countRows(w)).toBe(0);
+    });
+
+    it('makes a revoke wait for an insert in flight, so the withdrawal sees the row', async () => {
+      const w = world();
+      const keyId = await mintKey(w.userId);
+      let release = (): void => undefined;
+      const gate = new Promise<void>((resolve) => (release = resolve));
+      let locked = (): void => undefined;
+      const lockTaken = new Promise<void>((resolve) => (locked = resolve));
+      // What the insert transaction holds from the moment it checked the key.
+      const inserting = db.prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "ApiKey" WHERE "id" = ${keyId}::uuid FOR SHARE`;
+        locked();
+        await gate;
+      });
+      await lockTaken;
+
+      let revoked = false;
+      const revoking = db.prisma.apiKey
+        .updateMany({ where: { id: keyId, revokedAt: null }, data: { revokedAt: new Date() } })
+        .then(() => (revoked = true));
+      await tick();
+      expect(revoked).toBe(false);
+
+      release();
+      await inserting;
+      await revoking;
+      expect(revoked).toBe(true);
+    });
+  });
+
   describe('listing and suggestions', () => {
     it('lists the newest messages oldest first, with the public fields only', async () => {
       const w = world();

@@ -4,7 +4,12 @@ import { ApiError } from '../common/errors/http-error.js';
 import type { PrincipalRequest } from './principal.decorator.js';
 import { SessionService } from './session.service.js';
 
-/** How recent the login must be where `FreshAuthGuard` is applied. */
+/**
+ * How recent the login must be where `FreshAuthGuard` is applied. Measured from
+ * `session.createdAt`, which Better Auth 1.7.7 never rewrites when it refreshes a
+ * session (the cookie refresh copies the session object, the stored refresh only
+ * moves `expiresAt` and `updatedAt`); re-check after upgrading Better Auth.
+ */
 export const FRESH_AUTH_WINDOW_MS = 5 * 60_000;
 
 /** 401 `AUTH_UNAUTHENTICATED` unless the request carries a valid login; leaves the principal on the request. */

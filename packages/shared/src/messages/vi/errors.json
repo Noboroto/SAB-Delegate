@@ -6,6 +6,8 @@
   "AUTH_INVALID_API_KEY": "Khoá API không hợp lệ.",
   "AUTH_API_KEY_EXPIRED": "Khoá API đã hết hạn.",
   "AUTH_API_KEY_READ_ONLY": "Khoá API này chỉ được đọc, không được thay đổi dữ liệu.",
+  "API_KEY_LIMIT_REACHED": "Bạn đã có số khoá API đang dùng tối đa. Hãy thu hồi bớt một khoá hoặc chờ khoá hết hạn.",
+  "API_KEY_NOT_FOUND": "Không tìm thấy khoá API.",
   "GUILD_NOT_FOUND": "Không tìm thấy máy chủ.",
   "GUILD_ACCESS_DENIED": "Bạn không có quyền quản lý máy chủ này.",
   "GUILD_BOT_MISSING": "Bot chưa ở trong máy chủ này.",

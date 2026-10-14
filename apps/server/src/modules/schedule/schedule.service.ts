@@ -598,6 +598,7 @@ export class ScheduleService {
     for (let attempt = 1; ; attempt += 1) {
       try {
         return await this.prisma.$transaction(async (tx) => {
+          if (actor.apiKeyId !== undefined) await this.assertKeyLive(tx, actor.apiKeyId);
           const guild = await this.guilds.ensureGuild(guildId, undefined, tx);
           const highest = await tx.scheduledMessage.aggregate({
             where: { guildId: guild.id },
@@ -634,6 +635,27 @@ export class ScheduleService {
       } catch (error) {
         if (!isUniqueViolation(error) || attempt >= SEQ_RETRIES) throw error;
       }
+    }
+  }
+
+  /**
+   * Refuses a key that was revoked or expired after the request was accepted.
+   * The row is read `FOR SHARE` and held until this transaction ends, so it
+   * serialises with `ApiKeyService.revoke`: its UPDATE waits for this insert to
+   * commit, and `cancelByApiKey` (which runs after that commit) then sees and
+   * withdraws the row; if the revoke committed first, the read sees it here.
+   * Without the lock a message could be inserted just after the withdrawal ran
+   * and stay pending for a revoked key.
+   */
+  private async assertKeyLive(tx: Prisma.TransactionClient, apiKeyId: string): Promise<void> {
+    const rows = await tx.$queryRaw<{ revokedAt: Date | null; expiresAt: Date | null }[]>`
+      SELECT "revokedAt", "expiresAt" FROM "ApiKey" WHERE "id" = ${apiKeyId}::uuid FOR SHARE`;
+    const key = rows[0];
+    if (key === undefined || key.revokedAt !== null) {
+      throw new ServiceError(ErrorCode.AUTH_INVALID_API_KEY);
+    }
+    if (key.expiresAt !== null && key.expiresAt.getTime() <= Date.now()) {
+      throw new ServiceError(ErrorCode.AUTH_API_KEY_EXPIRED);
     }
   }
 

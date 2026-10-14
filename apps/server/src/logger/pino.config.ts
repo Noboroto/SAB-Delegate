@@ -22,6 +22,7 @@ export const SENSITIVE_KEYS = [
   'cookie',
   'set-cookie',
   'password',
+  'plaintext',
   'DISCORD_TOKEN',
   'POSTGRES_PASSWORD',
 ] as const;
