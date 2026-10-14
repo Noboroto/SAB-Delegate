@@ -6,7 +6,12 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import type { GuildPickerItem } from '@sab/shared';
 import { guildIconUrl } from '@/lib/discord-icon';
-import { GUILD_SECTIONS } from '@/lib/guild-sections';
+import {
+  GUILD_NAV,
+  activeNavKey,
+  type GuildNavChildKey,
+  type GuildNavKey,
+} from '@/lib/guild-sections';
 
 interface GuildBarProps {
   guilds: readonly GuildPickerItem[];
@@ -20,9 +25,32 @@ export function GuildBar({ guilds, currentId }: GuildBarProps) {
   const pathname = usePathname();
 
   const base = `/servers/${currentId}`;
-  const section = pathname.startsWith(`${base}/`)
-    ? pathname.slice(base.length + 1).split('/')[0]
-    : '';
+  const active = activeNavKey(pathname, currentId);
+
+  // Typed records, so a page added to the registry cannot ship without a label.
+  const labels: Record<GuildNavKey | GuildNavChildKey, string> = {
+    overview: t('nav.overview'),
+    modules: t('nav.modules'),
+    tools: t('nav.tools'),
+    commands: t('nav.commands'),
+    logs: t('nav.logs'),
+    settings: t('nav.settings'),
+    birthday: t('nav.birthday'),
+    note: t('nav.note'),
+    wordGame: t('nav.wordGame'),
+    schedule: t('nav.schedule'),
+    messaging: t('nav.messaging'),
+    mention: t('nav.mention'),
+    roleAssign: t('nav.roleAssign'),
+    threads: t('nav.threads'),
+    purge: t('nav.purge'),
+    activity: t('nav.activity'),
+    attendance: t('nav.attendance'),
+    info: t('nav.info'),
+  };
+  const link = (key: GuildNavKey | GuildNavChildKey, path: string) => (
+    <Link href={path === '' ? base : `${base}/${path}`}>{labels[key]}</Link>
+  );
 
   return (
     <div
@@ -65,15 +93,20 @@ export function GuildBar({ guilds, currentId }: GuildBarProps) {
       <Menu
         mode="horizontal"
         aria-label={t('nav.label')}
-        selectedKeys={[section === '' ? 'overview' : (section ?? 'overview')]}
+        selectedKeys={active === undefined ? [] : [active]}
         style={{ flex: 1, minWidth: 0, borderBottom: 'none', background: 'transparent' }}
-        items={[
-          { key: 'overview', label: <Link href={base}>{t('nav.overview')}</Link> },
-          ...GUILD_SECTIONS.map((name) => ({
-            key: name,
-            label: <Link href={`${base}/${name}`}>{t(`nav.${name}`)}</Link>,
-          })),
-        ]}
+        items={GUILD_NAV.map((entry) =>
+          entry.children === undefined
+            ? { key: entry.key, label: link(entry.key, entry.path ?? '') }
+            : {
+                key: entry.key,
+                label: entry.path === undefined ? labels[entry.key] : link(entry.key, entry.path),
+                children: entry.children.map((child) => ({
+                  key: child.key,
+                  label: link(child.key, child.path),
+                })),
+              },
+        )}
       />
     </div>
   );

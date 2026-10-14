@@ -28,7 +28,27 @@
     "commands": "Commands",
     "logs": "Logs",
     "settings": "Settings",
-    "comingSoon": "This page will arrive in a later update."
+    "tools": "Tools",
+    "birthday": "Birthdays",
+    "note": "Notes",
+    "wordGame": "Word game",
+    "schedule": "Schedule",
+    "messaging": "Messaging",
+    "mention": "Mentions",
+    "roleAssign": "Role assign",
+    "threads": "Threads",
+    "purge": "Purge",
+    "activity": "Activities",
+    "attendance": "Attendance",
+    "info": "Info",
+    "moduleDesc": {
+      "birthday": "Birthday wishes and the members' birthday list.",
+      "note": "Keyword notes for the whole server.",
+      "wordGame": "The word-chain game in a channel.",
+      "schedule": "Messages scheduled to be sent later.",
+      "messaging": "Send, copy and edit messages, and create polls."
+    },
+    "modulesSubtitle": "Pick a module to view and change it."
   },
   "notFound": {
     "title": "Server not found",

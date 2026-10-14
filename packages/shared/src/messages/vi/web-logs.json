@@ -1,0 +1,62 @@
+{
+  "title": "Nhật ký",
+  "subtitle": "Các thao tác quản trị đã làm trong máy chủ này, mới nhất trước.",
+  "filter": {
+    "action": "Lọc theo thao tác",
+    "source": "Lọc theo nguồn"
+  },
+  "columns": {
+    "time": "Thời gian",
+    "action": "Thao tác",
+    "source": "Nguồn",
+    "actor": "Người làm",
+    "result": "Kết quả",
+    "details": "Chi tiết"
+  },
+  "sources": {
+    "DISCORD": "Discord",
+    "HTTP": "Web / API",
+    "MCP": "MCP",
+    "SYSTEM": "Hệ thống"
+  },
+  "result": {
+    "ok": "Thành công",
+    "failed": "Thất bại"
+  },
+  "empty": "Chưa có thao tác nào được ghi.",
+  "emptyFiltered": "Không có thao tác nào khớp bộ lọc.",
+  "older": "Cũ hơn",
+  "newest": "Về mới nhất",
+  "actions": {
+    "guildConfigUpdate": "Đổi cài đặt máy chủ",
+    "botProfileUpdate": "Đổi hồ sơ bot",
+    "birthdayAdd": "Thêm sinh nhật",
+    "birthdayRemove": "Xoá sinh nhật",
+    "birthdayImport": "Nhập sinh nhật",
+    "birthdayWish": "Gửi lời chúc sinh nhật",
+    "noteUpsert": "Lưu ghi chú",
+    "noteRemove": "Xoá ghi chú",
+    "wordGameConfigure": "Cấu hình nối từ",
+    "wordGameReset": "Đặt lại nối từ",
+    "scheduleCreate": "Tạo hẹn giờ",
+    "scheduleCancel": "Huỷ hẹn giờ",
+    "messageSend": "Gửi tin nhắn",
+    "messageCopy": "Chép tin nhắn",
+    "messageReact": "Thả biểu cảm",
+    "messageEdit": "Sửa tin nhắn",
+    "pollCreate": "Tạo bình chọn",
+    "mentionReactors": "Nhắc người đã thả biểu cảm",
+    "mentionNonReactors": "Nhắc người chưa thả biểu cảm",
+    "mentionEveryone": "Nhắc mọi người",
+    "roleAssignApply": "Gán vai trò",
+    "threadCreate": "Tạo chủ đề",
+    "threadRename": "Đổi tên chủ đề",
+    "threadDelete": "Xoá chủ đề",
+    "privateThreadCreate": "Tạo chủ đề riêng",
+    "purgeMessages": "Dọn tin nhắn",
+    "activityCreate": "Tạo hoạt động",
+    "inviteCreate": "Tạo lời mời",
+    "apiKeyMint": "Tạo khoá API",
+    "apiKeyRevoke": "Thu hồi khoá API"
+  }
+}

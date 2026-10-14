@@ -1,0 +1,12 @@
+{
+  "title": "Lệnh",
+  "subtitle": "Các lệnh gạch chéo của bot trong máy chủ này.",
+  "groupEveryone": "Ai cũng dùng được",
+  "groupRestricted": "Cần quyền trong máy chủ",
+  "guildOnly": "Chỉ trong máy chủ",
+  "subcommands": "Lệnh con",
+  "empty": {
+    "title": "Chưa có lệnh nào",
+    "body": "Bot chưa đăng ký lệnh nào."
+  }
+}

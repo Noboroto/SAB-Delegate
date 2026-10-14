@@ -1,6 +1,6 @@
 import { screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { GUILD_SECTIONS } from '@/lib/guild-sections';
+import { GUILD_NAV } from '@/lib/guild-sections';
 import { renderWithProviders } from '@/lib/test/render-with-providers';
 
 const path = vi.hoisted(() => ({ current: '/servers/111111111111111111' }));
@@ -32,9 +32,37 @@ describe('GuildBar', () => {
       'href',
       `/servers/${A}`,
     );
-    for (const section of GUILD_SECTIONS) {
-      expect(nav.querySelector(`a[href="/servers/${A}/${section}"]`), section).not.toBeNull();
+    for (const entry of GUILD_NAV) {
+      if (entry.path === undefined || entry.path === '') continue;
+      expect(nav.querySelector(`a[href="/servers/${A}/${entry.path}"]`), entry.key).not.toBeNull();
     }
+    expect(within(nav).getByText('Công cụ')).toBeInTheDocument();
+  });
+
+  it('keeps the sub-pages of modules and tools in the submenus', () => {
+    path.current = `/servers/${A}`;
+    const { container } = renderWithProviders(<GuildBar guilds={guilds} currentId={A} />);
+    // The horizontal menu adds its own overflow ("...") submenu.
+    const submenus = container.querySelectorAll(
+      '.ant-menu-submenu:not(.ant-menu-overflow-item-rest)',
+    );
+    expect(submenus).toHaveLength(2);
+  });
+
+  it('selects the parent of a sub-page', () => {
+    path.current = `/servers/${A}/modules/word-game`;
+    const { container } = renderWithProviders(<GuildBar guilds={guilds} currentId={A} />, 'en');
+    expect(container.querySelector('.ant-menu-submenu-selected')).toHaveTextContent('Modules');
+    expect(screen.getByRole('menuitem', { name: 'Overview' })).not.toHaveClass(
+      'ant-menu-item-selected',
+    );
+  });
+
+  it('selects nothing on a path the menu does not know', () => {
+    path.current = `/servers/${A}/nope`;
+    const { container } = renderWithProviders(<GuildBar guilds={guilds} currentId={A} />);
+    expect(container.querySelector('.ant-menu-item-selected')).toBeNull();
+    expect(container.querySelector('.ant-menu-submenu-selected')).toBeNull();
   });
 
   it('marks the current section', () => {

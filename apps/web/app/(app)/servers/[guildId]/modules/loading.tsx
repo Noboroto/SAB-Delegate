@@ -1,5 +1,5 @@
 import { PageLoading } from '@/components/ui/page-loading';
 
-export default function GuildSectionLoading() {
+export default function ModulesLoading() {
   return <PageLoading />;
 }

@@ -1,0 +1,12 @@
+{
+  "title": "Commands",
+  "subtitle": "The bot's slash commands in this server.",
+  "groupEveryone": "Anyone can use",
+  "groupRestricted": "Needs a server permission",
+  "guildOnly": "Server only",
+  "subcommands": "Subcommands",
+  "empty": {
+    "title": "No commands yet",
+    "body": "The bot has not registered any commands."
+  }
+}
