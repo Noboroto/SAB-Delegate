@@ -18,6 +18,10 @@ import { ManageGuildGuard } from './common/guild-access/manage-guild.guard.js';
 // Routes that deliberately have no login: the container probes. Better Auth's
 // `/api/auth/*` is a raw Fastify route outside Nest and never appears here.
 const PUBLIC_ROUTES: ReadonlySet<string> = new Set(['/health', '/health/live']);
+// The one route outside /api: the MCP endpoint, which takes a bearer API key and
+// checks it inside the handler (no cookie, so no SessionGuard). Only its own
+// controller may sit there, and every tool call it serves re-checks Manage Server.
+const BEARER_ROUTES: ReadonlyMap<string, string> = new Map([['/mcp', 'McpController']]);
 const GUILD_SCOPED = /^\/api\/guilds\/:/;
 const GUILD_PARAM = /^\/api\/guilds\/:guildId(\/|$)/;
 
@@ -63,6 +67,12 @@ const GUARDS: Guards = { session: SessionGuard, manageGuild: ManageGuildGuard };
 function violationsOf(route: Route, guards: Guards = GUARDS): string[] {
   const label = `${route.owner} ${route.path}`;
   if (PUBLIC_ROUTES.has(route.path)) return [];
+  const bearerOwner = BEARER_ROUTES.get(route.path);
+  if (bearerOwner !== undefined) {
+    return route.owner.startsWith(`${bearerOwner}.`)
+      ? []
+      : [`${label}: ${route.path} belongs to ${bearerOwner}`];
+  }
   if (!route.path.startsWith('/api/')) return [`${label}: REST routes live under /api`];
   if (route.path.startsWith('/api/auth/')) return [];
   if (GUILD_SCOPED.test(route.path)) {
@@ -131,6 +141,7 @@ describe('REST route coverage', () => {
     expect(paths).toContain(`${String(RequestMethod.GET)}:/api/me`);
     expect(paths).toContain(`${String(RequestMethod.GET)}:/api/guilds`);
     expect(paths).toContain(`${String(RequestMethod.GET)}:/health`);
+    expect(paths).toContain(`${String(RequestMethod.POST)}:/mcp`);
   });
 
   it('guards every route under /api/guilds/:guildId with ManageGuildGuard and every other /api route with a login', () => {
@@ -227,6 +238,20 @@ describe('REST route coverage', () => {
       expect(violationsOfController(Elsewhere)).toEqual([
         expect.stringContaining('live under /api'),
       ]);
+    });
+
+    it('lets /mcp belong to McpController only', () => {
+      @Controller('mcp')
+      class Imposter {
+        @Post()
+        handle(): void {}
+      }
+      expect(violationsOfController(Imposter)).toEqual([
+        expect.stringContaining('belongs to McpController'),
+      ]);
+      expect(
+        violationsOf({ path: '/mcp', method: '1', guards: [], owner: 'McpController.handle' }),
+      ).toEqual([]);
     });
 
     it('leaves the probes and Better Auth alone', () => {

@@ -82,6 +82,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      MCP_ENABLED: ${MCP_ENABLED:-true}
       LOG_LEVEL: ${LOG_LEVEL:-debug}
 
 volumes:

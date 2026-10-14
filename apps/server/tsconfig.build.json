@@ -12,6 +12,7 @@
     "dist",
     "src/**/*.spec.ts",
     "src/**/*.db-harness.ts",
+    "src/**/*.test-harness.ts",
     "src/common/rest/rest-test-app.ts"
   ]
 }

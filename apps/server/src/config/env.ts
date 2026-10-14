@@ -97,6 +97,9 @@ export const envSchema = z
     // Signs and encrypts every session cookie; shorter secrets are guessable.
     BETTER_AUTH_SECRET: z.string().trim().min(32).optional(),
     TRUSTED_PROXY_IPS: csvOfIpOrCidr.optional(),
+    // The MCP endpoint (/mcp) is mounted when the REST API is on; false removes the route only.
+    // Production needs TRUSTED_PROXY_IPS for it like the rest of the API (see the proxy rule below).
+    MCP_ENABLED: flag.default(true),
   })
   // The dev guild scopes slash commands to one test server. Present in
   // production it would silently pull every command out of the real guilds;

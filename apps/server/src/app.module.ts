@@ -8,6 +8,7 @@ import { HealthModule } from './health/health.module.js';
 import { I18nModule } from './i18n/guild-locale.service.js';
 import { PgBossModule } from './jobs/pg-boss.module.js';
 import { buildPinoParams } from './logger/pino.config.js';
+import { mcpModules } from './mcp/mcp.module.js';
 import { featureModules } from './modules/feature-modules.js';
 import { meModules } from './modules/me/me.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
@@ -27,6 +28,7 @@ import { PrismaModule } from './prisma/prisma.module.js';
     HealthModule,
     ...authModules(),
     ...featureModules(),
+    ...mcpModules(),
     ...meModules(),
   ],
 })

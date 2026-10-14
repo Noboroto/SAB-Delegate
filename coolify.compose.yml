@@ -114,6 +114,7 @@ services:
       DB_POOL_MAX: ${DB_POOL_MAX:-10}
       PGBOSS_POOL_MAX: ${PGBOSS_POOL_MAX:-4}
       PGBOSS_WORKERS_ENABLED: ${PGBOSS_WORKERS_ENABLED:-true}
+      MCP_ENABLED: ${MCP_ENABLED:-true}
       LOG_LEVEL: ${LOG_LEVEL:-info}
     volumes:
       # TEMPORARY: the legacy sqlite files, read-only, for the one-off quick.db

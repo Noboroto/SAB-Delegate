@@ -211,6 +211,12 @@ describe('REST settings', () => {
     expect(failureOf({ ...productionEnv, ...restEnv, APP_URL: value }).names).toEqual(['APP_URL']);
   });
 
+  it('turns the MCP endpoint on unless MCP_ENABLED says false', () => {
+    expect(loadEnv(productionEnv).MCP_ENABLED).toBe(true);
+    expect(loadEnv({ ...productionEnv, MCP_ENABLED: 'false' }).MCP_ENABLED).toBe(false);
+    expect(failureOf({ ...productionEnv, MCP_ENABLED: 'no' }).names).toEqual(['MCP_ENABLED']);
+  });
+
   it('requires https in production only', () => {
     const http = { ...restEnv, APP_URL: 'http://bot.example.test' };
     expect(failureOf({ ...productionEnv, ...http }).names).toEqual(['APP_URL']);
