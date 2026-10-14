@@ -1,0 +1,306 @@
+{
+  "index": {
+    "title": "Tools",
+    "subtitle": "One-off actions for this server: mention lists, roles, threads, cleaning up messages and lookups."
+  },
+  "tools": {
+    "mention": {
+      "name": "Mention lists",
+      "description": "List who reacted to a message, or who did not, ready to paste or post."
+    },
+    "roleAssign": {
+      "name": "Assign roles",
+      "description": "Give or take a role for many members at once."
+    },
+    "threads": {
+      "name": "Threads",
+      "description": "Open threads, open private threads for members, and rename or delete threads by prefix."
+    },
+    "purge": {
+      "name": "Delete messages",
+      "description": "Delete the newest messages of a channel, or every message between two."
+    },
+    "activity": {
+      "name": "New activity",
+      "description": "Create the roles and channels of an activity."
+    },
+    "attendance": {
+      "name": "Voice attendance",
+      "description": "See who of a role is in a voice channel right now."
+    },
+    "info": {
+      "name": "Lookups",
+      "description": "A member introduction, who reacted, who holds a role, and invite links."
+    }
+  },
+  "common": {
+    "copy": "Copy",
+    "copied": "Copied.",
+    "copyFailed": "Could not copy. Select the text and copy it by hand.",
+    "none": "None.",
+    "required": "This field is required.",
+    "invalidForm": "Check the form: some fields are missing or not valid.",
+    "fillRequired": "Fill in the required fields to continue.",
+    "advanced": "Advanced options",
+    "messageRefInvalid": "Paste a message link (right-click the message, Copy Message Link).",
+    "messageRefPlaceholder": "https://discord.com/channels/...",
+    "emojiPlaceholder": "For example a thumbs up or :name:",
+    "idListTitle": "{title} ({count})"
+  },
+  "mention": {
+    "reactors": {
+      "title": "Who reacted",
+      "description": "Lists everyone who reacted to a message with one emoji."
+    },
+    "nonReactors": {
+      "title": "Who did not react",
+      "description": "Lists the members who did not react to a message."
+    },
+    "messageLabel": "Message link",
+    "emojiLabel": "Emoji",
+    "contentLabel": "Text before the list",
+    "contentHelp": "Optional. Written above the list of members.",
+    "postLabel": "Also post the list as a reply to this message",
+    "replyLabel": "Also post the list as a reply to this message",
+    "roleLabel": "Only members of this role",
+    "roleHelp": "Optional. Leave empty to use everyone who can see the channel.",
+    "onlyInChannelLabel": "Only members who can see the channel",
+    "includeBotsLabel": "Include bots",
+    "submit": "Make the list",
+    "posted": "The list was posted.",
+    "status": {
+      "OK": "{count, plural, one {# member listed.} other {# members listed.}}",
+      "NO_REACTORS": "Nobody reacted with that emoji.",
+      "ALL_REACTED": "Everyone has reacted.",
+      "UNSUPPORTED_CHANNEL": "This channel cannot be used: only text channels and threads work.",
+      "SEND_FAILED": "Discord refused a message: {posted} of {total, plural, one {# message was} other {# messages were}} posted."
+    },
+    "failure": "Reason: {reason}",
+    "delivered": "{count, plural, one {# message posted.} other {# messages posted.}}",
+    "sampleTitle": "First members",
+    "chunkTitle": "Message {index} of {total}"
+  },
+  "roleAssign": {
+    "members": {
+      "title": "By list of members",
+      "description": "Paste member ids, or pick a role whose members get the change."
+    },
+    "reactors": {
+      "title": "By reaction",
+      "description": "Everyone who reacted to a message with one emoji gets the change."
+    },
+    "modeLabel": "Action",
+    "modeGive": "Give the role",
+    "modeTake": "Take the role away",
+    "roleLabel": "Role",
+    "userIdsLabel": "Member ids",
+    "userIdsHelp": "Paste ids or mentions, separated by spaces, commas or lines. Found: {count} (at most {max}).",
+    "membersOfRoleLabel": "Also everyone who holds this role",
+    "membersOfRoleHelp": "Optional.",
+    "messageLabel": "Message link",
+    "emojiLabel": "Emoji",
+    "giveLabel": "Preview and give the role",
+    "takeLabel": "Preview and take the role away",
+    "giveTitle": "Give the role",
+    "takeTitle": "Take the role away",
+    "giveConfirm": "Give the role",
+    "takeConfirm": "Take the role away",
+    "noReactors": "Nobody reacted with that emoji, so there is nothing to do.",
+    "planGive": "{count, plural, one {The role will be given to # member.} other {The role will be given to # members.}}",
+    "planTake": "{count, plural, one {The role will be taken from # member.} other {The role will be taken from # members.}}",
+    "planSkipped": "{count, plural, one {# id is not a member of this server and is left out.} other {# ids are not members of this server and are left out.}}",
+    "sampleTitle": "First members",
+    "done": "The roles were updated.",
+    "outcome": "Done for {done} of {planned, plural, one {# member} other {# members}}.",
+    "failuresTitle": "Could not change {count, plural, one {# member} other {# members}}",
+    "failure": "{name} ({id}): {reason}"
+  },
+  "threads": {
+    "channelLabel": "Channel",
+    "prefixHelp": "Matched exactly as typed, including spaces.",
+    "reason": {
+      "nameInvalid": "The new name would be empty or too long.",
+      "memberNotFound": "Not a member of this server."
+    },
+    "batch": {
+      "cannotHoldThreads": "This channel cannot hold threads.",
+      "noMatch": "No active thread matches. Nothing will change.",
+      "planCount": "{count, plural, one {# active thread matches.} other {# active threads match.}}",
+      "planInvalid": "{count, plural, one {# of them cannot be renamed (the new name would be empty or too long) and is skipped.} other {# of them cannot be renamed (the new name would be empty or too long) and are skipped.}}",
+      "sampleTitle": "First matches",
+      "renameLine": "{from} becomes {to}",
+      "outcome": "Done for {done} of {count, plural, one {# thread} other {# threads}}.",
+      "failuresTitle": "Could not change {count, plural, one {# thread} other {# threads}}",
+      "failure": "{name} ({id}): {reason}"
+    },
+    "create": {
+      "title": "Open a thread",
+      "description": "Opens a thread in a channel and posts its first message.",
+      "nameLabel": "Thread name",
+      "messageLabel": "First message",
+      "privateLabel": "Private thread",
+      "privateHelp": "Ignored in a forum channel, whose posts are always public.",
+      "submit": "Open the thread",
+      "done": "The thread was opened.",
+      "status": {
+        "CREATED": "The thread was opened.",
+        "CHANNEL_CANNOT_HOLD_THREADS": "This channel cannot hold threads.",
+        "PRIVATE_NEEDS_TEXT_CHANNEL": "Private threads need a text channel."
+      }
+    },
+    "private": {
+      "title": "Private threads for members",
+      "description": "Opens one private thread per member, named prefix-username, with the same first message.",
+      "prefixLabel": "Name prefix",
+      "prefixHelp": "The thread is named prefix-username.",
+      "messageLabel": "First message",
+      "userIdsLabel": "Member ids",
+      "userIdsHelp": "Optional if you pick a role. Found: {count} (at most {max}).",
+      "roleLabel": "Or every member of this role",
+      "submit": "Open the threads",
+      "done": "The private threads were opened.",
+      "status": {
+        "OK": "Opened {created} of {total, plural, one {# thread} other {# threads}}.",
+        "CHANNEL_NOT_TEXT": "Private threads need a text channel.",
+        "NO_MEMBERS": "There is nobody to open a thread for.",
+        "INVALID_LINK": "The message link is not valid.",
+        "MESSAGE_NOT_FOUND": "That message was not found.",
+        "NO_ACCESS": "The bot cannot read that message."
+      },
+      "failuresTitle": "Left out: {count, plural, one {# member} other {# members}}",
+      "failure": "{id}: {reason}"
+    },
+    "privateReactors": {
+      "title": "Private threads for reactors",
+      "description": "Opens a private thread for everyone who reacted to a message with one emoji.",
+      "messageLabel": "Message link",
+      "emojiLabel": "Emoji"
+    },
+    "rename": {
+      "title": "Rename threads by prefix",
+      "description": "Replaces the start of the name of every active thread in a channel.",
+      "oldPrefixLabel": "Current prefix",
+      "newPrefixLabel": "New prefix",
+      "newPrefixHelp": "Leave empty to remove the prefix.",
+      "label": "Preview and rename",
+      "modalTitle": "Rename threads",
+      "confirm": "Rename",
+      "done": "The threads were renamed."
+    },
+    "delete": {
+      "title": "Delete threads by prefix",
+      "description": "Deletes every active thread in a channel whose name starts with the prefix. This cannot be undone.",
+      "prefixLabel": "Prefix",
+      "label": "Preview and delete",
+      "modalTitle": "Delete threads",
+      "confirm": "Delete the threads",
+      "done": "The threads were deleted."
+    }
+  },
+  "purge": {
+    "title": "Delete messages",
+    "description": "Deleted messages cannot be brought back. You see what would go before you confirm.",
+    "modeLabel": "What to delete",
+    "modeLast": "The newest messages",
+    "modeRange": "Messages between two",
+    "channelLabel": "Channel",
+    "untilLabel": "Delete messages newer than",
+    "untilHelp": "A message link or id. This message itself stays.",
+    "fromLabel": "Up to and including (optional)",
+    "fromHelp": "A message link or id. Leave empty for the newest message.",
+    "countLabel": "How many",
+    "countHelp": "From 1 to {max}.",
+    "messageInvalid": "Paste a link or id of a message in the channel above.",
+    "labelLast": "Preview and delete {count, plural, one {# message} other {# messages}}",
+    "labelRange": "Preview and delete the range",
+    "modalTitle": "Delete messages",
+    "confirm": "Delete the messages",
+    "done": "The messages were deleted.",
+    "status": {
+      "UNTIL_NOT_FOUND": "The first message was not found in this channel.",
+      "FROM_NOT_FOUND": "The last message was not found in this channel.",
+      "RANGE_REVERSED": "The first message must be older than the last one.",
+      "RANGE_TOO_LARGE": "The range holds too many messages. Choose a smaller one."
+    },
+    "planEmpty": "No message matches. Nothing will be deleted.",
+    "planCount": "{count, plural, one {# message will be deleted.} other {# messages will be deleted.}}",
+    "planOlder": "{count, plural, one {# of them is older than two weeks and is deleted on its own, which takes longer.} other {# of them are older than two weeks and are deleted one by one, which takes longer.}}",
+    "sampleTitle": "Newest message ids",
+    "outcome": "Deleted {deleted} of {count, plural, one {# message} other {# messages}}.",
+    "outcomeFailed": "{count, plural, one {# message could not be deleted.} other {# messages could not be deleted.}}"
+  },
+  "activity": {
+    "title": "New activity",
+    "description": "Creates three roles and three channels for an activity in the activity category.",
+    "emojiLabel": "Emoji",
+    "nameLabel": "Name",
+    "shortNameLabel": "Short name",
+    "shortNameHelp": "Exactly {length, plural, one {# character} other {# characters}}.",
+    "categoryLabel": "Category",
+    "categoryHelp": "Optional. Leave empty to use the category set for this server.",
+    "submit": "Create the activity",
+    "done": "The activity was created.",
+    "result": {
+      "title": "Created",
+      "category": "Category",
+      "roleEvent": "Event role",
+      "roleMulti": "Multi role",
+      "roleMc": "MC role",
+      "channelGeneral": "General channel",
+      "channelThreadOnly": "Thread-only channel",
+      "channelVoice": "Voice channel"
+    }
+  },
+  "attendance": {
+    "title": "Voice attendance",
+    "description": "Splits the members of a role by whether they are in a voice channel right now.",
+    "roleLabel": "Role",
+    "channelLabel": "Voice channel",
+    "submit": "Check",
+    "summary": "{role}: {present} of {total, plural, one {# member is} other {# members are}} in the channel.",
+    "present": "In the channel",
+    "absent": "Not in the channel",
+    "listTitle": "{title} ({count})",
+    "copyIds": "Copy ids"
+  },
+  "info": {
+    "memberLabel": "Member",
+    "messageLabel": "Message link",
+    "emojiLabel": "Emoji",
+    "roleLabel": "Role",
+    "introduction": {
+      "title": "Member introduction",
+      "description": "Finds the first introduction a member wrote in the intro channel.",
+      "submit": "Find",
+      "noChannel": "This server has no intro channel set.",
+      "notFound": "No introduction found in the newest {count, plural, one {# message} other {# messages}}.",
+      "found": "Introduction",
+      "link": "Link to the message"
+    },
+    "reactors": {
+      "title": "Who reacted",
+      "description": "The ids of everyone who reacted to a message with one emoji. Bots are left out.",
+      "submit": "List ids",
+      "listTitle": "Members"
+    },
+    "roleMembers": {
+      "title": "Members of a role",
+      "description": "The ids of the members who hold a role.",
+      "channelLabel": "Only those who can see this channel",
+      "channelHelp": "Optional.",
+      "submit": "List ids",
+      "roleName": "Role: {name}",
+      "listTitle": "Members"
+    },
+    "invite": {
+      "title": "Invite link",
+      "description": "Creates an invite link to a channel.",
+      "channelLabel": "Channel",
+      "reasonLabel": "Reason",
+      "reasonHelp": "Optional. Kept in the server audit log.",
+      "submit": "Create the invite",
+      "done": "The invite was created.",
+      "created": "Invite to {channel}"
+    }
+  }
+}
