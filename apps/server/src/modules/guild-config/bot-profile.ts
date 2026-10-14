@@ -110,7 +110,8 @@ export class BotProfileService {
     const parsed = BotProfileSetRequestSchema.safeParse(input);
     if (!parsed.success) throw new ServiceError(ErrorCode.VALIDATION_FAILED);
     const { nick, avatar } = parsed.data;
-    const picture = avatar === undefined ? undefined : avatarDataUri(avatar);
+    // `null` restores the bot's own picture; a string is the new one.
+    const picture = avatar === undefined || avatar === null ? avatar : avatarDataUri(avatar);
     const changes: Array<'nick' | 'avatar'> = [
       ...(nick === undefined ? [] : (['nick'] as const)),
       ...(picture === undefined ? [] : (['avatar'] as const)),
@@ -145,7 +146,7 @@ export class BotProfileService {
 
   private async edit(
     guild: Guild,
-    change: { nick: string | null } | { avatar: string },
+    change: { nick: string | null } | { avatar: string | null },
   ): Promise<void> {
     try {
       await guild.members.editMe(change);

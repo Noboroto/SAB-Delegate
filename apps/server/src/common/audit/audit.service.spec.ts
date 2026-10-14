@@ -178,7 +178,7 @@ describe('AuditService.list', () => {
     });
   });
 
-  it('applies the cursor, action and since filters', async () => {
+  it('applies the cursor, action, source and since filters', async () => {
     const { prisma, service } = build();
     const since = new Date('2026-10-01T00:00:00Z');
     const cursor = '0198f2f0-0000-7000-8000-000000000001';
@@ -186,12 +186,14 @@ describe('AuditService.list', () => {
       guildId: GUILD,
       cursor,
       action: AUDIT_ACTIONS.noteRemove,
+      source: 'HTTP',
       since,
     });
     expect(prisma.auditLog.findMany.mock.calls[0]?.[0]).toMatchObject({
       where: {
         guild: { discordId: GUILD },
         action: 'note.remove',
+        source: 'HTTP',
         createdAt: { gte: since },
       },
       cursor: { id: cursor },
@@ -206,6 +208,7 @@ describe('AuditService.list', () => {
     ['a limit above the page maximum', { guildId: GUILD, limit: 101 }],
     ['a cursor that is not an id', { guildId: GUILD, cursor: "x' OR 1=1" }],
     ['an action nobody records', { guildId: GUILD, action: 'drop.table' as never }],
+    ['a source nobody acts from', { guildId: GUILD, source: 'ROOT' as never }],
   ])('rejects %s without querying', async (_label, query) => {
     const { prisma, service } = build();
     await expect(service.list(query)).rejects.toMatchObject({

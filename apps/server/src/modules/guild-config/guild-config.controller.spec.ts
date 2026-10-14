@@ -157,6 +157,19 @@ describe('bot nickname reset', () => {
       dryRun: false,
     });
   });
+
+  it('PATCH accepts avatar null to restore the bot picture', async () => {
+    const response = await test.app.inject({
+      method: 'PATCH',
+      url,
+      headers: asUser(),
+      payload: { avatar: null },
+    });
+    expect(response.statusCode).toBe(200);
+    expect(profiles.setBotProfile).toHaveBeenLastCalledWith(GUILD, { avatar: null }, HTTP_ACTOR, {
+      dryRun: false,
+    });
+  });
 });
 
 describe('BotProfileService', () => {
@@ -202,6 +215,17 @@ describe('BotProfileService', () => {
     expect(members.editMe).toHaveBeenCalledWith({ nick: null });
     expect(result.changes).toEqual(['nick']);
     expect(audit.record).toHaveBeenCalledTimes(1);
+  });
+
+  it('restores the bot picture with a null avatar and records it as an avatar change', async () => {
+    const { service, members, audit } = build();
+    const result = await service.setBotProfile(GUILD, { avatar: null }, ACTOR);
+    expect(members.editMe).toHaveBeenCalledTimes(1);
+    expect(members.editMe).toHaveBeenCalledWith({ avatar: null });
+    expect(result.changes).toEqual(['avatar']);
+    expect(audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({ params: { kind: 'avatar' } }),
+    );
   });
 
   it('sends nickname and avatar as two separate requests, with the type read from the bytes', async () => {

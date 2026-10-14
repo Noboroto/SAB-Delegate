@@ -116,6 +116,19 @@ describe('AuditService against Postgres', () => {
     expect(none.items).toEqual([]);
   });
 
+  it('filters by the source of the change', async () => {
+    await service.record({
+      guildId: GUILD,
+      actor: { source: 'MCP', userId: '100000000000000002' },
+      action: AUDIT_ACTIONS.noteRemove,
+    });
+    const mcp = await service.list({ guildId: GUILD, source: 'MCP' });
+    expect(mcp.items).toHaveLength(1);
+    expect(mcp.items[0]).toMatchObject({ source: 'MCP', action: 'note.remove' });
+    const system = await service.list({ guildId: GUILD, source: 'SYSTEM' });
+    expect(system.items).toEqual([]);
+  });
+
   it('shows a server only its own rows', async () => {
     const other = await service.list({ guildId: '100000000000000099' });
     expect(other.items).toEqual([]);

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { DEFAULT_LOCALE, LocaleSchema } from '../utils/locale.js';
 import { AuditActionSchema } from '../audit-actions.js';
+import { ActorSourceSchema } from '../generated/zod/schemas/enums/ActorSource.schema.js';
 import { ScheduledStatusSchema } from '../generated/zod/schemas/enums/ScheduledStatus.schema.js';
 import { AuditLogSchema } from '../generated/zod/schemas/models/AuditLog.schema.js';
 import {
@@ -235,13 +236,15 @@ export type BotProfile = z.infer<typeof BotProfileSchema>;
  */
 export const BotProfileSetRequestSchema = z
   .object({
-    // `null` clears the nickname, so the bot shows its default name again.
+    // `null` clears the nickname, so the bot shows its default name again;
+    // `null` for the avatar drops the server picture back to the bot's own.
     nick: z.string().trim().min(1).max(BOT_NICK_MAX_LENGTH).nullable().optional(),
     avatar: z
       .string()
       .min(1)
       .max(BOT_AVATAR_BASE64_MAX_LENGTH)
       .regex(/^[A-Za-z0-9+/]+={0,2}$/, 'avatar must be base64 image bytes')
+      .nullable()
       .optional(),
     ...dryRunBodyShape,
   })
@@ -275,6 +278,7 @@ export const AuditLogsQuerySchema = z.object({
   cursor: z.uuid().optional(),
   limit: z.coerce.number().int().min(1).max(PAGE_SIZE_MAX).default(50),
   action: AuditActionSchema.optional(),
+  source: ActorSourceSchema.optional(),
   since: z.iso
     .datetime({ offset: true })
     .transform((instant) => new Date(instant))

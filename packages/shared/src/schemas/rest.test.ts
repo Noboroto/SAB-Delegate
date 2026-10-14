@@ -91,5 +91,6 @@ describe('request schemas shared with the REST controllers', () => {
     expect(BotProfileSetRequestSchema.safeParse({ nick: '' }).success).toBe(false);
     expect(BotProfileSetRequestSchema.safeParse({ nick: 'x'.repeat(33) }).success).toBe(false);
     expect(BotProfileSetRequestSchema.safeParse({ nick: 'x'.repeat(32) }).success).toBe(true);
+    expect(BotProfileSetRequestSchema.safeParse({ avatar: null }).success).toBe(true);
   });
 });

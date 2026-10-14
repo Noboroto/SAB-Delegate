@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import {
+  ActorSourceSchema,
   AuditActionSchema,
   ErrorCode,
   PAGE_SIZE_MAX,
@@ -116,6 +117,7 @@ const ListQuerySchema = z.object({
   cursor: z.uuid().optional(),
   limit: z.number().int().min(1).max(PAGE_SIZE_MAX).default(50),
   action: AuditActionSchema.optional(),
+  source: ActorSourceSchema.optional(),
   since: z.date().optional(),
 });
 
@@ -182,13 +184,14 @@ export class AuditService {
   async list(query: AuditListQuery): Promise<AuditPage> {
     const parsed = ListQuerySchema.safeParse(query);
     if (!parsed.success) throw new ServiceError(ErrorCode.VALIDATION_FAILED);
-    const { guildId, cursor, limit, action, since } = parsed.data;
+    const { guildId, cursor, limit, action, source, since } = parsed.data;
 
     // One extra row tells whether another page exists without a count query.
     const rows = await this.prisma.auditLog.findMany({
       where: {
         guild: { discordId: guildId },
         ...(action === undefined ? {} : { action }),
+        ...(source === undefined ? {} : { source }),
         ...(since === undefined ? {} : { createdAt: { gte: since } }),
       },
       select: LIST_SELECT,

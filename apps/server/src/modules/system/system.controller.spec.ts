@@ -84,7 +84,7 @@ describe('GET audit-logs', () => {
       nextCursor: id,
     });
     const response = await send(
-      `audit-logs?limit=10&cursor=${id}&action=note.upsert&since=2026-01-01T00:00:00Z`,
+      `audit-logs?limit=10&cursor=${id}&action=note.upsert&source=MCP&since=2026-01-01T00:00:00Z`,
     );
     expect(response.statusCode).toBe(200);
     const body = response.json<{ items: Array<Record<string, unknown>>; nextCursor: string }>();
@@ -95,6 +95,7 @@ describe('GET audit-logs', () => {
       limit: 10,
       cursor: id,
       action: 'note.upsert',
+      source: 'MCP',
       since: new Date('2026-01-01T00:00:00Z'),
     });
   });
@@ -103,6 +104,7 @@ describe('GET audit-logs', () => {
     await expectInvalid(test, get('audit-logs?limit=1000'), 'limit');
     await expectInvalid(test, get('audit-logs?action=drop.table'), 'action');
     await expectInvalid(test, get('audit-logs?cursor=1'), 'cursor');
+    await expectInvalid(test, get('audit-logs?source=ROOT'), 'source');
   });
 });
 
