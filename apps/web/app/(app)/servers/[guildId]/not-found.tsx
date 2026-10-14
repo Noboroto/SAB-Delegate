@@ -1,16 +1,16 @@
 import { getTranslations } from 'next-intl/server';
 import { PageState } from '@/components/ui/page-state';
 
-/** Unknown server, no bot in it and no permission look the same on purpose. */
-export default async function GuildNotFound() {
-  const t = await getTranslations('servers.notFound');
+/** A path under a known server that is not one of its pages: the server navigation stays. */
+export default async function GuildPageNotFound() {
+  const t = await getTranslations('web.notFoundPage');
 
   return (
     <PageState
       status="404"
       title={t('title')}
       body={t('body')}
-      action={{ label: t('back'), href: '/servers' }}
+      action={{ label: t('toServers'), href: '/servers' }}
     />
   );
 }

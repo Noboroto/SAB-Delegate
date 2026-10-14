@@ -15,11 +15,8 @@ export function ServerList({ guilds }: { guilds: readonly GuildPickerItem[] }) {
         <Col key={guild.id} xs={24} sm={12} lg={8} xl={6}>
           <Card>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-              <Avatar
-                size={48}
-                src={guildIconUrl(guild.id, guild.icon)}
-                alt={t('serverInitial', { name: guild.name })}
-              >
+              {/* Decorative: the name is printed right beside it. */}
+              <Avatar size={48} src={guildIconUrl(guild.id, guild.icon)} alt="">
                 {guild.name.slice(0, 1).toUpperCase()}
               </Avatar>
               <strong style={{ overflowWrap: 'anywhere' }}>{guild.name}</strong>

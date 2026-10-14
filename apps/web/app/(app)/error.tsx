@@ -1,4 +1,11 @@
 'use client';
 
-// The shared route boundary, kept inside the signed-in frame (header and all).
-export { default } from '@/app/error';
+import { RouteErrorState } from '@/components/ui/route-error-state';
+
+/** The route boundary inside the signed-in frame, whose shell already provides `main`. */
+export default function AppRouteError(props: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
+  return <RouteErrorState {...props} />;
+}

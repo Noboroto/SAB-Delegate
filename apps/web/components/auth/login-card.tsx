@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { Alert, Button, Card, Typography } from 'antd';
+import { Alert, Button, Card, Typography, theme } from 'antd';
 import { useTranslations } from 'next-intl';
 import { signInWithDiscord } from '@/lib/auth/auth-client';
 
 export function LoginCard({ next }: { next: string }) {
   const t = useTranslations('login');
+  const { token } = theme.useToken();
   const [starting, setStarting] = useState(false);
   const [failed, setFailed] = useState(false);
 
@@ -25,7 +26,14 @@ export function LoginCard({ next }: { next: string }) {
 
   return (
     <Card style={{ width: '100%', maxWidth: 420 }}>
-      <Typography.Title level={3} style={{ marginTop: 0 }}>
+      <Typography.Title
+        level={1}
+        style={{
+          marginTop: 0,
+          fontSize: token.fontSizeHeading3,
+          lineHeight: token.lineHeightHeading3,
+        }}
+      >
         {t('title')}
       </Typography.Title>
       <Typography.Paragraph type="secondary">{t('subtitle')}</Typography.Paragraph>

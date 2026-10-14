@@ -45,7 +45,7 @@ export function GuildBar({ guilds, currentId }: GuildBarProps) {
             value: guild.id,
             label: (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                <Avatar size={20} src={guildIconUrl(guild.id, guild.icon, 32)}>
+                <Avatar size={20} src={guildIconUrl(guild.id, guild.icon, 32)} alt="">
                   {guild.name.slice(0, 1).toUpperCase()}
                 </Avatar>
                 {guild.name}

@@ -25,6 +25,11 @@ describe('LoginCard', () => {
     expect(signIn).toHaveBeenCalledWith('/servers/5');
   });
 
+  it('is the page heading', () => {
+    renderWithProviders(<LoginCard next="/servers" />);
+    expect(screen.getByRole('heading', { level: 1, name: 'Đăng nhập' })).toBeInTheDocument();
+  });
+
   it('shows a translated error, not the cause, and lets the person try again', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     signIn.mockRejectedValueOnce(new Error('ECONNREFUSED 10.0.0.1'));

@@ -1,11 +1,15 @@
 import { notFound } from 'next/navigation';
+import { ReauthState } from '@/components/auth/reauth-state';
 import { GuildBar } from '@/components/servers/guild-bar';
-import { getGuilds } from '@/lib/guilds';
+import { getGuildsOrReauth } from '@/lib/guilds';
 
 /**
  * One server's dashboard. A server that is not in the visitor's list is the same
  * "not found" as one that does not exist: the list is the server's own answer
  * of what they may manage, and every later call is checked again by its guard.
+ *
+ * `notFound()` from a layout is caught by the `not-found.tsx` of a parent
+ * segment (`servers/`), never by one next to this file.
  */
 export default async function GuildLayout({
   children,
@@ -15,7 +19,8 @@ export default async function GuildLayout({
   params: Promise<{ guildId: string }>;
 }) {
   const { guildId } = await params;
-  const guilds = await getGuilds();
+  const guilds = await getGuildsOrReauth();
+  if (guilds === null) return <ReauthState />;
   if (!guilds.some((guild) => guild.id === guildId)) notFound();
 
   return (

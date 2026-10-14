@@ -31,11 +31,10 @@ export function AppFrame({ children }: { children: React.ReactNode }) {
         <ThemeSwitcher />
         <UserMenu />
       </Layout.Header>
-      <Layout.Content>
-        <main id="main" className="page-main">
-          {children}
-        </main>
-      </Layout.Content>
+      {/* Not `Layout.Content`: it renders its own `<main>`, and a page may have only one. */}
+      <main id="main" className="page-main" style={{ flex: 'auto', minHeight: 0 }}>
+        {children}
+      </main>
     </Layout>
   );
 }
