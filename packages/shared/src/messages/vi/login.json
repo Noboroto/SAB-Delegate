@@ -1,0 +1,14 @@
+{
+  "title": "Đăng nhập",
+  "subtitle": "Quản lý bot SAB cho máy chủ Discord của bạn.",
+  "signInWithDiscord": "Đăng nhập bằng Discord",
+  "redirecting": "Đang chuyển đến Discord...",
+  "startFailed": "Không bắt đầu được đăng nhập. Vui lòng thử lại.",
+  "access": "Bạn cần quyền Quản lý máy chủ ở máy chủ có bot.",
+  "privacy": "SAB chỉ đọc mã tài khoản và danh sách máy chủ của bạn để biết bạn quản lý nơi nào. Tên và ảnh đại diện không được lưu lại.",
+  "errorPage": {
+    "title": "Đăng nhập không thành công",
+    "body": "Discord hoặc SAB không hoàn tất được việc đăng nhập. Bạn có thể thử lại.",
+    "retry": "Thử đăng nhập lại"
+  }
+}

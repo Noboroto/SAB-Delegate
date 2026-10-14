@@ -1,0 +1,44 @@
+{
+  "title": "Choose a server",
+  "subtitle": "The servers with the SAB bot that you manage.",
+  "open": "Open dashboard",
+  "empty": {
+    "title": "No servers yet",
+    "body": "You need the Manage Server permission, and the SAB bot must already be in that server."
+  },
+  "loadFailed": {
+    "title": "The server list could not be loaded",
+    "body": "Discord or SAB is not answering right now. Please try again in a few minutes.",
+    "retry": "Try again"
+  },
+  "reauth": {
+    "title": "Please sign in again",
+    "body": "This login can no longer read your list of servers.",
+    "action": "Sign in again"
+  },
+  "serverInitial": "Icon of {name}",
+  "userMenu": {
+    "label": "Account",
+    "account": "Discord account",
+    "signOut": "Sign out",
+    "signOutFailed": "Could not sign out. Please try again."
+  },
+  "switcher": {
+    "label": "Switch server",
+    "all": "All servers"
+  },
+  "nav": {
+    "label": "Server navigation",
+    "overview": "Overview",
+    "modules": "Modules",
+    "commands": "Commands",
+    "logs": "Logs",
+    "settings": "Settings",
+    "comingSoon": "This page will arrive in a later update."
+  },
+  "notFound": {
+    "title": "Server not found",
+    "body": "This server does not exist, the bot is not in it, or you are not allowed to manage it.",
+    "back": "Choose another server"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "title": "Sign in",
+  "subtitle": "Manage the SAB bot in your Discord server.",
+  "signInWithDiscord": "Sign in with Discord",
+  "redirecting": "Redirecting to Discord...",
+  "startFailed": "Sign-in could not be started. Please try again.",
+  "access": "You need the Manage Server permission in a server that has the bot.",
+  "privacy": "SAB only reads your account id and the list of your servers to know which ones you manage. Your name and avatar are not stored.",
+  "errorPage": {
+    "title": "Sign-in did not complete",
+    "body": "Discord or SAB could not finish signing you in. You can try again.",
+    "retry": "Try signing in again"
+  }
+}

@@ -8,12 +8,14 @@ import enCommon from './en/common.json';
 import enErrors from './en/errors.json';
 import enGuildConfig from './en/guild-config.json';
 import enInfo from './en/info.json';
+import enLogin from './en/login.json';
 import enMention from './en/mention.json';
 import enMessaging from './en/messaging.json';
 import enNote from './en/note.json';
 import enPurge from './en/purge.json';
 import enRoleAssign from './en/role-assign.json';
 import enSchedule from './en/schedule.json';
+import enServers from './en/servers.json';
 import enSystem from './en/system.json';
 import enThread from './en/thread.json';
 import enWeb from './en/web.json';
@@ -26,12 +28,14 @@ import viCommon from './vi/common.json';
 import viErrors from './vi/errors.json';
 import viGuildConfig from './vi/guild-config.json';
 import viInfo from './vi/info.json';
+import viLogin from './vi/login.json';
 import viMention from './vi/mention.json';
 import viMessaging from './vi/messaging.json';
 import viNote from './vi/note.json';
 import viPurge from './vi/purge.json';
 import viRoleAssign from './vi/role-assign.json';
 import viSchedule from './vi/schedule.json';
+import viServers from './vi/servers.json';
 import viSystem from './vi/system.json';
 import viThread from './vi/thread.json';
 import viWeb from './vi/web.json';
@@ -60,6 +64,8 @@ export const MessageNamespaceSchema = z.enum([
   'attendance',
   'info',
   'web',
+  'login',
+  'servers',
 ]);
 
 export type MessageNamespace = z.infer<typeof MessageNamespaceSchema>;
@@ -88,6 +94,8 @@ export const MESSAGES = {
     attendance: viAttendance,
     info: viInfo,
     web: viWeb,
+    login: viLogin,
+    servers: viServers,
   },
   en: {
     common: enCommon,
@@ -108,5 +116,7 @@ export const MESSAGES = {
     attendance: enAttendance,
     info: enInfo,
     web: enWeb,
+    login: enLogin,
+    servers: enServers,
   },
 } satisfies Record<Locale, Record<MessageNamespace, object>>;
