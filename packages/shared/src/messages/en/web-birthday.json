@@ -1,0 +1,87 @@
+{
+  "title": "Birthdays",
+  "subtitle": "The people the bot greets on their birthday in this server.",
+  "filter": {
+    "label": "Filter by month",
+    "all": "All months",
+    "month": "Month {month}"
+  },
+  "table": {
+    "label": "Birthday list",
+    "name": "Name",
+    "studentId": "Student ID",
+    "discordId": "Discord account",
+    "birthday": "Birthday (day/month)",
+    "actions": "Actions",
+    "empty": "Nobody is on the list yet.",
+    "emptyFiltered": "Nobody has a birthday in this month."
+  },
+  "add": {
+    "title": "Add one person",
+    "studentId": "Student ID",
+    "name": "Name",
+    "discordId": "Discord account",
+    "discordIdPlaceholder": "Type a name to find a member",
+    "day": "Day",
+    "month": "Month",
+    "submit": "Add to the list",
+    "added": "Added {name} to the list.",
+    "duplicate": "This student ID is already on the list."
+  },
+  "validation": {
+    "required": "This field is required.",
+    "studentId": "The student ID is at most 64 characters.",
+    "name": "The name is at most 200 characters.",
+    "discordId": "Pick a Discord account.",
+    "day": "This day and month are not on the calendar.",
+    "month": "The month must be from 1 to 12."
+  },
+  "remove": {
+    "label": "Delete {name}",
+    "button": "Delete",
+    "modalTitle": "Remove from the birthday list?",
+    "confirm": "Delete",
+    "plan": "Will delete {count, plural, one {# person} other {# people}}:",
+    "notFound": "This person is not on the list; they may already have been removed.",
+    "done": "Removed {count, plural, one {# person} other {# people}} from the list."
+  },
+  "import": {
+    "title": "Import from a CSV file",
+    "help": "The CSV file needs all of these columns: {columns}. The column order does not matter. People whose student ID is already on the list are skipped.",
+    "chooseFile": "Choose a CSV file",
+    "fileInput": "Birthday CSV file",
+    "noFile": "No file chosen.",
+    "fileTooLarge": "The file is larger than 1 MB and cannot be imported.",
+    "fileUnreadable": "This file could not be read.",
+    "preview": "Check the file",
+    "confirm": "Import {count, plural, one {# person} other {# people}}",
+    "template": "Download the template",
+    "templateName": "birthday-template.csv",
+    "badFormat": "The CSV file does not match the template",
+    "badFormatBody": "Check the header line and the contents of the file, or start from the template. The template looks like this:",
+    "report": {
+      "title": "Result of the check",
+      "total": "Data rows: {count}",
+      "added": "Will be added: {count}",
+      "duplicates": "Skipped, student ID already on the list: {count}",
+      "duplicateList": "Student IDs already on the list: {ids}",
+      "problems": "Rows that cannot be used: {count}",
+      "sample": "For example: {names}",
+      "more": "and {count} more",
+      "nothingToAdd": "Nobody new to add."
+    },
+    "problem": {
+      "columnRow": "Row",
+      "columnStudentId": "Student ID",
+      "columnReason": "Why it cannot be used",
+      "kind": {
+        "MISSING_FIELDS": "Missing information",
+        "INVALID_DATE": "The day and month are not on the calendar",
+        "INVALID_DISCORD_ID": "The Discord ID is not valid",
+        "INVALID_VALUE": "A value is not valid",
+        "DUPLICATE_ID": "The student ID appears twice in the file"
+      }
+    },
+    "done": "Imported {count, plural, one {# person} other {# people}}."
+  }
+}

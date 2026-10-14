@@ -1,0 +1,45 @@
+{
+  "title": "Notes",
+  "subtitle": "The server's notes, grouped by role.",
+  "add": "Add a note",
+  "empty": {
+    "title": "No notes yet",
+    "body": "Add the first note for a role."
+  },
+  "role": {
+    "loading": "Loading role...",
+    "unknown": "Role no longer in the server ({id})",
+    "count": "{count, plural, one {# note} other {# notes}}"
+  },
+  "updated": "Last updated:",
+  "edit": {
+    "label": "Edit note {topic}",
+    "button": "Edit"
+  },
+  "form": {
+    "addTitle": "Add a note",
+    "editTitle": "Edit note",
+    "role": "Role",
+    "topic": "Topic",
+    "content": "Content",
+    "save": "Save note",
+    "saved": "Note saved.",
+    "roleLocked": "The role and topic identify the note, so they cannot change. To change them, add a new note and delete the old one."
+  },
+  "validation": {
+    "required": "This field is required.",
+    "role": "Pick a role.",
+    "topic": "The topic is at most 100 characters.",
+    "content": "The content cannot be blank and is at most 6000 characters.",
+    "exists": "This role already has a note with that topic. Use the Edit button on the existing note."
+  },
+  "remove": {
+    "label": "Delete note {topic}",
+    "button": "Delete",
+    "modalTitle": "Delete this note?",
+    "confirm": "Delete",
+    "plan": "Will delete {count, plural, one {# note} other {# notes}}:",
+    "notFound": "This note was not found; it may already have been deleted.",
+    "done": "Note deleted."
+  }
+}

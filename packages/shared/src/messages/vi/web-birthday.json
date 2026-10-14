@@ -1,0 +1,87 @@
+{
+  "title": "Sinh nhật",
+  "subtitle": "Những người bot sẽ chúc mừng sinh nhật trong máy chủ này.",
+  "filter": {
+    "label": "Lọc theo tháng",
+    "all": "Tất cả các tháng",
+    "month": "Tháng {month}"
+  },
+  "table": {
+    "label": "Danh sách sinh nhật",
+    "name": "Tên",
+    "studentId": "Mã số",
+    "discordId": "Tài khoản Discord",
+    "birthday": "Sinh nhật (ngày/tháng)",
+    "actions": "Thao tác",
+    "empty": "Chưa có ai trong danh sách.",
+    "emptyFiltered": "Không có ai sinh nhật trong tháng này."
+  },
+  "add": {
+    "title": "Thêm một người",
+    "studentId": "Mã số",
+    "name": "Tên",
+    "discordId": "Tài khoản Discord",
+    "discordIdPlaceholder": "Gõ tên để tìm thành viên",
+    "day": "Ngày",
+    "month": "Tháng",
+    "submit": "Thêm vào danh sách",
+    "added": "Đã thêm {name} vào danh sách.",
+    "duplicate": "Mã số này đã có trong danh sách."
+  },
+  "validation": {
+    "required": "Mục này không được để trống.",
+    "studentId": "Mã số dài tối đa 64 ký tự.",
+    "name": "Tên dài tối đa 200 ký tự.",
+    "discordId": "Hãy chọn một tài khoản Discord.",
+    "day": "Ngày và tháng này không có trong lịch.",
+    "month": "Tháng phải từ 1 đến 12."
+  },
+  "remove": {
+    "label": "Xoá {name}",
+    "button": "Xoá",
+    "modalTitle": "Xoá khỏi danh sách sinh nhật?",
+    "confirm": "Xoá",
+    "plan": "Sẽ xoá {count} người:",
+    "notFound": "Không tìm thấy người này trong danh sách; có thể họ đã bị xoá.",
+    "done": "Đã xoá {count} người khỏi danh sách."
+  },
+  "import": {
+    "title": "Nhập từ tệp CSV",
+    "help": "Tệp CSV cần đủ các cột {columns}. Thứ tự cột tuỳ ý. Người có mã số đã có trong danh sách sẽ được bỏ qua.",
+    "chooseFile": "Chọn tệp CSV",
+    "fileInput": "Tệp CSV sinh nhật",
+    "noFile": "Chưa chọn tệp.",
+    "fileTooLarge": "Tệp lớn hơn 1 MB nên không nhập được.",
+    "fileUnreadable": "Không đọc được tệp này.",
+    "preview": "Kiểm tra tệp",
+    "confirm": "Nhập {count} người",
+    "template": "Tải tệp mẫu",
+    "templateName": "mau-sinh-nhat.csv",
+    "badFormat": "Tệp CSV không đúng mẫu",
+    "badFormatBody": "Hãy kiểm tra dòng tiêu đề và nội dung của tệp, hoặc dùng tệp mẫu. Tệp mẫu có dạng:",
+    "report": {
+      "title": "Kết quả kiểm tra",
+      "total": "Số dòng dữ liệu: {count}",
+      "added": "Sẽ thêm: {count}",
+      "duplicates": "Bỏ qua vì mã số đã có: {count}",
+      "duplicateList": "Mã số đã có: {ids}",
+      "problems": "Dòng không dùng được: {count}",
+      "sample": "Ví dụ: {names}",
+      "more": "và {count} mã khác",
+      "nothingToAdd": "Không có ai mới để thêm."
+    },
+    "problem": {
+      "columnRow": "Dòng",
+      "columnStudentId": "Mã số",
+      "columnReason": "Lý do không dùng được",
+      "kind": {
+        "MISSING_FIELDS": "Thiếu thông tin",
+        "INVALID_DATE": "Ngày hoặc tháng không có trong lịch",
+        "INVALID_DISCORD_ID": "ID Discord không hợp lệ",
+        "INVALID_VALUE": "Có giá trị không hợp lệ",
+        "DUPLICATE_ID": "Mã số bị lặp trong tệp"
+      }
+    },
+    "done": "Đã nhập {count} người."
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "title": "Ghi chú",
+  "subtitle": "Ghi chú của máy chủ, gom theo vai trò.",
+  "add": "Thêm ghi chú",
+  "empty": {
+    "title": "Chưa có ghi chú nào",
+    "body": "Thêm ghi chú đầu tiên cho một vai trò."
+  },
+  "role": {
+    "loading": "Đang tải vai trò...",
+    "unknown": "Vai trò không còn trong máy chủ ({id})",
+    "count": "{count} ghi chú"
+  },
+  "updated": "Cập nhật lần cuối:",
+  "edit": {
+    "label": "Sửa ghi chú {topic}",
+    "button": "Sửa"
+  },
+  "form": {
+    "addTitle": "Thêm ghi chú",
+    "editTitle": "Sửa ghi chú",
+    "role": "Vai trò",
+    "topic": "Chủ đề",
+    "content": "Nội dung",
+    "save": "Lưu ghi chú",
+    "saved": "Đã lưu ghi chú.",
+    "roleLocked": "Vai trò và chủ đề xác định ghi chú nên không đổi được. Muốn đổi, hãy thêm ghi chú mới rồi xoá ghi chú cũ."
+  },
+  "validation": {
+    "required": "Mục này không được để trống.",
+    "role": "Hãy chọn một vai trò.",
+    "topic": "Chủ đề dài tối đa 100 ký tự.",
+    "content": "Nội dung không được để trống và dài tối đa 6000 ký tự.",
+    "exists": "Vai trò này đã có ghi chú với chủ đề đó. Hãy dùng nút Sửa trên ghi chú hiện có."
+  },
+  "remove": {
+    "label": "Xoá ghi chú {topic}",
+    "button": "Xoá",
+    "modalTitle": "Xoá ghi chú?",
+    "confirm": "Xoá",
+    "plan": "Sẽ xoá {count} ghi chú:",
+    "notFound": "Không tìm thấy ghi chú này; có thể nó đã bị xoá.",
+    "done": "Đã xoá ghi chú."
+  }
+}
