@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { Alert, Button, Card, Typography, theme } from 'antd';
 import { useTranslations } from 'next-intl';
 import { signInWithDiscord } from '@/lib/auth/auth-client';
@@ -26,6 +27,15 @@ export function LoginCard({ next }: { next: string }) {
 
   return (
     <Card style={{ width: '100%', maxWidth: 420 }}>
+      <Image
+        src="/brand/sab-logo.png"
+        alt="SAB"
+        width={144}
+        height={60}
+        unoptimized
+        preload
+        style={{ display: 'block', marginBottom: 16 }}
+      />
       <Typography.Title
         level={1}
         style={{

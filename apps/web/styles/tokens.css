@@ -2,31 +2,32 @@
  * Design tokens: the CSS custom properties read by hand-written components.
  * AntD's own tokens live in components/ui/theme-config.ts and must stay equal
  * to the pairs noted here (tokens.test.ts compares them):
- *   colorPrimary <-> --primary    colorLink <-> --link
- *   colorBgBase <-> --surface     colorBgLayout <-> --bg
- *   colorTextBase <-> --text-primary
+ *   colorPrimary <-> --primary    colorPrimaryHover <-> --primary-hover
+ *   colorLink <-> --link          colorBgContainer <-> --surface
+ *   colorBgLayout <-> --bg        colorTextBase <-> --text-primary
+ *   colorBorder <-> --border-strong (dark)
  *   controlHeight <-> --control-h  controlHeightSM <-> --control-h-sm
  * The dark theme is `[data-theme='dark']` on <html>; do not add a second signal.
  */
 :root {
-  --bg: #f6f7f7;
+  --bg: #f5f6fa;
   --surface: #ffffff;
-  --surface-secondary: #f2f4f3;
-  --surface-hover: #eef0ef;
-  --surface-selected: #e7f4ef;
-  --border: #e6e9e8;
-  --border-strong: #d6dad8;
-  --text-primary: #19211e;
-  --text-secondary: #5a625f;
-  --text-muted: #6b7470;
-  --primary: #0b7d70;
-  --primary-hover: #09695f;
+  --surface-secondary: #f1f3f8;
+  --surface-hover: #eceff6;
+  --surface-selected: #e8ecf8;
+  --border: #e4e7ef;
+  --border-strong: #d3d8e4;
+  --text-primary: #1a1f36;
+  --text-secondary: #565d73;
+  --text-muted: #5f657b;
+  --primary: #4b5fab;
+  --primary-hover: #3f5097;
   --primary-fg: #ffffff;
   /* Filled controls carry white text (AntD's too), so the fill must reach 4.5:1 with white. */
-  --primary-tint: #e3f4f1;
-  /* Prose links use a darker teal so they also clear 4.5:1 on tinted surfaces. */
-  --link: #0a786c;
-  --focus: #0e9384;
+  --primary-tint: #e9edf8;
+  /* Prose links use a darker navy so they also clear 4.5:1 on tinted surfaces. */
+  --link: #4357a3;
+  --focus: #4b5fab;
   --focus-width: 3px;
   /* Every control in a row shares one height: custom buttons use these, never a literal. */
   --control-h: 32px;
@@ -39,8 +40,16 @@
   --space-6: 24px;
   --page-px: clamp(16px, 2.5vw, 40px);
   --measure: 65ch;
-  --shadow: 0 1px 2px rgba(20, 28, 26, 0.05), 0 1px 3px rgba(20, 28, 26, 0.06);
-  --overlay: rgba(20, 28, 26, 0.42);
+  --shadow: 0 1px 2px rgba(26, 31, 54, 0.05), 0 1px 3px rgba(26, 31, 54, 0.06);
+  --overlay: rgba(26, 31, 54, 0.42);
+  /*
+   * The three colours of the SAB logo, the same in both themes. Teal and yellow
+   * reach only ~2:1 against white, so they decorate (the header band; a shade of
+   * teal is the dark-theme link) and never carry light-theme text or a white label.
+   */
+  --brand-navy: #4b5fab;
+  --brand-teal: #55c6d0;
+  --brand-yellow: #fecd68;
   --danger: var(--red-fg);
   --green-bg: #e6f6ed;
   --green-fg: #0a7b40;
@@ -50,27 +59,28 @@
   --amber-fg: #9a4a05;
   --blue-bg: #e8f0fd;
   --blue-fg: #1d4ed8;
-  --gray-bg: #eef0ef;
-  --gray-fg: #5a625f;
+  --gray-bg: #eceff6;
+  --gray-fg: #565d73;
 }
 
 [data-theme='dark'] {
-  --bg: #0d1413;
-  --surface: #141c1a;
-  --surface-secondary: #192220;
-  --surface-hover: #232d2b;
-  --surface-selected: #123029;
-  --border: #283230;
-  --border-strong: #37433f;
-  --text-primary: #e9efed;
-  --text-secondary: #9aa5a1;
-  --text-muted: #8a9490;
-  --primary: #0c8275;
-  --primary-hover: #0b7d70;
+  --bg: #0f1320;
+  --surface: #161b2b;
+  --surface-secondary: #1b2133;
+  --surface-hover: #242b40;
+  --surface-selected: #1f2a4d;
+  --border: #2a3147;
+  --border-strong: #39415a;
+  --text-primary: #e8eaf3;
+  --text-secondary: #a0a6bb;
+  --text-muted: #8d93a8;
+  /* AntD's dark algorithm shades the navy seed to this; both must paint one fill. */
+  --primary: #435494;
+  --primary-hover: #5568b5;
   --primary-fg: #ffffff;
-  --primary-tint: #0f2e2a;
-  --link: #2dd4bf;
-  --focus: #2dd4bf;
+  --primary-tint: #1d2545;
+  --link: #4babb4;
+  --focus: #55c6d0;
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
   --overlay: rgba(0, 0, 0, 0.55);
   --green-bg: #0f2a1c;
@@ -81,8 +91,8 @@
   --amber-fg: #fbbf24;
   --blue-bg: #15234a;
   --blue-fg: #6ea8fe;
-  --gray-bg: #222b29;
-  --gray-fg: #9aa5a1;
+  --gray-bg: #242a3a;
+  --gray-fg: #a0a6bb;
 }
 
 /* Touch targets: a finger needs 44px, so every control row grows together. */

@@ -233,6 +233,10 @@ services:
       NODE_ENV: production
       PORT: '3101'
       HOSTNAME: 0.0.0.0
+      # The public origin, copied from APP_URL under another name: APP_URL itself
+      # switches the REST API on and stays the server's alone. Link previews need
+      # it to make og:image absolute; unset, they point at localhost.
+      SITE_URL: ${APP_URL}
       # Keeps the V8 heap under the container limit so a spike is a GC pause,
       # not an OOM kill.
       NODE_OPTIONS: --max-old-space-size=384

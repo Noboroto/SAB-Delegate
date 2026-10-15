@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages, getTranslations } from 'next-intl/server';
 import { ThemeProvider } from '@/components/ui/theme-provider';
+import { siteUrl } from '@/lib/site-url';
 import {
   THEME_MODE_COOKIE,
   THEME_RESOLVED_COOKIE,
@@ -25,11 +26,26 @@ const beVietnamPro = localFont({
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('web');
+  const locale = await getLocale();
+  const site = siteUrl();
   return {
+    // Turns the `opengraph-image.png` beside this file into an absolute URL.
+    metadataBase: site,
     title: { default: t('appName'), template: `%s | ${t('appName')}` },
     description: t('siteDescription'),
-    openGraph: { title: t('appName'), description: t('siteDescription'), type: 'website' },
-    twitter: { card: 'summary' },
+    openGraph: {
+      title: t('appName'),
+      description: t('siteDescription'),
+      type: 'website',
+      siteName: t('appName'),
+      locale: locale === 'en' ? 'en_US' : 'vi_VN',
+      // `metadataBase` does not fill `og:url`, and some scrapers open it from the
+      // card. The fixed origin keeps tracking parameters off the preview.
+      url: site,
+    },
+    // The card shape only: Next copies title and description from `openGraph`.
+    // A page must not declare its own `twitter`, which replaces this one whole.
+    twitter: { card: 'summary_large_image' },
   };
 }
 

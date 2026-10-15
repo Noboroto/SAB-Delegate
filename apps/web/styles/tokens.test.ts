@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { darkTokens, lightTokens } from '@/components/ui/theme-config';
+import { theme } from 'antd';
+import { darkTheme, darkTokens, lightTheme, lightTokens } from '@/components/ui/theme-config';
 
 const css = readFileSync(join(import.meta.dirname, 'tokens.css'), 'utf8');
 
@@ -94,14 +95,80 @@ describe('tokens.css and the AntD theme agree', () => {
   });
 
   it.each([
-    ['light', light, lightTokens],
-    ['dark', dark, darkTokens],
-  ] as const)('maps colours one to one in %s', (_name, scope, tokens) => {
-    expect(valueOf(scope, '--primary')).toBe(tokens.colorPrimary);
-    expect(valueOf(scope, '--link')).toBe(tokens.colorLink);
-    expect(valueOf(scope, '--surface')).toBe(tokens.colorBgBase);
-    expect(valueOf(scope, '--bg')).toBe(tokens.colorBgLayout);
-    expect(valueOf(scope, '--text-primary')).toBe(tokens.colorTextBase);
+    ['light', light, lightTheme],
+    ['dark', dark, darkTheme],
+  ] as const)(
+    'maps colours one to one in %s, on the values AntD computes',
+    (_name, scope, config) => {
+      // The algorithms rewrite seeds (dark shades `colorPrimary`), so seeds prove nothing.
+      const token = theme.getDesignToken(config);
+      expect(valueOf(scope, '--primary')).toBe(token.colorPrimary);
+      expect(valueOf(scope, '--primary-hover')).toBe(token.colorPrimaryHover);
+      expect(valueOf(scope, '--link')).toBe(token.colorLink);
+      expect(valueOf(scope, '--surface')).toBe(token.colorBgContainer);
+      expect(valueOf(scope, '--bg')).toBe(token.colorBgLayout);
+      expect(valueOf(scope, '--text-primary')).toBe(token.colorTextBase);
+    },
+  );
+
+  it('keeps dark AntD borders on the neutral CSS ones, not the derived blue', () => {
+    const token = theme.getDesignToken(darkTheme);
+    expect(token.colorBorder).toBe(valueOf(dark, '--border-strong'));
+    expect(token.colorBorderSecondary).toBe(valueOf(dark, '--border'));
+    expect(token.colorSplit).toBe(valueOf(dark, '--border'));
+  });
+});
+
+describe('AntD text in the primary colour meets AA (4.5:1)', () => {
+  it.each([
+    ['light', lightTheme],
+    ['dark', darkTheme],
+  ] as const)('%s: white labels on the primary fill and its hover', (_name, config) => {
+    const token = theme.getDesignToken(config);
+    expect(contrast('#ffffff', token.colorPrimary)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast('#ffffff', token.colorPrimaryHover)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('light: selected and hovered tab or menu text on the surface', () => {
+    const token = theme.getDesignToken(lightTheme);
+    for (const color of [token.colorPrimary, token.colorPrimaryHover]) {
+      expect(contrast(color, token.colorBgContainer), color).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  it('dark: primary-role text, tabs and menu items on the surface', () => {
+    const token = theme.getDesignToken(darkTheme);
+    const tabs = darkTheme.components?.Tabs ?? {};
+    const menu = darkTheme.components?.Menu ?? {};
+    const colors = [
+      token.colorPrimaryText,
+      token.colorPrimaryTextHover,
+      tabs.itemSelectedColor,
+      tabs.itemHoverColor,
+      menu.horizontalItemSelectedColor,
+      menu.horizontalItemHoverColor,
+    ];
+    for (const color of colors) {
+      expect(color).toBeDefined();
+      expect(contrast(color ?? '', token.colorBgContainer), color).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+});
+
+describe('brand colours', () => {
+  it.each([
+    ['--brand-navy', '#4b5fab'],
+    ['--brand-teal', '#55c6d0'],
+    ['--brand-yellow', '#fecd68'],
+  ])('declares %s once, the same in both themes', (token, value) => {
+    expect(valueOf(light, token)).toBe(value);
+    expect(dark).not.toContain(`${token}:`);
+  });
+
+  it('seeds both AntD themes with the logo navy', () => {
+    expect(valueOf(light, '--primary')).toBe(valueOf(light, '--brand-navy'));
+    expect(lightTokens.colorPrimary).toBe(valueOf(light, '--brand-navy'));
+    expect(darkTokens.colorPrimary).toBe(valueOf(light, '--brand-navy'));
   });
 });
 
@@ -124,6 +191,14 @@ describe('tokens.css text meets WCAG AA (4.5:1)', () => {
     ['--text-primary', '--surface'],
     ['--text-secondary', '--surface'],
     ['--text-muted', '--surface'],
+    ...['--surface-secondary', '--surface-hover', '--surface-selected'].flatMap(
+      (surface) =>
+        [
+          ['--text-secondary', surface],
+          ['--text-muted', surface],
+          ['--link', surface],
+        ] as const,
+    ),
     ['--link', '--surface'],
     ['--primary-fg', '--primary'],
   ];

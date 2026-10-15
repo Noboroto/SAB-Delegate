@@ -100,6 +100,9 @@ services:
     depends_on:
       sab-server:
         condition: service_started
+    environment:
+      # Absolute og:image in link previews; unset falls back to localhost:3101.
+      SITE_URL: ${APP_URL:-}
     ports:
       - '127.0.0.1:3101:3101'
 

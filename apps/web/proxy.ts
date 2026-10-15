@@ -76,6 +76,9 @@ export const config = {
   // The API and the MCP endpoint are the server's (a locale cookie on a JSON-RPC
   // answer, or the body buffered for this proxy, would only get in the way),
   // static assets need no cookie, and the health probe must answer without side
-  // effects.
-  matcher: ['/((?!api|mcp|_next/static|_next/image|favicon\\.ico|healthz).*)'],
+  // effects. Icons, the preview image and robots.txt go to scrapers that keep
+  // no cookie.
+  matcher: [
+    '/((?!api|mcp|_next/static|_next/image|favicon\\.ico|healthz|brand/|icon|apple-icon|opengraph-image|robots\\.txt).*)',
+  ],
 };

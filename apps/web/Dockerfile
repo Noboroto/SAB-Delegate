@@ -50,8 +50,8 @@ FROM gen AS compile
 # and that file imports this root helper.
 COPY vitest-workers.mjs ./
 COPY apps/web ./apps/web
-# `output: 'standalone'` does not create public/ when the app has none, and the
-# runner copies it.
+# The runner copies public/ (logo files); the mkdir keeps that COPY valid if the
+# folder is ever emptied, since git does not track an empty directory.
 RUN mkdir -p apps/web/public
 ENV NEXT_TELEMETRY_DISABLED=1
 # `next build` directly: the package's `prebuild` regenerates artifacts through

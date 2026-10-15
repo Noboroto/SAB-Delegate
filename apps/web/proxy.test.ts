@@ -64,7 +64,7 @@ describe('proxy', () => {
     expect(response.cookies.get('locale')?.value).toBe('vi');
   });
 
-  it('does not run for the API, the MCP endpoint, static assets or the health probe', () => {
+  it('does not run for the API, the MCP endpoint, static assets, scraper files or the health probe', () => {
     const matcher = new RegExp(`^${config.matcher[0]}$`);
     for (const path of [
       '/api/me',
@@ -73,6 +73,11 @@ describe('proxy', () => {
       '/_next/image',
       '/healthz',
       '/favicon.ico',
+      '/icon.png',
+      '/apple-icon.png',
+      '/opengraph-image.png',
+      '/robots.txt',
+      '/brand/sab-logo.png',
     ]) {
       expect(matcher.test(path), path).toBe(false);
     }

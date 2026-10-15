@@ -73,7 +73,8 @@ a {
 
 .link-button:hover {
   border-color: var(--primary);
-  color: var(--primary);
+  /* --link, not --primary: the navy fill is too dark to read as text on the dark surface. */
+  color: var(--link);
 }
 
 .link-button-primary {
