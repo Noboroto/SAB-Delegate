@@ -9,6 +9,7 @@ import { GuildConfigModule } from './guild-config/guild-config.module.js';
 import { InfoModule } from './info/info.module.js';
 import { MentionModule } from './mention/mention.module.js';
 import { MessagingModule } from './messaging/messaging.module.js';
+import { MiniGameModule } from './mini-game/mini-game.module.js';
 import { NoteModule } from './note/note.module.js';
 import { PurgeModule } from './purge/purge.module.js';
 import { ReactionsModule } from './reactions/reactions.module.js';
@@ -33,6 +34,7 @@ export const DISCORD_FEATURE_MODULES: readonly Type[] = [
   NoteModule,
   ReactionsModule,
   WordGameModule,
+  MiniGameModule,
   ScheduleModule,
   MessagingModule,
   MentionModule,

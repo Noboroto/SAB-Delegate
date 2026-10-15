@@ -64,6 +64,9 @@ const LEGACY_ROOT_COMMANDS = [
   'word',
 ];
 
+/** Root commands added after the previous bot: the channel games, scores and help. */
+const ADDED_ROOT_COMMANDS = ['game', 'help', 'leaderboard'];
+
 /** The four message context menus; Discord allows five, one slot stays free. */
 const MESSAGE_CONTEXT_MENUS = [
   'Edit bot message',
@@ -154,7 +157,7 @@ describe('all feature modules in one application', () => {
     expect(validateCommandMetadata(payload)).toEqual([]);
   });
 
-  it('keeps the 16 root commands of the previous bot, minus shutdown, within the 100 limit', () => {
+  it('keeps the 16 root commands of the previous bot, minus shutdown, plus the games, within the 100 limit', () => {
     const roots = payload
       .filter(
         (command) =>
@@ -162,7 +165,7 @@ describe('all feature modules in one application', () => {
       )
       .map((command) => command.name);
     expect(roots.length).toBeLessThanOrEqual(100);
-    expect([...roots].sort()).toEqual([...LEGACY_ROOT_COMMANDS].sort());
+    expect([...roots].sort()).toEqual([...LEGACY_ROOT_COMMANDS, ...ADDED_ROOT_COMMANDS].sort());
     expect(roots).not.toContain('shutdown');
   });
 

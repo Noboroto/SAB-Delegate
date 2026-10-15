@@ -17,6 +17,7 @@ import { ScheduleModule } from './schedule/schedule.module.js';
 import { SystemModule } from './system/system.module.js';
 import { ThreadModule } from './thread/thread.module.js';
 import { WordGameModule } from './word-game/word-game.module.js';
+import { MiniGameModule } from './mini-game/mini-game.module.js';
 
 describe('featureModules', () => {
   it('lists every module that needs the Discord client', () => {
@@ -28,6 +29,7 @@ describe('featureModules', () => {
       NoteModule,
       ReactionsModule,
       WordGameModule,
+      MiniGameModule,
       ScheduleModule,
       MessagingModule,
       MentionModule,
