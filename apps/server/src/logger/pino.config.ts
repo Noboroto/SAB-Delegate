@@ -14,6 +14,8 @@ export const SENSITIVE_KEYS = [
   'refresh_token',
   'id_token',
   'secret',
+  'apiKey',
+  'apiKeyEnc',
   'clientSecret',
   'client_secret',
   'authorization',

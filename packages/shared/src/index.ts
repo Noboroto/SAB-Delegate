@@ -174,6 +174,15 @@ export {
   type SkippableGame,
 } from './schemas/mini-game.js';
 export {
+  LlmBaseUrlSchema,
+  LlmSettingsInputSchema,
+  LlmSettingsSchema,
+  LlmTestResultSchema,
+  type LlmSettings,
+  type LlmSettingsInput,
+  type LlmTestResult,
+} from './schemas/llm.js';
+export {
   ALLOWED_MENTIONS_ALL,
   ALLOWED_MENTIONS_NONE,
   AllowedMentionsSchema,

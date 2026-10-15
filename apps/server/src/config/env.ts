@@ -96,6 +96,9 @@ export const envSchema = z
     DISCORD_CLIENT_SECRET: z.string().trim().min(1).optional(),
     // Signs and encrypts every session cookie; shorter secrets are guessable.
     BETTER_AUTH_SECRET: z.string().trim().min(32).optional(),
+    // Encrypts the stored LLM API key. Unset: the LLM settings cannot be saved
+    // and words are only explained from the bundled dictionaries.
+    LLM_KEY_SECRET: z.string().trim().min(32).optional(),
     TRUSTED_PROXY_IPS: csvOfIpOrCidr.optional(),
     // The MCP endpoint (/mcp) is mounted when the REST API is on; false removes the route only.
     // Production needs TRUSTED_PROXY_IPS for it like the rest of the API (see the proxy rule below).
@@ -155,6 +158,7 @@ export const SECRET_ENV_NAMES = [
   'DISCORD_TOKEN',
   'DISCORD_CLIENT_SECRET',
   'BETTER_AUTH_SECRET',
+  'LLM_KEY_SECRET',
   'POSTGRES_PASSWORD',
 ] as const satisfies ReadonlyArray<keyof Env>;
 

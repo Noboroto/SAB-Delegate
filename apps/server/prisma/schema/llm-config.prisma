@@ -1,0 +1,16 @@
+/// The one LLM the bot may ask, as a fallback, for the meaning of a Vietnamese word
+/// just solved in the scramble. Any OpenAI-compatible chat-completions endpoint.
+/// `singleton` keeps it to one row. The API key is stored encrypted
+/// (AES-256-GCM, key from env LLM_KEY_SECRET); only its last four characters are
+/// ever shown. CHECK (migration `_llm_config`): `singleton` is true; `baseUrl`
+/// starts with https://; `model` is non-empty; `keyLast4` has at most 4 characters.
+model LlmConfig {
+  id        String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  singleton Boolean  @unique @default(true)
+  baseUrl   String
+  model     String
+  apiKeyEnc String
+  keyLast4  String
+  enabled   Boolean  @default(false)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+}

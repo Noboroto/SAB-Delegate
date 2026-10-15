@@ -19,6 +19,7 @@ export const AUDIT_ACTIONS = {
   miniGameConfigure: 'mini_game.configure',
   miniGameReset: 'mini_game.reset',
   miniGameSkip: 'mini_game.skip',
+  llmConfigure: 'llm.configure',
   scheduleCreate: 'schedule.create',
   scheduleCancel: 'schedule.cancel',
   messageSend: 'message.send',

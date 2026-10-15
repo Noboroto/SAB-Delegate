@@ -124,6 +124,7 @@ services:
       APP_URL: ${APP_URL}
       DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      LLM_KEY_SECRET: ${LLM_KEY_SECRET}
       # Every hop between the browser and the server: Traefik and sab-web.
       TRUSTED_PROXY_IPS: ${TRUSTED_PROXY_IPS}
       MCP_ENABLED: ${MCP_ENABLED:-true}

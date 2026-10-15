@@ -41,6 +41,7 @@
     "miniGameConfigure": "Game set up",
     "miniGameReset": "Game reset",
     "miniGameSkip": "Puzzle skipped",
+    "llmConfigure": "LLM settings",
     "scheduleCreate": "Schedule created",
     "scheduleCancel": "Schedule cancelled",
     "messageSend": "Message sent",

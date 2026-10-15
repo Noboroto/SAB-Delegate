@@ -1,0 +1,279 @@
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import {
+  AUDIT_ACTIONS,
+  ErrorCode,
+  LlmSettingsInputSchema,
+  z,
+  type ActorContext,
+  type LlmSettings,
+  type LlmTestResult,
+} from '@sab/shared';
+import pLimit from 'p-limit';
+import { AuditService } from '../../common/audit/audit.service.js';
+import { ServiceError } from '../../common/errors/service-error.js';
+import { PrismaService } from '../../prisma/prisma.service.js';
+import { SafePostError, safePostJson } from './safe-post.js';
+import { decryptSecret, encryptSecret } from './secret-box.js';
+
+/** The two settings the module reads from the environment (see `LlmModule`). */
+export const LLM_ENV = Symbol('LLM_ENV');
+type LlmEnv = { secret: string | undefined; adminGuildId: string };
+
+const CALL_TIMEOUT_MS = 15_000;
+/** A meaning is a sentence or two; this also caps what a call can cost. */
+const MAX_OUTPUT_TOKENS = 160;
+const MEANING_MAX_LENGTH = 400;
+/** How the model says it does not know the word, as the prompt asks. */
+const NO_MEANING = 'NONE';
+/** After a failed call, no question for this long: a dead endpoint is not hammered. */
+const COOLDOWN_MS = 10 * 60_000;
+/** A meaning with a link is not kept: it would show to every server, forever. */
+const LINK = /https?:\/\/|discord\.gg|www\./iu;
+
+const CompletionSchema = z.object({
+  choices: z
+    .array(
+      z.object({
+        message: z.object({ content: z.string().nullable() }),
+        finish_reason: z.string().nullable().optional(),
+      }),
+    )
+    .min(1),
+});
+
+type Target = { baseUrl: string; model: string; apiKey: string };
+
+function completionsUrl(baseUrl: string): string {
+  return `${baseUrl.replace(/\/+$/u, '')}/chat/completions`;
+}
+
+/**
+ * The one LLM the bot may ask, as a last resort, what a Vietnamese word means:
+ * only for a word a player has just solved and no dictionary explains, and once
+ * per word (the caller stores the answer). Any OpenAI-compatible
+ * chat-completions API (OpenAI, Anthropic, Gemini, OpenRouter, …), so no
+ * provider SDK is needed for one POST.
+ *
+ * The API key is stored encrypted with LLM_KEY_SECRET and never returned; a
+ * stored key is only ever sent to the base URL it was saved with.
+ */
+@Injectable()
+export class LlmService {
+  private readonly logger = new Logger(LlmService.name);
+  /** One question at a time, whatever happens in the game: never a burst. */
+  private readonly calls = pLimit(1);
+  private pausedUntil = 0;
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+    @Inject(LLM_ENV) private readonly env: LlmEnv,
+  ) {}
+
+  /** The admin guild's id: the only server whose managers configure the LLM. */
+  get adminGuildId(): string {
+    return this.env.adminGuildId;
+  }
+
+  /** The settings as the given server's managers may see them. */
+  async settings(guildId: string = this.env.adminGuildId): Promise<LlmSettings> {
+    if (guildId !== this.env.adminGuildId) {
+      return {
+        adminServer: false,
+        available: false,
+        enabled: false,
+        baseUrl: null,
+        model: null,
+        keyLast4: null,
+      };
+    }
+    const row = await this.row();
+    return {
+      adminServer: true,
+      available: this.env.secret !== undefined,
+      enabled: row?.enabled ?? false,
+      baseUrl: row?.baseUrl ?? null,
+      model: row?.model ?? null,
+      // A key the current secret cannot read is no key: the form asks for it again.
+      keyLast4: row !== null && this.readKey(row.apiKeyEnc) !== null ? row.keyLast4 : null,
+    };
+  }
+
+  async save(input: unknown, actor: ActorContext): Promise<LlmSettings> {
+    const secret = this.requireSecret();
+    const parsed = LlmSettingsInputSchema.safeParse(input);
+    if (!parsed.success) throw new ServiceError(ErrorCode.VALIDATION_FAILED);
+    const { baseUrl, model, enabled, apiKey } = parsed.data;
+    const current = await this.row();
+    if (
+      apiKey === undefined &&
+      (current === null ||
+        current.baseUrl !== baseUrl ||
+        decryptSecret(current.apiKeyEnc, secret) === null)
+    ) {
+      throw new ServiceError(ErrorCode.LLM_KEY_REQUIRED);
+    }
+    const key =
+      apiKey === undefined
+        ? { apiKeyEnc: current?.apiKeyEnc ?? '', keyLast4: current?.keyLast4 ?? '' }
+        : { apiKeyEnc: encryptSecret(apiKey, secret), keyLast4: apiKey.slice(-4) };
+
+    // New settings deserve a new try, whatever the old ones did.
+    this.pausedUntil = 0;
+    await this.prisma.$transaction(async (tx) => {
+      await tx.llmConfig.upsert({
+        where: { singleton: true },
+        create: { baseUrl, model, enabled, ...key },
+        update: { baseUrl, model, enabled, ...key },
+      });
+      await this.audit.record(
+        {
+          guildId: this.env.adminGuildId,
+          actor,
+          action: AUDIT_ACTIONS.llmConfigure,
+          params: {
+            host: new URL(baseUrl).host,
+            model,
+            enabled,
+            keyChanged: apiKey !== undefined,
+          },
+        },
+        tx,
+      );
+    });
+    return this.settings();
+  }
+
+  /** One short completion with the given settings, saved or not. */
+  async test(input: unknown): Promise<LlmTestResult> {
+    const parsed = LlmSettingsInputSchema.safeParse(input);
+    if (!parsed.success) throw new ServiceError(ErrorCode.VALIDATION_FAILED);
+    const { baseUrl, model, apiKey } = parsed.data;
+    let key = apiKey;
+    if (key === undefined) {
+      const secret = this.requireSecret();
+      const current = await this.row();
+      // A stored key only ever goes to the address it was saved for.
+      if (current === null || current.baseUrl !== baseUrl) {
+        throw new ServiceError(ErrorCode.LLM_KEY_REQUIRED);
+      }
+      key = decryptSecret(current.apiKeyEnc, secret) ?? undefined;
+      if (key === undefined) throw new ServiceError(ErrorCode.LLM_KEY_REQUIRED);
+    }
+    try {
+      await this.complete({ baseUrl, model, apiKey: key }, 'Trả lời đúng một từ: OK', 5);
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, reason: failureReason(error) };
+    }
+  }
+
+  /**
+   * The meaning of `word` in one or two Vietnamese sentences; `null` when the
+   * model says it does not know the word; `undefined` when no LLM is set up or
+   * the call failed, so nothing is to be stored and a later solve may ask again.
+   */
+  async explainVietnamese(word: string): Promise<string | null | undefined> {
+    if (Date.now() < this.pausedUntil) return undefined;
+    const target = await this.target();
+    if (target === null) return undefined;
+    const prompt =
+      `Giải nghĩa từ tiếng Việt "${word}" như một từ điển: một hoặc hai câu, ` +
+      `dưới ${MEANING_MAX_LENGTH} ký tự, không nhắc lại từ đó, không định dạng. ` +
+      `Nếu không chắc đây là một từ có nghĩa trong tiếng Việt, chỉ trả lời ${NO_MEANING}.`;
+    try {
+      const { text, cut } = await this.calls(() =>
+        this.complete(target, prompt, MAX_OUTPUT_TOKENS),
+      );
+      const meaning = text.trim().replace(/\s+/gu, ' ');
+      // Only the model's own "none" is stored as such. An empty or cut-off
+      // answer (a reasoning model spending its tokens elsewhere) says nothing
+      // about the word and is not kept.
+      if (meaning.toUpperCase() === NO_MEANING) return null;
+      if (meaning === '' || cut || LINK.test(meaning)) return undefined;
+      return meaning.slice(0, MEANING_MAX_LENGTH);
+    } catch (error) {
+      this.pausedUntil = Date.now() + COOLDOWN_MS;
+      this.logger.warn(
+        `Asking the LLM for a meaning failed (${failureReason(error)}); paused for ${COOLDOWN_MS / 60_000} min`,
+      );
+      return undefined;
+    }
+  }
+
+  private async complete(
+    target: Target,
+    prompt: string,
+    maxTokens: number,
+  ): Promise<{ text: string; cut: boolean }> {
+    const messages = [{ role: 'user', content: prompt }];
+    let response = await this.post(target, {
+      model: target.model,
+      messages,
+      max_tokens: maxTokens,
+      temperature: 0,
+    });
+    // Newer OpenAI models refuse `max_tokens` and `temperature`; the one
+    // parameter every OpenAI-compatible API agrees on for them is this.
+    if (response.status === 400) {
+      response = await this.post(target, {
+        model: target.model,
+        messages,
+        max_completion_tokens: maxTokens,
+      });
+    }
+    if (response.status === 401 || response.status === 403) throw new LlmUnauthorized();
+    const parsed = CompletionSchema.safeParse(response.body);
+    if (response.status !== 200 || !parsed.success) throw new SafePostError('bad_response');
+    const choice = parsed.data.choices[0];
+    return { text: choice?.message.content ?? '', cut: choice?.finish_reason === 'length' };
+  }
+
+  private post(target: Target, payload: Record<string, unknown>) {
+    return safePostJson(
+      completionsUrl(target.baseUrl),
+      { authorization: `Bearer ${target.apiKey}` },
+      payload,
+      CALL_TIMEOUT_MS,
+    );
+  }
+
+  /** The saved settings ready to call, or `null` when switched off or unusable. */
+  private async target(): Promise<Target | null> {
+    if (this.env.secret === undefined) return null;
+    const row = await this.row();
+    if (row === null || !row.enabled) return null;
+    const apiKey = this.readKey(row.apiKeyEnc);
+    if (apiKey === null) {
+      this.logger.warn('The stored LLM API key cannot be read with LLM_KEY_SECRET; enter it again');
+      return null;
+    }
+    return { baseUrl: row.baseUrl, model: row.model, apiKey };
+  }
+
+  private row() {
+    return this.prisma.llmConfig.findUnique({
+      where: { singleton: true },
+      select: { baseUrl: true, model: true, apiKeyEnc: true, keyLast4: true, enabled: true },
+    });
+  }
+
+  private readKey(stored: string): string | null {
+    return this.env.secret === undefined ? null : decryptSecret(stored, this.env.secret);
+  }
+
+  private requireSecret(): string {
+    if (this.env.secret === undefined) throw new ServiceError(ErrorCode.LLM_NOT_AVAILABLE);
+    return this.env.secret;
+  }
+}
+
+class LlmUnauthorized extends Error {}
+
+function failureReason(error: unknown): NonNullable<LlmTestResult['reason']> {
+  if (error instanceof LlmUnauthorized) return 'unauthorized';
+  if (error instanceof SafePostError) {
+    return error.reason === 'too_large' ? 'bad_response' : error.reason;
+  }
+  return 'unreachable';
+}
