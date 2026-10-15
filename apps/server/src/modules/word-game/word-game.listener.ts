@@ -2,6 +2,7 @@ import { Logger } from '@nestjs/common';
 import { WordStatus, type WordSubmitResult } from '@sab/shared';
 import { MessageFlags } from 'discord.js';
 import { Context, On, type ContextOf } from 'necord';
+import pLimit, { type LimitFunction } from 'p-limit';
 import { DiscordCommands } from '../../discord/decorators/discord-commands.decorator.js';
 import { DiscordReadyService } from '../../discord/discord-ready.service.js';
 import { GuildLocaleService } from '../../i18n/guild-locale.service.js';
@@ -26,6 +27,13 @@ type Reactable = {
   }): Promise<unknown>;
 };
 
+/**
+ * Longest a move may hold its channel's queue. The pool has no query timeout,
+ * so a stalled connection would otherwise freeze the game in that channel; past
+ * this the next move is judged, and the database still refuses a stale one.
+ */
+const JUDGE_TIMEOUT_MS = 10_000;
+
 const SUCCESS_REACTION = '✅';
 const FAILURE_REACTION = '❌';
 
@@ -39,6 +47,15 @@ const FAILURE_REACTION = '❌';
 @DiscordCommands()
 export class WordGameListener {
   private readonly logger = new Logger(WordGameListener.name);
+  /**
+   * One judging queue per channel. Handlers run concurrently, so without it a
+   * later message whose database round-trip happens to finish first takes the
+   * move, and the player who sent first is refused against a word sent after
+   * theirs. Only judging is queued: reactions and the meaning lookup run
+   * outside, so a slow reply never holds up the next move. In process only,
+   * which is enough because one process serves the token.
+   */
+  private readonly channelQueues = new Map<string, LimitFunction>();
 
   constructor(
     private readonly game: WordGameService,
@@ -55,13 +72,45 @@ export class WordGameListener {
     // The database pool is about to close once shutdown began.
     if (this.ready.isStopping()) return;
 
-    const result = await this.game.submitWord(message.guildId, {
-      channelId: message.channelId,
-      authorId: message.author.id,
-      content: message.content,
-    });
+    const guildId = message.guildId;
+    // A failure here (the database, a move stuck past the timeout) is left to
+    // the exception filter, which logs it and reports it to #bot-log.
+    const result = await this.inArrivalOrder(message.channelId, () =>
+      // A move that waited in the queue past the start of shutdown would only
+      // meet a closing pool.
+      this.ready.isStopping()
+        ? Promise.resolve(null)
+        : this.game.submitWord(guildId, {
+            channelId: message.channelId,
+            authorId: message.author.id,
+            content: message.content,
+          }),
+    );
+    if (result === null) return;
     // The service judged `content` lower-cased as a whole; a move is that word.
-    await this.answer(message, message.guildId, result, message.content.toLowerCase());
+    await this.answer(message, guildId, result, message.content.toLowerCase());
+  }
+
+  /**
+   * Runs `task` after every earlier task of the channel, giving up on it after
+   * `JUDGE_TIMEOUT_MS`. The queue is joined before this handler's own first
+   * `await`; every message passes through the same Necord wrapping before
+   * that, so the order is the order Discord delivered them in as long as no
+   * async guard or pipe is added to this class. An empty queue is dropped.
+   */
+  private async inArrivalOrder<T>(channelId: string, task: () => Promise<T>): Promise<T> {
+    let queue = this.channelQueues.get(channelId);
+    if (queue === undefined) {
+      queue = pLimit(1);
+      this.channelQueues.set(channelId, queue);
+    }
+    try {
+      return await queue(() => withTimeout(task(), JUDGE_TIMEOUT_MS));
+    } finally {
+      if (queue.activeCount === 0 && queue.pendingCount === 0) {
+        this.channelQueues.delete(channelId);
+      }
+    }
   }
 
   private async answer(
@@ -150,4 +199,12 @@ export class WordGameListener {
       this.logger.warn(`Could not reply to a word (${errorLabel(error)})`);
     }
   }
+}
+
+function withTimeout<T>(work: Promise<T>, ms: number): Promise<T> {
+  let timer: NodeJS.Timeout | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error('Judging a word timed out')), ms);
+  });
+  return Promise.race([work, timeout]).finally(() => clearTimeout(timer));
 }

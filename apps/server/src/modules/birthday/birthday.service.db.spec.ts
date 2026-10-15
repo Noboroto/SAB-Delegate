@@ -15,7 +15,13 @@ import { RUN_LEASE_MS, BirthdayService } from './birthday.service.js';
 const ACTOR: ActorContext = { source: 'DISCORD', userId: '100000000000000002' };
 const YEAR = 2026;
 
-type Sent = { channelId: string; content: string; allowedMentions: { users: string[] } };
+type Sent = {
+  channelId: string;
+  content: string;
+  allowedMentions: { users: string[] };
+  nonce?: string;
+  enforceNonce?: boolean;
+};
 
 describe('BirthdayService against Postgres', () => {
   let database: TestDatabase;
@@ -405,6 +411,12 @@ describe('BirthdayService against Postgres', () => {
       );
       expect(summaries.reduce((total, summary) => total + summary.sent, 0)).toBe(7);
       expect(summaries.filter((summary) => summary.sent > 0)).toHaveLength(1);
+      // Each greeting has its own nonce that Discord enforces, so a send that a
+      // crash kept from being recorded is not posted twice by the next run.
+      const nonces = sentTo(channelId).map((message) => message.nonce ?? '');
+      expect(new Set(nonces).size).toBe(7);
+      expect(nonces.every((nonce) => nonce.length > 0 && nonce.length <= 25)).toBe(true);
+      expect(sentTo(channelId).every((message) => message.enforceNonce === true)).toBe(true);
       await expect(
         prisma.birthdayCompletedDate.count({ where: { guild: { discordId: guildId } } }),
       ).resolves.toBe(1);

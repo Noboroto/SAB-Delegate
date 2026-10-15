@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
+import { Inject, Injectable, Logger, type OnApplicationBootstrap, Optional } from '@nestjs/common';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
@@ -46,12 +46,15 @@ export async function loadBundledWords(): Promise<readonly string[]> {
 }
 
 /**
- * The word list of the game, 370,100 words. Read on first use rather than at
- * boot, so a server that never hosts a game does not pay for it, and kept as a
- * `Set`: an object lookup would answer `true` for "constructor" or "__proto__".
+ * The word list of the game, 370,100 words, kept as a `Set`: an object lookup
+ * would answer `true` for "constructor" or "__proto__".
+ *
+ * Building it blocks the event loop for about 200 ms (JSON.parse, then the
+ * keys, then the `Set`; measured on Node 24), so it starts at boot, before
+ * anyone plays, rather than on the first word of a game.
  */
 @Injectable()
-export class DictionaryService {
+export class DictionaryService implements OnApplicationBootstrap {
   private readonly logger = new Logger(DictionaryService.name);
   private words: Promise<ReadonlySet<string>> | undefined;
 
@@ -60,6 +63,14 @@ export class DictionaryService {
     @Inject(DICTIONARY_SOURCE)
     private readonly source: DictionarySource = loadBundledWords,
   ) {}
+
+  /**
+   * Not awaited: boot must not wait on, or fail because of, the word list. A
+   * failed load is logged by `load` and retried on the first word.
+   */
+  onApplicationBootstrap(): void {
+    this.load().catch(() => undefined);
+  }
 
   /** `word` must already be lower-case. */
   async has(word: string): Promise<boolean> {

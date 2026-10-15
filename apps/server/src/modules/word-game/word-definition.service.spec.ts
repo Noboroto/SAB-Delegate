@@ -67,6 +67,32 @@ describe('WordDefinitionService', () => {
     expect(fetcher).toHaveBeenCalledTimes(2);
   });
 
+  it('skips the meaning of new words past four lookups at once, but still serves cached ones', async () => {
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const { fetcher } = network({ en: EN, vi: VI });
+    const slow = vi.fn<DefinitionFetch>(async (url, init) => {
+      if (url.includes('/hold')) await gate;
+      return fetcher(url, init);
+    });
+    const service = new WordDefinitionService(slow);
+    await service.define('run');
+
+    const held = ['a', 'b', 'c', 'd'].map((word) => service.define(`hold${word}`));
+    await expect(service.define('fresh')).resolves.toBeNull();
+    expect(slow.mock.calls.some(([url]) => url.includes('fresh'))).toBe(false);
+    await expect(service.define('run')).resolves.not.toBeNull();
+    // A word already being looked up joins that lookup instead of being skipped.
+    const joined = service.define('holda');
+
+    release();
+    await expect(joined).resolves.not.toBeNull();
+    await Promise.all(held);
+    await expect(service.define('fresh')).resolves.not.toBeNull();
+  });
+
   it('gives nothing when every source is down, and asks again next time', async () => {
     const { fetcher } = network({
       en: new Error('ECONNRESET'),

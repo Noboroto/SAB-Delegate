@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import cookie from '@fastify/cookie';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
-import { StandardSchemaValidationPipe } from '@nestjs/common';
+import { Logger as NestLogger, StandardSchemaValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { Logger } from 'nestjs-pino';
@@ -15,6 +15,7 @@ import { validationFailed } from './common/errors/http-error.js';
 import { rateLimitOptions } from './common/rate-limit/rate-limit.util.js';
 import { InvalidEnvError, loadEnv, restSettingsOf } from './config/env.js';
 import { BootGuardError } from './discord/boot-guard.js';
+import { errorLabel } from './prisma/pool-factory.js';
 
 // Fixed by the image, not configurable: compose and the reverse proxy point at
 // it. Not 5000 or 7000, which AirPlay holds on macOS dev machines.
@@ -35,6 +36,16 @@ async function bootstrap(): Promise<void> {
     { bufferLogs: true, abortOnError: false },
   );
   app.useLogger(app.get(Logger));
+
+  // Node exits on an unhandled rejection by default. One that slips past the
+  // Discord and HTTP exception filters would take the bot offline and drop
+  // every job in flight, so it is logged instead. Only the error's name and
+  // stack frames: a message can carry query arguments (Prisma) or user text.
+  const processLogger = new NestLogger('Process');
+  process.on('unhandledRejection', (reason) => {
+    const frames = reason instanceof Error ? (reason.stack ?? '').split('\n').slice(1) : [];
+    processLogger.error(`Unhandled promise rejection (${errorLabel(reason)})`, frames.join('\n'));
+  });
 
   await app.register(helmet, HELMET_OPTIONS);
 

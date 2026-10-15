@@ -35,10 +35,29 @@ describe('DictionaryService', () => {
     expect(source).toHaveBeenCalledTimes(1);
   });
 
-  it('does not read anything until the first word is asked about', () => {
+  it('starts reading the list at boot, so the first word does not wait for it', async () => {
     const source = vi.fn(() => Promise.resolve(['apple']));
-    new DictionaryService(source);
+    const dictionary = new DictionaryService(source);
     expect(source).not.toHaveBeenCalled();
+
+    dictionary.onApplicationBootstrap();
+    expect(source).toHaveBeenCalledTimes(1);
+    await expect(dictionary.has('apple')).resolves.toBe(true);
+    expect(source).toHaveBeenCalledTimes(1);
+  });
+
+  it('boots even when the list cannot be read, and reads it again on the first word', async () => {
+    const source = vi
+      .fn<() => Promise<readonly string[]>>()
+      .mockRejectedValueOnce(new Error('disk gone'))
+      .mockResolvedValueOnce(['apple']);
+    const dictionary = new DictionaryService(source);
+
+    expect(() => dictionary.onApplicationBootstrap()).not.toThrow();
+    // Let the failed load settle and drop itself.
+    await new Promise((resolve) => setImmediate(resolve));
+    await expect(dictionary.has('apple')).resolves.toBe(true);
+    expect(source).toHaveBeenCalledTimes(2);
   });
 
   it('retries after a failed load instead of staying broken', async () => {

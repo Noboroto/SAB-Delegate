@@ -171,6 +171,17 @@ export class WordGameService {
       if (game === null || game.channelId !== channelId) {
         return this.result(WordStatus.NOTHING, game?.round ?? FRESH_ROUND, game?.maxWords ?? 0);
       }
+      // The last move is already this word by this player: either another
+      // process on the same token (two containers overlapping in a deploy)
+      // recorded this very message first, or the player sent it twice. Judging
+      // it would put SAME_AUTHOR's cross under the accepted word.
+      if (
+        !game.round.started &&
+        game.round.lastWord === word &&
+        game.round.lastUserId === authorId
+      ) {
+        return this.result(WordStatus.NOTHING, game.round, game.maxWords);
+      }
 
       const refusal = await this.judge(game, word, authorId);
       if (refusal !== null) return refusal;

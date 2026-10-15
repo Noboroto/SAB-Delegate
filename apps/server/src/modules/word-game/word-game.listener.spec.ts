@@ -68,6 +68,85 @@ describe('WordGameListener', () => {
     });
   });
 
+  it('judges the messages of a channel in the order they arrived, however long each takes', async () => {
+    const { listener, submitWord, message } = build();
+    const order: string[] = [];
+    submitWord.mockImplementation(async (_guild: string, input: { content: string }) => {
+      // The first message is the slowest to judge; it must still go first.
+      const delay = input.content === 'first' ? 20 : 0;
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      order.push(input.content);
+      return outcome({});
+    });
+    await Promise.all(
+      ['first', 'second', 'third'].map((content) =>
+        listener.onMessageCreate([message({ content })] as never),
+      ),
+    );
+    expect(order).toEqual(['first', 'second', 'third']);
+    // An emptied queue is dropped, so channels that went quiet hold no memory.
+    expect(
+      (listener as unknown as { channelQueues: Map<string, unknown> }).channelQueues.size,
+    ).toBe(0);
+  });
+
+  it('gives up on a move stuck past ten seconds and judges the next one', async () => {
+    vi.useFakeTimers();
+    try {
+      const { listener, submitWord, message } = build();
+      submitWord.mockReturnValueOnce(new Promise(() => undefined));
+      const stuck = listener.onMessageCreate([message({ content: 'stuck' })] as never);
+      const stuckSettled = expect(stuck).rejects.toThrow('Judging a word timed out');
+      const next = message({ content: 'next' });
+      const after = listener.onMessageCreate([next] as never);
+
+      await vi.advanceTimersByTimeAsync(10_000);
+      await stuckSettled;
+      await after;
+      expect(next.react).toHaveBeenCalledWith('✅');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('drops a queued move once shutdown has begun', async () => {
+    let stopping = false;
+    const { message } = build();
+    const submitWord = vi.fn(() => {
+      stopping = true;
+      return Promise.resolve(outcome({}));
+    });
+    const listener = new WordGameListener(
+      { submitWord } as unknown as WordGameService,
+      { resolve: vi.fn() } as unknown as GuildLocaleService,
+      { isStopping: () => stopping } as unknown as DiscordReadyService,
+      { define: vi.fn().mockResolvedValue(null) } as unknown as WordDefinitionService,
+    );
+    const queued = message();
+    await Promise.all([
+      listener.onMessageCreate([message()] as never),
+      listener.onMessageCreate([queued] as never),
+    ]);
+    expect(submitWord).toHaveBeenCalledTimes(1);
+    expect(queued.react).not.toHaveBeenCalled();
+  });
+
+  it('does not make one channel wait for another', async () => {
+    const { listener, submitWord, message } = build();
+    const order: string[] = [];
+    submitWord.mockImplementation(async (_guild: string, input: { channelId: string }) => {
+      await new Promise((resolve) => setTimeout(resolve, input.channelId === CHANNEL ? 20 : 0));
+      order.push(input.channelId);
+      return outcome({});
+    });
+    const other = '200000000000000002';
+    await Promise.all([
+      listener.onMessageCreate([message()] as never),
+      listener.onMessageCreate([message({ channelId: other })] as never),
+    ]);
+    expect(order).toEqual([other, CHANNEL]);
+  });
+
   it('never looks at bots or direct messages, and not at all during shutdown', async () => {
     const { listener, submitWord, message } = build();
     await listener.onMessageCreate([message({ author: { id: USER, bot: true } })] as never);

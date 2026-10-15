@@ -38,6 +38,13 @@ const PARTIAL_TTL_MS = 10 * 60 * 1000;
  * refuses, asking again for every new word only adds a timeout to each reply.
  */
 const TRANSLATION_PAUSE_MS = 60 * 60 * 1000;
+/**
+ * Words being looked up at once. A burst of new words past this gets no
+ * meaning rather than a queue: a reply that arrives a minute late under a long
+ * chain helps nobody, and a burst of requests is what gets a keyless client
+ * rate-limited by the wikis.
+ */
+const MAX_CONCURRENT_LOOKUPS = 4;
 
 /** The Vietnamese sense for the English part of speech, else the first one. */
 function pickVietnamese(
@@ -62,6 +69,8 @@ export class WordDefinitionService {
   private readonly logger = new Logger(WordDefinitionService.name);
   private readonly cache: LRUCache<string, WordDefinition>;
   private translationPausedUntil = 0;
+  /** Words being looked up now; lru-cache's `has` does not count a pending fetch. */
+  private readonly lookupsInFlight = new Set<string>();
 
   constructor(
     @Optional()
@@ -76,15 +85,24 @@ export class WordDefinitionService {
       perf: { now: () => performance.now() },
       // Concurrent lookups of one word share a single set of requests.
       fetchMethod: async (word, _stale, { options }) => {
-        const found = await this.lookup(word);
-        if (found?.partial === true) options.ttl = PARTIAL_TTL_MS;
-        return found?.definition;
+        this.lookupsInFlight.add(word);
+        try {
+          const found = await this.lookup(word);
+          if (found?.partial === true) options.ttl = PARTIAL_TTL_MS;
+          return found?.definition;
+        } finally {
+          this.lookupsInFlight.delete(word);
+        }
       },
     });
   }
 
   /** `word` must already be lower-case. `null` when there is nothing to show. */
   async define(word: string): Promise<WordDefinition | null> {
+    // A cached word, or one already being looked up, costs nothing more; only
+    // a new lookup counts against the cap.
+    const known = this.cache.has(word) || this.lookupsInFlight.has(word);
+    if (!known && this.lookupsInFlight.size >= MAX_CONCURRENT_LOOKUPS) return null;
     try {
       const found = await this.cache.fetch(word);
       if (found === undefined || (found.english === undefined && found.vietnamese === undefined)) {

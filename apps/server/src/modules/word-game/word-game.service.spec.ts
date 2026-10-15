@@ -300,6 +300,17 @@ describe('WordGameService.submitWord: the rules after the first word', () => {
     expect(store.used).toEqual(['apple']);
   });
 
+  it('ignores the last word sent again by the player who played it, and changes nothing', async () => {
+    // Also what a second process on the same token sees when the first one
+    // already recorded this very message.
+    const { service, store } = build(AFTER_APPLE);
+    await expect(service.submitWord(GUILD, move('Apple', ALICE))).resolves.toMatchObject({
+      status: WordStatus.NOTHING,
+    });
+    expect(store.used).toEqual(['apple']);
+    expect(store.state).toMatchObject({ count: 1, lastWord: 'apple', lastUserId: ALICE });
+  });
+
   it('refuses a word that was already played', async () => {
     const { service } = build({
       round: { started: false, count: 3, lastWord: 'tea', lastUserId: ALICE },

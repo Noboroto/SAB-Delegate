@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { Injectable, Logger } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import {
@@ -103,6 +104,24 @@ export type BirthdayRunSummary = z.infer<typeof RunSummarySchema>;
  * taken the day over (its write replaced the value) none of ours can land.
  */
 type Run = { id: string; sent: Set<string>; leaseUntil: Date };
+
+/** Discord reads a nonce of up to 25 characters. */
+const NONCE_LENGTH = 25;
+
+/**
+ * Discord drops a send whose nonce it saw from this bot a few minutes earlier.
+ * One greeting of one day has one nonce (`run.id` is the day's row, kept by a
+ * takeover), so a retry soon after a send that was never recorded, such as a
+ * failed write that released the lease, does not greet the person twice. A
+ * takeover after a crash waits out the lease, usually past Discord's window,
+ * so it narrows the repeat rather than ruling it out.
+ */
+function greetingNonce(runId: string, discordId: string): string {
+  return createHash('sha256')
+    .update(`${runId}:${discordId}`)
+    .digest('base64url')
+    .slice(0, NONCE_LENGTH);
+}
 
 /** A server with someone to greet today, and where. */
 type Target = {
@@ -519,6 +538,8 @@ export class BirthdayService {
         await channel.send({
           content: renderBirthdayWish(wishIndex, `<@${discordId}>`),
           allowedMentions: { users: [discordId] },
+          nonce: greetingNonce(run.id, discordId),
+          enforceNonce: true,
         });
         progress.sent += 1;
         if (!(await this.holdLease(run, discordId))) return this.lostLease(target);
