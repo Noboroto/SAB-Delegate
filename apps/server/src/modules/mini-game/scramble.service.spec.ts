@@ -142,16 +142,23 @@ describe('ScrambleService.submit: what counts as a move', () => {
     ).rejects.toMatchObject({ code: ErrorCode.VALIDATION_FAILED });
   });
 
-  it('ignores an answer made of other letters without checking the word list', async () => {
+  it('treats a message of another length as chat', async () => {
     const { service, words, leaderboard } = build();
     await expect(service.submit(GUILD, move('con mèo'))).resolves.toEqual({ status: 'NOTHING' });
     expect(words.isVietnameseWord).not.toHaveBeenCalled();
     expect(leaderboard.award).not.toHaveBeenCalled();
   });
 
-  it('ignores a guess with the right letters that is not a listed word', async () => {
+  it('marks a guess of the right length made of other letters wrong, without the word list', async () => {
+    const { service, words, leaderboard } = build();
+    await expect(service.submit(GUILD, move('hoc sinh'))).resolves.toEqual({ status: 'WRONG' });
+    expect(words.isVietnameseWord).not.toHaveBeenCalled();
+    expect(leaderboard.award).not.toHaveBeenCalled();
+  });
+
+  it('marks a guess with the right letters that is not a listed word wrong', async () => {
     const { service, store, leaderboard } = build({ words: ['con mèo'] });
-    await expect(service.submit(GUILD, move('sinh học'))).resolves.toEqual({ status: 'NOTHING' });
+    await expect(service.submit(GUILD, move('sinh học'))).resolves.toEqual({ status: 'WRONG' });
     expect(store.puzzle?.round).toBe(3);
     expect(leaderboard.award).not.toHaveBeenCalled();
   });
@@ -220,15 +227,15 @@ describe('ScrambleService.submit: concurrent answers', () => {
       store.puzzle = { answer: 'hoà bình', puzzle: 'x', round: 4 };
     };
     await expect(service.submit(GUILD, move('học sinh'))).resolves.toEqual({ status: 'NOTHING' });
-    // Judged again against the puzzle the winner left: the letters no longer fit.
+    // Right for the puzzle it answered, only late: no point, and no cross either.
     expect(leaderboard.award).not.toHaveBeenCalled();
   });
 
-  it('gives up with an error after sixteen lost races', async () => {
+  it('tries the claim once: a lost race is a late answer', async () => {
     const { service, scrambleState, leaderboard } = build();
     scrambleState.updateMany.mockResolvedValue({ count: 0 });
-    await expect(service.submit(GUILD, move('học sinh'))).rejects.toThrow(/kept losing the race/u);
-    expect(scrambleState.updateMany).toHaveBeenCalledTimes(16);
+    await expect(service.submit(GUILD, move('học sinh'))).resolves.toEqual({ status: 'NOTHING' });
+    expect(scrambleState.updateMany).toHaveBeenCalledTimes(1);
     expect(leaderboard.award).not.toHaveBeenCalled();
   });
 });

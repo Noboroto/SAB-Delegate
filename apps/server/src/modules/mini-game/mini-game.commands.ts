@@ -302,11 +302,12 @@ export class GameInfoCommands {
     const embed: APIEmbed = {
       title: t(`mini-game.names.${game}`),
       color: BLURPLE,
+      // The hint names a command in backticks; a footer shows no markdown.
+      description: t('mini-game.leaderboardHint'),
       fields: [
         { name: t('mini-game.rulesTitle'), value: t(`mini-game.help.${game}.rules`) },
         { name: t('mini-game.setupTitle'), value: t(`mini-game.help.${game}.setup`) },
       ],
-      footer: { text: t('mini-game.leaderboardHint') },
     };
     await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
   }

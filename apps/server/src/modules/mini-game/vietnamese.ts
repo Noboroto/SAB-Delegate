@@ -4,6 +4,7 @@
  * and stay on it.
  */
 const TONE_MARK = /[\u0300\u0301\u0303\u0309\u0323]/u;
+const TONE_MARKS = /[\u0300\u0301\u0303\u0309\u0323]/gu;
 const VOWEL_MARK = /[\u0302\u0306\u031b]/u;
 const VOWEL = /[aeiouy]/u;
 const SPACE = /\s/u;
@@ -36,9 +37,17 @@ export function compactWord(text: string): string {
   return (out + tones).normalize('NFC');
 }
 
-/** Equal for two words made of the same letters and tone marks, in any order. */
+/**
+ * Equal for two words made of the same letters and the same tone marks, in any
+ * order. Letters and tones are compared apart: the puzzle's letters carry their
+ * tones, but a tone may move to another syllable and still use the same set,
+ * as in "hầu cận" and "hậu cần". The vowel marks stay part of their letter.
+ */
 export function anagramKey(text: string): string {
-  return Array.from(compactWord(text)).sort().join('');
+  const decomposed = compactWord(text).normalize('NFD');
+  const tones = (decomposed.match(TONE_MARKS) ?? []).sort().join('');
+  const letters = Array.from(decomposed.replace(TONE_MARKS, '').normalize('NFC')).sort().join('');
+  return `${letters}|${tones}`;
 }
 
 /** The number of syllables of a word as written. */

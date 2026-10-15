@@ -63,7 +63,7 @@
       "setup": "`/game set game:Counting channel:#channel`; `/game reset game:Counting` starts over from 1."
     },
     "SCRAMBLE": {
-      "rules": "The bot shows the shuffled letters of a Vietnamese word of 2–3 syllables. The first to send a real word using exactly those letters scores 1 point and gets a new puzzle. Wrong guesses cost nothing and get no answer.",
+      "rules": "The bot shows the shuffled letters of a Vietnamese word of 2–3 syllables. The first to send a real word using exactly those letters scores 1 point and gets a new puzzle. A wrong guess with the right number of letters gets a ❌ and costs nothing; messages of other lengths are chat.",
       "setup": "`/game set game:Vietnamese scramble channel:#channel`; `/game skip game:Vietnamese scramble` reveals the answer and gives a new one."
     },
     "WORDLE": {

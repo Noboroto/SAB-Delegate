@@ -17,7 +17,10 @@ export type CountingOutcome =
   | { status: 'SAME_USER'; best: number };
 
 export type ScrambleOutcome =
-  { status: 'NOTHING' } | { status: 'SOLVED'; guess: string; next: ScrambleOpening };
+  | { status: 'NOTHING' }
+  /** As many letters as the answer, but not a listed word made of its letters. */
+  | { status: 'WRONG' }
+  | { status: 'SOLVED'; guess: string; next: ScrambleOpening };
 
 export type WordleOutcome =
   | { status: 'NOTHING' | 'NOT_IN_LIST' | 'SAME_USER' | 'ALREADY_GUESSED' }

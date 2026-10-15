@@ -60,6 +60,11 @@ describe('compactWord', () => {
 });
 
 describe('anagramKey', () => {
+  it('lets one set of letters spell two listed words, as "hầu cận" and "hậu cần"', () => {
+    expect(anagramKey('hầu cận')).toBe(anagramKey('hậu cần'));
+    expect(anagramKey('HẬU CẦN')).toBe(anagramKey('hầucận'));
+  });
+
   it('is equal for any ordering of the same letters', () => {
     expect(anagramKey('tiếng')).toBe(anagramKey('gniết'));
     expect(anagramKey('con mèo')).toBe(anagramKey('mèo con'));

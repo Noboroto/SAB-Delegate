@@ -121,6 +121,10 @@ export class MiniGameListener {
       }
       case 'SCRAMBLE': {
         const { outcome } = move;
+        if (outcome.status === 'WRONG') {
+          await this.respond(message, FAILURE_REACTION);
+          return;
+        }
         if (outcome.status !== 'SOLVED') return;
         await this.respond(
           message,

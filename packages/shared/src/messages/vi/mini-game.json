@@ -63,7 +63,7 @@
       "setup": "`/game set game:Đếm số channel:#kênh`, `/game reset game:Đếm số` để đếm lại từ 1."
     },
     "SCRAMBLE": {
-      "rules": "Bot đưa các chữ cái bị xáo của một từ tiếng Việt 2–3 tiếng. Ai gửi đúng một từ có nghĩa dùng đủ các chữ cái đó trước thì được +1 điểm, rồi bot ra câu mới. Đoán sai không bị trừ, bot không trả lời.",
+      "rules": "Bot đưa các chữ cái bị xáo của một từ tiếng Việt 2–3 tiếng. Ai gửi đúng một từ có nghĩa dùng đủ các chữ cái đó trước thì được +1 điểm, rồi bot ra câu mới. Gửi đủ số chữ cái mà sai thì bot thả ❌, không bị trừ điểm; tin dài ngắn khác được coi là trò chuyện.",
       "setup": "`/game set game:Vua Tiếng Việt channel:#kênh`, `/game skip game:Vua Tiếng Việt` để lộ đáp án và đổi câu."
     },
     "WORDLE": {

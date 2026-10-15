@@ -3,13 +3,17 @@ import { PrismaService } from '../../prisma/prisma.service.js';
 import { LeaderboardService } from '../game-core/leaderboard.service.js';
 import { GameWordsService } from './game-words.service.js';
 import {
-  MAX_ATTEMPTS,
   parseMove,
   type GameTx,
   type ScrambleOpening,
   type ScrambleOutcome,
 } from './mini-game.types.js';
-import { anagramKey, scrambleLetters } from './vietnamese.js';
+import { anagramKey, compactWord, scrambleLetters } from './vietnamese.js';
+
+/** Letters of a word as the puzzle shows them: tone marks ride on their letter. */
+function letterCount(text: string): number {
+  return Array.from(compactWord(text)).length;
+}
 
 /** Longer than any two- or three-syllable word; longer text is chat. */
 const GUESS_MAX_LENGTH = 40;
@@ -18,10 +22,12 @@ const GUESS_MAX_LENGTH = 40;
  * Vua Tiếng Việt: the bot shows the shuffled letters of a Vietnamese word and
  * the first player to write a word of exactly those letters wins the puzzle and
  * a point. Any listed word fits, not only the one drawn, as a set of letters
- * can spell several. A wrong guess gets no answer: the channel is for guessing.
+ * can spell several. A wrong guess of the right length gets a cross; other
+ * messages are chat.
  *
  * `round` grows with every puzzle; a win is applied only to the round it was
- * judged against, so two right answers at once give one point.
+ * judged against, so two right answers at once give one point and the later
+ * one gets no answer.
  */
 @Injectable()
 export class ScrambleService {
@@ -36,39 +42,42 @@ export class ScrambleService {
     const guess = move.content.trim().replace(/\s+/gu, ' ').toLowerCase();
     if (guess === '' || guess.length > GUESS_MAX_LENGTH) return { status: 'NOTHING' };
 
-    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
-      const row = await this.prisma.guild.findUnique({
-        where: { discordId: id },
-        select: {
-          id: true,
-          gameChannels: { where: { game: 'SCRAMBLE' }, select: { channelId: true } },
-          scramble: { select: { answer: true, round: true } },
-        },
-      });
-      if (
-        row === null ||
-        row.scramble === null ||
-        row.gameChannels[0]?.channelId !== move.channelId
-      ) {
-        return { status: 'NOTHING' };
-      }
-      const state = row.scramble;
-      if (anagramKey(guess) !== anagramKey(state.answer)) return { status: 'NOTHING' };
-      if (!(await this.words.isVietnameseWord(guess))) return { status: 'NOTHING' };
-
-      const next = await this.nextPuzzle(state.answer);
-      const won = await this.prisma.$transaction(async (tx) => {
-        const claimed = await tx.scrambleState.updateMany({
-          where: { guildId: row.id, round: state.round },
-          data: { answer: next.answer, puzzle: next.letters, round: { increment: 1 } },
-        });
-        if (claimed.count === 0) return false;
-        await this.leaderboard.award(tx, row.id, 'SCRAMBLE', move.authorId);
-        return true;
-      });
-      if (won) return { status: 'SOLVED', guess, next };
+    const row = await this.prisma.guild.findUnique({
+      where: { discordId: id },
+      select: {
+        id: true,
+        gameChannels: { where: { game: 'SCRAMBLE' }, select: { channelId: true } },
+        scramble: { select: { answer: true, round: true } },
+      },
+    });
+    if (
+      row === null ||
+      row.scramble === null ||
+      row.gameChannels[0]?.channelId !== move.channelId
+    ) {
+      return { status: 'NOTHING' };
     }
-    throw new Error('A guess kept losing the race for the puzzle');
+    const state = row.scramble;
+    // Only a message as long as the answer reads as a guess and gets a cross;
+    // any other length is chat and gets no answer.
+    if (letterCount(guess) !== letterCount(state.answer)) return { status: 'NOTHING' };
+    if (anagramKey(guess) !== anagramKey(state.answer)) return { status: 'WRONG' };
+    if (!(await this.words.isVietnameseWord(guess))) return { status: 'WRONG' };
+
+    const next = await this.nextPuzzle(state.answer);
+    const won = await this.prisma.$transaction(async (tx) => {
+      const claimed = await tx.scrambleState.updateMany({
+        where: { guildId: row.id, round: state.round },
+        data: { answer: next.answer, puzzle: next.letters, round: { increment: 1 } },
+      });
+      if (claimed.count === 0) return false;
+      await this.leaderboard.award(tx, row.id, 'SCRAMBLE', move.authorId);
+      return true;
+    });
+    // Lost: the puzzle changed since the read, solved by someone else or
+    // skipped. The guess was right for the puzzle it answered, only late, so
+    // it is neither judged against the new puzzle nor marked wrong.
+    return won ? { status: 'SOLVED', guess, next } : { status: 'NOTHING' };
   }
 
   /** A new puzzle in place of the current one, whose answer it returns. */

@@ -260,6 +260,16 @@ describe('MiniGameListener: scramble', () => {
   });
 });
 
+describe('MiniGameListener: scramble wrong guess', () => {
+  it('reacts with a cross and does not reply', async () => {
+    const { listener, message } = build({ game: 'SCRAMBLE', scramble: { status: 'WRONG' } });
+    const incoming = message({ content: 'hoc sinh' });
+    await send(listener, incoming);
+    expect(incoming.react).toHaveBeenCalledWith('❌');
+    expect(incoming.reply).not.toHaveBeenCalled();
+  });
+});
+
 describe('MiniGameListener: wordle', () => {
   const guessed: WordleOutcome = { status: 'GUESSED', guesses: ['crane'], answer: 'plumb' };
 
