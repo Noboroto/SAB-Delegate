@@ -38,6 +38,7 @@ export function GuildBar({ guilds, currentId }: GuildBarProps) {
     birthday: t('nav.birthday'),
     note: t('nav.note'),
     wordGame: t('nav.wordGame'),
+    games: t('nav.games'),
     schedule: t('nav.schedule'),
     messaging: t('nav.messaging'),
     mention: t('nav.mention'),

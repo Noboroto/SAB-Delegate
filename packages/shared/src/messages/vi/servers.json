@@ -43,6 +43,7 @@
     "birthday": "Sinh nhật",
     "note": "Ghi chú",
     "wordGame": "Nối từ",
+    "games": "Trò chơi",
     "schedule": "Hẹn giờ",
     "messaging": "Tin nhắn",
     "mention": "Nhắc tên",
@@ -57,9 +58,11 @@
       "note": "Ghi chú theo từ khoá cho cả máy chủ.",
       "wordGame": "Trò chơi nối từ trong một kênh.",
       "schedule": "Tin nhắn hẹn giờ gửi sau.",
-      "messaging": "Gửi, chép, sửa tin nhắn và tạo bình chọn."
+      "messaging": "Gửi, chép, sửa tin nhắn và tạo bình chọn.",
+      "games": "Luật và cách cài nối từ, đếm số, Vua Tiếng Việt, Wordle."
     },
-    "modulesSubtitle": "Chọn một mô-đun để xem và chỉnh."
+    "modulesSubtitle": "Chọn một mô-đun để xem và chỉnh.",
+    "gamesSubtitle": "Cài trò chơi bằng lệnh slash trong Discord; điểm xem bằng /leaderboard."
   },
   "notFound": {
     "title": "Không tìm thấy máy chủ",

@@ -43,6 +43,7 @@
     "birthday": "Birthdays",
     "note": "Notes",
     "wordGame": "Word game",
+    "games": "Games",
     "schedule": "Schedule",
     "messaging": "Messaging",
     "mention": "Mentions",
@@ -57,9 +58,11 @@
       "note": "Keyword notes for the whole server.",
       "wordGame": "The word-chain game in a channel.",
       "schedule": "Messages scheduled to be sent later.",
-      "messaging": "Send, copy and edit messages, and create polls."
+      "messaging": "Send, copy and edit messages, and create polls.",
+      "games": "Rules and set-up of the word chain, counting, the Vietnamese scramble and Wordle."
     },
-    "modulesSubtitle": "Pick a module to view and change it."
+    "modulesSubtitle": "Pick a module to view and change it.",
+    "gamesSubtitle": "Games are set up with slash commands in Discord; scores are shown by /leaderboard."
   },
   "notFound": {
     "title": "Server not found",

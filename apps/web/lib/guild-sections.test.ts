@@ -21,6 +21,7 @@ describe('GUILD_NAV', () => {
       'modules/birthday',
       'modules/note',
       'modules/word-game',
+      'modules/games',
       'modules/schedule',
       'modules/messaging',
     ]);

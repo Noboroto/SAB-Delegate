@@ -15,6 +15,7 @@ export function ModulesIndex({ guildId }: { guildId: string }) {
     birthday: [t('birthday'), t('moduleDesc.birthday')],
     note: [t('note'), t('moduleDesc.note')],
     wordGame: [t('wordGame'), t('moduleDesc.wordGame')],
+    games: [t('games'), t('moduleDesc.games')],
     schedule: [t('schedule'), t('moduleDesc.schedule')],
     messaging: [t('messaging'), t('moduleDesc.messaging')],
   };
