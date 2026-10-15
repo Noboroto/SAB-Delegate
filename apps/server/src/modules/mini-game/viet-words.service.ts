@@ -11,10 +11,11 @@ const WORDS_ASSET = 'viet-words.txt';
 const MEANINGS_ASSET = 'viet-meanings.tsv';
 const SEED_KEY = 'viet-words:asset-hash';
 /**
- * Part of the seed hash: raise it whenever `normalizeWord` changes, so the
- * stored keys are computed again even though the assets did not change.
+ * Part of the seed hash: raise it whenever the load itself changes (the
+ * `normalizeWord` keys, which words are kept), so the table is loaded again
+ * even though the assets did not change.
  */
-const NORMALIZE_VERSION = '1';
+const SEED_VERSION = '2';
 const SEED_BATCH = 2_000;
 const MEANING_SOURCES = new Set(['WIKTIONARY', 'VNTK']);
 
@@ -36,7 +37,7 @@ export function normalizeWord(text: string): string {
     .replace(SPACES, '');
 }
 
-type SeedRow = { word: string; source: string | null; meaning: string | null };
+type SeedRow = { word: string; source: string; meaning: string };
 
 function parseAssets(words: string, meanings: string): SeedRow[] {
   const known = new Map<string, { source: string; meaning: string }>();
@@ -49,20 +50,21 @@ function parseAssets(words: string, meanings: string): SeedRow[] {
   return words
     .split('\n')
     .map((line) => line.trim().normalize('NFC'))
-    .filter((word) => word !== '')
-    .map((word) => {
+    .flatMap((word) => {
       const entry = known.get(word);
-      return { word, source: entry?.source ?? null, meaning: entry?.meaning ?? null };
+      return entry === undefined ? [] : [{ word, ...entry }];
     });
 }
 
 /**
  * The Vietnamese words of the scramble, kept in Postgres with their meanings.
+ * Only words a dictionary explains are kept: a listed word no dictionary
+ * explains is neither a puzzle nor an accepted guess.
  *
  * The bundled list and meanings are loaded at boot, in the background, only when
  * they changed since the last load (their hash is kept in AppState). A load
- * never overwrites a meaning found later (an LLM's, or a confirmed absence):
- * only rows without one take the bundled meaning.
+ * never overwrites a meaning found later (an LLM's), and removes every row
+ * left without a meaning.
  */
 @Injectable()
 export class VietWordsService implements OnApplicationBootstrap {
@@ -108,9 +110,10 @@ export class VietWordsService implements OnApplicationBootstrap {
   }
 
   /**
-   * The meaning of `word` (as listed) for a word a player has just solved. A
-   * word no dictionary explains and nobody asked about yet is put to the LLM,
-   * once: its answer, or that it has none, is stored and reused from then on.
+   * The meaning of `word` (as listed) for a word a player has just solved.
+   * Every word the load keeps has one; a row stored without one (not by the
+   * load) is put to the LLM, once: its answer, or that it has none, is stored
+   * and reused from then on.
    * Nothing is stored when no LLM is set up or the call failed, so a later
    * solve may ask again. Never called in bulk: one solved word, one question.
    */
@@ -186,7 +189,7 @@ export class VietWordsService implements OnApplicationBootstrap {
       readAsset(MEANINGS_ASSET),
     ]);
     const hash = createHash('sha256')
-      .update(NORMALIZE_VERSION)
+      .update(SEED_VERSION)
       .update('\0')
       .update(words)
       .update('\0')
@@ -198,11 +201,11 @@ export class VietWordsService implements OnApplicationBootstrap {
     for (let start = 0; start < rows.length; start += SEED_BATCH) {
       const batch = rows.slice(start, start + SEED_BATCH);
       // One statement per batch: new words are inserted, every word gets its
-      // key computed again, and a word without a meaning yet takes the bundled
-      // one. A meaning already there (LLM, NONE) is kept.
+      // key computed again and takes the bundled meaning, unless the LLM's is
+      // already there. A word the LLM had no meaning for (NONE) takes it too.
       await this.prisma.$executeRaw`
         INSERT INTO "VietWord" ("word", "normalized", "meaning", "meaningSource", "meaningAt")
-        SELECT w, n, m, s::"MeaningSource", CASE WHEN s IS NULL THEN NULL ELSE now() END
+        SELECT w, n, m, s::"MeaningSource", now()
         FROM unnest(
           ${batch.map((row) => row.word)}::text[],
           ${batch.map((row) => normalizeWord(row.word))}::text[],
@@ -211,12 +214,17 @@ export class VietWordsService implements OnApplicationBootstrap {
         ) AS t(w, n, m, s)
         ON CONFLICT ("word") DO UPDATE SET
           "normalized" = EXCLUDED."normalized",
-          "meaning" = CASE WHEN "VietWord"."meaningSource" IS NULL
-            THEN EXCLUDED."meaning" ELSE "VietWord"."meaning" END,
-          "meaningAt" = CASE WHEN "VietWord"."meaningSource" IS NULL
-            THEN EXCLUDED."meaningAt" ELSE "VietWord"."meaningAt" END,
-          "meaningSource" = COALESCE("VietWord"."meaningSource", EXCLUDED."meaningSource")`;
+          "meaning" = CASE WHEN "VietWord"."meaningSource" = 'LLM'
+            THEN "VietWord"."meaning" ELSE EXCLUDED."meaning" END,
+          "meaningAt" = CASE WHEN "VietWord"."meaningSource" = 'LLM'
+            THEN "VietWord"."meaningAt" ELSE EXCLUDED."meaningAt" END,
+          "meaningSource" = CASE WHEN "VietWord"."meaningSource" = 'LLM'
+            THEN "VietWord"."meaningSource" ELSE EXCLUDED."meaningSource" END`;
     }
+    // Rows an earlier list left without a meaning, or the LLM found none for.
+    await this.prisma.vietWord.deleteMany({
+      where: { OR: [{ meaningSource: null }, { meaningSource: 'NONE' }] },
+    });
     await this.appState.set(SEED_KEY, hash);
     this.count = undefined;
     this.logger.log(`Loaded ${rows.length} Vietnamese words`);

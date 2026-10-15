@@ -63,7 +63,9 @@ export class ScrambleService {
     // any other length is chat and gets no answer.
     if (letterCount(guess) !== letterCount(state.answer)) return { status: 'NOTHING' };
     const found =
-      anagramKey(guess) === anagramKey(state.answer) ? await this.words.find(guess) : null;
+      anagramKey(guess) === anagramKey(state.answer)
+        ? await this.accept(guess, state.answer)
+        : null;
     if (found === null) return this.wrong(row.id, state);
 
     const next = await this.nextPuzzle(state.answer);
@@ -87,6 +89,20 @@ export class ScrambleService {
     return won
       ? { status: 'SOLVED', guess: found.word, meaning: found.meaning, next }
       : { status: 'NOTHING' };
+  }
+
+  /**
+   * A listed word spelled by the puzzle's letters, or the answer itself even
+   * when it is no longer listed (a puzzle drawn before its word was removed
+   * stays solvable).
+   */
+  private async accept(
+    guess: string,
+    answer: string,
+  ): Promise<{ word: string; meaning: string | null } | null> {
+    const found = await this.words.find(guess);
+    if (found !== null) return found;
+    return compactWord(guess) === compactWord(answer) ? { word: answer, meaning: null } : null;
   }
 
   /**

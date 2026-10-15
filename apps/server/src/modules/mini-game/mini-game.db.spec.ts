@@ -585,7 +585,7 @@ describe('mini games against Postgres', () => {
       ).resolves.toMatchObject({ meaningSource: null });
     });
 
-    it('loads the bundled list once and keeps a meaning found later', async () => {
+    it('loads only the explained words once, keeps a meaning found later, drops the rest', async () => {
       const kept = new Map<string, string>();
       const appState = {
         get: (key: string) => Promise.resolve(kept.get(key) ?? null),
@@ -604,10 +604,30 @@ describe('mini games against Postgres', () => {
         },
         update: { meaning: 'nghĩa riêng', meaningSource: 'LLM' },
       });
+      // The LLM had nothing for it, but a dictionary explains it: it stays.
+      await prisma.vietWord.upsert({
+        where: { word: 'hầu cận' },
+        create: { word: 'hầu cận', normalized: normalizeWord('hầu cận'), meaningSource: 'NONE' },
+        update: { meaning: null, meaningSource: 'NONE' },
+      });
       const loader = new VietWordsService(prisma, appState, llm as unknown as LlmService);
 
       await expect(loader.isVietnameseWord('HẦU  CẬN')).resolves.toBe(true);
-      expect(await prisma.vietWord.count()).toBeGreaterThan(49_000);
+      // Listed, but no dictionary explains it.
+      await expect(loader.isVietnameseWord('cỏm rỏm')).resolves.toBe(false);
+      expect(await prisma.vietWord.count({ where: { meaningSource: null } })).toBe(0);
+      expect(await prisma.vietWord.count({ where: { meaningSource: 'NONE' } })).toBe(0);
+      expect(await prisma.vietWord.count()).toBeGreaterThan(28_000);
+      // Left by the spec above: the LLM's meaning stays, "none" and unknown go.
+      await expect(
+        prisma.vietWord.findUnique({ where: { word: 'từ thử một' }, select: { meaning: true } }),
+      ).resolves.toEqual({ meaning: 'nghĩa từ máy' });
+      await expect(
+        prisma.vietWord.findUnique({ where: { word: 'từ thử hai' } }),
+      ).resolves.toBeNull();
+      await expect(
+        prisma.vietWord.findUnique({ where: { word: 'từ thử ba' } }),
+      ).resolves.toBeNull();
       await expect(
         prisma.vietWord.findUniqueOrThrow({ where: { word: 'hậu cần' } }),
       ).resolves.toMatchObject({ meaning: 'nghĩa riêng', meaningSource: 'LLM' });

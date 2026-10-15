@@ -204,6 +204,16 @@ describe('ScrambleService.submit: a right answer', () => {
     expect(leaderboard.award).toHaveBeenCalledTimes(1);
   });
 
+  it('still accepts the answer of a puzzle whose word is no longer listed', async () => {
+    const { service, leaderboard } = build({ words: ['con mèo'] });
+    await expect(service.submit(GUILD, move('Học  Sinh'))).resolves.toMatchObject({
+      status: 'SOLVED',
+      guess: 'học sinh',
+      meaning: null,
+    });
+    expect(leaderboard.award).toHaveBeenCalledTimes(1);
+  });
+
   it('accepts case, extra spaces and the other tone placement', async () => {
     const { service } = build({
       puzzle: { answer: 'hoà bình', puzzle: 'x' },
