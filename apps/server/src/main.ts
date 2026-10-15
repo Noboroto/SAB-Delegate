@@ -43,7 +43,13 @@ async function bootstrap(): Promise<void> {
     // header itself and sets its own cookies.
     await app.register(cookie);
     // Before the auth route is added, so sign-in attempts are counted too.
-    await app.register(rateLimit, rateLimitOptions(app.get(SessionService)));
+    const logger = app.get(Logger);
+    await app.register(
+      rateLimit,
+      rateLimitOptions(app.get(SessionService), (event) => {
+        logger.log({ ...event, msg: 'request rate limited' });
+      }),
+    );
     mountAuth(app.getHttpAdapter().getInstance(), app.get<Auth>(AUTH));
   }
 

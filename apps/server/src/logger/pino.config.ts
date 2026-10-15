@@ -1,5 +1,6 @@
 import { RequestMethod } from '@nestjs/common';
 import type { Params } from 'nestjs-pino';
+import { stdSerializers } from 'pino';
 import type { Options } from 'pino-http';
 
 // Keys that carry credentials wherever they appear in a logged object. Header
@@ -54,12 +55,32 @@ export const REDACTION: { paths: string[]; censor: string } = {
   censor: '[REDACTED]',
 };
 
+const AUTH_PATH = /^\/api\/auth(\/|$)/;
+
+/**
+ * The OAuth callback arrives as `/api/auth/callback/discord?code=...&state=...`;
+ * `code` and `state` are single-use credentials, so the query of every Better
+ * Auth route is dropped from the logged URL and the path is kept.
+ */
+export function redactAuthQuery(url: string): string {
+  const queryStart = url.indexOf('?');
+  if (queryStart === -1) return url;
+  const path = url.slice(0, queryStart);
+  return AUTH_PATH.test(path) ? path : url;
+}
+
 export function buildPinoParams(level: string): Params {
   const pinoHttp: Options = {
     level,
     redact: REDACTION,
     // Level as a label so log tooling can filter by severity.
     formatters: { level: (label: string) => ({ level: label }) },
+    serializers: {
+      req: (req: Parameters<typeof stdSerializers.req>[0]) => {
+        const serialized = stdSerializers.req(req);
+        return { ...serialized, url: redactAuthQuery(serialized.url) };
+      },
+    },
   };
   return {
     pinoHttp,

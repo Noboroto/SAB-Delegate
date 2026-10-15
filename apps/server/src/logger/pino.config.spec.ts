@@ -1,7 +1,15 @@
 import { randomBytes } from 'node:crypto';
+import type { IncomingMessage } from 'node:http';
 import pino from 'pino';
+import type { Options } from 'pino-http';
 import { describe, expect, it } from 'vitest';
-import { NESTING_PREFIXES, REDACTION, SENSITIVE_KEYS, buildPinoParams } from './pino.config.js';
+import {
+  NESTING_PREFIXES,
+  REDACTION,
+  SENSITIVE_KEYS,
+  buildPinoParams,
+  redactAuthQuery,
+} from './pino.config.js';
 
 const marker = (label: string) => `marker-${label}-${randomBytes(6).toString('hex')}`;
 
@@ -61,5 +69,35 @@ describe('log redaction', () => {
 
   it('installs the same redaction on the http logger', () => {
     expect(buildPinoParams('warn').pinoHttp).toMatchObject({ level: 'warn', redact: REDACTION });
+  });
+});
+
+describe('request url in the log', () => {
+  it('drops the query of Better Auth routes and keeps the path', () => {
+    expect(redactAuthQuery('/api/auth/callback/discord?code=abc&state=xyz')).toBe(
+      '/api/auth/callback/discord',
+    );
+    expect(redactAuthQuery('/api/auth?x=1')).toBe('/api/auth');
+  });
+
+  it('leaves every other url untouched', () => {
+    expect(redactAuthQuery('/api/guilds/1/audit-logs?limit=20')).toBe(
+      '/api/guilds/1/audit-logs?limit=20',
+    );
+    expect(redactAuthQuery('/api/authors?q=1')).toBe('/api/authors?q=1');
+    expect(redactAuthQuery('/api/auth/get-session')).toBe('/api/auth/get-session');
+  });
+
+  it('is applied by the serializer pino-http uses', () => {
+    const req = (buildPinoParams('info').pinoHttp as Options).serializers?.req;
+    const code = marker('code');
+    const incoming = {
+      method: 'GET',
+      url: `/api/auth/callback/discord?code=${code}&state=s`,
+      headers: {},
+    } as unknown as IncomingMessage;
+    const out: unknown = req?.(incoming);
+    expect(out).toMatchObject({ url: '/api/auth/callback/discord' });
+    expect(JSON.stringify(out)).not.toContain(code);
   });
 });

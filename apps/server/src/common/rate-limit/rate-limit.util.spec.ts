@@ -2,7 +2,15 @@ import rateLimit from '@fastify/rate-limit';
 import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
 import { afterEach, describe, expect, it } from 'vitest';
 import { fastifyOptions } from '../../bootstrap/security-config.js';
-import { GUILD_LIST_RATE_LIMIT, rateLimitKey, rateLimitOptions } from './rate-limit.util.js';
+import {
+  GUILD_LIST_RATE_LIMIT,
+  READ_RATE_LIMIT_MAX,
+  WRITE_RATE_LIMIT_MAX,
+  createRefusalLogThrottle,
+  rateLimitKey,
+  rateLimitOptions,
+  type RateLimitedEvent,
+} from './rate-limit.util.js';
 
 const ALICE = '200000000000000001';
 const BOB = '200000000000000002';
@@ -26,15 +34,21 @@ afterEach(async () => {
 });
 
 async function build(
-  options: { max?: number; trustedProxies?: string[] } = {},
+  options: {
+    max?: number;
+    trustedProxies?: string[];
+    onLimited?: (event: RateLimitedEvent) => void;
+  } = {},
 ): Promise<FastifyInstance> {
   app = Fastify(fastifyOptions(options.trustedProxies));
   await app.register(rateLimit, {
-    ...rateLimitOptions(sessions),
+    ...rateLimitOptions(sessions, options.onLimited),
     ...(options.max ? { max: options.max } : {}),
   });
   app.get('/api/things', () => ({ ok: true }));
+  app.post('/api/things', () => ({ ok: true }));
   app.get('/api/guilds', { config: { rateLimit: GUILD_LIST_RATE_LIMIT } }, () => ({ ok: true }));
+  app.get('/api/auth/*', () => ({ ok: true }));
   app.get('/health', () => ({ ok: true }));
   return app;
 }
@@ -100,9 +114,84 @@ describe('rate limiting', () => {
     expect(await status(instance, '/api/guilds', { 'x-user': BOB })).toBe(200);
   });
 
+  it('lets one dashboard view fan out into dozens of reads without a refusal', async () => {
+    const instance = await build();
+    const person = { 'x-user': ALICE };
+    for (let i = 0; i < 40; i++) expect(await status(instance, '/api/guilds', person)).toBe(200);
+  });
+
+  it('gives reads a larger budget than writes', async () => {
+    expect(READ_RATE_LIMIT_MAX).toBeGreaterThan(WRITE_RATE_LIMIT_MAX);
+    const instance = await build();
+    const person = { 'x-user': ALICE };
+    const post = async () =>
+      (await instance.inject({ method: 'POST', url: '/api/things', headers: person })).statusCode;
+    for (let i = 0; i < WRITE_RATE_LIMIT_MAX; i++) expect(await post()).toBe(200);
+    expect(await post()).toBe(429);
+    // Reads of the same person are still served.
+    expect(await status(instance, '/api/things', person)).toBe(200);
+  });
+
+  it('reports a refused request with the account, the route pattern and no query string', async () => {
+    const events: RateLimitedEvent[] = [];
+    const instance = await build({ max: 1, onLimited: (event) => events.push(event) });
+    const person = { 'x-user': ALICE };
+    await status(instance, '/api/things?code=secret-value', person);
+    expect(await status(instance, '/api/things?code=secret-value', person)).toBe(429);
+    expect(events).toEqual([{ method: 'GET', route: '/api/things', key: `user:${ALICE}` }]);
+    expect(JSON.stringify(events)).not.toContain('secret-value');
+  });
+
+  it('logs only the first refusal of a key per window', async () => {
+    const events: RateLimitedEvent[] = [];
+    const instance = await build({ max: 1, onLimited: (event) => events.push(event) });
+    const person = { 'x-user': ALICE };
+    await status(instance, '/api/things', person);
+    for (let i = 0; i < 5; i++) expect(await status(instance, '/api/things', person)).toBe(429);
+    expect(events).toHaveLength(1);
+    await status(instance, '/api/things', { 'x-user': BOB });
+    expect(await status(instance, '/api/things', { 'x-user': BOB })).toBe(429);
+    expect(events).toHaveLength(2);
+  });
+
+  it('keeps the write budget on sign-in routes even for GET', async () => {
+    const instance = await build();
+    const person = { 'x-user': ALICE };
+    for (let i = 0; i < WRITE_RATE_LIMIT_MAX; i++) {
+      expect(await status(instance, '/api/auth/callback/discord?code=x', person)).toBe(200);
+    }
+    expect(await status(instance, '/api/auth/callback/discord?code=x', person)).toBe(429);
+  });
+
   it('never throttles the health probes', async () => {
     const instance = await build({ max: 1 });
     for (let i = 0; i < 5; i++) expect(await status(instance, '/health')).toBe(200);
+  });
+});
+
+describe('createRefusalLogThrottle', () => {
+  it('lets a key through again once its window has passed', () => {
+    let clock = 0;
+    const allow = createRefusalLogThrottle(() => clock, 1000, 10);
+    expect(allow('a')).toBe(true);
+    expect(allow('a')).toBe(false);
+    clock = 999;
+    expect(allow('a')).toBe(false);
+    clock = 1000;
+    expect(allow('a')).toBe(true);
+  });
+
+  it('stays bounded by dropping the oldest key when full', () => {
+    let clock = 0;
+    const allow = createRefusalLogThrottle(() => clock, 1000, 2);
+    expect(allow('a')).toBe(true);
+    clock = 1;
+    expect(allow('b')).toBe(true);
+    clock = 2;
+    expect(allow('c')).toBe(true);
+    // "a" was evicted to make room, so it is logged again; "c" is still remembered.
+    expect(allow('a')).toBe(true);
+    expect(allow('c')).toBe(false);
   });
 });
 
