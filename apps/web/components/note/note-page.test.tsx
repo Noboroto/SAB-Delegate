@@ -104,7 +104,11 @@ describe('NotePage', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Thêm ghi chú' }));
     const dialog = await screen.findByRole('dialog');
     await userEvent.click(within(dialog).getByRole('button', { name: 'Lưu ghi chú' }));
-    expect((await within(dialog).findAllByText('Mục này không được để trống.')).length).toBe(3);
+    // AntD validates the fields one after another; under load the first match
+    // can land before the third message renders, so wait for all three.
+    await waitFor(() =>
+      expect(within(dialog).getAllByText('Mục này không được để trống.')).toHaveLength(3),
+    );
     expect(writes()).toHaveLength(0);
   });
 
