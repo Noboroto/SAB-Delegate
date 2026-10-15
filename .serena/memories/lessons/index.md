@@ -22,6 +22,7 @@
 - `mem:lessons/process/agent-orchestration` — mẫu prompt subagent (no test runs, lint+typecheck bắt buộc), cấm kill/compose down, chỉ orchestrator ghi git/memory, nhịp wave, leo thang sau 3 vòng sonnet, verify trình duyệt do orchestrator làm.
 - `mem:lessons/process/verification-evidence` — test xanh ≠ hành vi đúng, `done` phải có caller, đọc lại trạng thái đích, live-verify đường thất bại, mệnh đề phủ định phải kiểm chữ giới hạn, design vs measured.
 - `mem:lessons/process/review-and-decisions` — 4 lăng kính reviewer theo loại lỗi, reviewer UI/UX + responsive, xét toàn pipeline, gom xung đột cho user quyết trước, copy-first từ JudgeHub/Leaderboard, AGENTS.md không chép số đo.
+- `mem:lessons/deploy/verify-running-commit` — đo 15/10: push main xong ≠ deploy xong (2 lần fail im lặng); hỏi phiên Coolify commit đang chạy; asset đuôi mới phải thêm glob vào nest-cli.json.
 - `mem:lessons/process/heavy-lock-deadlock-judgehub` — đo 15/10: hook SAB và `locked.sh` JudgeHub (sab_priority) chờ nhau vô hạn; gỡ bằng tự giữ khoá + `CC_HEAVY_OWNER`.
 - `mem:lessons/process/heavy-work-additions` — bổ sung khoá heavy: poll foreground/nhả trước khi chờ, kiểm owner line + load, ESLint một luồng, cổng bận/registry, dev server mồ côi, ENOSPC do `.next`, vòng chờ nền hỏng.
 - `mem:lessons/git-hooks/hook-design` — hook phải executable + hooksPath, husky `sh -e`/bash 3.2, thứ tự prettier→eslint→typecheck→knip→vitest, trần 29 file, hook test working tree, commit/push vượt 10 phút, `TEST_REQUIRE_DB`, commit-msg chặn attribution AI.

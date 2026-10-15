@@ -1,0 +1,5 @@
+# Deploy: verify the running commit, not the push (measured 2026-10-15)
+
+- `git push main` exiting 0 says nothing about the deploy. 2b25848 and 3c03384 both FAILED in Coolify while this session reported them "deployed"; prod silently stayed on 764b9b8 for ~1 h. **How**: after every push, ask the Coolify session (SendMessage to "Coolify") for the latest `application_deployment_queues` status and the commit of the running sab-server/sab-web containers; only then call it deployed.
+- Cause of both failures: `apps/server/nest-cli.json` `compilerOptions.assets` copies by extension glob (`../assets/*.json`, `*.txt`, now `*.tsv`). A new asset with a new extension is silently NOT emitted, and the Dockerfile `test -s dist/assets/<file>` assert fails with a bare "exit code: 1" (no message in the build log). **How**: when adding an asset, check its extension is globbed, and run `nest build` locally + `ls dist/assets` before pushing.
+- The Coolify Discord channel (#docker) posts "Deployment failed" + disk alerts; disk at 81% was unrelated (19 GB free).
