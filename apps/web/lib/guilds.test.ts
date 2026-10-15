@@ -13,8 +13,25 @@ describe('getGuilds', () => {
       (_path: string, { parser }: { parser: { parse(x: unknown): unknown } }) =>
         Promise.resolve(parser.parse([{ id: '1'.repeat(18), name: 'A', icon: null, extra: 1 }])),
     );
-    await expect(getGuilds()).resolves.toEqual([{ id: '1'.repeat(18), name: 'A', icon: null }]);
+    await expect(getGuilds()).resolves.toEqual([
+      { id: '1'.repeat(18), name: 'A', icon: null, botPresent: true, invite: null },
+    ]);
     expect(fetchGuilds.mock.calls[0]?.[0]).toBe('/api/guilds');
+  });
+});
+
+describe('getGuilds with a server the bot is not in', () => {
+  it('keeps the flag and the invite data the server sent', async () => {
+    const invite = { clientId: '3'.repeat(18), permissions: '8' };
+    fetchGuilds.mockImplementation(
+      (_path: string, { parser }: { parser: { parse(x: unknown): unknown } }) =>
+        Promise.resolve(
+          parser.parse([{ id: '2'.repeat(18), name: 'B', icon: null, botPresent: false, invite }]),
+        ),
+    );
+    await expect(getGuilds()).resolves.toEqual([
+      { id: '2'.repeat(18), name: 'B', icon: null, botPresent: false, invite },
+    ]);
   });
 });
 

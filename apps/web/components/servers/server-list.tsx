@@ -3,7 +3,7 @@
 import { Avatar, Button, Card, Col, Row } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import type { GuildPickerItem } from '@sab/shared';
+import { buildBotInviteUrl, type GuildPickerItem } from '@sab/shared';
 import { guildIconUrl } from '@/lib/discord-icon';
 
 export function ServerList({ guilds }: { guilds: readonly GuildPickerItem[] }) {
@@ -21,11 +21,28 @@ export function ServerList({ guilds }: { guilds: readonly GuildPickerItem[] }) {
               </Avatar>
               <strong style={{ overflowWrap: 'anywhere' }}>{guild.name}</strong>
             </div>
-            <Link href={`/servers/${guild.id}`}>
-              <Button type="primary" block>
-                {t('open')}
-              </Button>
-            </Link>
+            {guild.botPresent ? (
+              <Link href={`/servers/${guild.id}`}>
+                <Button type="primary" block>
+                  {t('open')}
+                </Button>
+              </Link>
+            ) : (
+              <>
+                <p style={{ margin: '0 0 12px' }}>{t('botMissing')}</p>
+                {guild.invite !== null && (
+                  <Button
+                    type="primary"
+                    block
+                    href={buildBotInviteUrl({ ...guild.invite, guildId: guild.id })}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {t('invite')}
+                  </Button>
+                )}
+              </>
+            )}
           </Card>
         </Col>
       ))}

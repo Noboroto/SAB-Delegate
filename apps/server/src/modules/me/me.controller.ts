@@ -1,4 +1,4 @@
-import { Controller, Get, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Inject, Req, UseGuards } from '@nestjs/common';
 import { RouteConfig } from '@nestjs/platform-fastify';
 import {
   ErrorCode,
@@ -8,6 +8,8 @@ import {
   type GuildPickerItem,
   type Me,
 } from '@sab/shared';
+import { REST_SETTINGS } from '../../auth/better-auth.js';
+import type { RestSettings } from '../../config/env.js';
 import {
   Principal,
   type PrincipalRequest,
@@ -26,6 +28,7 @@ export class MeController {
   constructor(
     private readonly sessions: SessionService,
     private readonly access: GuildAccessService,
+    @Inject(REST_SETTINGS) private readonly settings: Pick<RestSettings, 'discordClientId'>,
   ) {}
 
   @Get('me')
@@ -34,8 +37,9 @@ export class MeController {
   }
 
   /**
-   * The server picker: servers the caller may manage where the bot is. Only a
-   * convenience filter; each server route checks the permission again.
+   * The server picker: servers the caller may manage, with and without the bot
+   * (`botPresent`). Only a convenience filter; each server route checks the
+   * permission again and treats a server without the bot as not found.
    */
   @Get('guilds')
   @RouteConfig({ rateLimit: GUILD_LIST_RATE_LIMIT })
@@ -46,7 +50,11 @@ export class MeController {
     const accessToken = await this.sessions.discordAccessToken(request.headers);
     // A login without the Discord token cannot list servers: sign in again.
     if (accessToken === null) throw new ApiError(ErrorCode.AUTH_REAUTH_REQUIRED);
-    const guilds = await this.access.listManageableGuilds(principal.discordUserId, accessToken);
+    const guilds = await this.access.listManageableGuilds(
+      principal.discordUserId,
+      accessToken,
+      this.settings.discordClientId,
+    );
     return z.array(GuildPickerItemSchema).parse(guilds);
   }
 }

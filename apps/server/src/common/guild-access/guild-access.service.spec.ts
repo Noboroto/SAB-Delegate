@@ -1,6 +1,7 @@
 import 'reflect-metadata';
-import type { GuildPickerItem } from '@sab/shared';
+import { BOT_INVITE_PERMISSIONS } from '@sab/shared';
 import type { Client } from 'discord.js';
+import type { ManageableGuild } from './user-guilds.client.js';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   GUILD_ACCESS_ALLOW_TTL_MS,
@@ -35,7 +36,7 @@ function setup({ bits = MANAGE_GUILD, inGuild = true }: Setup = {}) {
   const client = {
     guilds: { cache: new Map(inGuild ? [[GUILD, guild]] : []) },
   } as unknown as Client;
-  const manageableGuilds = vi.fn((_accessToken: string) => Promise.resolve<GuildPickerItem[]>([]));
+  const manageableGuilds = vi.fn((_accessToken: string) => Promise.resolve<ManageableGuild[]>([]));
   const service = new GuildAccessService(client, {
     manageableGuilds,
   });
@@ -218,7 +219,7 @@ describe('GuildAccessService with the person own server list', () => {
   const oauthToken = () => Promise.resolve<string | null>('token');
   const listed = (ids: string[]) =>
     vi.fn((_accessToken: string) =>
-      Promise.resolve<GuildPickerItem[]>(ids.map((id) => ({ id, name: id, icon: null }))),
+      Promise.resolve<ManageableGuild[]>(ids.map((id) => ({ id, name: id, icon: null }))),
     );
 
   it('refuses a server missing from the list without any member lookup', async () => {
@@ -286,48 +287,60 @@ describe('GuildAccessService.assertManageGuild', () => {
 describe('GuildAccessService.listManageableGuilds', () => {
   const TOKEN = 'token-for-the-picker';
   const OTHER_GUILD = '100000000000000002';
-  const item = (id: string): GuildPickerItem => ({ id, name: `server ${id}`, icon: null });
+  const CLIENT_ID = '300000000000000001';
+  const item = (id: string): ManageableGuild => ({ id, name: `server ${id}`, icon: null });
+  const withBot = (id: string) => ({ ...item(id), botPresent: true, invite: null });
+  const withoutBot = (id: string) => ({
+    ...item(id),
+    botPresent: false,
+    invite: { clientId: CLIENT_ID, permissions: BOT_INVITE_PERMISSIONS },
+  });
+  const list = (service: GuildAccessService, userId = USER) =>
+    service.listManageableGuilds(userId, TOKEN, CLIENT_ID);
 
-  it('keeps the servers the person manages that the bot is also in', async () => {
+  it('lists servers with the bot first, then the ones to invite it to', async () => {
     const { service, manageableGuilds } = setup();
-    manageableGuilds.mockResolvedValue([item(GUILD), item(OTHER_GUILD)]);
-    // The bot knows GUILD only; OTHER_GUILD must not appear, nor reveal anything.
-    expect(await service.listManageableGuilds(USER, TOKEN)).toEqual([item(GUILD)]);
+    manageableGuilds.mockResolvedValue([item(OTHER_GUILD), item(GUILD)]);
+    // The bot knows GUILD only; OTHER_GUILD is flagged and carries the invite data.
+    expect(await list(service)).toEqual([withBot(GUILD), withoutBot(OTHER_GUILD)]);
     expect(manageableGuilds).toHaveBeenCalledWith(TOKEN);
   });
 
-  it('is empty when none of the person servers has the bot', async () => {
+  it('flags every server when none of them has the bot', async () => {
     const { service, manageableGuilds } = setup({ inGuild: false });
     manageableGuilds.mockResolvedValue([item(GUILD)]);
-    expect(await service.listManageableGuilds(USER, TOKEN)).toEqual([]);
+    expect(await list(service)).toEqual([withoutBot(GUILD)]);
+  });
+
+  it('lists nothing for a person who manages no server', async () => {
+    const { service, manageableGuilds } = setup();
+    manageableGuilds.mockResolvedValue([]);
+    expect(await list(service)).toEqual([]);
   });
 
   it('asks Discord once per 30 seconds for one person, and shares concurrent calls', async () => {
     const { service, manageableGuilds } = setup();
     manageableGuilds.mockResolvedValue([item(GUILD)]);
-    await Promise.all([
-      service.listManageableGuilds(USER, TOKEN),
-      service.listManageableGuilds(USER, TOKEN),
-    ]);
-    await service.listManageableGuilds(USER, TOKEN);
+    await Promise.all([list(service), list(service)]);
+    await list(service);
     expect(manageableGuilds).toHaveBeenCalledTimes(1);
 
     vi.advanceTimersByTime(GUILD_ACCESS_ALLOW_TTL_MS + 1);
-    await service.listManageableGuilds(USER, TOKEN);
+    await list(service);
     expect(manageableGuilds).toHaveBeenCalledTimes(2);
   });
 
   it('does not share a list between two people', async () => {
     const { service, manageableGuilds } = setup();
     manageableGuilds.mockResolvedValue([item(GUILD)]);
-    await service.listManageableGuilds(USER, TOKEN);
-    await service.listManageableGuilds(OWNER, TOKEN);
+    await list(service);
+    await list(service, OWNER);
     expect(manageableGuilds).toHaveBeenCalledTimes(2);
   });
 
   it('refuses an id that is not a snowflake without calling Discord', async () => {
     const { service, manageableGuilds } = setup();
-    expect(await service.listManageableGuilds('not-an-id', TOKEN)).toEqual([]);
+    expect(await list(service, 'not-an-id')).toEqual([]);
     expect(manageableGuilds).not.toHaveBeenCalled();
   });
 
@@ -335,7 +348,7 @@ describe('GuildAccessService.listManageableGuilds', () => {
     const { service, manageableGuilds } = setup();
     const failure = new Error('rate limited');
     manageableGuilds.mockRejectedValueOnce(failure).mockResolvedValue([item(GUILD)]);
-    await expect(service.listManageableGuilds(USER, TOKEN)).rejects.toBe(failure);
-    expect(await service.listManageableGuilds(USER, TOKEN)).toEqual([item(GUILD)]);
+    await expect(list(service)).rejects.toBe(failure);
+    expect(await list(service)).toEqual([withBot(GUILD)]);
   });
 });

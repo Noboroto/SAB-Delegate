@@ -19,8 +19,8 @@ import { GuildBar } from './guild-bar';
 const A = '1'.repeat(18);
 const B = '2'.repeat(18);
 const guilds = [
-  { id: A, name: 'Alpha', icon: null },
-  { id: B, name: 'Beta', icon: 'abc123' },
+  { id: A, name: 'Alpha', icon: null, botPresent: true, invite: null },
+  { id: B, name: 'Beta', icon: 'abc123', botPresent: true, invite: null },
 ];
 
 describe('GuildBar', () => {

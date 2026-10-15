@@ -5,14 +5,23 @@ import rateLimit from '@fastify/rate-limit';
 import { Global, Module } from '@nestjs/common';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { Test } from '@nestjs/testing';
-import { ErrorCode, GuildPickerItemSchema, z, type GuildPickerItem } from '@sab/shared';
-import { Client, DiscordAPIError, RateLimitError } from 'discord.js';
+import {
+  BOT_INVITE_PERMISSIONS,
+  BOT_INVITE_PERMISSION_BITS,
+  ErrorCode,
+  GuildPickerItemSchema,
+  z,
+} from '@sab/shared';
+import { Client, DiscordAPIError, PermissionFlagsBits, RateLimitError } from 'discord.js';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { REST_SETTINGS } from '../../auth/better-auth.js';
 import type { PrincipalRequest } from '../../auth/principal.decorator.js';
 import { SessionService } from '../../auth/session.service.js';
 import { ServiceError } from '../../common/errors/service-error.js';
-import { UserGuildsClient } from '../../common/guild-access/user-guilds.client.js';
+import {
+  UserGuildsClient,
+  type ManageableGuild,
+} from '../../common/guild-access/user-guilds.client.js';
 import {
   GUILD_LIST_RATE_LIMIT,
   rateLimitOptions,
@@ -34,7 +43,7 @@ const settings: RestSettings = {
 };
 const ACCESS_TOKEN = `at-${randomBytes(8).toString('hex')}`;
 
-const item = (id: string): GuildPickerItem => ({ id, name: `server ${id}`, icon: null });
+const item = (id: string): ManageableGuild => ({ id, name: `server ${id}`, icon: null });
 
 /** Stands in for the cookie login: `x-user` is the signed-in account, `x-token` the Discord token. */
 const sessions = {
@@ -57,7 +66,7 @@ const sessions = {
     Promise.resolve(typeof headers['x-token'] === 'string' ? headers['x-token'] : null),
 };
 
-const oauth = { manageableGuilds: vi.fn<(token: string) => Promise<GuildPickerItem[]>>() };
+const oauth = { manageableGuilds: vi.fn<(token: string) => Promise<ManageableGuild[]>>() };
 
 @Global()
 @Module({
@@ -136,20 +145,40 @@ describe('GET /api/guilds', () => {
     headers: asUser(randomId(next++), { 'x-token': token }),
   });
 
-  it('lists only the servers the person manages that the bot is also in', async () => {
+  it('lists the servers with the bot first and flags the ones it is not in', async () => {
     oauth.manageableGuilds.mockResolvedValue([
-      item(BOT_GUILD),
       item(NO_BOT_GUILD),
+      item(BOT_GUILD),
       item(BOT_GUILD_2),
     ]);
     const response = await app.inject(picker());
     expect(response.statusCode).toBe(200);
     expect(z.array(GuildPickerItemSchema).parse(response.json())).toEqual([
-      item(BOT_GUILD),
-      item(BOT_GUILD_2),
+      { ...item(BOT_GUILD), botPresent: true, invite: null },
+      { ...item(BOT_GUILD_2), botPresent: true, invite: null },
+      {
+        ...item(NO_BOT_GUILD),
+        botPresent: false,
+        invite: { clientId: settings.discordClientId, permissions: BOT_INVITE_PERMISSIONS },
+      },
     ]);
-    expect(response.body).not.toContain(NO_BOT_GUILD);
     expect(oauth.manageableGuilds).toHaveBeenCalledWith(ACCESS_TOKEN);
+  });
+
+  it('never lists a server the person may not manage, with or without the bot', async () => {
+    // The OAuth client already dropped servers without Manage Server.
+    oauth.manageableGuilds.mockResolvedValue([item(BOT_GUILD)]);
+    const response = await app.inject(picker());
+    expect(response.body).not.toContain(NO_BOT_GUILD);
+    expect(response.body).not.toContain(BOT_GUILD_2);
+  });
+
+  it('invites with exactly the permissions discord.js names for the bot features', () => {
+    const expected = Object.keys(BOT_INVITE_PERMISSION_BITS).reduce(
+      (bits, name) => bits | PermissionFlagsBits[name as keyof typeof PermissionFlagsBits],
+      0n,
+    );
+    expect(BOT_INVITE_PERMISSIONS).toBe(expected.toString());
   });
 
   it('answers 401 without a login and asks to sign in again when the login holds no Discord token', async () => {

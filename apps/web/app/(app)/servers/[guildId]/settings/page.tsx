@@ -18,8 +18,8 @@ export default async function GuildSettingsPage({ params }: GuildParams) {
   const guilds = await getGuildsOrReauth();
   if (guilds === null) return <ReauthState />;
   // The layout has already turned an unknown server into the 404; this keeps the
-  // page from asking the server about an id that is not in the visitor's list.
-  const guild = guilds.find((candidate) => candidate.id === guildId);
+  // page from asking the server about an id that is not in the visitor's list or a server the bot is not in.
+  const guild = guilds.find((candidate) => candidate.id === guildId && candidate.botPresent);
   if (guild === undefined) notFound();
 
   const { settings, botProfile } = await getSettingsPageData(guild.id);

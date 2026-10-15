@@ -4,7 +4,7 @@ import { GuildBar } from '@/components/servers/guild-bar';
 import { getGuildsOrReauth } from '@/lib/guilds';
 
 /**
- * One server's dashboard. A server that is not in the visitor's list is the same
+ * One server's dashboard. A server that is not in the visitor's list, or that the bot is not in, is the same
  * "not found" as one that does not exist: the list is the server's own answer
  * of what they may manage, and every later call is checked again by its guard.
  *
@@ -21,11 +21,13 @@ export default async function GuildLayout({
   const { guildId } = await params;
   const guilds = await getGuildsOrReauth();
   if (guilds === null) return <ReauthState />;
-  if (!guilds.some((guild) => guild.id === guildId)) notFound();
+  // The picker also lists servers the bot is not in; they have no dashboard.
+  const withBot = guilds.filter((guild) => guild.botPresent);
+  if (!withBot.some((guild) => guild.id === guildId)) notFound();
 
   return (
     <>
-      <GuildBar guilds={guilds} currentId={guildId} />
+      <GuildBar guilds={withBot} currentId={guildId} />
       {children}
     </>
   );

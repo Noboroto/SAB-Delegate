@@ -1,10 +1,12 @@
 {
   "title": "Choose a server",
-  "subtitle": "The servers with the SAB bot that you manage.",
+  "subtitle": "The servers you manage. Invite the SAB bot to the ones it is not in yet.",
   "open": "Open dashboard",
+  "invite": "Invite bot",
+  "botMissing": "The bot is not in this server yet.",
   "empty": {
     "title": "No servers yet",
-    "body": "You need the Manage Server permission, and the SAB bot must already be in that server."
+    "body": "You need the Manage Server permission in a server."
   },
   "reauth": {
     "title": "Please sign in again",

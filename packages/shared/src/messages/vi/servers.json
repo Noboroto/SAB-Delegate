@@ -1,10 +1,12 @@
 {
   "title": "Chọn máy chủ",
-  "subtitle": "Các máy chủ có bot SAB mà bạn quản lý.",
+  "subtitle": "Các máy chủ bạn quản lý. Mời bot SAB vào những máy chủ chưa có bot.",
   "open": "Mở bảng điều khiển",
+  "invite": "Mời bot",
+  "botMissing": "Bot chưa ở trong máy chủ này.",
   "empty": {
     "title": "Chưa có máy chủ nào",
-    "body": "Bạn cần quyền Quản lý máy chủ, và bot SAB phải đã ở trong máy chủ đó."
+    "body": "Bạn cần quyền Quản lý máy chủ ở ít nhất một máy chủ."
   },
   "reauth": {
     "title": "Cần đăng nhập lại",

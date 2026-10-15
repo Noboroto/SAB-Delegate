@@ -3,6 +3,9 @@ import { ErrorCode, SnowflakeSchema, canManageGuild, z, type GuildPickerItem } f
 import { DiscordAPIError, REST, Routes } from 'discord.js';
 import { ServiceError } from '../errors/service-error.js';
 
+/** A server from the person's OAuth list, before the bot's presence is known. */
+export type ManageableGuild = Pick<GuildPickerItem, 'id' | 'name' | 'icon'>;
+
 /** Discord returns at most this many entries per page of `GET /users/@me/guilds`. */
 const PAGE_SIZE = 200;
 /** A person in more servers than this sees the first ones only; the cap bounds the REST calls one request can make. */
@@ -29,8 +32,8 @@ export type UserGuildsRest = Pick<REST, 'get'>;
  * expired) is a request to sign in again; a rate limit or any other upstream
  * failure is a Discord error, never an empty list.
  */
-export async function fetchManageableGuilds(rest: UserGuildsRest): Promise<GuildPickerItem[]> {
-  const manageable: GuildPickerItem[] = [];
+export async function fetchManageableGuilds(rest: UserGuildsRest): Promise<ManageableGuild[]> {
+  const manageable: ManageableGuild[] = [];
   let after: string | undefined;
   for (let page = 0; page < MAX_PAGES; page++) {
     const query = new URLSearchParams({ limit: String(PAGE_SIZE) });
@@ -74,7 +77,7 @@ function translateFailure(error: unknown): unknown {
  */
 @Injectable()
 export class UserGuildsClient {
-  manageableGuilds(accessToken: string): Promise<GuildPickerItem[]> {
+  manageableGuilds(accessToken: string): Promise<ManageableGuild[]> {
     const rest = new REST({
       authPrefix: 'Bearer',
       version: '10',

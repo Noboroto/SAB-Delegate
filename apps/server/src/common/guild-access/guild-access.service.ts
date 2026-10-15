@@ -1,10 +1,16 @@
 import { Injectable } from '@nestjs/common';
-import { ErrorCode, SnowflakeSchema, canManageGuild, type GuildPickerItem } from '@sab/shared';
+import {
+  BOT_INVITE_PERMISSIONS,
+  ErrorCode,
+  SnowflakeSchema,
+  canManageGuild,
+  type GuildPickerItem,
+} from '@sab/shared';
 import { Client } from 'discord.js';
 import { LRUCache } from 'lru-cache';
 import { discordErrorCode } from '../../discord/helpers/reply.js';
 import { ServiceError } from '../errors/service-error.js';
-import { UserGuildsClient } from './user-guilds.client.js';
+import { UserGuildsClient, type ManageableGuild } from './user-guilds.client.js';
 
 /** Upper bound on remembered (guild, user) pairs; a flood of new keys evicts the oldest. */
 export const GUILD_ACCESS_CACHE_MAX = 5000;
@@ -107,12 +113,12 @@ export class GuildAccessService {
    * answer, so reloading the picker does not ask Discord each time; only a
    * convenience filter, the guard still checks every request.
    */
-  private readonly userGuilds = new LRUCache<string, GuildPickerItem[]>({
+  private readonly userGuilds = new LRUCache<string, ManageableGuild[]>({
     max: USER_GUILDS_CACHE_MAX,
     ttl: GUILD_ACCESS_ALLOW_TTL_MS,
     perf: { now: () => performance.now() },
   });
-  private readonly userGuildsInFlight = new Map<string, Promise<GuildPickerItem[]>>();
+  private readonly userGuildsInFlight = new Map<string, Promise<ManageableGuild[]>>();
 
   constructor(
     private readonly client: Client,
@@ -177,17 +183,36 @@ export class GuildAccessService {
 
   /**
    * The servers for the picker: the ones the person may manage (from Discord's
-   * list for their login, with permission bits) that the bot is also in. No
-   * request goes through the bot, so a person in many servers cannot spend the
-   * bot's REST budget. Failures of the OAuth call are thrown as they are.
+   * list for their login, with permission bits). Those with the bot come first
+   * and open the dashboard; the others are flagged `botPresent: false` and
+   * carry what the invite link needs. No request goes through the bot, so a
+   * person in many servers cannot spend the bot's REST budget. Failures of the
+   * OAuth call are thrown as they are.
    */
-  async listManageableGuilds(userId: string, accessToken: string): Promise<GuildPickerItem[]> {
+  async listManageableGuilds(
+    userId: string,
+    accessToken: string,
+    clientId: string,
+  ): Promise<GuildPickerItem[]> {
     if (!SnowflakeSchema.safeParse(userId).success) return [];
     const mine = await this.oauthGuildsOf(userId, accessToken);
-    return mine.filter((guild) => this.client.guilds.cache.has(guild.id));
+    const withBot: GuildPickerItem[] = [];
+    const withoutBot: GuildPickerItem[] = [];
+    for (const guild of mine) {
+      if (this.client.guilds.cache.has(guild.id)) {
+        withBot.push({ ...guild, botPresent: true, invite: null });
+      } else {
+        withoutBot.push({
+          ...guild,
+          botPresent: false,
+          invite: { clientId, permissions: BOT_INVITE_PERMISSIONS },
+        });
+      }
+    }
+    return [...withBot, ...withoutBot];
   }
 
-  private oauthGuildsOf(userId: string, accessToken: string): Promise<GuildPickerItem[]> {
+  private oauthGuildsOf(userId: string, accessToken: string): Promise<ManageableGuild[]> {
     const cached = this.userGuilds.get(userId);
     if (cached !== undefined) return Promise.resolve(cached);
     const running = this.userGuildsInFlight.get(userId);
