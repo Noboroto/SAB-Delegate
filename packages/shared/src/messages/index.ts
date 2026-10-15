@@ -20,6 +20,7 @@ import enSystem from './en/system.json';
 import enThread from './en/thread.json';
 import enWeb from './en/web.json';
 import enWordGame from './en/word-game.json';
+import enMiniGame from './en/mini-game.json';
 import enWebCommon from './en/web-common.json';
 import enWebOverview from './en/web-overview.json';
 import enWebSettings from './en/web-settings.json';
@@ -52,6 +53,7 @@ import viSystem from './vi/system.json';
 import viThread from './vi/thread.json';
 import viWeb from './vi/web.json';
 import viWordGame from './vi/word-game.json';
+import viMiniGame from './vi/mini-game.json';
 import viWebCommon from './vi/web-common.json';
 import viWebOverview from './vi/web-overview.json';
 import viWebSettings from './vi/web-settings.json';
@@ -78,6 +80,7 @@ export const MessageNamespaceSchema = z.enum([
   'birthday',
   'note',
   'word-game',
+  'mini-game',
   'schedule',
   'messaging',
   'mention',
@@ -120,6 +123,7 @@ export const MESSAGES = {
     birthday: viBirthday,
     note: viNote,
     'word-game': viWordGame,
+    'mini-game': viMiniGame,
     schedule: viSchedule,
     messaging: viMessaging,
     mention: viMention,
@@ -154,6 +158,7 @@ export const MESSAGES = {
     birthday: enBirthday,
     note: enNote,
     'word-game': enWordGame,
+    'mini-game': enMiniGame,
     schedule: enSchedule,
     messaging: enMessaging,
     mention: enMention,

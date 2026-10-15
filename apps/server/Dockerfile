@@ -72,16 +72,17 @@ ENTRYPOINT ["/bin/sh", "/app/apps/server/scripts/release.sh"]
 FROM gen AS deploy
 COPY apps/server/tsconfig.json apps/server/tsconfig.build.json apps/server/nest-cli.json ./apps/server/
 COPY apps/server/src ./apps/server/src
-# The word dictionary the server reads at runtime; `nest build` copies it to the output assets folder.
+# The word lists the server reads at runtime; `nest build` copies them to the output assets folder.
 COPY apps/server/assets ./apps/server/assets
 # `nest build` directly: the package's `prebuild` regenerates artifacts through
 # root scripts this stage does not carry, and gen already produced them.
-# The two `test`s fail the image build when the dictionary did not reach the
-# output. DictionaryService loads it on the first word, so without them a
-# missing asset would only surface in production, at the first message.
+# The `test`s fail the image build when a word list did not reach the output.
+# The games load them in the background after boot, so without them a missing
+# asset would only surface in production, at the first message.
 RUN cd apps/server && pnpm exec nest build \
-	&& test -f dist/assets/word-dict.json \
-	&& test -s dist/assets/word-dict.json
+	&& test -s dist/assets/word-dict.json \
+	&& test -s dist/assets/viet-words.txt \
+	&& test -s dist/assets/wordle-answers.txt
 # `pnpm deploy`, not `pnpm install` + `pnpm prune --prod`: prune does not support
 # a workspace and silently drops packages that only one member uses. `--prod` is
 # explicit for the same reason as above. `inject-workspace-packages` copies

@@ -4,6 +4,15 @@
   "compilerOptions": {
     "deleteOutDir": true,
     "tsConfigPath": "tsconfig.build.json",
-    "assets": [{ "include": "../assets/*.json", "outDir": "dist/assets" }]
+    "assets": [
+      {
+        "include": "../assets/*.json",
+        "outDir": "dist/assets"
+      },
+      {
+        "include": "../assets/*.txt",
+        "outDir": "dist/assets"
+      }
+    ]
   }
 }

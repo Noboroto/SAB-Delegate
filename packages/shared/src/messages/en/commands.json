@@ -1,20 +1,59 @@
 {
-  "ping": { "description": "Check that the bot is alive and how fast it responds" },
-  "add-poll": { "description": "Add poll choices to a message, or create a new poll message" },
+  "ping": {
+    "description": "Check that the bot is alive and how fast it responds"
+  },
+  "add-poll": {
+    "description": "Add poll choices to a message, or create a new poll message"
+  },
   "attendance-by-role": {
     "description": "Check which members with a role are present in a voice channel"
   },
-  "create-activity": { "description": "Create the roles and channels an activity needs" },
-  "bot-message": { "description": "Send, copy, edit or schedule messages as the bot" },
-  "scheduler": { "description": "List and cancel scheduled messages" },
-  "birthday": { "description": "Manage birthday wishes for members" },
-  "set": { "description": "Set configurations for this server" },
-  "word": { "description": "Word-chain game" },
-  "note": { "description": "Manage notes by role" },
-  "get": { "description": "Get useful information and settings" },
-  "mention": { "description": "Mention many members by condition" },
-  "bulk-assign": { "description": "Assign or remove a role for many members" },
-  "thread": { "description": "Create, rename or delete threads, or mention everyone in one" },
-  "private-thread": { "description": "Create a private thread for each member" },
-  "purge": { "description": "Purge messages in this channel" }
+  "create-activity": {
+    "description": "Create the roles and channels an activity needs"
+  },
+  "bot-message": {
+    "description": "Send, copy, edit or schedule messages as the bot"
+  },
+  "scheduler": {
+    "description": "List and cancel scheduled messages"
+  },
+  "birthday": {
+    "description": "Manage birthday wishes for members"
+  },
+  "set": {
+    "description": "Set configurations for this server"
+  },
+  "word": {
+    "description": "Word-chain game"
+  },
+  "note": {
+    "description": "Manage notes by role"
+  },
+  "get": {
+    "description": "Get useful information and settings"
+  },
+  "mention": {
+    "description": "Mention many members by condition"
+  },
+  "bulk-assign": {
+    "description": "Assign or remove a role for many members"
+  },
+  "thread": {
+    "description": "Create, rename or delete threads, or mention everyone in one"
+  },
+  "private-thread": {
+    "description": "Create a private thread for each member"
+  },
+  "purge": {
+    "description": "Purge messages in this channel"
+  },
+  "game": {
+    "description": "Set up the channel games: counting, Vietnamese scramble, Wordle"
+  },
+  "leaderboard": {
+    "description": "Show the leaderboard of a game"
+  },
+  "help": {
+    "description": "Show the rules and set-up of a game"
+  }
 }

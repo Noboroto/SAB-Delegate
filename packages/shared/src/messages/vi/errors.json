@@ -15,6 +15,7 @@
   "DISCORD_MISSING_PERMISSIONS": "Bot không có quyền {permission, select, view {xem kênh này} send {gửi tin nhắn trong kênh này} other {dùng kênh này}}. Hãy cấp quyền đó cho bot rồi thử lại.",
   "DISCORD_CHANNEL_NOT_FOUND": "Không tìm thấy kênh, hoặc bot không truy cập được kênh đó.",
   "DISCORD_MESSAGE_NOT_FOUND": "Không tìm thấy tin nhắn.",
+  "CHANNEL_IN_USE": "Kênh này đang dùng cho một trò chơi khác. Chọn kênh khác nhé.",
   "VALIDATION_FAILED": "Một số giá trị không hợp lệ. Hãy kiểm tra lại những gì đã nhập.",
   "SCHEDULE_LIMIT_REACHED": "Server này đã đạt số tin nhắn hẹn giờ tối đa đang chờ. Hãy huỷ bớt hoặc chờ chúng được gửi.",
   "SCHEDULE_TOO_FAR": "Thời điểm này quá xa. Hãy chọn thời điểm sớm hơn.",

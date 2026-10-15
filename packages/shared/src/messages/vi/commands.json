@@ -1,22 +1,59 @@
 {
-  "ping": { "description": "Kiểm tra bot có đang hoạt động và phản hồi nhanh đến đâu" },
+  "ping": {
+    "description": "Kiểm tra bot có đang hoạt động và phản hồi nhanh đến đâu"
+  },
   "add-poll": {
     "description": "Thêm lựa chọn bình chọn vào một tin nhắn hoặc tạo tin nhắn mới"
   },
   "attendance-by-role": {
     "description": "Điểm danh các thành viên có một vai trò trong kênh thoại"
   },
-  "create-activity": { "description": "Tạo các vai trò và kênh cần cho một hoạt động" },
-  "bot-message": { "description": "Gửi, sao chép, sửa hoặc hẹn giờ tin nhắn bằng bot" },
-  "scheduler": { "description": "Xem và huỷ các tin nhắn đã hẹn giờ" },
-  "birthday": { "description": "Quản lý lời chúc sinh nhật cho thành viên" },
-  "set": { "description": "Cài đặt cấu hình cho máy chủ này" },
-  "word": { "description": "Trò chơi nối chữ" },
-  "note": { "description": "Quản lý ghi chú theo vai trò" },
-  "get": { "description": "Lấy thông tin và cấu hình hữu ích" },
-  "mention": { "description": "Nhắc nhiều thành viên theo điều kiện" },
-  "bulk-assign": { "description": "Gán hoặc gỡ vai trò cho nhiều thành viên" },
-  "thread": { "description": "Tạo, đổi tên hoặc xoá luồng, hoặc nhắc mọi người trong một luồng" },
-  "private-thread": { "description": "Tạo một luồng riêng cho từng thành viên" },
-  "purge": { "description": "Xoá hàng loạt tin nhắn trong kênh này" }
+  "create-activity": {
+    "description": "Tạo các vai trò và kênh cần cho một hoạt động"
+  },
+  "bot-message": {
+    "description": "Gửi, sao chép, sửa hoặc hẹn giờ tin nhắn bằng bot"
+  },
+  "scheduler": {
+    "description": "Xem và huỷ các tin nhắn đã hẹn giờ"
+  },
+  "birthday": {
+    "description": "Quản lý lời chúc sinh nhật cho thành viên"
+  },
+  "set": {
+    "description": "Cài đặt cấu hình cho máy chủ này"
+  },
+  "word": {
+    "description": "Trò chơi nối chữ"
+  },
+  "note": {
+    "description": "Quản lý ghi chú theo vai trò"
+  },
+  "get": {
+    "description": "Lấy thông tin và cấu hình hữu ích"
+  },
+  "mention": {
+    "description": "Nhắc nhiều thành viên theo điều kiện"
+  },
+  "bulk-assign": {
+    "description": "Gán hoặc gỡ vai trò cho nhiều thành viên"
+  },
+  "thread": {
+    "description": "Tạo, đổi tên hoặc xoá luồng, hoặc nhắc mọi người trong một luồng"
+  },
+  "private-thread": {
+    "description": "Tạo một luồng riêng cho từng thành viên"
+  },
+  "purge": {
+    "description": "Xoá hàng loạt tin nhắn trong kênh này"
+  },
+  "game": {
+    "description": "Cài đặt các trò chơi trong kênh: đếm số, Vua Tiếng Việt, Wordle"
+  },
+  "leaderboard": {
+    "description": "Xem bảng xếp hạng của một trò chơi"
+  },
+  "help": {
+    "description": "Xem luật và cách cài một trò chơi"
+  }
 }

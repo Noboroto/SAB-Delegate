@@ -1,0 +1,10 @@
+wordle-answers.txt: the five-letter words of google-10000-english-usa-no-swears.txt
+(https://github.com/first20hours/google-10000-english), kept only when they are also in
+word-dict.json and in the npm package word-list@4.1.0 (MIT), with plurals, names and
+unsuitable words removed by hand.
+
+The source list is derived from the Google Web Trillion Word Corpus (Brants & Franz,
+distributed by the Linguistic Data Consortium), subsets by Peter Norvig, cleanup by
+Josh Kaufman. Its licence permits educational and personal/research use under the LDC
+licence, Norvig's MIT licence for his contributions, and fair use; it advises against
+commercial use. This bot is a non-commercial community bot.

@@ -1,0 +1,72 @@
+/// Where a game is played. CHECK (migration `_mini_games`): `channelId` is a
+/// snowflake. A channel hosts one game at most (`channelId` unique), and a game
+/// one channel per guild.
+model GameChannel {
+  id        String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  guildId   String   @db.Uuid
+  game      MiniGame
+  channelId String   @unique
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@unique([guildId, game])
+}
+
+/// CHECK (migration `_mini_games`): `count` and `best` are >= 0.
+model CountingState {
+  id         String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  guildId    String   @unique @db.Uuid
+  count      Int      @default(0)
+  lastUserId String   @default("")
+  best       Int      @default(0)
+  updatedAt  DateTime @updatedAt @db.Timestamptz(3)
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+}
+
+/// The puzzle in play. `round` grows on every new puzzle, so a move judged
+/// against an older puzzle cannot claim the current one.
+/// CHECK (migration `_mini_games`): `answer` and `puzzle` are non-empty, `round` >= 0.
+model ScrambleState {
+  id        String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  guildId   String   @unique @db.Uuid
+  answer    String
+  puzzle    String
+  round     Int      @default(0)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+}
+
+/// The board in play; `guesses` holds the words tried so far, in order.
+/// CHECK (migration `_mini_games`): `answer` is five lower-case letters, at most
+/// six guesses, `round` >= 0; `guesses` is NOT NULL.
+model WordleState {
+  id         String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  guildId    String   @unique @db.Uuid
+  answer     String
+  guesses    String[]
+  lastUserId String   @default("")
+  round      Int      @default(0)
+  updatedAt  DateTime @updatedAt @db.Timestamptz(3)
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+}
+
+/// All-time points of a player in one game of one guild. `userId` is the
+/// player's Discord snowflake. CHECK (migration `_mini_games`): `points` >= 0,
+/// `userId` is a snowflake.
+model GameScore {
+  id        String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  guildId   String   @db.Uuid
+  game      MiniGame
+  userId    String
+  points    Int      @default(0)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@unique([guildId, game, userId])
+  @@index([guildId, game, points(sort: Desc)])
+}

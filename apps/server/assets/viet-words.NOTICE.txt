@@ -1,0 +1,5 @@
+viet-words.txt: the entries of Viet74K.txt from https://github.com/duyet/vietnamese-wordlist
+(compiled by Ho Ngoc Duc) that are two or three lower-case syllables of Vietnamese letters
+with 4-12 letters in all, normalised to NFC and de-duplicated.
+
+Licensed under the GNU General Public License version 2; see viet-words.LICENSE.txt.

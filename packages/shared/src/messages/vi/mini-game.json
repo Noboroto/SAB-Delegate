@@ -1,0 +1,77 @@
+{
+  "commands": {
+    "set": {
+      "description": "Chọn kênh chơi cho một trò và bắt đầu ván mới"
+    },
+    "reset": {
+      "description": "Bắt đầu lại ván của một trò, giữ nguyên kênh chơi"
+    },
+    "skip": {
+      "description": "Lộ đáp án câu đang chơi và ra câu mới"
+    },
+    "gameOption": {
+      "description": "Trò chơi"
+    },
+    "channelOption": {
+      "description": "Kênh chơi"
+    }
+  },
+  "names": {
+    "WORD_CHAIN": "Nối từ",
+    "COUNTING": "Đếm số",
+    "SCRAMBLE": "Vua Tiếng Việt",
+    "WORDLE": "Wordle"
+  },
+  "confirmation": "Đã chọn {channel} làm kênh chơi {game}",
+  "notConfigured": "Chưa chọn kênh chơi {game}. Dùng `/game set` trước nhé",
+  "channelTaken": "Kênh này đang dùng cho trò {game}. Chọn kênh khác nhé",
+  "skipped": "Đáp án là **{answer}**",
+  "counting": {
+    "start": "Bắt đầu đếm! Số đầu tiên là **1**",
+    "wrongNumber": "Sai rồi, số tiếp theo phải là **{expected}**. Đếm lại từ **1** nhé! Kỷ lục: **{best}**",
+    "sameUser": "Không được đếm hai lần liên tiếp. Đếm lại từ **1** nhé! Kỷ lục: **{best}**"
+  },
+  "scramble": {
+    "title": "🔤 Vua Tiếng Việt",
+    "prompt": "Sắp xếp các chữ cái thành một từ có nghĩa",
+    "syllables": "{count} tiếng",
+    "solved": "🎉 {user} đoán đúng: **{answer}**"
+  },
+  "wordle": {
+    "start": "🟩 Ô chữ Wordle mới! Đoán một từ tiếng Anh {length} chữ cái, cả kênh có {max} lượt",
+    "notInList": "Từ này không có trong từ điển, không tính lượt",
+    "sameUser": "Bạn vừa đoán lượt trước, nhường người khác nhé",
+    "alreadyGuessed": "Từ này đã được đoán rồi",
+    "progress": "Lượt {count}/{max}",
+    "solved": "🎉 {user} đoán đúng **{answer}** ở lượt {count}/{max}",
+    "lost": "Hết lượt! Đáp án là **{answer}**"
+  },
+  "leaderboard": {
+    "title": "🏆 Bảng xếp hạng {game}",
+    "row": "{rank}. {user}: {points} điểm",
+    "empty": "Chưa có ai ghi điểm",
+    "you": "Hạng của bạn: {rank} ({points} điểm)",
+    "youNone": "Bạn chưa có điểm"
+  },
+  "help": {
+    "WORD_CHAIN": {
+      "rules": "Mỗi người gửi một từ tiếng Anh bắt đầu bằng chữ cái cuối của từ trước. Không lặp từ, không nối hai lần liên tiếp. Mỗi từ được nhận +1 điểm.",
+      "setup": "`/word set channel:#kênh` để chọn kênh (tuỳ chọn `max-words`), `/word reset` để chơi lại."
+    },
+    "COUNTING": {
+      "rules": "Cả kênh đếm 1, 2, 3… mỗi tin một số. Không ai đếm hai lần liên tiếp. Sai số hoặc đếm liên tiếp thì đếm lại từ 1, kỷ lục vẫn giữ. Mỗi số đúng +1 điểm. Tin không phải số được bỏ qua.",
+      "setup": "`/game set game:Đếm số channel:#kênh`, `/game reset game:Đếm số` để đếm lại từ 1."
+    },
+    "SCRAMBLE": {
+      "rules": "Bot đưa các chữ cái bị xáo của một từ tiếng Việt 2–3 tiếng. Ai gửi đúng một từ có nghĩa dùng đủ các chữ cái đó trước thì được +1 điểm, rồi bot ra câu mới. Đoán sai không bị trừ, bot không trả lời.",
+      "setup": "`/game set game:Vua Tiếng Việt channel:#kênh`, `/game skip game:Vua Tiếng Việt` để lộ đáp án và đổi câu."
+    },
+    "WORDLE": {
+      "rules": "Cả kênh cùng giải một ô chữ tiếng Anh 5 chữ cái trong 6 lượt; không ai đoán hai lượt liên tiếp. 🟩 đúng chỗ, 🟨 có trong từ nhưng sai chỗ, ⬛ không có. Ai đoán trúng +1 điểm. Hết lượt thì lộ đáp án và sang ô mới.",
+      "setup": "`/game set game:Wordle channel:#kênh`, `/game skip game:Wordle` để lộ đáp án và đổi ô."
+    }
+  },
+  "leaderboardHint": "Xem điểm: `/leaderboard game:…`",
+  "rulesTitle": "Luật chơi",
+  "setupTitle": "Cách cài"
+}

@@ -1,0 +1,77 @@
+{
+  "commands": {
+    "set": {
+      "description": "Pick the channel of a game and start a new round"
+    },
+    "reset": {
+      "description": "Start a game over, keeping its channel"
+    },
+    "skip": {
+      "description": "Reveal the answer of the current puzzle and start a new one"
+    },
+    "gameOption": {
+      "description": "The game"
+    },
+    "channelOption": {
+      "description": "The channel to play in"
+    }
+  },
+  "names": {
+    "WORD_CHAIN": "Word chain",
+    "COUNTING": "Counting",
+    "SCRAMBLE": "Vietnamese scramble",
+    "WORDLE": "Wordle"
+  },
+  "confirmation": "{channel} is now the {game} channel",
+  "notConfigured": "No {game} channel yet. Use `/game set` first",
+  "channelTaken": "This channel already hosts {game}. Pick another one",
+  "skipped": "The answer was **{answer}**",
+  "counting": {
+    "start": "Start counting! The first number is **1**",
+    "wrongNumber": "Wrong, the next number was **{expected}**. Start again from **1**! Record: **{best}**",
+    "sameUser": "No counting twice in a row. Start again from **1**! Record: **{best}**"
+  },
+  "scramble": {
+    "title": "🔤 Vietnamese scramble",
+    "prompt": "Rearrange the letters into a Vietnamese word",
+    "syllables": "{count} syllables",
+    "solved": "🎉 {user} got it: **{answer}**"
+  },
+  "wordle": {
+    "start": "🟩 New Wordle! Guess an English word of {length} letters; the channel has {max} guesses",
+    "notInList": "Not in the word list; no guess used",
+    "sameUser": "You guessed last; let someone else go",
+    "alreadyGuessed": "That word was already guessed",
+    "progress": "Guess {count}/{max}",
+    "solved": "🎉 {user} solved **{answer}** in {count}/{max}",
+    "lost": "Out of guesses! The answer was **{answer}**"
+  },
+  "leaderboard": {
+    "title": "🏆 {game} leaderboard",
+    "row": "{rank}. {user}: {points} points",
+    "empty": "Nobody has scored yet",
+    "you": "Your rank: {rank} ({points} points)",
+    "youNone": "You have no points yet"
+  },
+  "help": {
+    "WORD_CHAIN": {
+      "rules": "Each player sends an English word starting with the last letter of the previous one. No repeated words, nobody twice in a row. Each accepted word scores 1 point.",
+      "setup": "`/word set channel:#channel` picks the channel (optional `max-words`); `/word reset` starts over."
+    },
+    "COUNTING": {
+      "rules": "The channel counts 1, 2, 3… one number per message, nobody twice in a row. A wrong number or a second number in a row starts over from 1; the record stays. Each right number scores 1 point. Messages that are not numbers are ignored.",
+      "setup": "`/game set game:Counting channel:#channel`; `/game reset game:Counting` starts over from 1."
+    },
+    "SCRAMBLE": {
+      "rules": "The bot shows the shuffled letters of a Vietnamese word of 2–3 syllables. The first to send a real word using exactly those letters scores 1 point and gets a new puzzle. Wrong guesses cost nothing and get no answer.",
+      "setup": "`/game set game:Vietnamese scramble channel:#channel`; `/game skip game:Vietnamese scramble` reveals the answer and gives a new one."
+    },
+    "WORDLE": {
+      "rules": "The channel solves one 5-letter English word together in 6 guesses; nobody guesses twice in a row. 🟩 right spot, 🟨 in the word elsewhere, ⬛ not in the word. Solving it scores 1 point. Out of guesses reveals the answer and starts a new board.",
+      "setup": "`/game set game:Wordle channel:#channel`; `/game skip game:Wordle` reveals the answer and starts a new board."
+    }
+  },
+  "leaderboardHint": "Scores: `/leaderboard game:…`",
+  "rulesTitle": "Rules",
+  "setupTitle": "Set-up"
+}

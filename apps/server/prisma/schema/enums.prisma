@@ -29,3 +29,11 @@ enum ApiKeyMode {
   READ
   WRITE
 }
+
+/// The channel games and the word chain, as the leaderboard names them.
+enum MiniGame {
+  WORD_CHAIN
+  COUNTING
+  SCRAMBLE
+  WORDLE
+}

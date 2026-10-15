@@ -51,6 +51,7 @@ const PARAM_KEYS: ReadonlySet<string> = new Set([
   'mode',
   'scopes',
   'keyPrefix',
+  'game',
 ]);
 
 const MAX_PARAM_DEPTH = 4;

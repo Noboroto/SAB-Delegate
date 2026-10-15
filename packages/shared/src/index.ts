@@ -157,6 +157,23 @@ export {
   type WordSubmitResult,
 } from './schemas/word-game.js';
 export {
+  ChannelGameSchema,
+  GameMoveInputSchema,
+  LEADERBOARD_SIZE,
+  LeaderboardRowSchema,
+  LeaderboardSchema,
+  MiniGame,
+  MiniGameSchema,
+  SkippableGameSchema,
+  WORDLE_MAX_GUESSES,
+  WORDLE_WORD_LENGTH,
+  type ChannelGame,
+  type GameMoveInput,
+  type Leaderboard,
+  type LeaderboardRow,
+  type SkippableGame,
+} from './schemas/mini-game.js';
+export {
   ALLOWED_MENTIONS_ALL,
   ALLOWED_MENTIONS_NONE,
   AllowedMentionsSchema,

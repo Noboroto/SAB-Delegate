@@ -15,6 +15,11 @@ model Guild {
   birthdayWishes BirthdayWishUsage[]
   notes          NoteEntry[]
   wordGame       WordGameState?
+  gameChannels   GameChannel[]
+  counting       CountingState?
+  scramble       ScrambleState?
+  wordle         WordleState?
+  gameScores     GameScore[]
   scheduled      ScheduledMessage[]
   auditLogs      AuditLog[]
 }
