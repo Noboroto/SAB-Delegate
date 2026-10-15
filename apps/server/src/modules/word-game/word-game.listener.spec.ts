@@ -1,11 +1,13 @@
 import 'reflect-metadata';
 import { Logger } from '@nestjs/common';
 import { MESSAGES, WordStatus, type WordSubmitResult } from '@sab/shared';
+import { MessageFlags } from 'discord.js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { DiscordReadyService } from '../../discord/discord-ready.service.js';
 import type { GuildLocaleService } from '../../i18n/guild-locale.service.js';
 import { WordGameListener } from './word-game.listener.js';
 import type { WordGameService } from './word-game.service.js';
+import type { WordDefinition, WordDefinitionService } from './word-definition.service.js';
 
 const GUILD = '100000000000000001';
 const CHANNEL = '200000000000000001';
@@ -24,14 +26,21 @@ const outcome = (overrides: Partial<WordSubmitResult>): WordSubmitResult => ({
 });
 
 function build(
-  options: { result?: WordSubmitResult; locale?: 'vi' | 'en'; stopping?: boolean } = {},
+  options: {
+    result?: WordSubmitResult;
+    locale?: 'vi' | 'en';
+    stopping?: boolean;
+    definition?: WordDefinition;
+  } = {},
 ) {
   const submitWord = vi.fn().mockResolvedValue(options.result ?? outcome({}));
   const resolve = vi.fn().mockResolvedValue(options.locale ?? 'vi');
+  const define = vi.fn().mockResolvedValue(options.definition ?? null);
   const listener = new WordGameListener(
     { submitWord } as unknown as WordGameService,
     { resolve } as unknown as GuildLocaleService,
     { isStopping: () => options.stopping ?? false } as unknown as DiscordReadyService,
+    { define } as unknown as WordDefinitionService,
   );
   const message = (overrides: Record<string, unknown> = {}) => ({
     guildId: GUILD,
@@ -42,7 +51,7 @@ function build(
     reply: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   });
-  return { listener, submitWord, resolve, message };
+  return { listener, submitWord, resolve, define, message };
 }
 
 /** The reply pings only the player it answers, whatever the client-wide default is. */
@@ -69,13 +78,69 @@ describe('WordGameListener', () => {
     expect(stopping.submitWord).not.toHaveBeenCalled();
   });
 
-  it('puts a check mark on an accepted word, with no reply and no language lookup', async () => {
-    const { listener, message, resolve } = build();
-    const incoming = message();
+  it('puts a check mark on an accepted word, with no reply when no meaning is found', async () => {
+    const { listener, message, resolve, define } = build();
+    const incoming = message({ content: 'Apple' });
     await listener.onMessageCreate([incoming] as never);
     expect(incoming.react).toHaveBeenCalledWith('✅');
+    expect(define).toHaveBeenCalledWith('apple');
     expect(incoming.reply).not.toHaveBeenCalled();
     expect(resolve).not.toHaveBeenCalled();
+  });
+
+  it('replies under an accepted word with its meaning, after the check mark and without a ping', async () => {
+    const { listener, message } = build({
+      definition: {
+        english: { partOfSpeech: 'noun', definition: 'A fruit.', source: 'wiktionary' },
+        vietnamese: { meaning: 'Quả táo.', source: 'wiktionary' },
+      },
+    });
+    const order: string[] = [];
+    const incoming = message({
+      content: 'apple',
+      react: vi.fn(() => {
+        order.push('react');
+        return Promise.resolve();
+      }),
+      reply: vi.fn(() => {
+        order.push('reply');
+        return Promise.resolve();
+      }),
+    });
+    await listener.onMessageCreate([incoming] as never);
+    expect(order).toEqual(['react', 'reply']);
+    expect(incoming.reply).toHaveBeenCalledWith({
+      content: expect.stringContaining('**apple** · *noun* · 🇻🇳 Quả táo.') as unknown,
+      allowedMentions: { parse: [], repliedUser: false },
+      flags: MessageFlags.SuppressEmbeds,
+    });
+  });
+
+  it('drops the meaning when shutdown began during the lookup', async () => {
+    let stopping = false;
+    const { listener, message, define, resolve } = build({
+      definition: { vietnamese: { meaning: 'Quả táo.', source: 'wiktionary' } },
+    });
+    Object.assign(listener, { ready: { isStopping: () => stopping } });
+    define.mockImplementationOnce(() => {
+      stopping = true;
+      return Promise.resolve({ vietnamese: { meaning: 'Quả táo.', source: 'wiktionary' } });
+    });
+    const incoming = message({ content: 'apple' });
+    await listener.onMessageCreate([incoming] as never);
+    expect(incoming.react).toHaveBeenCalledWith('✅');
+    expect(resolve).not.toHaveBeenCalled();
+    expect(incoming.reply).not.toHaveBeenCalled();
+  });
+
+  it('does not throw when the meaning cannot be posted', async () => {
+    const warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    const { listener, message } = build({
+      definition: { vietnamese: { meaning: 'Quả táo.', source: 'machine' } },
+    });
+    const incoming = message({ reply: vi.fn().mockRejectedValue(new Error('Missing Access')) });
+    await expect(listener.onMessageCreate([incoming] as never)).resolves.toBeUndefined();
+    expect(warn).toHaveBeenCalledTimes(1);
   });
 
   it('announces the end of the game on the word that reaches the limit', async () => {

@@ -6,13 +6,14 @@ import { WordGameCommands } from './word-game.commands.js';
 import { WordGameListener } from './word-game.listener.js';
 import { WordGameModule } from './word-game.module.js';
 import { WordGameService } from './word-game.service.js';
+import { DEFINITION_FETCH, WordDefinitionService } from './word-definition.service.js';
 
 // Everything that lives outside the module (the database, the Discord client,
-// the other modules' services) is a stand-in. The dictionary source is the one
-// parameter that is optional on purpose: it must stay unresolved so the
-// service falls back to the bundled asset.
+// the other modules' services) is a stand-in. The dictionary source
+// and the definition fetcher are the parameters that are optional on purpose:
+// they must stay unresolved so the services fall back to their defaults.
 const standIn = (token: unknown): object | undefined =>
-  token === DICTIONARY_SOURCE ? undefined : {};
+  token === DICTIONARY_SOURCE || token === DEFINITION_FETCH ? undefined : {};
 
 describe('WordGameModule', () => {
   it('resolves every provider through the container', async () => {
@@ -23,6 +24,7 @@ describe('WordGameModule', () => {
     expect(moduleRef.get(WordGameService)).toBeInstanceOf(WordGameService);
     expect(moduleRef.get(WordGameListener)).toBeInstanceOf(WordGameListener);
     expect(moduleRef.get(WordGameCommands)).toBeInstanceOf(WordGameCommands);
+    expect(moduleRef.get(WordDefinitionService)).toBeInstanceOf(WordDefinitionService);
     await moduleRef.close();
   });
 

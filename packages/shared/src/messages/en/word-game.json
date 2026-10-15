@@ -22,5 +22,11 @@
     "SAME_AUTHOR": "You played the previous word",
     "SAME_WORD": "This word has already been played",
     "finished": "The game is over: {maxWords} words reached. Reset it to play again"
+  },
+  "definition": {
+    "machineTranslated": "machine translation",
+    "englishLink": "English",
+    "vietnameseLink": "Vietnamese",
+    "oxfordLink": "Oxford"
   }
 }

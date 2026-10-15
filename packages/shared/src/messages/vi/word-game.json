@@ -22,5 +22,11 @@
     "SAME_AUTHOR": "Bạn đã nối từ trước đó",
     "SAME_WORD": "Từ này đã được nối",
     "finished": "Trò chơi kết thúc do đã đạt {maxWords} từ. Hãy reset nếu muốn chơi tiếp nhé"
+  },
+  "definition": {
+    "machineTranslated": "dịch máy",
+    "englishLink": "Anh-Anh",
+    "vietnameseLink": "Anh-Việt",
+    "oxfordLink": "Oxford"
   }
 }

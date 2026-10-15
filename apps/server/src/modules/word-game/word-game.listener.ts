@@ -1,5 +1,6 @@
 import { Logger } from '@nestjs/common';
 import { WordStatus, type WordSubmitResult } from '@sab/shared';
+import { MessageFlags } from 'discord.js';
 import { Context, On, type ContextOf } from 'necord';
 import { DiscordCommands } from '../../discord/decorators/discord-commands.decorator.js';
 import { DiscordReadyService } from '../../discord/discord-ready.service.js';
@@ -7,6 +8,8 @@ import { GuildLocaleService } from '../../i18n/guild-locale.service.js';
 import { translatorFor } from '../../i18n/translator.js';
 import { errorLabel } from '../../prisma/pool-factory.js';
 import { WordGameService } from './word-game.service.js';
+import { formatDefinition } from './word-definition.format.js';
+import { WordDefinitionService } from './word-definition.service.js';
 
 /**
  * What the listener uses of a message. Structural on purpose: the message a
@@ -16,7 +19,11 @@ import { WordGameService } from './word-game.service.js';
  */
 type Reactable = {
   react(emoji: string): Promise<unknown>;
-  reply(options: { content: string; allowedMentions: { repliedUser: true } }): Promise<unknown>;
+  reply(options: {
+    content: string;
+    allowedMentions: { parse?: []; repliedUser: boolean };
+    flags?: MessageFlags.SuppressEmbeds;
+  }): Promise<unknown>;
 };
 
 const SUCCESS_REACTION = '✅';
@@ -26,7 +33,8 @@ const FAILURE_REACTION = '❌';
  * Turns messages in the game channel into moves. The service decides what a
  * message is; this only reacts and replies once the move is committed.
  * `NOTHING` and `MAX_WORD` get no answer at all: a chat message in the channel
- * is not a mistake, and a finished round stays quiet until it is reset.
+ * is not a mistake, and a finished round stays quiet until it is reset. An
+ * accepted word gets its meaning underneath when a dictionary has one.
  */
 @DiscordCommands()
 export class WordGameListener {
@@ -36,6 +44,7 @@ export class WordGameListener {
     private readonly game: WordGameService,
     private readonly locales: GuildLocaleService,
     private readonly ready: DiscordReadyService,
+    private readonly definitions: WordDefinitionService,
   ) {}
 
   @On('messageCreate')
@@ -51,23 +60,24 @@ export class WordGameListener {
       authorId: message.author.id,
       content: message.content,
     });
-    await this.answer(message, message.guildId, result);
+    // The service judged `content` lower-cased as a whole; a move is that word.
+    await this.answer(message, message.guildId, result, message.content.toLowerCase());
   }
 
   private async answer(
     message: Reactable,
     guildId: string,
     result: WordSubmitResult,
+    word: string,
   ): Promise<void> {
     const { status } = result;
     if (status === WordStatus.NOTHING || status === WordStatus.MAX_WORD) return;
     if (status === WordStatus.SUCCESS && !result.finished) {
       await this.respond(message, SUCCESS_REACTION);
+      await this.explain(message, guildId, word);
       return;
     }
 
-    // Only the replies need the language, so the lookup is skipped for the
-    // plain success that most moves are.
     const t = translatorFor(await this.locales.resolve(guildId));
     switch (status) {
       case WordStatus.SUCCESS:
@@ -93,6 +103,30 @@ export class WordGameListener {
           t('word-game.reply.NOT_LINK', { starter: result.starter ?? '' }),
         );
         return;
+    }
+  }
+
+  /**
+   * The meaning of an accepted word, after its check mark so the player sees
+   * the verdict at once. It informs, it does not answer the player, so it does
+   * not notify them; link previews would bury the channel. With no meaning
+   * found the check mark stays alone.
+   */
+  private async explain(message: Reactable, guildId: string, word: string): Promise<void> {
+    try {
+      const definition = await this.definitions.define(word);
+      // The lookup can take seconds; the database pool may be closing by now.
+      if (definition === null || this.ready.isStopping()) return;
+      const t = translatorFor(await this.locales.resolve(guildId));
+      await message.reply({
+        content: formatDefinition(word, definition, t),
+        // The text comes from public wikis and a translation service: whatever
+        // mention it carries must not ping anyone.
+        allowedMentions: { parse: [], repliedUser: false },
+        flags: MessageFlags.SuppressEmbeds,
+      });
+    } catch (error) {
+      this.logger.warn(`Could not reply with a word's meaning (${errorLabel(error)})`);
     }
   }
 

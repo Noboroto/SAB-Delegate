@@ -16,13 +16,13 @@ Hệ quả cụ thể cho đường slash:
 
 ## Cách đọc
 
-| Cột | Ý nghĩa |
-| --- | --- |
-| Ai dùng | Quyền mặc định của Discord cho cả nhóm lệnh ("mọi người" = không đặt quyền) |
-| Trả lời | Công khai hay riêng |
-| Ping | Ai bị thông báo |
-| Được phép | Điểm bản cũ không chặn, bot giữ nguyên |
-| Khác bản cũ | Chỉ ghi chỗ khác; trống = giữ nguyên bản cũ |
+| Cột         | Ý nghĩa                                                                     |
+| ----------- | --------------------------------------------------------------------------- |
+| Ai dùng     | Quyền mặc định của Discord cho cả nhóm lệnh ("mọi người" = không đặt quyền) |
+| Trả lời     | Công khai hay riêng                                                         |
+| Ping        | Ai bị thông báo                                                             |
+| Được phép   | Điểm bản cũ không chặn, bot giữ nguyên                                      |
+| Khác bản cũ | Chỉ ghi chỗ khác; trống = giữ nguyên bản cũ                                 |
 
 Chung cho mọi lệnh:
 
@@ -38,35 +38,35 @@ Nguồn đối chiếu: quyền và guild-only ở `apps/server/src/discord/comm
 
 Ai dùng: Quản trị viên. Mọi subcommand trả riêng.
 
-| Subcommand | Làm gì | Ping / Được phép | Khác bản cũ |
-| --- | --- | --- | --- |
-| `send` `[content]` `[destination]` `[reply-message]` | Bot gửi tin vào kênh/thread (mặc định kênh hiện tại), hoặc trả lời một tin | Ping theo nội dung (user, role, everyone). Gửi được vào kênh của guild khác, trả lời tin guild khác | Khác đã duyệt: `content` đổi thành tuỳ chọn, thiếu thì mở hộp thoại nhập (bản cũ bắt buộc) |
-| `copy-paste` `message-link` `[destination]` | Sao chép tin (chữ, file) sang kênh khác | Ping theo nội dung tin gốc. Nguồn từ guild khác được | — |
-| `edit-copy` `new-message-link` `old-bot-message-link` | Sửa tin cũ của bot bằng nội dung của một tin khác | Ping theo nội dung mới | — |
-| `edit-send` `old-bot-message-link` `[new-content]` | Sửa tin cũ của bot bằng chữ gõ tay | Ping theo nội dung mới | Khác đã duyệt (hộp thoại cho nội dung dài): `new-content` đổi thành tuỳ chọn, thiếu thì mở hộp thoại (bản cũ bắt buộc) |
-| `react` `message-link` `emoji` `[poll-choice-count 0-10]` | Bot thả emoji vào một tin, tuỳ chọn thêm các số làm lựa chọn bình chọn | Không ping | — |
-| `schedule-send` `time` `[message]` `[date]` `[destination]` | Hẹn giờ gửi một tin | Ping theo nội dung khi đến giờ | Khác đã duyệt: `time` + `date` là chuỗi có gợi ý (giờ Việt Nam; `date` dạng ngày/tháng, không năm = lần gần nhất sắp tới) thay 6 option số. Khác đã duyệt: `message` tuỳ chọn (mở hộp thoại); lịch lưu trong DB nên không mất khi khởi động lại (bản cũ chỉ trong RAM); giới hạn 366 ngày / 500 lịch chờ chỉ áp cho REST/MCP |
-| `schedule-copy` `message-link` `time` `[date]` `[destination]` | Hẹn giờ sao chép một tin; chữ và file được đọc lúc đến giờ, nên sửa tin trước đó thì bản gửi là bản sửa | Ping theo nội dung khi đến giờ | Như `schedule-send` (`time`/`date`, bền, giới hạn mới) |
+| Subcommand                                                     | Làm gì                                                                                                  | Ping / Được phép                                                                                    | Khác bản cũ                                                                                                                                                                                                                                                                                                                  |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `send` `[content]` `[destination]` `[reply-message]`           | Bot gửi tin vào kênh/thread (mặc định kênh hiện tại), hoặc trả lời một tin                              | Ping theo nội dung (user, role, everyone). Gửi được vào kênh của guild khác, trả lời tin guild khác | Khác đã duyệt: `content` đổi thành tuỳ chọn, thiếu thì mở hộp thoại nhập (bản cũ bắt buộc)                                                                                                                                                                                                                                   |
+| `copy-paste` `message-link` `[destination]`                    | Sao chép tin (chữ, file) sang kênh khác                                                                 | Ping theo nội dung tin gốc. Nguồn từ guild khác được                                                | —                                                                                                                                                                                                                                                                                                                            |
+| `edit-copy` `new-message-link` `old-bot-message-link`          | Sửa tin cũ của bot bằng nội dung của một tin khác                                                       | Ping theo nội dung mới                                                                              | —                                                                                                                                                                                                                                                                                                                            |
+| `edit-send` `old-bot-message-link` `[new-content]`             | Sửa tin cũ của bot bằng chữ gõ tay                                                                      | Ping theo nội dung mới                                                                              | Khác đã duyệt (hộp thoại cho nội dung dài): `new-content` đổi thành tuỳ chọn, thiếu thì mở hộp thoại (bản cũ bắt buộc)                                                                                                                                                                                                       |
+| `react` `message-link` `emoji` `[poll-choice-count 0-10]`      | Bot thả emoji vào một tin, tuỳ chọn thêm các số làm lựa chọn bình chọn                                  | Không ping                                                                                          | —                                                                                                                                                                                                                                                                                                                            |
+| `schedule-send` `time` `[message]` `[date]` `[destination]`    | Hẹn giờ gửi một tin                                                                                     | Ping theo nội dung khi đến giờ                                                                      | Khác đã duyệt: `time` + `date` là chuỗi có gợi ý (giờ Việt Nam; `date` dạng ngày/tháng, không năm = lần gần nhất sắp tới) thay 6 option số. Khác đã duyệt: `message` tuỳ chọn (mở hộp thoại); lịch lưu trong DB nên không mất khi khởi động lại (bản cũ chỉ trong RAM); giới hạn 366 ngày / 500 lịch chờ chỉ áp cho REST/MCP |
+| `schedule-copy` `message-link` `time` `[date]` `[destination]` | Hẹn giờ sao chép một tin; chữ và file được đọc lúc đến giờ, nên sửa tin trước đó thì bản gửi là bản sửa | Ping theo nội dung khi đến giờ                                                                      | Như `schedule-send` (`time`/`date`, bền, giới hạn mới)                                                                                                                                                                                                                                                                       |
 
 ## 2. `/scheduler` — xem và huỷ tin hẹn giờ
 
 Ai dùng: Quản lý tin nhắn.
 
-| Subcommand | Làm gì | Trả lời | Khác bản cũ |
-| --- | --- | --- | --- |
-| `get` | Liệt kê tin hẹn giờ của guild | Công khai | Khác đã duyệt: chỉ liệt kê lịch đang chờ (bản cũ chỉ biết lịch còn sống nên tương đương); id là id mới, lấy từ danh sách |
-| `cancel` `id` | Huỷ một lịch | Riêng | `id` có gợi ý từ danh sách lịch chờ |
+| Subcommand    | Làm gì                        | Trả lời   | Khác bản cũ                                                                                                              |
+| ------------- | ----------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `get`         | Liệt kê tin hẹn giờ của guild | Công khai | Khác đã duyệt: chỉ liệt kê lịch đang chờ (bản cũ chỉ biết lịch còn sống nên tương đương); id là id mới, lấy từ danh sách |
+| `cancel` `id` | Huỷ một lịch                  | Riêng     | `id` có gợi ý từ danh sách lịch chờ                                                                                      |
 
 ## 3. `/birthday` — danh sách sinh nhật
 
 Ai dùng: Quản trị viên.
 
-| Subcommand | Làm gì | Trả lời |
-| --- | --- | --- |
-| `append-list` `file` | Nhập file CSV (tối đa 1 MB), báo từng dòng bị bỏ qua | Riêng |
-| `get-list` `[month 1-12]` | Xem danh sách theo tháng (mặc định cả năm) | Công khai |
-| `remove` `[student-id]` `[user]` | Xoá một người khỏi danh sách theo mã sinh viên hoặc user (cần một trong hai) | Riêng |
-| `birthday-channel` `channel` | Chọn kênh chúc mừng; cùng cài đặt với `/set birthday-channel` | Công khai |
+| Subcommand                       | Làm gì                                                                       | Trả lời   |
+| -------------------------------- | ---------------------------------------------------------------------------- | --------- |
+| `append-list` `file`             | Nhập file CSV (tối đa 1 MB), báo từng dòng bị bỏ qua                         | Riêng     |
+| `get-list` `[month 1-12]`        | Xem danh sách theo tháng (mặc định cả năm)                                   | Công khai |
+| `remove` `[student-id]` `[user]` | Xoá một người khỏi danh sách theo mã sinh viên hoặc user (cần một trong hai) | Riêng     |
+| `birthday-channel` `channel`     | Chọn kênh chúc mừng; cùng cài đặt với `/set birthday-channel`                | Công khai |
 
 Không ping. Lời chúc tự động nằm ở mục "Hành vi tự động".
 
@@ -74,30 +74,30 @@ Không ping. Lời chúc tự động nằm ở mục "Hành vi tự động".
 
 Ai dùng: Quản trị viên. Bot từ chối (riêng) nếu nó không đủ quyền trong kênh được chọn; đó là kiểm quyền của bot, không phải của người gọi. Trả lời công khai, không ping.
 
-| Subcommand | Làm gì |
-| --- | --- |
-| `intro-channel` `channel` | Kênh giới thiệu, nguồn cho `/get intro` |
-| `log-channel` `channel` | Kênh log của guild |
-| `birthday-channel` `channel` | Kênh chúc sinh nhật |
+| Subcommand                   | Làm gì                                  |
+| ---------------------------- | --------------------------------------- |
+| `intro-channel` `channel`    | Kênh giới thiệu, nguồn cho `/get intro` |
+| `log-channel` `channel`      | Kênh log của guild                      |
+| `birthday-channel` `channel` | Kênh chúc sinh nhật                     |
 
 ## 5. `/word` — trò chơi nối từ
 
 Ai dùng: Quản lý tin nhắn. Trả lời công khai; cả hai lệnh đăng "Trò chơi bắt đầu" vào kênh chơi. Không ping.
 
-| Subcommand | Làm gì |
-| --- | --- |
+| Subcommand                    | Làm gì                                                                       |
+| ----------------------------- | ---------------------------------------------------------------------------- |
 | `set` `channel` `[max-words]` | Chọn kênh chơi và đặt lại trò chơi; `max-words` tối thiểu 200, mặc định 1500 |
-| `reset` | Chơi lại ở kênh đã chọn; chưa chọn kênh thì báo riêng |
+| `reset`                       | Chơi lại ở kênh đã chọn; chưa chọn kênh thì báo riêng                        |
 
 ## 6. `/note` — ghi chú theo vai trò
 
 Ai dùng: mọi người. Trả lời công khai: ghi chú là của cả phòng. Không ping (tên vai trò hiện dạng chữ).
 
-| Subcommand | Làm gì | Khác bản cũ |
-| --- | --- | --- |
-| `add` `role` `topic` `[content]` | Lưu (hoặc ghi đè) ghi chú theo chủ đề | Khác đã duyệt: thiếu `content` thì mở hộp thoại; option `note` đổi tên `content`. `topic` có gợi ý |
-| `get` `role` | Xem mọi ghi chú của vai trò | — |
-| `remove` `role` `topic` | Xoá ghi chú; báo xong dù chủ đề có tồn tại hay không | `topic` có gợi ý |
+| Subcommand                       | Làm gì                                               | Khác bản cũ                                                                                        |
+| -------------------------------- | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `add` `role` `topic` `[content]` | Lưu (hoặc ghi đè) ghi chú theo chủ đề                | Khác đã duyệt: thiếu `content` thì mở hộp thoại; option `note` đổi tên `content`. `topic` có gợi ý |
+| `get` `role`                     | Xem mọi ghi chú của vai trò                          | —                                                                                                  |
+| `remove` `role` `topic`          | Xoá ghi chú; báo xong dù chủ đề có tồn tại hay không | `topic` có gợi ý                                                                                   |
 
 Ai cũng thêm/xoá được ghi chú của mọi vai trò: bản cũ không chặn.
 
@@ -105,12 +105,12 @@ Ai cũng thêm/xoá được ghi chú của mọi vai trò: bản cũ không ch�
 
 Ai dùng: mọi người.
 
-| Subcommand | Làm gì | Trả lời | Ping | Khác bản cũ |
-| --- | --- | --- | --- | --- |
-| `intro` `user` | Tìm bài giới thiệu mới nhất của user trong kênh giới thiệu (quét tối đa 10000 tin gần nhất) | Công khai; chưa đặt kênh thì báo riêng | Không | — |
-| `id-by-reaction` `message-link` `emoji` `[mention]` `[reply-message]` `[content]` | Liệt kê id người đã thả emoji | Công khai; riêng nếu có `reply-message` (danh sách gửi vào tin kia) | Chỉ khi `mention` bật: ping những người đó | — |
-| `id-by-role` `role` `[in-this-channel]` | Liệt kê id thành viên của vai trò | Công khai | Không | Bản cũ tự chặn người không có quyền Quản lý vai trò; bản mới bỏ chặn, ai thấy lệnh là dùng được (chủ bot chốt 2026-10-14) |
-| `invite-link` `[channel]` | Tạo lời mời không hết hạn, gửi DM cho người gọi (DM đóng thì hiện link trong câu trả lời riêng) | Riêng | Không | — |
+| Subcommand                                                                        | Làm gì                                                                                          | Trả lời                                                             | Ping                                       | Khác bản cũ                                                                                                               |
+| --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| `intro` `user`                                                                    | Tìm bài giới thiệu mới nhất của user trong kênh giới thiệu (quét tối đa 10000 tin gần nhất)     | Công khai; chưa đặt kênh thì báo riêng                              | Không                                      | —                                                                                                                         |
+| `id-by-reaction` `message-link` `emoji` `[mention]` `[reply-message]` `[content]` | Liệt kê id người đã thả emoji                                                                   | Công khai; riêng nếu có `reply-message` (danh sách gửi vào tin kia) | Chỉ khi `mention` bật: ping những người đó | —                                                                                                                         |
+| `id-by-role` `role` `[in-this-channel]`                                           | Liệt kê id thành viên của vai trò                                                               | Công khai                                                           | Không                                      | Bản cũ tự chặn người không có quyền Quản lý vai trò; bản mới bỏ chặn, ai thấy lệnh là dùng được (chủ bot chốt 2026-10-14) |
+| `invite-link` `[channel]`                                                         | Tạo lời mời không hết hạn, gửi DM cho người gọi (DM đóng thì hiện link trong câu trả lời riêng) | Riêng                                                               | Không                                      | —                                                                                                                         |
 
 Link tin nhắn của guild khác được theo ở `id-by-reaction`.
 
@@ -118,11 +118,11 @@ Link tin nhắn của guild khác được theo ở `id-by-reaction`.
 
 Ai dùng: người có quyền Dùng lệnh ứng dụng (gần như mọi người). Ping được chủ động: `@user` trong danh sách và `@role`/`@everyone` trong `content` đều ping.
 
-| Subcommand | Làm gì | Trả lời |
-| --- | --- | --- |
-| `by-a-reaction` `message-link` `emoji` `[reply-message]` `[content]` | Ping những người đã thả emoji | Công khai; riêng ("Sent!") nếu có `reply-message` |
+| Subcommand                                                                                        | Làm gì                                                                                                                                                 | Trả lời                                                              |
+| ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------- |
+| `by-a-reaction` `message-link` `emoji` `[reply-message]` `[content]`                              | Ping những người đã thả emoji                                                                                                                          | Công khai; riêng ("Sent!") nếu có `reply-message`                    |
 | `not-react` `message-link` `[content]` `[role]` `[is-reply]` `[include-bots]` `[only-in-channel]` | Ping những người nhìn thấy kênh nhưng chưa thả cảm xúc nào; lọc theo vai trò, có thể gồm bot; `only-in-channel` tắt thì xét mọi thành viên của vai trò | Công khai; riêng nếu `is-reply` (danh sách trả lời vào chính tin đó) |
-| `everyone` `[content]` `[reply-message]` | Chỉ trong thread: bot ping cả thread với lời "đã nhắc @everyone", dù người gọi không có quyền Mention Everyone | Riêng ("Sent!"); tin ở thread |
+| `everyone` `[content]` `[reply-message]`                                                          | Chỉ trong thread: bot ping cả thread với lời "đã nhắc @everyone", dù người gọi không có quyền Mention Everyone                                         | Riêng ("Sent!"); tin ở thread                                        |
 
 `/thread everyone` là cùng lệnh này đặt trong `/thread`. Danh sách dài được chia khối ≤ 2000 ký tự. Kênh thoại không được hỗ trợ.
 
@@ -130,37 +130,37 @@ Ai dùng: người có quyền Dùng lệnh ứng dụng (gần như mọi ngư�
 
 Ai dùng: Quản lý vai trò. Trả lời riêng, không ping. `is-remove` bật thì gỡ thay vì gán. Báo số người xong và từng người lỗi.
 
-| Subcommand | Làm gì | Khác bản cũ |
-| --- | --- | --- |
-| `list` `role` `[ids]` `[members-of-role]` `[is-remove]` | Gán/gỡ cho danh sách id (mention, dấu phẩy đều nhận) | Khác đã duyệt (nhập id dễ hơn): `ids` đổi thành tuỳ chọn và thêm `members-of-role` (lấy thành viên của một vai trò khác); bản cũ `ids` bắt buộc |
-| `by-reaction` `message-link` `emoji` `role` `[is-remove]` | Gán/gỡ cho người đã thả emoji vào tin (kể cả tin guild khác; vai trò là của guild đang chạy lệnh) | — |
+| Subcommand                                                | Làm gì                                                                                            | Khác bản cũ                                                                                                                                     |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `list` `role` `[ids]` `[members-of-role]` `[is-remove]`   | Gán/gỡ cho danh sách id (mention, dấu phẩy đều nhận)                                              | Khác đã duyệt (nhập id dễ hơn): `ids` đổi thành tuỳ chọn và thêm `members-of-role` (lấy thành viên của một vai trò khác); bản cũ `ids` bắt buộc |
+| `by-reaction` `message-link` `emoji` `role` `[is-remove]` | Gán/gỡ cho người đã thả emoji vào tin (kể cả tin guild khác; vai trò là của guild đang chạy lệnh) | —                                                                                                                                               |
 
 ## 10. `/thread` — luồng theo tiền tố
 
 Ai dùng: Quản lý vai trò.
 
-| Subcommand | Làm gì | Trả lời | Ping | Khác bản cũ |
-| --- | --- | --- | --- | --- |
-| `create` `name` `message` `[is-private]` `[destination]` | Tạo thread (kênh chữ hoặc forum; thread riêng chỉ ở kênh chữ) và đăng tin đầu, ghi "người gọi đã tạo" | Công khai | Theo nội dung tin đầu (user, role) | — |
-| `edit-prefix` `old-prefix` `new-prefix` `[destination]` | Đổi tiền tố tên mọi thread đang mở khớp tiền tố cũ | Riêng | Không | — |
-| `remove-by-prefix` `prefix` `[destination]` | Xoá mọi thread khớp tiền tố | Riêng | Không | Khác đã duyệt: xem danh sách và hỏi xác nhận (nút) trước khi xoá |
-| `everyone` | Xem `/mention everyone` | | | |
+| Subcommand                                               | Làm gì                                                                                                | Trả lời   | Ping                               | Khác bản cũ                                                      |
+| -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | --------- | ---------------------------------- | ---------------------------------------------------------------- |
+| `create` `name` `message` `[is-private]` `[destination]` | Tạo thread (kênh chữ hoặc forum; thread riêng chỉ ở kênh chữ) và đăng tin đầu, ghi "người gọi đã tạo" | Công khai | Theo nội dung tin đầu (user, role) | —                                                                |
+| `edit-prefix` `old-prefix` `new-prefix` `[destination]`  | Đổi tiền tố tên mọi thread đang mở khớp tiền tố cũ                                                    | Riêng     | Không                              | —                                                                |
+| `remove-by-prefix` `prefix` `[destination]`              | Xoá mọi thread khớp tiền tố                                                                           | Riêng     | Không                              | Khác đã duyệt: xem danh sách và hỏi xác nhận (nút) trước khi xoá |
+| `everyone`                                               | Xem `/mention everyone`                                                                               |           |                                    |                                                                  |
 
 ## 11. `/private-thread` — một thread riêng cho mỗi người
 
 Ai dùng: Quản lý vai trò. Chỉ trong kênh chữ. Trả lời riêng. Bot thêm từng người (và người gọi) vào thread riêng của họ rồi đăng `message`; ping theo nội dung `message` (user, role).
 
-| Subcommand | Làm gì | Khác bản cũ |
-| --- | --- | --- |
-| `list` `prefix` `[ids]` `[role]` `[message]` `[destination]` | Tạo thread `<prefix>-<tên>` cho từng người trong danh sách id | Khác đã duyệt: thêm `role`; `ids` đổi thành tuỳ chọn (cần `ids` hoặc `role`) |
-| `by-reaction` `prefix` `message-link` `emoji` `[message]` `[destination]` | Tạo cho người đã thả emoji vào tin (kể cả tin guild khác) | — |
+| Subcommand                                                                | Làm gì                                                        | Khác bản cũ                                                                  |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `list` `prefix` `[ids]` `[role]` `[message]` `[destination]`              | Tạo thread `<prefix>-<tên>` cho từng người trong danh sách id | Khác đã duyệt: thêm `role`; `ids` đổi thành tuỳ chọn (cần `ids` hoặc `role`) |
+| `by-reaction` `prefix` `message-link` `emoji` `[message]` `[destination]` | Tạo cho người đã thả emoji vào tin (kể cả tin guild khác)     | —                                                                            |
 
 ## 12. `/purge` — xoá hàng loạt tin trong kênh
 
 Ai dùng: Quản trị viên. Mọi câu trả lời là riêng. Chỉ chạm kênh đang chạy lệnh (link phải cùng kênh). Tin hệ thống bị bỏ qua.
 
-| Subcommand | Làm gì | Khác bản cũ |
-| --- | --- | --- |
+| Subcommand                                          | Làm gì                                                                                                                                                                                                                    | Khác bản cũ                                                                                                                                  |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | `any` `[until-link]` `[from-link]` `[count 1-1000]` | Xoá các tin mới hơn `until-link` (tin này được giữ) đến `from-link` (tin này bị xoá; mặc định tin mới nhất); hoặc xoá `count` tin mới nhất. Dùng `until-link` hoặc `count`, không cả hai; `from-link` đi với `until-link` | Khác đã duyệt: hiện số tin sẽ xoá và hỏi xác nhận bằng nút trước khi xoá; thêm `count`. Tin đăng thêm khi đang chờ xác nhận không bị xoá lẫn |
 
 ## 13. `/ping`
@@ -190,23 +190,24 @@ Ai dùng: Quản lý kênh. Trả lời công khai, không ping. `1-emoji` `2-na
 
 Bản cũ không có. Không đặt guild-only. Mọi menu mở hộp thoại hoặc trả riêng.
 
-| Menu | Ai dùng | Làm gì |
-| --- | --- | --- |
-| Edit bot message (Sửa tin nhắn của bot) | Quản trị viên | Mở hộp thoại sửa tin; chỉ tin do chính bot đăng, tin khác bị từ chối (riêng). Tương đương `/bot-message edit-send` |
-| Reply as bot (Trả lời bằng bot) | Quản trị viên | Mở hộp thoại, bot trả lời tin đã chọn; ping theo nội dung. Tương đương `/bot-message send` với `reply-message` |
+| Menu                                               | Ai dùng            | Làm gì                                                                                                                              |
+| -------------------------------------------------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Edit bot message (Sửa tin nhắn của bot)            | Quản trị viên      | Mở hộp thoại sửa tin; chỉ tin do chính bot đăng, tin khác bị từ chối (riêng). Tương đương `/bot-message edit-send`                  |
+| Reply as bot (Trả lời bằng bot)                    | Quản trị viên      | Mở hộp thoại, bot trả lời tin đã chọn; ping theo nội dung. Tương đương `/bot-message send` với `reply-message`                      |
 | Mention non-reactors (Nhắc người chưa thả cảm xúc) | Dùng lệnh ứng dụng | `/mention not-react` với mặc định: không trả lời vào tin, không lọc vai trò, thành viên nhìn thấy kênh, bỏ bot; ping người chưa thả |
-| Purge up to here (Xoá đến đây) | Quản trị viên | Xoá mọi tin mới hơn tin đã chọn (tin này được giữ), sau xem trước và xác nhận như `/purge any` |
+| Purge up to here (Xoá đến đây)                     | Quản trị viên      | Xoá mọi tin mới hơn tin đã chọn (tin này được giữ), sau xem trước và xác nhận như `/purge any`                                      |
 
 ---
 
 ## Hành vi tự động (không phải lệnh)
 
-| Việc | Hành vi |
-| --- | --- |
-| Chúc sinh nhật | 00:00 giờ Việt Nam mỗi ngày, vào kênh sinh nhật của guild; một tin cho mỗi người, ping người đó. Bot tắt lúc 00:00 thì chúc bù khi khởi động. Sinh nhật 29/2 được chúc vào 28/2 ở năm không nhuận |
-| Nối từ | Trong kênh đặt bởi `/word set`: bot thả phản ứng và trả lời theo luật nối từ; tin chat thường trong kênh được bỏ qua, trò đã đạt `max-words` thì im lặng đến khi `/word reset` |
-| Auto-react | Tin chứa cụm trong từ điển phản ứng, hoặc có `react <emoji>`, được bot thả emoji tương ứng; áp dụng cả khi sửa tin. Emoji lỗi (thiếu quyền, server không có) bị bỏ qua, không báo người dùng |
-| Báo lỗi | Lỗi bất ngờ khi chạy lệnh được gửi vào kênh `bot-log` của guild quản trị (không ping); người gọi chỉ thấy câu thông báo chung, không thấy chi tiết |
+| Việc           | Hành vi                                                                                                                                                                                                                                                                                                                                                                                         |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Chúc sinh nhật | 00:00 giờ Việt Nam mỗi ngày, vào kênh sinh nhật của guild; một tin cho mỗi người, ping người đó. Bot tắt lúc 00:00 thì chúc bù khi khởi động. Sinh nhật 29/2 được chúc vào 28/2 ở năm không nhuận                                                                                                                                                                                               |
+| Nối từ         | Trong kênh đặt bởi `/word set`: bot thả phản ứng và trả lời theo luật nối từ; tin chat thường trong kênh được bỏ qua, trò đã đạt `max-words` thì im lặng đến khi `/word reset`                                                                                                                                                                                                                  |
+| Nghĩa của từ   | Từ được chấp nhận: sau ✅ bot trả lời (không ping, không xem trước link) từ loại, nghĩa Anh-Anh + ví dụ (en.wiktionary, dự phòng Datamuse), nghĩa tiếng Việt (vi.wiktionary, dự phòng dịch máy MyMemory, có ghi "dịch máy") và link Anh-Anh / Anh-Việt / Oxford. Tra trực tiếp, chỉ nhớ tạm trong RAM (5000 từ, 24 giờ); mọi nguồn lỗi thì chỉ có ✅. Việc chấm từ không phụ thuộc vào phần này |
+| Auto-react     | Tin chứa cụm trong từ điển phản ứng, hoặc có `react <emoji>`, được bot thả emoji tương ứng; áp dụng cả khi sửa tin. Emoji lỗi (thiếu quyền, server không có) bị bỏ qua, không báo người dùng                                                                                                                                                                                                    |
+| Báo lỗi        | Lỗi bất ngờ khi chạy lệnh được gửi vào kênh `bot-log` của guild quản trị (không ping); người gọi chỉ thấy câu thông báo chung, không thấy chi tiết                                                                                                                                                                                                                                              |
 
 ## Lệnh đã bỏ
 

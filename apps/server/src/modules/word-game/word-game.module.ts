@@ -8,6 +8,7 @@ import { WordGameCommands } from './word-game.commands.js';
 import { WordGameController } from './word-game.controller.js';
 import { WordGameListener } from './word-game.listener.js';
 import { WordGameService } from './word-game.service.js';
+import { WordDefinitionService } from './word-definition.service.js';
 
 /**
  * Needs the Discord client (messages, channel checks), so it is left out of the
@@ -15,7 +16,13 @@ import { WordGameService } from './word-game.service.js';
  */
 @Module({
   imports: [AuditModule, I18nModule, GuildConfigModule, ...restImports()],
-  providers: [WordGameService, DictionaryService, WordGameListener, WordGameCommands],
+  providers: [
+    WordGameService,
+    DictionaryService,
+    WordDefinitionService,
+    WordGameListener,
+    WordGameCommands,
+  ],
   controllers: restControllers([WordGameController]),
   exports: [WordGameService],
 })
