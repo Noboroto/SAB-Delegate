@@ -1,10 +1,19 @@
 {
   "title": "Choose a server",
-  "subtitle": "The servers you manage. Invite the SAB bot to the ones it is not in yet.",
+  "subtitle": "The servers you manage.",
   "open": "Open dashboard",
+  "openTo": "Open the dashboard of {name}",
   "invite": "Invite bot",
-  "botMissing": "The bot is not in this server yet.",
+  "inviteTo": "Invite the bot to {name}",
+  "inviteShort": "Invite",
+  "showMore": "Show more ({count})",
+  "showLess": "Show less",
+  "groups": {
+    "manage": "Manage servers",
+    "invite": "Invite the bot to a server"
+  },
   "empty": {
+    "botAbsent": "The bot is not in any of your servers yet. Invite it below.",
     "title": "No servers yet",
     "body": "You need the Manage Server permission in a server."
   },
@@ -28,7 +37,7 @@
     "overview": "Overview",
     "modules": "Modules",
     "commands": "Commands",
-    "logs": "Logs",
+    "auditLog": "Audit log",
     "settings": "Settings",
     "tools": "Tools",
     "birthday": "Birthdays",

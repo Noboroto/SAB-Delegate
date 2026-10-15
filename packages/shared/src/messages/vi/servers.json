@@ -1,10 +1,19 @@
 {
   "title": "Chọn máy chủ",
-  "subtitle": "Các máy chủ bạn quản lý. Mời bot SAB vào những máy chủ chưa có bot.",
+  "subtitle": "Các máy chủ bạn quản lý.",
   "open": "Mở bảng điều khiển",
+  "openTo": "Mở bảng điều khiển của {name}",
   "invite": "Mời bot",
-  "botMissing": "Bot chưa ở trong máy chủ này.",
+  "inviteTo": "Mời bot vào {name}",
+  "inviteShort": "Mời",
+  "showMore": "Xem thêm ({count})",
+  "showLess": "Thu gọn",
+  "groups": {
+    "manage": "Quản lý máy chủ",
+    "invite": "Mời bot vào máy chủ"
+  },
   "empty": {
+    "botAbsent": "Bot chưa ở máy chủ nào của bạn. Mời bot ở bên dưới.",
     "title": "Chưa có máy chủ nào",
     "body": "Bạn cần quyền Quản lý máy chủ ở ít nhất một máy chủ."
   },
@@ -28,7 +37,7 @@
     "overview": "Tổng quan",
     "modules": "Mô-đun",
     "commands": "Lệnh",
-    "logs": "Nhật ký",
+    "auditLog": "Nhật ký",
     "settings": "Cài đặt",
     "tools": "Công cụ",
     "birthday": "Sinh nhật",

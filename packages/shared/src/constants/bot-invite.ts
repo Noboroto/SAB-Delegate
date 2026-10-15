@@ -42,21 +42,23 @@ export const BOT_INVITE_PERMISSIONS: string = Object.values<bigint>(BOT_INVITE_P
   .toString();
 
 /**
- * Discord's authorize page for adding the bot to one server. The server is
- * fixed and the picker hidden, so the person cannot add it somewhere else
- * by mistake.
+ * Discord's authorize page for adding the bot. With a `guildId` the server is
+ * fixed and the picker hidden, so the person cannot add it somewhere else by
+ * mistake; without one Discord shows its own server picker.
  */
 export function buildBotInviteUrl(input: {
   clientId: string;
   permissions: string;
-  guildId: string;
+  guildId?: string;
 }): string {
   const query = new URLSearchParams({
     client_id: input.clientId,
     scope: 'bot applications.commands',
     permissions: input.permissions,
-    guild_id: input.guildId,
-    disable_guild_select: 'true',
   });
+  if (input.guildId !== undefined) {
+    query.set('guild_id', input.guildId);
+    query.set('disable_guild_select', 'true');
+  }
   return `https://discord.com/oauth2/authorize?${query.toString()}`;
 }
