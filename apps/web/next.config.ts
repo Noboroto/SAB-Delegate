@@ -38,6 +38,12 @@ const nextConfig: NextConfig = {
     Promise.resolve([
       { source: '/', destination: '/servers', permanent: true },
       { source: '/dashboard', destination: '/servers', permanent: true },
+      // The audit log page was first published at /logs.
+      {
+        source: '/servers/:guildId/logs',
+        destination: '/servers/:guildId/audit-log',
+        permanent: true,
+      },
     ]),
   // Pages only: `/api/*` and `/mcp` are the Nest server's, and it sets its own
   // (closed) policy on JSON answers.

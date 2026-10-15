@@ -80,7 +80,7 @@ describe('every translation key the web app asks for exists in every language', 
 
   it('has the section names the navigation builds from GUILD_SECTIONS', () => {
     expect(DYNAMIC_KEYS.map(({ key }) => key)).toEqual(
-      expect.arrayContaining(['servers.nav.logs', 'web.theme.system', 'web.language.en']),
+      expect.arrayContaining(['servers.nav.auditLog', 'web.theme.system', 'web.language.en']),
     );
   });
 

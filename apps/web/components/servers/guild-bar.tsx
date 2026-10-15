@@ -33,7 +33,7 @@ export function GuildBar({ guilds, currentId }: GuildBarProps) {
     modules: t('nav.modules'),
     tools: t('nav.tools'),
     commands: t('nav.commands'),
-    logs: t('nav.logs'),
+    auditLog: t('nav.auditLog'),
     settings: t('nav.settings'),
     birthday: t('nav.birthday'),
     note: t('nav.note'),

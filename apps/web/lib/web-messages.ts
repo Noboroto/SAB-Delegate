@@ -22,7 +22,7 @@ export const WEB_NAMESPACES = [
   'web-schedule',
   'web-tools',
   'web-commands',
-  'web-logs',
+  'web-audit-log',
   'web-api-keys',
 ] as const;
 

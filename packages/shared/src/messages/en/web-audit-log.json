@@ -1,0 +1,62 @@
+{
+  "title": "Audit log",
+  "subtitle": "The admin actions taken in this server, newest first.",
+  "filter": {
+    "action": "Filter by action",
+    "source": "Filter by source"
+  },
+  "columns": {
+    "time": "Time",
+    "action": "Action",
+    "source": "Source",
+    "actor": "Done by",
+    "result": "Result",
+    "details": "Details"
+  },
+  "sources": {
+    "DISCORD": "Discord",
+    "HTTP": "Web / API",
+    "MCP": "MCP",
+    "SYSTEM": "System"
+  },
+  "result": {
+    "ok": "Done",
+    "failed": "Failed"
+  },
+  "empty": "No actions have been recorded yet.",
+  "emptyFiltered": "No action matches the filter.",
+  "older": "Older",
+  "newest": "Back to newest",
+  "actions": {
+    "guildConfigUpdate": "Server settings changed",
+    "botProfileUpdate": "Bot profile changed",
+    "birthdayAdd": "Birthday added",
+    "birthdayRemove": "Birthday removed",
+    "birthdayImport": "Birthdays imported",
+    "birthdayWish": "Birthday wish sent",
+    "noteUpsert": "Note saved",
+    "noteRemove": "Note removed",
+    "wordGameConfigure": "Word game configured",
+    "wordGameReset": "Word game reset",
+    "scheduleCreate": "Schedule created",
+    "scheduleCancel": "Schedule cancelled",
+    "messageSend": "Message sent",
+    "messageCopy": "Message copied",
+    "messageReact": "Reaction added",
+    "messageEdit": "Message edited",
+    "pollCreate": "Poll created",
+    "mentionReactors": "Mentioned reactors",
+    "mentionNonReactors": "Mentioned non-reactors",
+    "mentionEveryone": "Mentioned everyone",
+    "roleAssignApply": "Roles assigned",
+    "threadCreate": "Thread created",
+    "threadRename": "Thread renamed",
+    "threadDelete": "Thread deleted",
+    "privateThreadCreate": "Private thread created",
+    "purgeMessages": "Messages purged",
+    "activityCreate": "Activity created",
+    "inviteCreate": "Invite created",
+    "apiKeyMint": "API key created",
+    "apiKeyRevoke": "API key revoked"
+  }
+}

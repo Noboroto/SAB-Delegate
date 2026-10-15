@@ -18,7 +18,7 @@
     "title": "Go to",
     "modules": "What the bot does: birthdays, notes, the word game, scheduled messages.",
     "commands": "The commands the bot understands, with descriptions.",
-    "logs": "Who changed what on this server.",
+    "auditLog": "Who changed what on this server.",
     "settings": "Language, channels and the bot's display name."
   },
   "unavailable": {

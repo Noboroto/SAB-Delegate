@@ -3,7 +3,7 @@
 import { Card, Col, Row } from 'antd';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { GUILD_SECTIONS, type GuildSection } from '@/lib/guild-sections';
+import { GUILD_SECTIONS, guildSectionPath, type GuildSection } from '@/lib/guild-sections';
 
 /** One card per part of the dashboard, each saying what is there; the whole card is the link. */
 export function SectionShortcuts({ guildId }: { guildId: string }) {
@@ -14,7 +14,7 @@ export function SectionShortcuts({ guildId }: { guildId: string }) {
   const descriptions: Record<GuildSection, string> = {
     modules: t('shortcuts.modules'),
     commands: t('shortcuts.commands'),
-    logs: t('shortcuts.logs'),
+    auditLog: t('shortcuts.auditLog'),
     settings: t('shortcuts.settings'),
   };
 
@@ -24,7 +24,7 @@ export function SectionShortcuts({ guildId }: { guildId: string }) {
         {GUILD_SECTIONS.map((section) => (
           <Col key={section} xs={24} sm={12} xl={6}>
             <Link
-              href={`/servers/${guildId}/${section}`}
+              href={`/servers/${guildId}/${guildSectionPath(section)}`}
               style={{ display: 'block', height: '100%' }}
             >
               <Card hoverable style={{ height: '100%' }}>

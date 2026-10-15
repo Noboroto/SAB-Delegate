@@ -18,7 +18,7 @@
     "title": "Đi tới",
     "modules": "Các tính năng của bot: sinh nhật, ghi chú, trò chơi nối từ, tin nhắn hẹn giờ.",
     "commands": "Danh sách lệnh bot hiểu, kèm mô tả.",
-    "logs": "Ai đã đổi gì trên máy chủ này.",
+    "auditLog": "Ai đã đổi gì trên máy chủ này.",
     "settings": "Ngôn ngữ, kênh và tên hiển thị của bot."
   },
   "unavailable": {

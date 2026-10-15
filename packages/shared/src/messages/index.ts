@@ -31,7 +31,7 @@ import enWebMessaging from './en/web-messaging.json';
 import enWebSchedule from './en/web-schedule.json';
 import enWebTools from './en/web-tools.json';
 import enWebCommands from './en/web-commands.json';
-import enWebLogs from './en/web-logs.json';
+import enWebAuditLog from './en/web-audit-log.json';
 import viActivity from './vi/activity.json';
 import viAttendance from './vi/attendance.json';
 import viBirthday from './vi/birthday.json';
@@ -63,7 +63,7 @@ import viWebMessaging from './vi/web-messaging.json';
 import viWebSchedule from './vi/web-schedule.json';
 import viWebTools from './vi/web-tools.json';
 import viWebCommands from './vi/web-commands.json';
-import viWebLogs from './vi/web-logs.json';
+import viWebAuditLog from './vi/web-audit-log.json';
 
 /** Discord rejects a command or option description longer than this. */
 export const COMMAND_DESCRIPTION_MAX_LENGTH = 100;
@@ -100,7 +100,7 @@ export const MessageNamespaceSchema = z.enum([
   'web-schedule',
   'web-tools',
   'web-commands',
-  'web-logs',
+  'web-audit-log',
   'web-api-keys',
 ]);
 
@@ -142,7 +142,7 @@ export const MESSAGES = {
     'web-schedule': viWebSchedule,
     'web-tools': viWebTools,
     'web-commands': viWebCommands,
-    'web-logs': viWebLogs,
+    'web-audit-log': viWebAuditLog,
     'web-api-keys': viWebApiKeys,
   },
   en: {
@@ -176,7 +176,7 @@ export const MESSAGES = {
     'web-schedule': enWebSchedule,
     'web-tools': enWebTools,
     'web-commands': enWebCommands,
-    'web-logs': enWebLogs,
+    'web-audit-log': enWebAuditLog,
     'web-api-keys': enWebApiKeys,
   },
 } satisfies Record<Locale, Record<MessageNamespace, object>>;

@@ -66,9 +66,11 @@ describe('GuildBar', () => {
   });
 
   it('marks the current section', () => {
-    path.current = `/servers/${A}/logs`;
+    path.current = `/servers/${A}/audit-log`;
     renderWithProviders(<GuildBar guilds={guilds} currentId={A} />, 'en');
-    expect(screen.getByRole('menuitem', { name: 'Logs' })).toHaveClass('ant-menu-item-selected');
+    expect(screen.getByRole('menuitem', { name: 'Audit log' })).toHaveClass(
+      'ant-menu-item-selected',
+    );
     expect(screen.getByRole('menuitem', { name: 'Overview' })).not.toHaveClass(
       'ant-menu-item-selected',
     );

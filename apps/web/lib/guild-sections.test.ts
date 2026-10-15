@@ -12,7 +12,7 @@ describe('GUILD_NAV', () => {
       'modules',
       'tools',
       'commands',
-      'logs',
+      'auditLog',
       'settings',
     ]);
     expect(GUILD_NAV.find((entry) => entry.key === 'modules')?.children).toBe(MODULE_PAGES);
@@ -40,7 +40,7 @@ describe('activeNavKey', () => {
   it.each([
     [`/servers/${G}`, 'overview'],
     [`/servers/${G}/`, 'overview'],
-    [`/servers/${G}/logs`, 'logs'],
+    [`/servers/${G}/audit-log`, 'auditLog'],
     [`/servers/${G}/modules`, 'modules'],
     [`/servers/${G}/modules/word-game`, 'wordGame'],
     [`/servers/${G}/modules/word-game/`, 'wordGame'],
@@ -52,8 +52,8 @@ describe('activeNavKey', () => {
 
   it('selects nothing for an unknown path or another server', () => {
     expect(activeNavKey(`/servers/${G}/admin`, G)).toBeUndefined();
-    expect(activeNavKey(`/servers/${G}/logsx`, G)).toBeUndefined();
-    expect(activeNavKey(`/servers/${'2'.repeat(18)}/logs`, G)).toBeUndefined();
+    expect(activeNavKey(`/servers/${G}/audit-log-x`, G)).toBeUndefined();
+    expect(activeNavKey(`/servers/${'2'.repeat(18)}/audit-log`, G)).toBeUndefined();
   });
 });
 

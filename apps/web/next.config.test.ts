@@ -20,6 +20,11 @@ describe('next.config', () => {
     expect(redirects).toEqual([
       { source: '/', destination: '/servers', permanent: true },
       { source: '/dashboard', destination: '/servers', permanent: true },
+      {
+        source: '/servers/:guildId/logs',
+        destination: '/servers/:guildId/audit-log',
+        permanent: true,
+      },
     ]);
   });
 

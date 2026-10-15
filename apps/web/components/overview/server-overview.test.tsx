@@ -1,7 +1,7 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { GUILD_SECTIONS } from '@/lib/guild-sections';
+import { GUILD_SECTIONS, guildSectionPath } from '@/lib/guild-sections';
 import { SUPPORTED_LOCALES } from '@/lib/locale';
 import { renderWithProviders } from '@/lib/test/render-with-providers';
 
@@ -87,7 +87,9 @@ describe.each(SUPPORTED_LOCALES)('ServerOverview (%s)', (locale) => {
     const hrefs = within(shortcuts)
       .getAllByRole('link')
       .map((link) => link.getAttribute('href'));
-    expect(hrefs).toEqual(GUILD_SECTIONS.map((section) => `/servers/${GUILD}/${section}`));
+    expect(hrefs).toEqual(
+      GUILD_SECTIONS.map((section) => `/servers/${GUILD}/${guildSectionPath(section)}`),
+    );
   });
 
   it('keeps the title and the links when the bot status cannot be read, and reloads on retry', async () => {

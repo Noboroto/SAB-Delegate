@@ -1,5 +1,5 @@
 /** Sections of a server's dashboard besides the overview; the overview page links one card to each. */
-export const GUILD_SECTIONS = ['modules', 'commands', 'logs', 'settings'] as const;
+export const GUILD_SECTIONS = ['modules', 'commands', 'auditLog', 'settings'] as const;
 
 export type GuildSection = (typeof GUILD_SECTIONS)[number];
 
@@ -62,9 +62,16 @@ export const GUILD_NAV: readonly GuildNavEntry[] = [
   { key: 'modules', path: 'modules', children: MODULE_PAGES },
   { key: 'tools', path: 'tools', children: TOOL_PAGES },
   { key: 'commands', path: 'commands' },
-  { key: 'logs', path: 'logs' },
+  { key: 'auditLog', path: 'audit-log' },
   { key: 'settings', path: 'settings' },
 ];
+
+/** URL path (below the server's own) of a section; the menu key and the path differ for `auditLog`. */
+export function guildSectionPath(section: GuildSection): string {
+  const entry = GUILD_NAV.find((item) => item.key === section);
+  if (entry?.path === undefined) throw new Error(`Section ${section} has no page`);
+  return entry.path;
+}
 
 /**
  * The menu key that owns `pathname` inside the server `guildId`: the deepest
