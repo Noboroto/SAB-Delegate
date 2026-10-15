@@ -17,31 +17,31 @@ Nơi sở hữu: `coolify.compose.yml` (stack prod), `deploy/postgres.compose.ym
 
 ## Quyết định và lý do
 
-| Quyết định | Lý do (không suy lại khi chưa có bằng chứng mới) |
-| --- | --- |
-| MỘT tiến trình NestJS (Fastify) chứa bot Necord, Prisma và pg-boss | Một bot Sabi thay cho hai token cũ; không Redis/BullMQ; lịch hẹn và cron nằm trong Postgres nên sống qua restart |
-| Postgres là resource Coolify RIÊNG, không nằm trong compose app | Coolify xoá và dựng lại CẢ stack compose mỗi deploy; DB không được restart theo mỗi lần đẩy code |
-| Image DB `postgres:18` Debian, ghim theo digest; session `-c timezone=UTC` | `uuidv7()` cần PG18; glibc cho `lower()` tiếng Việt; hai bài học ở `mem:lessons/deploy/coolify-host-images-and-build-cache` và `mem:lessons/postgres-prisma/ids-time-image` |
-| `sab-release` one-shot chạy TRƯỚC server, server `depends_on` dạng map `service_completed_successfully` | Migrate lỗi thì server không khởi động; dạng list không chờ |
-| Backup là service riêng, KHÔNG có BackupModule trong server | Server không giữ quyền ghi/xoá dump; một `backup.sh` dùng chung cho release và job hằng ngày |
-| Ba role Postgres: `migrate` (DDL, chỉ release), `runtime` (DML, server), `backup` (đọc) | Server bị chiếm cũng không đổi được schema; runtime không có `CREATE` |
-| Chỉ ba service tham gia `sab-db`; mỗi service có khối `environment:` tường minh | Coolify bơm env rộng; token và mật khẩu chỉ tới service cần nó. `TOKENS` cũ không nằm trong bất kỳ allowlist nào |
-| Slash command KHÔNG kiểm quyền người gọi | Luật chủ bot; xem `docs/commands.md` |
+| Quyết định                                                                                              | Lý do (không suy lại khi chưa có bằng chứng mới)                                                                                                                            |
+| ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| MỘT tiến trình NestJS (Fastify) chứa bot Necord, Prisma và pg-boss                                      | Một bot Sabi thay cho hai token cũ; không Redis/BullMQ; lịch hẹn và cron nằm trong Postgres nên sống qua restart                                                            |
+| Postgres là resource Coolify RIÊNG, không nằm trong compose app                                         | Coolify xoá và dựng lại CẢ stack compose mỗi deploy; DB không được restart theo mỗi lần đẩy code                                                                            |
+| Image DB `postgres:18` Debian, ghim theo digest; session `-c timezone=UTC`                              | `uuidv7()` cần PG18; glibc cho `lower()` tiếng Việt; hai bài học ở `mem:lessons/deploy/coolify-host-images-and-build-cache` và `mem:lessons/postgres-prisma/ids-time-image` |
+| `sab-release` one-shot chạy TRƯỚC server, server `depends_on` dạng map `service_completed_successfully` | Migrate lỗi thì server không khởi động; dạng list không chờ                                                                                                                 |
+| Backup là service riêng, KHÔNG có BackupModule trong server                                             | Server không giữ quyền ghi/xoá dump; một `backup.sh` dùng chung cho release và job hằng ngày                                                                                |
+| Ba role Postgres: `migrate` (DDL, chỉ release), `runtime` (DML, server), `backup` (đọc)                 | Server bị chiếm cũng không đổi được schema; runtime không có `CREATE`                                                                                                       |
+| Chỉ ba service tham gia `sab-db`; mỗi service có khối `environment:` tường minh                         | Coolify bơm env rộng; token và mật khẩu chỉ tới service cần nó. `TOKENS` cũ không nằm trong bất kỳ allowlist nào                                                            |
+| Slash command KHÔNG kiểm quyền người gọi                                                                | Luật chủ bot; xem `docs/commands.md`                                                                                                                                        |
 
 ## Trong `sab-server`
 
 Điểm vào `apps/server/src/main.ts`; cổng cố định 3100. Module gốc `apps/server/src/app.module.ts`.
 
-| Thành phần | Vai trò | Ghi chú đáng nhớ |
-| --- | --- | --- |
-| `config/env.ts` | Zod validate env lúc boot (fail-fast, chỉ in TÊN biến) | Thay cho `${VAR:?}` |
-| `prisma/` | Prisma 7 + `adapter-pg`, pool luôn UTC | Không gọi Discord API trong `$transaction` |
-| `jobs/` | Facade pg-boss, một cửa duy nhất | Runtime không `CREATE`: không tự cài schema `pgboss`, release làm việc đó |
-| `app-state/` | Cặp khoá-giá trị (băm bộ lệnh đã đăng ký) | Xem phần đăng ký lệnh |
-| `discord/` | `BootGuard`, `CommandRegistrar`, `DiscordReadyService` | Xem bên dưới |
-| `modules/*` | Một module cho mỗi nhóm lệnh: guild-config, system, birthday, note, reactions, word-game, schedule, messaging, mention, role-assign, thread, purge, activity, attendance, info | Danh sách thật ở `modules/feature-modules.ts` |
-| `health/` | `/health` readiness, `/health/live` liveness | Xem bên dưới |
-| `tools/migrate-quickdb/` | Công cụ nạp quick.db và `export-claims` | TẠM THỜI, xoá cùng bot cũ |
+| Thành phần               | Vai trò                                                                                                                                                                        | Ghi chú đáng nhớ                                                          |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------- |
+| `config/env.ts`          | Zod validate env lúc boot (fail-fast, chỉ in TÊN biến)                                                                                                                         | Thay cho `${VAR:?}`                                                       |
+| `prisma/`                | Prisma 7 + `adapter-pg`, pool luôn UTC                                                                                                                                         | Không gọi Discord API trong `$transaction`                                |
+| `jobs/`                  | Facade pg-boss, một cửa duy nhất                                                                                                                                               | Runtime không `CREATE`: không tự cài schema `pgboss`, release làm việc đó |
+| `app-state/`             | Cặp khoá-giá trị (băm bộ lệnh đã đăng ký)                                                                                                                                      | Xem phần đăng ký lệnh                                                     |
+| `discord/`               | `BootGuard`, `CommandRegistrar`, `DiscordReadyService`                                                                                                                         | Xem bên dưới                                                              |
+| `modules/*`              | Một module cho mỗi nhóm lệnh: guild-config, system, birthday, note, reactions, word-game, schedule, messaging, mention, role-assign, thread, purge, activity, attendance, info | Danh sách thật ở `modules/feature-modules.ts`                             |
+| `health/`                | `/health` readiness, `/health/live` liveness                                                                                                                                   | Xem bên dưới                                                              |
+| `tools/migrate-quickdb/` | Công cụ nạp quick.db và `export-claims`                                                                                                                                        | TẠM THỜI, xoá cùng bot cũ                                                 |
 
 ### Khởi động
 
@@ -81,4 +81,5 @@ Thứ tự quan trọng vì job đang chạy vẫn dùng client và pool:
 - Vận hành, backup, đăng ký lại lệnh: `docs/deployment.md`.
 - Thay bot cũ: `docs/cutover-runbook.md`.
 - Giao diện MCP cho AI agent (khoá, tool, xác nhận): `docs/mcp.md`.
+- Quy tắc giao diện dashboard (căn lề, chiều cao control, nút, form, bảng): `docs/ui-rules.md`.
 - Luật cứng và bài học đã đo: `AGENTS.md` và serena `mem:lessons/index`.
