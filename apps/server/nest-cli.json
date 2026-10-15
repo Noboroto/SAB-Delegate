@@ -12,6 +12,10 @@
       {
         "include": "../assets/*.txt",
         "outDir": "dist/assets"
+      },
+      {
+        "include": "../assets/*.tsv",
+        "outDir": "dist/assets"
       }
     ]
   }
