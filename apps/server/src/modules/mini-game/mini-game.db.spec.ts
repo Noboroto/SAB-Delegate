@@ -6,6 +6,7 @@ import type { AppStateService } from '../../app-state/app-state.service.js';
 import type { PrismaService } from '../../prisma/prisma.service.js';
 import { createTestDatabase, type TestDatabase } from '../../testing/test-database.js';
 import { LeaderboardService } from '../game-core/leaderboard.service.js';
+import type { LlmService } from '../llm/llm.service.js';
 import type { DictionaryService } from '../word-game/dictionary.service.js';
 import { CountingService } from './counting.service.js';
 import { GameWordsService } from './game-words.service.js';
@@ -20,6 +21,7 @@ const WORDLE_ANSWERS = ['plumb', 'ghost', 'crane', 'fuzzy'];
 const player = (n: number) => String(300000000000000000n + BigInt(n));
 
 describe('mini games against Postgres', () => {
+  let llm: { explainVietnamese: ReturnType<typeof vi.fn> };
   let database: TestDatabase;
   let prisma: PrismaService;
   let leaderboard: LeaderboardService;
@@ -82,8 +84,9 @@ describe('mini games against Postgres', () => {
       { has: () => Promise.resolve(false) } as unknown as DictionaryService,
       { wordleAnswers: () => Promise.resolve(WORDLE_ANSWERS) },
     );
+    llm = { explainVietnamese: vi.fn() };
     // The bundled list is not loaded here; the specs' own words are the table.
-    const viet = new VietWordsService(prisma, {} as AppStateService);
+    const viet = new VietWordsService(prisma, {} as AppStateService, llm as unknown as LlmService);
     vi.spyOn(viet as unknown as { seed: () => Promise<void> }, 'seed').mockResolvedValue();
     await prisma.vietWord.createMany({
       data: SCRAMBLE_WORDS.map((word) => ({
@@ -542,6 +545,46 @@ describe('mini games against Postgres', () => {
   // Last: it fills the table with the whole bundled list, which the specs above
   // must not see.
   describe('Vietnamese words', () => {
+    it('asks the LLM once per solved word and stores its answer, even "none"', async () => {
+      const viet = new VietWordsService(
+        prisma,
+        {} as AppStateService,
+        llm as unknown as LlmService,
+      );
+      vi.spyOn(viet as unknown as { seed: () => Promise<void> }, 'seed').mockResolvedValue();
+      await prisma.vietWord.createMany({
+        data: ['từ thử một', 'từ thử hai', 'từ thử ba'].map((word) => ({
+          word,
+          normalized: normalizeWord(word),
+        })),
+      });
+
+      llm.explainVietnamese.mockResolvedValueOnce('nghĩa từ máy');
+      await expect(
+        Promise.all([viet.explain('từ thử một'), viet.explain('từ thử một')]),
+      ).resolves.toEqual(['nghĩa từ máy', 'nghĩa từ máy']);
+      await expect(viet.explain('từ thử một')).resolves.toBe('nghĩa từ máy');
+      expect(llm.explainVietnamese).toHaveBeenCalledTimes(1);
+      await expect(
+        prisma.vietWord.findUniqueOrThrow({ where: { word: 'từ thử một' } }),
+      ).resolves.toMatchObject({ meaning: 'nghĩa từ máy', meaningSource: 'LLM' });
+
+      llm.explainVietnamese.mockResolvedValueOnce(null);
+      await expect(viet.explain('từ thử hai')).resolves.toBeNull();
+      await expect(viet.explain('từ thử hai')).resolves.toBeNull();
+      expect(llm.explainVietnamese).toHaveBeenCalledTimes(2);
+      await expect(
+        prisma.vietWord.findUniqueOrThrow({ where: { word: 'từ thử hai' } }),
+      ).resolves.toMatchObject({ meaning: null, meaningSource: 'NONE' });
+
+      // No LLM set up (or a failed call): nothing stored, a later solve asks again.
+      llm.explainVietnamese.mockResolvedValueOnce(undefined);
+      await expect(viet.explain('từ thử ba')).resolves.toBeNull();
+      await expect(
+        prisma.vietWord.findUniqueOrThrow({ where: { word: 'từ thử ba' } }),
+      ).resolves.toMatchObject({ meaningSource: null });
+    });
+
     it('loads the bundled list once and keeps a meaning found later', async () => {
       const kept = new Map<string, string>();
       const appState = {
@@ -561,7 +604,7 @@ describe('mini games against Postgres', () => {
         },
         update: { meaning: 'nghĩa riêng', meaningSource: 'LLM' },
       });
-      const loader = new VietWordsService(prisma, appState);
+      const loader = new VietWordsService(prisma, appState, llm as unknown as LlmService);
 
       await expect(loader.isVietnameseWord('HẦU  CẬN')).resolves.toBe(true);
       expect(await prisma.vietWord.count()).toBeGreaterThan(49_000);
@@ -573,7 +616,7 @@ describe('mini games against Postgres', () => {
       ).resolves.toMatchObject({ meaningSource: 'WIKTIONARY' });
 
       // The same assets again: nothing is written.
-      const again = new VietWordsService(prisma, appState);
+      const again = new VietWordsService(prisma, appState, llm as unknown as LlmService);
       const write = vi.spyOn(prisma, '$executeRaw');
       await again.isVietnameseWord('hầu cận');
       expect(write).not.toHaveBeenCalled();

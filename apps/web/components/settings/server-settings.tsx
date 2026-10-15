@@ -1,9 +1,10 @@
 'use client';
 
-import { Space } from 'antd';
+import { Card, Space, Typography } from 'antd';
 import { useTranslations } from 'next-intl';
 import type { BotProfile, GuildSettings } from '@sab/shared';
 import { Heading } from '@/components/ui/heading';
+import { LinkButton } from '@/components/ui/link-button';
 import { BotProfileForm } from './bot-profile-form';
 import { BotProfileUnavailable } from './bot-profile-unavailable';
 import { SettingsForm } from './settings-form';
@@ -31,6 +32,10 @@ export function ServerSettings({ guildId, guildName, settings, botProfile }: Ser
         ) : (
           <BotProfileForm guildId={guildId} profile={botProfile} />
         )}
+        <Card title={t('llm.link.title')}>
+          <Typography.Paragraph>{t('llm.link.description')}</Typography.Paragraph>
+          <LinkButton href={`/servers/${guildId}/settings/llm`}>{t('llm.link.open')}</LinkButton>
+        </Card>
       </Space>
     </>
   );

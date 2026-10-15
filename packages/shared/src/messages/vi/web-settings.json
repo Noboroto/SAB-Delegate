@@ -50,5 +50,43 @@
       "size": "Ảnh lớn hơn {size} KB. Hãy chọn ảnh nhỏ hơn.",
       "read": "Không đọc được tệp. Hãy chọn lại."
     }
+  },
+  "llm": {
+    "link": {
+      "title": "LLM giải nghĩa từ",
+      "description": "Chọn dịch vụ AI dùng để giải nghĩa các từ tiếng Việt trong trò chơi.",
+      "open": "Mở cài đặt LLM"
+    },
+    "page": {
+      "title": "LLM giải nghĩa từ",
+      "subtitle": "Dịch vụ AI bot dùng để giải nghĩa từ tiếng Việt trong trò chơi.",
+      "adminOnly": "Chỉ có ở máy chủ quản trị",
+      "adminOnlyBody": "Cài đặt này chỉ có ở máy chủ quản trị của bot. Hãy mở trang này từ máy chủ quản trị.",
+      "back": "Về cài đặt"
+    },
+    "form": {
+      "unavailable": "Máy chủ chưa bật tính năng lưu khoá API (thiếu LLM_KEY_SECRET) nên chưa lưu được cài đặt LLM.",
+      "preset": "Nhà cung cấp",
+      "presetCustom": "Khác",
+      "baseUrl": "Địa chỉ API",
+      "baseUrlHelp": "Địa chỉ https của API tương thích OpenAI.",
+      "baseUrlInvalid": "Nhập địa chỉ https hợp lệ, không có tham số hay dấu #.",
+      "model": "Mô hình",
+      "modelRequired": "Nhập tên mô hình.",
+      "apiKey": "Khoá API",
+      "apiKeyHelp": "Để trống để giữ khoá đã lưu. Khoá chỉ được gửi lên máy chủ, không hiện lại.",
+      "apiKeyRequired": "Nhập khoá API (lần đầu lưu hoặc khi đổi địa chỉ API).",
+      "enabled": "Bật giải nghĩa bằng LLM",
+      "test": "Kiểm tra kết nối",
+      "save": "Lưu",
+      "saved": "Đã lưu cài đặt LLM.",
+      "testOk": "Kết nối thành công.",
+      "testReasons": {
+        "unreachable": "Không kết nối được tới địa chỉ API. Kiểm tra lại địa chỉ.",
+        "blocked": "Địa chỉ này không được phép dùng.",
+        "unauthorized": "Khoá API bị từ chối. Kiểm tra lại khoá.",
+        "bad_response": "Dịch vụ trả về kết quả không đúng định dạng. Kiểm tra lại địa chỉ và mô hình."
+      }
+    }
   }
 }

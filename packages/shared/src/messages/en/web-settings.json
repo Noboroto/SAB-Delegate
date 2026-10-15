@@ -50,5 +50,43 @@
       "size": "That picture is larger than {size} KB. Choose a smaller one.",
       "read": "The file could not be read. Choose it again."
     }
+  },
+  "llm": {
+    "link": {
+      "title": "LLM for word explanations",
+      "description": "Choose the AI service that explains Vietnamese words in the games.",
+      "open": "Open LLM settings"
+    },
+    "page": {
+      "title": "LLM for word explanations",
+      "subtitle": "The AI service the bot uses to explain Vietnamese words in the games.",
+      "adminOnly": "Only in the admin server",
+      "adminOnlyBody": "This setting only exists in the bot's admin server. Open this page from the admin server.",
+      "back": "Back to settings"
+    },
+    "form": {
+      "unavailable": "The server cannot store API keys yet (LLM_KEY_SECRET is missing), so LLM settings cannot be saved.",
+      "preset": "Provider",
+      "presetCustom": "Other",
+      "baseUrl": "API address",
+      "baseUrlHelp": "The https address of an OpenAI-compatible API.",
+      "baseUrlInvalid": "Enter a valid https address without a query or #.",
+      "model": "Model",
+      "modelRequired": "Enter a model name.",
+      "apiKey": "API key",
+      "apiKeyHelp": "Leave empty to keep the stored key. The key is only sent to the server and never shown again.",
+      "apiKeyRequired": "Enter an API key (on the first save or when the API address changes).",
+      "enabled": "Explain words with the LLM",
+      "test": "Test connection",
+      "save": "Save",
+      "saved": "LLM settings saved.",
+      "testOk": "Connection works.",
+      "testReasons": {
+        "unreachable": "Could not reach the API address. Check the address.",
+        "blocked": "This address is not allowed.",
+        "unauthorized": "The API key was rejected. Check the key.",
+        "bad_response": "The service answered in an unexpected format. Check the address and model."
+      }
+    }
   }
 }

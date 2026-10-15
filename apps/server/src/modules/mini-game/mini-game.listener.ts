@@ -17,10 +17,14 @@ import {
 } from './mini-game.format.js';
 import type { CountingOutcome, ScrambleOutcome, WordleOutcome } from './mini-game.types.js';
 import { ScrambleService } from './scramble.service.js';
+import { VietWordsService } from './viet-words.service.js';
 import { WordleService } from './wordle.service.js';
 
 /** Longest a move may hold its channel's queue; see `ChannelQueue`. */
 const JUDGE_TIMEOUT_MS = 10_000;
+
+/** Longest the reply to a solved word waits on its meaning. */
+const EXPLAIN_WAIT_MS = 5_000;
 
 const SUCCESS_REACTION = '✅';
 const FAILURE_REACTION = '❌';
@@ -58,6 +62,7 @@ export class MiniGameListener {
     private readonly wordle: WordleService,
     private readonly locales: GuildLocaleService,
     private readonly ready: DiscordReadyService,
+    private readonly vietWords: VietWordsService,
   ) {}
 
   @On('messageCreate')
@@ -131,10 +136,14 @@ export class MiniGameListener {
           return;
         }
         if (outcome.status !== 'SOLVED') return;
+        // The check mark first: a word no dictionary explains may wait on the
+        // LLM, and the player should see the verdict at once.
+        await this.respond(message, SUCCESS_REACTION);
+        const meaning = outcome.meaning ?? (await this.explainBriefly(outcome.guess));
         await this.respond(
           message,
-          SUCCESS_REACTION,
-          formatScrambleSolved(t, outcome.guess, outcome.meaning, authorId, outcome.next),
+          undefined,
+          formatScrambleSolved(t, outcome.guess, meaning, authorId, outcome.next),
         );
         return;
       }
@@ -178,6 +187,27 @@ export class MiniGameListener {
             return;
         }
       }
+    }
+  }
+
+  /**
+   * The meaning of a solved word, waiting at most `EXPLAIN_WAIT_MS` so a slow
+   * or failing LLM does not hold the next puzzle back. A late answer is still
+   * stored by `explain` for the next time the word comes up; a failure here
+   * only means no meaning under this win.
+   */
+  private async explainBriefly(word: string): Promise<string | null> {
+    let timer: NodeJS.Timeout | undefined;
+    const late = new Promise<null>((resolve) => {
+      timer = setTimeout(() => resolve(null), EXPLAIN_WAIT_MS);
+    });
+    try {
+      return await Promise.race([this.vietWords.explain(word), late]);
+    } catch (error) {
+      this.logger.warn(`Could not find the meaning of a solved word (${errorLabel(error)})`);
+      return null;
+    } finally {
+      clearTimeout(timer);
     }
   }
 

@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { AppStateService } from '../../app-state/app-state.service.js';
 import { errorLabel } from '../../prisma/pool-factory.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
+import { LlmService } from '../llm/llm.service.js';
 import { readAsset } from '../word-game/dictionary.service.js';
 import { compactWord } from './vietnamese.js';
 
@@ -69,9 +70,13 @@ export class VietWordsService implements OnApplicationBootstrap {
   private seeding: Promise<void> | undefined;
   private count: number | undefined;
 
+  /** One question per word at a time, however many players solve it at once. */
+  private readonly explaining = new Map<string, Promise<string | null>>();
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly appState: AppStateService,
+    private readonly llm: LlmService,
   ) {}
 
   onApplicationBootstrap(): void {
@@ -100,6 +105,48 @@ export class VietWordsService implements OnApplicationBootstrap {
     });
     const compact = compactWord(text);
     return rows.find((row) => compactWord(row.word) === compact) ?? null;
+  }
+
+  /**
+   * The meaning of `word` (as listed) for a word a player has just solved. A
+   * word no dictionary explains and nobody asked about yet is put to the LLM,
+   * once: its answer, or that it has none, is stored and reused from then on.
+   * Nothing is stored when no LLM is set up or the call failed, so a later
+   * solve may ask again. Never called in bulk: one solved word, one question.
+   */
+  async explain(word: string): Promise<string | null> {
+    const row = await this.prisma.vietWord.findUnique({
+      where: { word },
+      select: { meaning: true, meaningSource: true },
+    });
+    if (row === null) return null;
+    if (row.meaningSource !== null) return row.meaning;
+    let pending = this.explaining.get(word);
+    if (pending === undefined) {
+      pending = this.askLlm(word).finally(() => this.explaining.delete(word));
+      this.explaining.set(word, pending);
+    }
+    return pending;
+  }
+
+  private async askLlm(word: string): Promise<string | null> {
+    // A question that finished just before this one began has stored its answer.
+    const fresh = await this.prisma.vietWord.findUnique({
+      where: { word },
+      select: { meaning: true, meaningSource: true },
+    });
+    if (fresh?.meaningSource != null) return fresh.meaning;
+    const meaning = await this.llm.explainVietnamese(word);
+    if (meaning === undefined) return null;
+    // Only a word still without a meaning: another process may have asked too.
+    await this.prisma.vietWord.updateMany({
+      where: { word, meaningSource: null },
+      data:
+        meaning === null
+          ? { meaningSource: 'NONE', meaningAt: new Date() }
+          : { meaning, meaningSource: 'LLM', meaningAt: new Date() },
+    });
+    return meaning;
   }
 
   async pickVietnamese(random: () => number = Math.random): Promise<string> {

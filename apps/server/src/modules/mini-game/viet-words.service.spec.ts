@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { AppStateService } from '../../app-state/app-state.service.js';
 import type { PrismaService } from '../../prisma/prisma.service.js';
+import type { LlmService } from '../llm/llm.service.js';
 import { normalizeWord, VietWordsService } from './viet-words.service.js';
 
 describe('normalizeWord', () => {
@@ -15,7 +16,7 @@ describe('normalizeWord', () => {
 function build(rows: string[]) {
   const findMany = vi.fn(() => Promise.resolve(rows.map((word) => ({ word }))));
   const prisma = { vietWord: { findMany } } as unknown as PrismaService;
-  const service = new VietWordsService(prisma, {} as AppStateService);
+  const service = new VietWordsService(prisma, {} as AppStateService, {} as LlmService);
   vi.spyOn(service as unknown as { seed: () => Promise<void> }, 'seed').mockResolvedValue();
   return { service, findMany };
 }

@@ -9,6 +9,7 @@ import type { CountingService } from './counting.service.js';
 import { MiniGameListener } from './mini-game.listener.js';
 import type { CountingOutcome, ScrambleOutcome, WordleOutcome } from './mini-game.types.js';
 import type { ScrambleService } from './scramble.service.js';
+import type { VietWordsService } from './viet-words.service.js';
 import type { WordleService } from './wordle.service.js';
 
 const GUILD = '100000000000000001';
@@ -24,6 +25,8 @@ type Setup = {
   game?: 'COUNTING' | 'SCRAMBLE' | 'WORDLE' | null;
   counting?: CountingOutcome;
   scramble?: ScrambleOutcome;
+  /** What the LLM fallback answers for a solved word without a meaning. */
+  explained?: string | null;
   wordle?: WordleOutcome;
   stopping?: boolean;
 };
@@ -34,6 +37,7 @@ function build(setup: Setup = {}) {
   const scrambleSubmit = vi.fn().mockResolvedValue(setup.scramble ?? { status: 'NOTHING' });
   const wordleSubmit = vi.fn().mockResolvedValue(setup.wordle ?? { status: 'NOTHING' });
   const resolve = vi.fn().mockResolvedValue('en');
+  const explain = vi.fn().mockResolvedValue(setup.explained ?? null);
   const listener = new MiniGameListener(
     { routeOf } as unknown as GameChannelService,
     { submit: countingSubmit } as unknown as CountingService,
@@ -41,6 +45,7 @@ function build(setup: Setup = {}) {
     { submit: wordleSubmit } as unknown as WordleService,
     { resolve } as unknown as GuildLocaleService,
     { isStopping: () => setup.stopping ?? false } as unknown as DiscordReadyService,
+    { explain } as unknown as VietWordsService,
   );
   const message = (overrides: Record<string, unknown> = {}) => ({
     guildId: GUILD,
@@ -51,7 +56,16 @@ function build(setup: Setup = {}) {
     reply: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   });
-  return { listener, routeOf, countingSubmit, scrambleSubmit, wordleSubmit, resolve, message };
+  return {
+    listener,
+    routeOf,
+    countingSubmit,
+    scrambleSubmit,
+    wordleSubmit,
+    resolve,
+    explain,
+    message,
+  };
 }
 
 const send = (listener: MiniGameListener, incoming: unknown) =>
@@ -124,6 +138,7 @@ describe('MiniGameListener: which messages are moves', () => {
       {} as unknown as WordleService,
       { resolve: vi.fn() } as unknown as GuildLocaleService,
       { isStopping: () => stopping } as unknown as DiscordReadyService,
+      {} as unknown as VietWordsService,
     );
     const { message } = build();
     await Promise.all([send(listener, message()), send(listener, message())]);
@@ -241,7 +256,7 @@ describe('MiniGameListener: scramble', () => {
   };
 
   it('reacts with a check mark and posts the win and the next puzzle as embeds', async () => {
-    const { listener, message } = build({
+    const { listener, message, explain } = build({
       game: 'SCRAMBLE',
       scramble: { status: 'SOLVED', guess: 'học sinh', meaning: 'người *đi* học', next },
     });
@@ -259,7 +274,23 @@ describe('MiniGameListener: scramble', () => {
     );
     // The meaning is shown as written, not as markdown.
     expect(reply.embeds[0]?.fields?.[0]?.value).toBe('người \\*đi\\* học');
+    expect(explain).not.toHaveBeenCalled();
     expect(reply.embeds[1]?.description).toContain('**M / È / O / C / N / O**');
+  });
+
+  it('asks for the meaning of a solved word only when the puzzle had none', async () => {
+    const { listener, message, explain } = build({
+      game: 'SCRAMBLE',
+      scramble: { status: 'SOLVED', guess: 'hối tâm', meaning: null, next },
+      explained: 'hối hận trong lòng',
+    });
+    const incoming = message({ content: 'hối tâm' });
+    await send(listener, incoming);
+    expect(explain).toHaveBeenCalledExactlyOnceWith('hối tâm');
+    const reply = incoming.reply.mock.calls[0]?.[0] as {
+      embeds: Array<{ fields?: Array<{ value: string }> }>;
+    };
+    expect(reply.embeds[0]?.fields?.[0]?.value).toBe('hối hận trong lòng');
   });
 
   it('posts the hint that comes with the tenth wrong guess', async () => {

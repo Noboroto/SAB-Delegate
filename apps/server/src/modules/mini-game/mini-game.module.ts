@@ -3,6 +3,7 @@ import { AppStateModule } from '../../app-state/app-state.service.js';
 import { AuditModule } from '../../common/audit/audit.module.js';
 import { I18nModule } from '../../i18n/guild-locale.service.js';
 import { GameCoreModule } from '../game-core/game-core.module.js';
+import { LlmModule } from '../llm/llm.module.js';
 import { GuildConfigModule } from '../guild-config/guild-config.module.js';
 import { WordGameModule } from '../word-game/word-game.module.js';
 import { CountingService } from './counting.service.js';
@@ -26,6 +27,7 @@ import { WordleService } from './wordle.service.js';
     I18nModule,
     GuildConfigModule,
     GameCoreModule,
+    LlmModule,
     WordGameModule,
   ],
   providers: [
