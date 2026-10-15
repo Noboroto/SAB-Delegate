@@ -288,6 +288,7 @@ const ALL_FILES = [
   'deploy/local-smoke.compose.yml',
 ] as const;
 const RELEASE_JOB_SERVICES = ['sab-release', 'sab-server', 'sab-backup'];
+const WEB_SERVICE = 'sab-web';
 const DIGEST = /@sha256:[0-9a-f]{64}$/;
 
 describe('every compose file', () => {
@@ -478,11 +479,11 @@ describe('coolify.compose.yml', () => {
   const { text, doc } = read('coolify.compose.yml');
   const services = Object.fromEntries(servicesOf(doc));
 
-  it('has exactly the release, server and backup services', () => {
-    expect(Object.keys(services).sort()).toEqual([...RELEASE_JOB_SERVICES].sort());
+  it('has exactly the release, server, backup and web services', () => {
+    expect(Object.keys(services).sort()).toEqual([...RELEASE_JOB_SERVICES, WEB_SERVICE].sort());
   });
 
-  it('puts only those three services on sab-db', () => {
+  it('puts only the release, server and backup services on sab-db', () => {
     const onDb = Object.entries(services)
       .filter(([, service]) => networkNames(service).includes('sab-db'))
       .map(([name]) => name);
@@ -491,6 +492,63 @@ describe('coolify.compose.yml', () => {
 
   it('keeps the backup job off every network but sab-db', () => {
     expect(networkNames(services['sab-backup']!)).toEqual(['sab-db']);
+  });
+
+  it('leaves the web on the implicit default network, never sab-db', () => {
+    expect(networkNames(services[WEB_SERVICE]!)).toEqual([]);
+  });
+
+  it('gives the web no Discord, Postgres, auth or legacy variable', () => {
+    const keys = envKeys(services[WEB_SERVICE]!) ?? [];
+    expect(keys).not.toEqual([]);
+    for (const key of keys) {
+      expect(key, `${WEB_SERVICE} ${key}`).not.toMatch(
+        /^(?:DISCORD_|POSTGRES_|BETTER_AUTH_|TOKENS$|LEGACY_|APP_URL$|TRUSTED_PROXY_IPS$|BACKUP_)/,
+      );
+      expect(key, `${WEB_SERVICE} ${key}`).not.toMatch(SECRET_NAME);
+    }
+  });
+
+  it('hands the REST and login variables to the server and nothing else', () => {
+    const REST_KEYS = [
+      'APP_URL',
+      'DISCORD_CLIENT_SECRET',
+      'BETTER_AUTH_SECRET',
+      'TRUSTED_PROXY_IPS',
+    ];
+    for (const [name, service] of Object.entries(services)) {
+      const keys = envKeys(service) ?? [];
+      for (const key of REST_KEYS) {
+        expect(keys.includes(key), `${name} ${key}`).toBe(name === 'sab-server');
+      }
+    }
+  });
+
+  it('starts the web after the server without waiting on the bot login', () => {
+    const dependsOn = asMap(services[WEB_SERVICE]!['depends_on'], `${WEB_SERVICE} depends_on`);
+    expect(asMap(dependsOn['sab-server'], 'sab-server')['condition']).toBe('service_started');
+    expect(services[WEB_SERVICE]!['restart']).toBe('unless-stopped');
+    expect(services[WEB_SERVICE]!['stop_signal']).toBe('SIGTERM');
+  });
+
+  it('probes the web on its own /healthz, not through the server', () => {
+    const health = asMap(services[WEB_SERVICE]!['healthcheck'], 'healthcheck');
+    expect(health['test']).toEqual([
+      'CMD',
+      'wget',
+      '-q',
+      '-O',
+      '/dev/null',
+      'http://127.0.0.1:3101/healthz',
+    ]);
+    expect(health['start_period']).toBeDefined();
+  });
+
+  it('builds the web from its own Dockerfile and never names the rewrite target', () => {
+    const build = asMap(services[WEB_SERVICE]!['build'], 'build');
+    expect(build['dockerfile']).toBe('apps/web/Dockerfile');
+    expect(build['target']).toBe('runner');
+    expect(envKeys(services[WEB_SERVICE]!) ?? []).not.toContain('SERVER_INTERNAL_URL');
   });
 
   it('lists environment variables explicitly for every service', () => {

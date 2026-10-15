@@ -3,10 +3,11 @@ import nextConfig from './next.config';
 import { DEFAULT_SERVER_ORIGIN, serverOrigin } from './server-origin';
 
 describe('next.config', () => {
-  it('proxies /api/* (Better Auth included) to the server so the browser has one origin', async () => {
+  it('proxies /api/* (Better Auth included) and /mcp to the server so the browser has one origin', async () => {
     const rewrites = await nextConfig.rewrites?.();
     expect(rewrites).toEqual([
       { source: '/api/:path*', destination: `${serverOrigin()}/api/:path*` },
+      { source: '/mcp', destination: `${serverOrigin()}/mcp` },
     ]);
   });
 
@@ -36,12 +37,14 @@ describe('next.config', () => {
       return new Map((rules[0]?.headers ?? []).map(({ key, value }) => [key, value]));
     };
 
-    it('applies to pages and leaves /api to the server, which sets its own policy', async () => {
+    it('applies to pages and leaves /api and /mcp to the server, which sets its own policy', async () => {
       const rules = (await nextConfig.headers?.()) ?? [];
       const source = new RegExp(`^${rules[0]?.source ?? ''}$`);
       expect(source.test('/servers/1')).toBe(true);
       expect(source.test('/login')).toBe(true);
       expect(source.test('/api/auth/get-session')).toBe(false);
+      expect(source.test('/mcp')).toBe(false);
+      expect(source.test('/mcp-guide')).toBe(true);
     });
 
     it('forbids framing, sniffing and leaking the full referrer', async () => {

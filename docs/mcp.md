@@ -5,6 +5,7 @@ Phạm vi: endpoint MCP là gì, lấy khoá và nối client thế nào, tool n
 ## Endpoint
 
 - URL: `https://bot.sabies.vn/mcp`, cùng host với dashboard.
+- Đường đi: Traefik tới `sab-web`, rồi Next `rewrites()` (`apps/web/next.config.ts`) đẩy `/mcp` sang `sab-server`, cùng cách với `/api/*`; không có label Traefik riêng. Next giữ nguyên header (không tự thêm `Origin`), và `apps/web/proxy.ts` bỏ qua `/mcp`. Phía server thấy request đến từ container web nên `TRUSTED_PROXY_IPS` phải phủ cả web lẫn Traefik (`docs/deployment.md`, mục Release 2).
 - Chỉ `POST`, Streamable HTTP không trạng thái (mỗi request dựng server và transport mới, trả JSON một lần). `GET`/`DELETE` trả 405.
 - Xác thực chỉ bằng `Authorization: Bearer sab_...`. Không cookie (cookie là quyền trình duyệt tự gắn, nhận nó thì trang web bất kỳ người dùng ghé qua cũng gọi được tool), không query string.
 - Request có header `Origin` bị từ chối 403 và không có CORS: client MCP không phải trình duyệt.

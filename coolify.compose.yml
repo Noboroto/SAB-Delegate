@@ -1,16 +1,20 @@
 # Production stack, deployed by Coolify on every push to main.
 #
-# Three services, one image family (apps/server/Dockerfile):
+# Four services. Three share one image family (apps/server/Dockerfile):
 #   sab-release  one-shot: dumps a non-empty database, applies migrations, then
 #                exits. The server waits for it to finish successfully.
-#   sab-server   the Discord bot.
+#   sab-server   the Discord bot, the REST API and the MCP endpoint.
 #   sab-backup   daily dump, outside the server process.
+# and the dashboard has its own image (apps/web/Dockerfile):
+#   sab-web      the Next.js dashboard. The only service with a public domain
+#                (attached in Coolify, container port 3101); it forwards /api/*
+#                and /mcp to sab-server by service name. It never joins sab-db.
 #
 # Postgres is a separate Coolify resource (deploy/postgres.compose.yml). Coolify
 # deletes and recreates every container of a compose app on each deploy, so the
 # database must not live here. The three services reach it over the external
 # network `sab-db`, created by hand once (`docker network create sab-db`), by the
-# alias `sab-postgres`. Nothing else joins that network.
+# alias `sab-postgres`. Nothing else joins that network (sab-web included).
 #
 # Coolify specifics:
 #   * No `container_name:`, named volumes or `${VAR:?}`: Coolify 4.3 overrides or
@@ -114,6 +118,14 @@ services:
       DB_POOL_MAX: ${DB_POOL_MAX:-10}
       PGBOSS_POOL_MAX: ${PGBOSS_POOL_MAX:-4}
       PGBOSS_WORKERS_ENABLED: ${PGBOSS_WORKERS_ENABLED:-true}
+      # REST API, dashboard login and MCP are on exactly when APP_URL is set; the
+      # server refuses to boot with APP_URL but without the other three (and in
+      # production without TRUSTED_PROXY_IPS). Unset all four = bot only.
+      APP_URL: ${APP_URL}
+      DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      # Every hop between the browser and the server: Traefik and sab-web.
+      TRUSTED_PROXY_IPS: ${TRUSTED_PROXY_IPS}
       MCP_ENABLED: ${MCP_ENABLED:-true}
       LOG_LEVEL: ${LOG_LEVEL:-info}
     volumes:
@@ -188,3 +200,44 @@ services:
         limits:
           cpus: '0.50'
           memory: 256M
+
+  sab-web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      target: runner
+    pull_policy: never
+    # service_started, not service_healthy: the web's own probe never touches the
+    # server, and a bot that is slow to log in to Discord must not keep the
+    # dashboard (or its failed health check) from coming up.
+    depends_on:
+      sab-server:
+        condition: service_started
+    restart: unless-stopped
+    # No `networks:` key on purpose: the service then joins the compose default
+    # network (where it reaches sab-server by name) and Coolify adds its proxy
+    # network itself. It must never join sab-db.
+    stop_signal: SIGTERM
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1:3101/healthz']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+      start_interval: 3s
+    # Runtime settings only, no secrets: sessions and OAuth live in sab-server.
+    # SERVER_INTERNAL_URL is deliberately absent: the rewrite target is baked into
+    # the image at build time (default http://sab-server:3100), so a runtime value
+    # could only disagree with it.
+    environment:
+      NODE_ENV: production
+      PORT: '3101'
+      HOSTNAME: 0.0.0.0
+      # Keeps the V8 heap under the container limit so a spike is a GC pause,
+      # not an OOM kill.
+      NODE_OPTIONS: --max-old-space-size=384
+    deploy:
+      resources:
+        limits:
+          cpus: '1.00'
+          memory: 512M

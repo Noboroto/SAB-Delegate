@@ -64,10 +64,11 @@ describe('proxy', () => {
     expect(response.cookies.get('locale')?.value).toBe('vi');
   });
 
-  it('does not run for the API, static assets or the health probe', () => {
+  it('does not run for the API, the MCP endpoint, static assets or the health probe', () => {
     const matcher = new RegExp(`^${config.matcher[0]}$`);
     for (const path of [
       '/api/me',
+      '/mcp',
       '/_next/static/a.js',
       '/_next/image',
       '/healthz',

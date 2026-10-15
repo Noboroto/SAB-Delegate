@@ -22,9 +22,15 @@ const nextConfig: NextConfig = {
   },
   // One origin for the browser: `/api/*` (including Better Auth's
   // `/api/auth/*` and its Discord callback) reaches the Nest server through
-  // this rewrite, so cookies are first-party and there is no CORS.
+  // this rewrite, so cookies are first-party and there is no CORS. `/mcp` (the
+  // AI-agent endpoint, bearer-key only) takes the same path: it is one exact
+  // route, and the rewrite forwards the headers untouched, including the absence
+  // of `Origin` that the server's MCP guard relies on.
   rewrites: () =>
-    Promise.resolve([{ source: '/api/:path*', destination: `${serverOrigin()}/api/:path*` }]),
+    Promise.resolve([
+      { source: '/api/:path*', destination: `${serverOrigin()}/api/:path*` },
+      { source: '/mcp', destination: `${serverOrigin()}/mcp` },
+    ]),
   // Real 308s, not page stubs: a `redirect()` in a page answers 200 with an RSC
   // payload and crawlers stop at that shell. The app has no landing page: `/`
   // goes to the picker, which sends a signed-out visitor on to the login page.
@@ -33,12 +39,12 @@ const nextConfig: NextConfig = {
       { source: '/', destination: '/servers', permanent: true },
       { source: '/dashboard', destination: '/servers', permanent: true },
     ]),
-  // Pages only: `/api/*` is the Nest server's, and it sets its own (closed)
-  // policy on JSON answers.
+  // Pages only: `/api/*` and `/mcp` are the Nest server's, and it sets its own
+  // (closed) policy on JSON answers.
   headers: () =>
     Promise.resolve([
       {
-        source: '/((?!api/).*)',
+        source: '/((?!api/|mcp$).*)',
         headers: securityHeaders(process.env['NODE_ENV'] === 'production'),
       },
     ]),

@@ -7,6 +7,7 @@ Phạm vi: cách deploy, cấu hình Coolify, kiểm sau deploy, backup, đăng 
 | Việc | Nguồn thật |
 | --- | --- |
 | Service, mạng, healthcheck, giới hạn, bind mount | `coolify.compose.yml` |
+| Đường `/api/*` và `/mcp` từ web sang server | `apps/web/next.config.ts` (`rewrites`), `apps/web/server-origin.ts` |
 | Resource Postgres (image, lệnh, mount) | `deploy/postgres.compose.yml` |
 | Stack chạy thử cục bộ | `compose.yml`, `deploy/local-smoke.compose.yml` |
 | Release (kiểm rỗng, dump, migrate, cấp quyền) | `apps/server/scripts/release.sh` |
@@ -18,10 +19,10 @@ Phạm vi: cách deploy, cấu hình Coolify, kiểm sau deploy, backup, đăng 
 
 - MỘT app Coolify duy nhất (repo, nhánh `main`, build pack Docker Compose, đường dẫn `/coolify.compose.yml`). Không tạo app thứ hai; không có staging. Push `main` là deploy prod; push `dev` KHÔNG deploy (kiểm khi cấu hình).
 - Resource Postgres riêng, mạng ngoài `sab-db` tạo tay, alias `sab-postgres`, không `ports:`. Dữ liệu tại `/srv/appdata/sab-delegate/postgres` (PG18 mount `/var/lib/postgresql`, không phải `/data`). Mật khẩu superuser chỉ nằm trong resource này.
-- Chỉ `sab-release`, `sab-server`, `sab-backup` vào `sab-db`.
+- Chỉ `sab-release`, `sab-server`, `sab-backup` vào `sab-db`. `sab-web` chỉ ở mạng `default`, không biến DB, không bí mật.
 - Bind mount tuyệt đối dưới `/srv/appdata/sab-delegate/`, mount THƯ MỤC (không mount file đơn). Cấm bấm "Convert to directory".
 - Không `${VAR:?}`, named volume, `container_name`, `ports:`, `cpus:` cấp service, `restart: always`. Giới hạn chỉ qua `deploy.resources.limits.*`. Biến bắt buộc fail-fast bằng Zod lúc boot.
-- `stop_signal: SIGTERM`, `stop_grace_period: 45s` (lớn hơn 30 s drain của pg-boss), `pull_policy: never`, `depends_on` dạng map `service_completed_successfully` cho `sab-release`, `restart: "no"` cho release, `restart: unless-stopped` cho server và backup.
+- `stop_signal: SIGTERM`, `stop_grace_period: 45s` (lớn hơn 30 s drain của pg-boss), `pull_policy: never`, `depends_on` dạng map `service_completed_successfully` cho `sab-release`, `restart: "no"` cho release, `restart: unless-stopped` cho server, backup và web. `sab-web` đợi `sab-server` ở mức `service_started` (không `service_healthy`: probe của web không đụng server, bot đăng nhập Discord chậm không được giữ dashboard).
 - Mọi biến bí mật đặt `is_buildtime=false`. Coolify bơm env thành `ARG` vào mọi stage, nên mọi `pnpm install` trong Dockerfile phải ghi `--prod` hoặc `--no-prod`.
 
 ## Biến môi trường theo service (chỉ TÊN)
@@ -30,13 +31,14 @@ Bảng này, `env.ts`, khối `environment:` của compose và `.env.example` ph
 
 | Service | Biến |
 | --- | --- |
-| `sab-server` | `APP_ENV`, **`DISCORD_TOKEN`**, `DISCORD_CLIENT_ID`, `DISCORD_ALLOWED_APP_IDS`, `ADMIN_GUILD_ID`, `MIGRATION_PENDING` (mặc định compose `true`: thiếu hay trống thì bot không đăng nhập; chạy thật phải đặt `false` rõ ràng), `COMMANDS_FORCE_RESET`, `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, **`POSTGRES_PASSWORD`** (role runtime), `DB_POOL_MAX`, `PGBOSS_POOL_MAX`, `PGBOSS_WORKERS_ENABLED`, `MCP_ENABLED` (mặc định `true`; `false` gỡ route `/mcp`; route chỉ có khi REST bật, tức là có `APP_URL`, và production còn cần `TRUSTED_PROXY_IPS`), `LOG_LEVEL`. `DISCORD_DEV_GUILD_ID` chỉ ở dev cục bộ, CẤM ở production |
+| `sab-server` | `APP_ENV`, **`DISCORD_TOKEN`**, `DISCORD_CLIENT_ID`, `DISCORD_ALLOWED_APP_IDS`, `ADMIN_GUILD_ID`, `MIGRATION_PENDING` (mặc định compose `true`: thiếu hay trống thì bot không đăng nhập; chạy thật phải đặt `false` rõ ràng), `COMMANDS_FORCE_RESET`, `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, **`POSTGRES_PASSWORD`** (role runtime), `DB_POOL_MAX`, `PGBOSS_POOL_MAX`, `PGBOSS_WORKERS_ENABLED`, `**`DISCORD_CLIENT_SECRET`**, **`BETTER_AUTH_SECRET`** (≥ 32 ký tự), `APP_URL` (origin https không path, ví dụ `https://bot.sabies.vn`), `TRUSTED_PROXY_IPS` (danh sách IP/CIDR phân cách phẩy; xem mục Release 2), `MCP_ENABLED` (mặc định `true`; `false` gỡ route `/mcp`; route chỉ có khi REST bật, tức là có `APP_URL`, và production còn cần `TRUSTED_PROXY_IPS`), `LOG_LEVEL`. Bốn biến REST/đăng nhập đi cùng nhau: có `APP_URL` mà thiếu ba biến kia (production) thì server từ chối khởi động; bỏ trống cả bốn = chỉ chạy bot `DISCORD_DEV_GUILD_ID` chỉ ở dev cục bộ, CẤM ở production |
 | `sab-release` | `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER` (role runtime, để cấp quyền), `POSTGRES_MIGRATE_USER`, **`POSTGRES_MIGRATE_PASSWORD`**, `BACKUP_DIR`, `BACKUP_KEEP_PRE_MIGRATE`. Không có `BACKUP_ENABLED`: release luôn dump DB không rỗng (xem mục Backup) |
+| `sab-web` | `NODE_ENV`, `PORT`, `HOSTNAME` (hằng số của image, không đặt trên Coolify). KHÔNG `DISCORD_*`, `POSTGRES_*`, `BETTER_AUTH_*`, `TOKENS`, không bí mật nào. `SERVER_INTERNAL_URL` cố ý vắng: đích rewrite được nướng vào image lúc build (mặc định `http://sab-server:3100`) |
 | `sab-backup` | `TZ`, `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_BACKUP_USER`, **`POSTGRES_BACKUP_PASSWORD`**, `BACKUP_DIR`, `BACKUP_ENABLED`, `BACKUP_KEEP_DAILY` |
 | Không service mới nào | `TOKENS` (cũ). Giữ trên Coolify tới hết cửa sổ rollback nhưng NGOÀI mọi allowlist |
 | Máy owner, tạm | `LEGACY_BOT_TOKEN`, `LEGACY_CLIENT_ID` (script dọn lệnh Alohomora); không bao giờ vào compose |
 
-Bảng đã đối chiếu với `coolify.compose.yml` (2026-10-14). `COMMANDS_FORCE_RESET` chỉ đặt tạm, xem mục đăng ký lại lệnh.
+Bảng đã đối chiếu với `coolify.compose.yml` (2026-10-15). `COMMANDS_FORCE_RESET` chỉ đặt tạm, xem mục đăng ký lại lệnh.
 
 Kiểm: `docker exec <container> env | cut -d= -f1` cho từng container, so với bảng; không `TOKENS`. Không in giá trị, không `docker compose config` đã nội suy.
 
@@ -74,12 +76,28 @@ Coolify xoá rồi dựng lại cả stack mỗi deploy, và một token chỉ �
 ## Kiểm sau deploy
 
 1. Trong 10 giây phải có deployment mới: `docker exec coolify-db psql -U coolify -d coolify -At -c "select status from application_deployment_queues order by id desc limit 1"`. Không có thì kích tay (webhook có thể không bắn).
-2. `docker ps`: ba service đúng trạng thái (`sab-release` Exited 0, `sab-server` và `sab-backup` Up), 0 restart.
+2. `docker ps`: bốn service đúng trạng thái (`sab-release` Exited 0, `sab-server`, `sab-backup` và `sab-web` Up/healthy), 0 restart.
 3. Log `sab-server` có `Ready! Logged in as …`; `#bot-log` yên.
 4. `GET /health` trả `ok` (cả `database` và `discord` là `up`).
 5. `_prisma_migrations` khớp thư mục `apps/server/prisma/migrations` (số dòng, không dòng nào chưa `finished_at`), và đếm dữ liệu thật so với mốc trước deploy.
-6. `docker history --no-trunc <image> | grep -c '<TÊN_SECRET>='` bằng 0 cho cả ba image.
+6. `docker history --no-trunc <image> | grep -c '<TÊN_SECRET>='` bằng 0 cho cả bốn image (web thêm: các tên `NEXT_PUBLIC_*` nếu có).
 7. Giữ id deployment và tag/SHA cũ để rollback nhanh.
+
+## Release 2 (dashboard, REST, MCP)
+
+Một app Coolify, thêm service `sab-web`; thay đổi so với Release 1 chỉ là service mới và bốn biến của `sab-server`.
+
+1. Domain: gắn `https://bot.sabies.vn` vào service `sab-web` (cổng container `3101`), KHÔNG vào `sab-server`. Trỏ DNS đúng TRƯỚC khi bật domain (Let's Encrypt giới hạn 5 cert trùng hostname mỗi tuần; không thêm/xoá domain lặp lại).
+2. Discord Developer Portal, app Sabi, OAuth2 Redirects: `https://bot.sabies.vn/api/auth/callback/discord`. `APP_URL` phải là đúng origin này.
+3. Biến mới trên Coolify, đều `is_buildtime=false`: `APP_URL`, `DISCORD_CLIENT_SECRET`, `BETTER_AUTH_SECRET`, `TRUSTED_PROXY_IPS`. Không biến nào cho `sab-web`.
+4. `/mcp`: Next `rewrites()` đẩy `/mcp` sang `sab-server` giống `/api/*`, KHÔNG dùng label Traefik. Next chuyển tiếp header nguyên vẹn (`Authorization` giữ nguyên, không tự thêm `Origin`), nên bearer auth và việc từ chối request có `Origin` của server vẫn đúng. `proxy.ts` loại `/mcp` khỏi matcher (không cookie ngôn ngữ trên trả lời JSON-RPC, không đệm body). Đích rewrite nướng lúc build, nên đổi `SERVER_INTERNAL_URL` phải build lại. Cần live-verify sau deploy (xem dưới), không suy từ test.
+5. `TRUSTED_PROXY_IPS`: server thấy request đến từ container `sab-web` (Next thêm IP đó vào cuối `X-Forwarded-For`), và Traefik đứng trước web, nên danh sách phải phủ CẢ HAI. Subnet chỉ biết sau lần deploy đầu:
+   - Mạng của app: `docker network ls --format '{{.Name}}' | grep <uuid-app-coolify>`; subnet: `docker network inspect <mạng> --format '{{range .IPAM.Config}}{{.Subnet}}{{end}}'`.
+   - Mạng mà Traefik (`coolify-proxy`) dùng để tới app: `docker inspect <container-sab-web> --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{$v.IPAddress}}{{"\n"}}{{end}}'` và subnet của từng mạng như trên.
+   - Đặt các subnet (CIDR) đó, phẩy phân cách. Lần deploy đầu có thể đặt tạm bằng CIDR rộng của mạng Docker rồi thu hẹp sau khi đo.
+   - Đo bằng log: `/api/me` hai lần từ hai IP khác nhau phải thấy IP khác nhau trong bộ đếm rate limit; nếu mọi request cùng một IP là danh sách còn thiếu một hop.
+6. Kiểm sau deploy, ngoài mục Kiểm sau deploy: mở `https://bot.sabies.vn/healthz` (200), đăng nhập Discord trọn vòng; `POST /mcp` không khoá trả `401` + `WWW-Authenticate: Bearer`; có `Origin` trả `403`; có khoá hợp lệ trả kết quả `tools/list`. Đọc lại bằng request thật, không chỉ log.
+7. Rollback, từ nhẹ tới nặng: (a) chỉ `/mcp`: `MCP_ENABLED=false` rồi redeploy; (b) gỡ dashboard khỏi mạng: bỏ domain khỏi `sab-web` (bot không đổi); (c) về bot-only: để trống `APP_URL`, `DISCORD_CLIENT_SECRET`, `BETTER_AUTH_SECRET`, `TRUSTED_PROXY_IPS` rồi redeploy (server bỏ REST, web vẫn lên nhưng không có API); (d) revert commit thêm `sab-web` và push `main`. Mọi bước là một lần redeploy toàn stack (~60 s bot rớt mạng), nên theo luật giờ ở mục Giảm downtime.
 
 ## Backup và restore
 

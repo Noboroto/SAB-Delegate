@@ -73,7 +73,9 @@ export function proxy(request: NextRequest): NextResponse {
 }
 
 export const config = {
-  // The API is the server's, static assets need no cookie, and the health probe
-  // must answer without side effects.
-  matcher: ['/((?!api|_next/static|_next/image|favicon\\.ico|healthz).*)'],
+  // The API and the MCP endpoint are the server's (a locale cookie on a JSON-RPC
+  // answer, or the body buffered for this proxy, would only get in the way),
+  // static assets need no cookie, and the health probe must answer without side
+  // effects.
+  matcher: ['/((?!api|mcp|_next/static|_next/image|favicon\\.ico|healthz).*)'],
 };

@@ -82,8 +82,26 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      # Empty = REST API, login and MCP off (bot only). To use the dashboard
+      # locally set APP_URL=http://localhost:3101 plus both secrets.
+      APP_URL: ${APP_URL:-}
+      DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET:-}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-}
       MCP_ENABLED: ${MCP_ENABLED:-true}
       LOG_LEVEL: ${LOG_LEVEL:-debug}
+
+  # The dashboard; `/api/*` and `/mcp` reach sab-server by service name.
+  sab-web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      target: runner
+    restart: unless-stopped
+    depends_on:
+      sab-server:
+        condition: service_started
+    ports:
+      - '127.0.0.1:3101:3101'
 
 volumes:
   # Throwaway development data; `docker compose down -v` discards it.
