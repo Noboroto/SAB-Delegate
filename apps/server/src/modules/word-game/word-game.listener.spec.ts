@@ -86,7 +86,7 @@ describe('WordGameListener', () => {
     expect(order).toEqual(['first', 'second', 'third']);
     // An emptied queue is dropped, so channels that went quiet hold no memory.
     expect(
-      (listener as unknown as { channelQueues: Map<string, unknown> }).channelQueues.size,
+      (listener as unknown as { queue: { queues: Map<string, unknown> } }).queue.queues.size,
     ).toBe(0);
   });
 

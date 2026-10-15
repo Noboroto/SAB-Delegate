@@ -45,6 +45,7 @@ function build(options: { access?: ChannelAccess } = {}) {
       createMany: vi.fn().mockResolvedValue({ count: 1 }),
       update: vi.fn().mockResolvedValue({}),
     },
+    gameChannel: { findUnique: vi.fn().mockResolvedValue(null) },
     $transaction: vi.fn(),
   };
   prisma.$transaction.mockImplementation((work: (tx: typeof prisma) => unknown) => work(prisma));
@@ -68,6 +69,16 @@ describe('GuildConfigService.patch validation', () => {
       failsWith(ErrorCode.DISCORD_CHANNEL_NOT_FOUND),
     );
     expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(audit.record).not.toHaveBeenCalled();
+  });
+
+  it('refuses a word channel that hosts a channel game, writing nothing', async () => {
+    const { prisma, audit, service } = build();
+    prisma.gameChannel.findUnique.mockResolvedValueOnce({ id: 'game-channel' });
+    await expect(service.patch(GUILD, { wordChannelId: CHANNEL }, ACTOR)).rejects.toEqual(
+      failsWith(ErrorCode.CHANNEL_IN_USE),
+    );
+    expect(prisma.guildConfig.update).not.toHaveBeenCalled();
     expect(audit.record).not.toHaveBeenCalled();
   });
 

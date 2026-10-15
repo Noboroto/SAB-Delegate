@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { AuditService } from '../../common/audit/audit.service.js';
 import type { GuildLocaleService } from '../../i18n/guild-locale.service.js';
 import type { PrismaService } from '../../prisma/prisma.service.js';
+import type { LeaderboardService } from '../game-core/leaderboard.service.js';
 import type { GuildConfigService } from '../guild-config/guild-config.service.js';
 import type { DictionaryService } from './dictionary.service.js';
 import { WordGameService } from './word-game.service.js';
@@ -149,6 +150,7 @@ function build(setup: Setup = {}) {
   const audit = { record: vi.fn().mockResolvedValue(undefined) };
   const guilds = {
     assertChannelUsable: vi.fn().mockResolvedValue(undefined),
+    assertNotGameChannel: vi.fn().mockResolvedValue(undefined),
     ensureGuild: vi.fn().mockResolvedValue({ id: 'guild-key' }),
     wordGameRoute: vi.fn(() =>
       Promise.resolve(
@@ -161,6 +163,7 @@ function build(setup: Setup = {}) {
   };
   const known = new Set(setup.dictionary ?? WORDS);
   const dictionary = { has: vi.fn((word: string) => Promise.resolve(known.has(word))) };
+  const leaderboard = { award: vi.fn().mockResolvedValue(undefined) };
   const service = new WordGameService(
     prisma as unknown as PrismaService,
     audit as unknown as AuditService,
@@ -168,8 +171,9 @@ function build(setup: Setup = {}) {
     dictionary as unknown as DictionaryService,
     { resolve: vi.fn().mockResolvedValue('en') } as unknown as GuildLocaleService,
     {} as never,
+    leaderboard as unknown as LeaderboardService,
   );
-  return { service, store, prisma, audit, guilds, dictionary, hooks, ...prisma };
+  return { service, store, prisma, audit, guilds, dictionary, leaderboard, hooks, ...prisma };
 }
 
 const move = (content: string, authorId = BOB, channelId = CHANNEL) => ({

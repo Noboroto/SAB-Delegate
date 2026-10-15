@@ -18,6 +18,7 @@ import { ChannelAccessService } from '../../discord/services/channel-access.serv
 import { PrismaService } from '../../prisma/prisma.service.js';
 
 type Db = Pick<Prisma.TransactionClient, 'guild' | 'guildConfig'>;
+type GameChannelDb = Pick<Prisma.TransactionClient, 'gameChannel'>;
 
 /** The server's own row: `id` is the internal key other tables reference. */
 type GuildRecord = {
@@ -239,6 +240,9 @@ export class GuildConfigService {
       const guild = await this.ensureGuild(id, undefined, tx);
       const before = toSettings(await this.readRow(tx, id));
 
+      if (configChanges.wordChannelId != null) {
+        await this.assertNotGameChannel(configChanges.wordChannelId, tx);
+      }
       if (Object.keys(configChanges).length > 0) {
         await tx.guildConfig.update({ where: { guildId: guild.id }, data: configChanges });
       }
@@ -263,6 +267,16 @@ export class GuildConfigService {
     });
     this.forgetWordGameRoute(id);
     return updated;
+  }
+
+  /**
+   * `CHANNEL_IN_USE` when `channelId` hosts a channel game: the word chain
+   * there would judge every message a second time. Run it inside the
+   * transaction that sets the word channel.
+   */
+  async assertNotGameChannel(channelId: string, db: GameChannelDb = this.prisma): Promise<void> {
+    const holder = await db.gameChannel.findUnique({ where: { channelId }, select: { id: true } });
+    if (holder !== null) throw new ServiceError(ErrorCode.CHANNEL_IN_USE);
   }
 
   private readRow(db: Pick<Prisma.TransactionClient, 'guild'>, discordId: string) {

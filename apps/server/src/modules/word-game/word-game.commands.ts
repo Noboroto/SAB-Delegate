@@ -90,7 +90,6 @@ export class WordGameCommands {
     // Before the reply is deferred: a channel the bot cannot post in is refused
     // with a private answer, which a deferred public reply could not give.
     await this.guilds.assertChannelUsable('wordChannelId', channel.id);
-
     // The writes below, and the message posted in the channel, can outlast the
     // 3 s window for a first reply.
     await interaction.deferReply();

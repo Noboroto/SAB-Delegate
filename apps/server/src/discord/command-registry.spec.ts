@@ -32,13 +32,17 @@ const LEGACY_PERMISSIONS: Record<string, bigint | undefined> = {
   'add-poll': undefined,
   'attendance-by-role': undefined,
   'create-activity': PermissionFlagsBits.ManageChannels,
+  // Added after the previous bot: the channel games, their scores and help.
+  game: PermissionFlagsBits.ManageMessages,
+  leaderboard: undefined,
+  help: undefined,
 };
 const LEGACY_GUILD_ONLY = ['add-poll', 'attendance-by-role', 'create-activity'];
 
-describe('the 16 top-level commands', () => {
+describe('the 19 top-level commands', () => {
   it('are exactly the commands in the shared catalog', () => {
     expect([...ROOT_COMMAND_NAMES].sort()).toEqual(Object.keys(MESSAGES.en.commands).sort());
-    expect(ROOT_COMMAND_NAMES).toHaveLength(16);
+    expect(ROOT_COMMAND_NAMES).toHaveLength(19);
   });
 
   it('pass the Discord metadata limits', () => {
@@ -76,9 +80,9 @@ describe('the 16 top-level commands', () => {
 });
 
 describe('command group decorators', () => {
-  it('declare each of the 12 groups once, with the registered metadata', () => {
+  it('declare each of the 13 groups once, with the registered metadata', () => {
     const groups = Object.keys(CommandGroup);
-    expect(groups).toHaveLength(12);
+    expect(groups).toHaveLength(13);
     const reflector = new Reflector();
     for (const name of groups) {
       @(CommandGroup[name as keyof typeof CommandGroup]())

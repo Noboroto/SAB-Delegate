@@ -7,6 +7,7 @@ import type { ChannelAccessService } from '../../discord/services/channel-access
 import type { GuildLocaleService } from '../../i18n/guild-locale.service.js';
 import type { PrismaService } from '../../prisma/prisma.service.js';
 import { createTestDatabase, type TestDatabase } from '../../testing/test-database.js';
+import { LeaderboardService } from '../game-core/leaderboard.service.js';
 import { GuildConfigService } from '../guild-config/guild-config.service.js';
 import { DictionaryService } from './dictionary.service.js';
 import { WordGameService } from './word-game.service.js';
@@ -54,6 +55,7 @@ describe('WordGameService against Postgres', () => {
       new DictionaryService(() => Promise.resolve(WORDS)),
       { resolve: vi.fn().mockResolvedValue('en') } as unknown as GuildLocaleService,
       {} as never,
+      new LeaderboardService(prisma),
     );
   });
 

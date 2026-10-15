@@ -25,6 +25,7 @@ import { discordErrorCode } from '../../discord/helpers/reply.js';
 import { GuildLocaleService } from '../../i18n/guild-locale.service.js';
 import { translatorFor } from '../../i18n/translator.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
+import { LeaderboardService } from '../game-core/leaderboard.service.js';
 import { GuildConfigService } from '../guild-config/guild-config.service.js';
 import { DictionaryService } from './dictionary.service.js';
 
@@ -137,6 +138,7 @@ export class WordGameService {
     private readonly dictionary: DictionaryService,
     private readonly locales: GuildLocaleService,
     private readonly client: Client,
+    private readonly leaderboard: LeaderboardService,
   ) {}
 
   /**
@@ -276,6 +278,7 @@ export class WordGameService {
           // also undoes the claim above.
           throw new WordAlreadyPlayed();
         }
+        await this.leaderboard.award(tx, game.guildKey, 'WORD_CHAIN', authorId);
         return 'CLAIMED';
       });
     } catch (error) {
@@ -326,6 +329,7 @@ export class WordGameService {
 
     const done = await this.prisma.$transaction(async (tx): Promise<WordGameConfigResult> => {
       const guild = await this.guilds.ensureGuild(id, undefined, tx);
+      if (channelId !== undefined) await this.guilds.assertNotGameChannel(channelId, tx);
       const before = settingsOf(await this.loadGame(tx, id));
 
       const after = await tx.guildConfig.update({

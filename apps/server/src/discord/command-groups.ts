@@ -24,6 +24,7 @@ const SPECS = {
   birthday: { permissions: PermissionFlagsBits.Administrator },
   set: { permissions: PermissionFlagsBits.Administrator },
   word: { permissions: PermissionFlagsBits.ManageMessages },
+  game: { permissions: PermissionFlagsBits.ManageMessages },
   note: {},
   get: {},
   mention: { permissions: PermissionFlagsBits.UseApplicationCommands },
@@ -36,12 +37,14 @@ const SPECS = {
   'add-poll': { guildOnly: true },
   'attendance-by-role': { guildOnly: true },
   'create-activity': { permissions: PermissionFlagsBits.ManageChannels, guildOnly: true },
+  leaderboard: {},
+  help: {},
 } as const satisfies Record<keyof (typeof MESSAGES)['en']['commands'], CommandSpec>;
 
 type CommandName = keyof typeof SPECS;
 type GroupName = Exclude<
   CommandName,
-  'ping' | 'add-poll' | 'attendance-by-role' | 'create-activity'
+  'ping' | 'add-poll' | 'attendance-by-role' | 'create-activity' | 'leaderboard' | 'help'
 >;
 
 const GROUP_NAMES = [
@@ -50,6 +53,7 @@ const GROUP_NAMES = [
   'birthday',
   'set',
   'word',
+  'game',
   'note',
   'get',
   'mention',
