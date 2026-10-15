@@ -12,6 +12,6 @@
 - Trình duyệt Playwright có thể giữ chunk cũ sau rebuild → thêm `?v=` khi đo lại.
 
 ## Link preview (Messenger/Facebook/Zalo)
-- `metadataBase` từ env `APP_URL` lúc request (sab-web nhận `APP_URL` trong compose). `next dev` luôn dùng localhost cho og:image dạng file (cố ý của Next); `next start` mới dùng metadataBase — đo bằng `next start`.
+- `metadataBase` từ env `SITE_URL` lúc request; compose ghi `SITE_URL: ${APP_URL}` cho sab-web vì guard `compose-rules.guard.test.ts` cấm key `APP_URL` ngoài sab-server (APP_URL là công tắc bật REST). `next dev` luôn dùng localhost cho og:image dạng file (cố ý của Next); `next start` mới dùng metadataBase — đo bằng `next start`.
 - robots.ts: khối riêng cho facebookexternalhit/Facebot (bài học JudgeHub); `*` không được chặn /servers vì `/` → /servers → /login.
 - Guard i18n (`message-keys.guard.test.ts`) chỉ nhận `const t = await getTranslations('ns')` — destructure `Promise.all` làm guard báo key "không dùng".
