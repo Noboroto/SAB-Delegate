@@ -1,10 +1,11 @@
 'use client';
 
-import { App, Button, Space, Typography } from 'antd';
+import { App, Button, Typography } from 'antd';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { DiscordTimestamp } from '@/components/data/discord-timestamp';
 import { ConfirmAction } from '@/components/forms/confirm-action';
+import { ActionRow } from '@/components/ui/action-row';
 import { previewRemoveNote, removeNote } from '@/lib/note/note-api';
 import type { NoteView } from '@/lib/note/note-schemas';
 
@@ -27,7 +28,7 @@ export function NoteCard({ guildId, note, onEdit }: NoteCardProps) {
         {note.topic}
       </Typography.Title>
       <div style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{note.content}</div>
-      <Space wrap style={{ marginTop: 8 }}>
+      <ActionRow style={{ marginTop: 'var(--space-2)' }}>
         <Typography.Text type="secondary">
           {t('updated')} <DiscordTimestamp value={note.updatedAt} />
         </Typography.Text>
@@ -66,7 +67,7 @@ export function NoteCard({ guildId, note, onEdit }: NoteCardProps) {
             router.refresh();
           }}
         />
-      </Space>
+      </ActionRow>
     </article>
   );
 }

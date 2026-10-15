@@ -77,7 +77,7 @@ export function BirthdayAddForm({ guildId }: { guildId: string }) {
         <Form.Item name="discordId" label={t('add.discordId')} rules={required}>
           <MemberSelect guildId={guildId} placeholder={t('add.discordIdPlaceholder')} />
         </Form.Item>
-        <div style={{ display: 'flex', gap: 12 }}>
+        <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
           <Form.Item name="day" label={t('add.day')} rules={required} style={{ flex: 1 }}>
             <InputNumber min={1} max={31} precision={0} style={{ width: '100%' }} />
           </Form.Item>
@@ -90,9 +90,11 @@ export function BirthdayAddForm({ guildId }: { guildId: string }) {
             <ErrorAlert error={add.error} />
           </Form.Item>
         )}
-        <Button type="primary" htmlType="submit" loading={add.pending} block>
-          {t('add.submit')}
-        </Button>
+        <Form.Item style={{ marginBottom: 0 }}>
+          <Button type="primary" htmlType="submit" loading={add.pending}>
+            {t('add.submit')}
+          </Button>
+        </Form.Item>
       </Form>
     </Card>
   );

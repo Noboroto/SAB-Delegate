@@ -171,7 +171,7 @@ export function CreateKeyModal({ open, onClose, onMinted }: CreateKeyModalProps)
           title={t('reauth.title')}
           description={t('reauth.body')}
           action={
-            <Button size="small" type="primary" loading={signingIn} onClick={signInAgain}>
+            <Button loading={signingIn} onClick={signInAgain}>
               {t('reauth.action')}
             </Button>
           }

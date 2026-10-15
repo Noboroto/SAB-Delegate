@@ -6,6 +6,7 @@ import { App, Avatar, Button, Card, Form, Input, Popconfirm, Space, Typography }
 import { useTranslations } from 'next-intl';
 import { BotProfileSetResultSchema, type BotProfile } from '@sab/shared';
 import { ErrorAlert } from '@/components/data/error-alert';
+import { ActionRow } from '@/components/ui/action-row';
 import { apiFetch } from '@/lib/api/api-fetch';
 import { useApiMutation } from '@/lib/api/mutations';
 import {
@@ -125,7 +126,7 @@ export function BotProfileForm({ guildId, profile }: BotProfileFormProps) {
                 : t(`fileErrors.${fileError}`, { size: AVATAR_MAX_KIB })
             }
           >
-            <Space size={16} wrap align="center">
+            <ActionRow>
               <Space orientation="vertical" size={4} align="center">
                 <Avatar size={64} src={picked?.previewUrl ?? profile.avatarUrl ?? undefined} />
                 <Typography.Text type="secondary">
@@ -152,34 +153,40 @@ export function BotProfileForm({ guildId, profile }: BotProfileFormProps) {
                   {t('avatarDiscard')}
                 </Button>
               )}
-            </Space>
+            </ActionRow>
           </Form.Item>
-          {save.error === undefined ? null : <ErrorAlert error={save.error} />}
-          <Space wrap style={{ marginTop: save.error === undefined ? 0 : 16 }}>
-            <Button type="primary" htmlType="submit" loading={save.pending} disabled={!changed}>
-              {t('save')}
-            </Button>
-            <Button
-              disabled={save.pending || profile.nick === null}
-              onClick={() => void submit({ nick: null }, t('restoreNickDone'), () => setNick(''))}
-            >
-              {t('restoreNick')}
-            </Button>
-            <Popconfirm
-              title={t('restoreAvatarConfirm')}
-              okText={t('restoreAvatarConfirmOk')}
-              cancelText={tCommon('cancel')}
-              okButtonProps={{ danger: true }}
-              disabled={save.pending || profile.avatarUrl === null}
-              onConfirm={() =>
-                void submit({ avatar: null }, t('restoreAvatarDone'), () => setPicked(undefined))
-              }
-            >
-              <Button danger disabled={save.pending || profile.avatarUrl === null}>
-                {t('restoreAvatar')}
+          {save.error === undefined ? null : (
+            <Form.Item>
+              <ErrorAlert error={save.error} />
+            </Form.Item>
+          )}
+          <Form.Item style={{ marginBottom: 0 }}>
+            <ActionRow>
+              <Button type="primary" htmlType="submit" loading={save.pending} disabled={!changed}>
+                {t('save')}
               </Button>
-            </Popconfirm>
-          </Space>
+              <Button
+                disabled={save.pending || profile.nick === null}
+                onClick={() => void submit({ nick: null }, t('restoreNickDone'), () => setNick(''))}
+              >
+                {t('restoreNick')}
+              </Button>
+              <Popconfirm
+                title={t('restoreAvatarConfirm')}
+                okText={t('restoreAvatarConfirmOk')}
+                cancelText={tCommon('cancel')}
+                okButtonProps={{ danger: true }}
+                disabled={save.pending || profile.avatarUrl === null}
+                onConfirm={() =>
+                  void submit({ avatar: null }, t('restoreAvatarDone'), () => setPicked(undefined))
+                }
+              >
+                <Button danger disabled={save.pending || profile.avatarUrl === null}>
+                  {t('restoreAvatar')}
+                </Button>
+              </Popconfirm>
+            </ActionRow>
+          </Form.Item>
         </Form>
       </Space>
     </Card>

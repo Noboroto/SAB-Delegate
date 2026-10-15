@@ -104,6 +104,17 @@ describe('serverFetch', () => {
     });
   });
 
+  it('throws a rate limit as a typed error for the route boundary, never as not-found', async () => {
+    fetchMock.mockResolvedValue(
+      new Response('{"code":"RATE_LIMITED","message":"Too many requests"}', { status: 429 }),
+    );
+    const error = (await serverFetch('/api/guilds/1/audit-logs', { parser }).catch(
+      (e: unknown) => e,
+    )) as Error;
+    expect(error).toMatchObject({ name: 'ApiRequestError', status: 429, code: 'RATE_LIMITED' });
+    expect(error.message).not.toContain('Too many');
+  });
+
   it('reports an unreachable server as 503 without leaking the network error', async () => {
     fetchMock.mockRejectedValue(new TypeError('connect ECONNREFUSED 172.18.0.5:3100'));
     const error = (await serverFetch('/api/me', { parser }).catch((e: unknown) => e)) as Error;

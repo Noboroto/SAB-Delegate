@@ -48,6 +48,7 @@ describe('getGuildsOrReauth', () => {
 describe('isGuildSection', () => {
   it('accepts exactly the sections the navigation links to', () => {
     for (const section of GUILD_SECTIONS) expect(isGuildSection(section)).toBe(true);
-    for (const other of ['', 'admin', '..', 'Logs']) expect(isGuildSection(other)).toBe(false);
+    for (const other of ['', 'admin', '..', 'Logs', 'audit-log'])
+      expect(isGuildSection(other)).toBe(false);
   });
 });

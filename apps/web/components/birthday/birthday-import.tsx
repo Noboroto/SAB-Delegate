@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { BIRTHDAY_CSV_HEADER, BIRTHDAY_CSV_TEMPLATE, type BirthdayImportReport } from '@sab/shared';
 import { ErrorAlert } from '@/components/data/error-alert';
+import { ActionRow } from '@/components/ui/action-row';
 import { useApiMutation } from '@/lib/api/mutations';
 import { importBirthdays } from '@/lib/birthday/birthday-api';
 import { BIRTHDAY_CSV_MAX_BYTES, downloadBirthdayTemplate } from '@/lib/birthday/csv-template';
@@ -86,7 +87,7 @@ export function BirthdayImport({ guildId }: { guildId: string }) {
         <Typography.Paragraph style={{ marginBottom: 0 }}>
           {t('import.help', { columns: BIRTHDAY_CSV_HEADER.join(', ') })}
         </Typography.Paragraph>
-        <Space wrap>
+        <ActionRow>
           <input
             ref={input}
             type="file"
@@ -102,7 +103,7 @@ export function BirthdayImport({ guildId }: { guildId: string }) {
             {t('import.template')}
           </Button>
           <Typography.Text type="secondary">{fileName ?? t('import.noFile')}</Typography.Text>
-        </Space>
+        </ActionRow>
         {fileError === undefined ? null : (
           <Alert
             type="error"
@@ -124,16 +125,15 @@ export function BirthdayImport({ guildId }: { guildId: string }) {
           />
         ) : null}
         {send.error === undefined ? null : <ErrorAlert error={send.error} />}
-        <div>
-          <Button
-            type="primary"
-            onClick={() => void check()}
-            loading={send.pending && report === undefined}
-            disabled={csv === undefined || send.pending}
-          >
-            {t('import.preview')}
-          </Button>
-        </div>
+        {/* The confirm button below becomes the card's one primary once a report is on screen. */}
+        <Button
+          type={report === undefined ? 'primary' : 'default'}
+          onClick={() => void check()}
+          loading={send.pending && report === undefined}
+          disabled={csv === undefined || send.pending}
+        >
+          {t('import.preview')}
+        </Button>
         {report === undefined ? null : (
           <ImportReport report={report} pending={send.pending} onConfirm={() => void confirm()} />
         )}
@@ -157,56 +157,60 @@ function ImportReport({
 
   return (
     <section aria-label={t('import.report.title')}>
-      <Typography.Title level={3} style={{ fontSize: 16 }}>
-        {t('import.report.title')}
-      </Typography.Title>
-      <ul>
-        <li>{t('import.report.total', { count: report.total })}</li>
-        <li>{t('import.report.added', { count: report.added })}</li>
-        <li>{t('import.report.duplicates', { count: report.duplicates.length })}</li>
-        <li>{t('import.report.problems', { count: report.problems.length })}</li>
-      </ul>
-      {report.sample.length === 0 ? null : (
-        <p>{t('import.report.sample', { names: report.sample.join(', ') })}</p>
-      )}
-      {listed.length === 0 ? null : (
-        <p>
-          {t('import.report.duplicateList', {
-            ids:
-              listed.join(', ') +
-              (hidden > 0 ? `, ${t('import.report.more', { count: hidden })}` : ''),
-          })}
-        </p>
-      )}
-      {report.problems.length === 0 ? null : (
-        <Table<ImportProblem>
-          size="small"
-          rowKey={(problem) => `${problem.row}-${problem.kind}`}
-          dataSource={report.problems}
-          pagination={{ pageSize: 10, hideOnSinglePage: true, showSizeChanger: false }}
-          scroll={{ x: 'max-content' }}
-          columns={[
-            { title: t('import.problem.columnRow'), dataIndex: 'row' },
-            {
-              title: t('import.problem.columnStudentId'),
-              dataIndex: 'studentId',
-              render: (id: string | undefined) => id ?? '-',
-            },
-            {
-              title: t('import.problem.columnReason'),
-              dataIndex: 'kind',
-              render: (kind: ImportProblem['kind']) => t(`import.problem.kind.${kind}`),
-            },
-          ]}
-        />
-      )}
-      {report.added === 0 ? (
-        <Alert type="info" showIcon title={t('import.report.nothingToAdd')} />
-      ) : (
-        <Button type="primary" onClick={onConfirm} loading={pending} disabled={pending}>
-          {t('import.confirm', { count: report.added })}
-        </Button>
-      )}
+      <Space orientation="vertical" size={12} style={{ width: '100%' }}>
+        <Typography.Title level={3} style={{ fontSize: 16, margin: 0 }}>
+          {t('import.report.title')}
+        </Typography.Title>
+        <ul style={{ margin: 0 }}>
+          <li>{t('import.report.total', { count: report.total })}</li>
+          <li>{t('import.report.added', { count: report.added })}</li>
+          <li>{t('import.report.duplicates', { count: report.duplicates.length })}</li>
+          <li>{t('import.report.problems', { count: report.problems.length })}</li>
+        </ul>
+        {report.sample.length === 0 ? null : (
+          <Typography.Paragraph style={{ marginBottom: 0 }}>
+            {t('import.report.sample', { names: report.sample.join(', ') })}
+          </Typography.Paragraph>
+        )}
+        {listed.length === 0 ? null : (
+          <Typography.Paragraph style={{ marginBottom: 0 }}>
+            {t('import.report.duplicateList', {
+              ids:
+                listed.join(', ') +
+                (hidden > 0 ? `, ${t('import.report.more', { count: hidden })}` : ''),
+            })}
+          </Typography.Paragraph>
+        )}
+        {report.problems.length === 0 ? null : (
+          <Table<ImportProblem>
+            size="small"
+            rowKey={(problem) => `${problem.row}-${problem.kind}`}
+            dataSource={report.problems}
+            pagination={{ pageSize: 10, hideOnSinglePage: true, showSizeChanger: false }}
+            scroll={{ x: 'max-content' }}
+            columns={[
+              { title: t('import.problem.columnRow'), dataIndex: 'row' },
+              {
+                title: t('import.problem.columnStudentId'),
+                dataIndex: 'studentId',
+                render: (id: string | undefined) => id ?? '-',
+              },
+              {
+                title: t('import.problem.columnReason'),
+                dataIndex: 'kind',
+                render: (kind: ImportProblem['kind']) => t(`import.problem.kind.${kind}`),
+              },
+            ]}
+          />
+        )}
+        {report.added === 0 ? (
+          <Alert type="info" showIcon title={t('import.report.nothingToAdd')} />
+        ) : (
+          <Button type="primary" onClick={onConfirm} loading={pending} disabled={pending}>
+            {t('import.confirm', { count: report.added })}
+          </Button>
+        )}
+      </Space>
     </section>
   );
 }

@@ -4,6 +4,7 @@ import { useSyncExternalStore } from 'react';
 import { CopyOutlined } from '@ant-design/icons';
 import { Button, Card, Space, Typography } from 'antd';
 import { useTranslations } from 'next-intl';
+import { ActionRow } from '@/components/ui/action-row';
 import { mcpConfigSnippet, mcpUrl } from '@/lib/api-keys/mcp-config';
 import { useCopyToClipboard } from './use-copy-to-clipboard';
 
@@ -26,17 +27,16 @@ export function ConnectBox() {
         <Typography.Paragraph style={{ marginBottom: 0 }}>{t('intro')}</Typography.Paragraph>
         <div>
           <Typography.Text strong>{t('urlLabel')}</Typography.Text>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <ActionRow>
             <Typography.Text code style={{ overflowWrap: 'anywhere' }}>
               {url}
             </Typography.Text>
             <Button
-              size="small"
               icon={<CopyOutlined />}
               aria-label={t('copyUrl')}
               onClick={() => void copy(url, { done: t('copied'), failed: t('copyFailed') })}
             />
-          </div>
+          </ActionRow>
         </div>
         <div>
           <Typography.Text strong>{t('fileLabel')}</Typography.Text>
@@ -52,7 +52,6 @@ export function ConnectBox() {
             <code>{snippet}</code>
           </pre>
           <Button
-            size="small"
             icon={<CopyOutlined />}
             onClick={() => void copy(snippet, { done: t('copied'), failed: t('copyFailed') })}
           >

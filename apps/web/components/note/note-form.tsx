@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { NOTE_CONTENT_MAX_LENGTH, NOTE_TOPIC_MAX_LENGTH, NoteUpsertSchema } from '@sab/shared';
 import { ErrorAlert } from '@/components/data/error-alert';
 import { RoleSelect } from '@/components/forms/role-select';
+import { ActionRow } from '@/components/ui/action-row';
 import { useApiMutation } from '@/lib/api/mutations';
 import { saveNote } from '@/lib/note/note-api';
 import type { NoteView } from '@/lib/note/note-schemas';
@@ -118,14 +119,14 @@ export function NoteForm({ guildId, editing, existing, onSaved }: NoteFormProps)
           <ErrorAlert error={save.error} />
         </Form.Item>
       )}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+      <ActionRow align="end">
         <Button onClick={onSaved} disabled={save.pending}>
           {tCommon('cancel')}
         </Button>
         <Button type="primary" htmlType="submit" loading={save.pending}>
           {t('form.save')}
         </Button>
-      </div>
+      </ActionRow>
     </Form>
   );
 }

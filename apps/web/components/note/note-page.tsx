@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { Button, Modal, Typography } from 'antd';
 import { useTranslations } from 'next-intl';
+import { ActionRow } from '@/components/ui/action-row';
 import { Heading } from '@/components/ui/heading';
 import { PageState } from '@/components/ui/page-state';
 import { useRoles } from '@/lib/discord/use-roles';
@@ -45,11 +46,13 @@ export function NotePage({ guildId, notes }: NotePageProps) {
   return (
     <>
       <Heading title={t('title')} subtitle={t('subtitle')} />
-      <div style={{ marginBottom: 16 }}>
-        <Button type="primary" onClick={() => setEditor({ note: undefined })}>
-          {t('add')}
-        </Button>
-      </div>
+      {groups.length === 0 ? null : (
+        <ActionRow style={{ marginBottom: 'var(--space-4)' }}>
+          <Button type="primary" onClick={() => setEditor({ note: undefined })}>
+            {t('add')}
+          </Button>
+        </ActionRow>
+      )}
       {groups.length === 0 ? (
         <PageState
           status="info"

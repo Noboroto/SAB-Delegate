@@ -31,6 +31,12 @@
   /* Every control in a row shares one height: custom buttons use these, never a literal. */
   --control-h: 32px;
   --control-h-sm: 24px;
+  /* Spacing scale: the only gaps between sibling controls, cards and sections. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
   --page-px: clamp(16px, 2.5vw, 40px);
   --measure: 65ch;
   --shadow: 0 1px 2px rgba(20, 28, 26, 0.05), 0 1px 3px rgba(20, 28, 26, 0.06);
