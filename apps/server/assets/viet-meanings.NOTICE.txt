@@ -1,0 +1,10 @@
+viet-meanings.tsv: word <TAB> source <TAB> meaning, one Vietnamese meaning per word of
+viet-words.txt that has one. Rebuilt with a one-off script from:
+
+- WIKTIONARY: the first Vietnamese definition of the word in the Vietnamese Wiktionary dump
+  (https://dumps.wikimedia.org/viwiktionary/), wiki markup removed. Wiktionary text is
+  licensed under the Creative Commons Attribution-ShareAlike 4.0 licence
+  (https://creativecommons.org/licenses/by-sa/4.0/); this file is shared under the same terms.
+- VNTK: the first definition in dictionary.json of https://github.com/vntk/dictionary,
+  used for words Wiktionary has no definition for. The repository is published under the
+  MIT licence; its definitions may derive from an earlier Vietnamese dictionary.

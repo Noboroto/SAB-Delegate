@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { LEADERBOARD_SIZE } from '@sab/shared';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { requireDatabaseUrl } from '../../../../../vitest-test-database.mjs';
+import type { AppStateService } from '../../app-state/app-state.service.js';
 import type { PrismaService } from '../../prisma/prisma.service.js';
 import { createTestDatabase, type TestDatabase } from '../../testing/test-database.js';
 import { LeaderboardService } from '../game-core/leaderboard.service.js';
@@ -9,6 +10,7 @@ import type { DictionaryService } from '../word-game/dictionary.service.js';
 import { CountingService } from './counting.service.js';
 import { GameWordsService } from './game-words.service.js';
 import { ScrambleService } from './scramble.service.js';
+import { normalizeWord, VietWordsService } from './viet-words.service.js';
 import { WordleService } from './wordle.service.js';
 
 const SCRAMBLE_WORDS = ['học sinh', 'con mèo', 'hoà bình'];
@@ -57,7 +59,8 @@ describe('mini games against Postgres', () => {
 
   async function openScramble(discordId: string) {
     const key = await keyOf(discordId);
-    await prisma.$transaction((tx) => scramble.restart(tx, key));
+    const next = await scramble.prepare(discordId);
+    await prisma.$transaction((tx) => scramble.restart(tx, key, next));
   }
 
   async function openWordle(discordId: string, answer = 'plumb') {
@@ -77,23 +80,30 @@ describe('mini games against Postgres', () => {
     leaderboard = new LeaderboardService(prisma);
     const words = new GameWordsService(
       { has: () => Promise.resolve(false) } as unknown as DictionaryService,
-      {
-        vietnamese: () => Promise.resolve(SCRAMBLE_WORDS),
-        wordleAnswers: () => Promise.resolve(WORDLE_ANSWERS),
-      },
+      { wordleAnswers: () => Promise.resolve(WORDLE_ANSWERS) },
     );
+    // The bundled list is not loaded here; the specs' own words are the table.
+    const viet = new VietWordsService(prisma, {} as AppStateService);
+    vi.spyOn(viet as unknown as { seed: () => Promise<void> }, 'seed').mockResolvedValue();
+    await prisma.vietWord.createMany({
+      data: SCRAMBLE_WORDS.map((word) => ({
+        word,
+        normalized: normalizeWord(word),
+      })),
+      skipDuplicates: true,
+    });
     // Consecutive draws always differ, so a new puzzle never repeats the one
     // just solved and the specs do not depend on luck.
-    let viet = 0;
+    let drawn = 0;
     let english = 0;
-    vi.spyOn(words, 'pickVietnamese').mockImplementation(() =>
-      Promise.resolve(SCRAMBLE_WORDS[viet++ % SCRAMBLE_WORDS.length] as string),
+    vi.spyOn(viet, 'pickVietnamese').mockImplementation(() =>
+      Promise.resolve(SCRAMBLE_WORDS[drawn++ % SCRAMBLE_WORDS.length] as string),
     );
     vi.spyOn(words, 'pickWordleAnswer').mockImplementation(() =>
       Promise.resolve(WORDLE_ANSWERS[english++ % WORDLE_ANSWERS.length] as string),
     );
     counting = new CountingService(prisma, leaderboard);
-    scramble = new ScrambleService(prisma, leaderboard, words);
+    scramble = new ScrambleService(prisma, leaderboard, viet);
     wordle = new WordleService(prisma, leaderboard, words);
   });
 
@@ -528,5 +538,46 @@ describe('mini games against Postgres', () => {
       expect(await prisma.gameScore.count({ where: { guildId: key } })).toBe(0);
       expect(await prisma.gameChannel.count({ where: { guildId: key } })).toBe(0);
     });
+  });
+  // Last: it fills the table with the whole bundled list, which the specs above
+  // must not see.
+  describe('Vietnamese words', () => {
+    it('loads the bundled list once and keeps a meaning found later', async () => {
+      const kept = new Map<string, string>();
+      const appState = {
+        get: (key: string) => Promise.resolve(kept.get(key) ?? null),
+        set: (key: string, value: string) => {
+          kept.set(key, value);
+          return Promise.resolve();
+        },
+      } as unknown as AppStateService;
+      await prisma.vietWord.upsert({
+        where: { word: 'hậu cần' },
+        create: {
+          word: 'hậu cần',
+          normalized: normalizeWord('hậu cần'),
+          meaning: 'nghĩa riêng',
+          meaningSource: 'LLM',
+        },
+        update: { meaning: 'nghĩa riêng', meaningSource: 'LLM' },
+      });
+      const loader = new VietWordsService(prisma, appState);
+
+      await expect(loader.isVietnameseWord('HẦU  CẬN')).resolves.toBe(true);
+      expect(await prisma.vietWord.count()).toBeGreaterThan(49_000);
+      await expect(
+        prisma.vietWord.findUniqueOrThrow({ where: { word: 'hậu cần' } }),
+      ).resolves.toMatchObject({ meaning: 'nghĩa riêng', meaningSource: 'LLM' });
+      await expect(
+        prisma.vietWord.findUniqueOrThrow({ where: { word: 'hầu cận' } }),
+      ).resolves.toMatchObject({ meaningSource: 'WIKTIONARY' });
+
+      // The same assets again: nothing is written.
+      const again = new VietWordsService(prisma, appState);
+      const write = vi.spyOn(prisma, '$executeRaw');
+      await again.isVietnameseWord('hầu cận');
+      expect(write).not.toHaveBeenCalled();
+      write.mockRestore();
+    }, 120_000);
   });
 });

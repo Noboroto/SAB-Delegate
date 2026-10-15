@@ -237,18 +237,19 @@ describe('MiniGameListener: scramble', () => {
     answer: 'con mèo',
     letters: 'M / È / O / C / N / O',
     previous: 'học sinh',
+    previousMeaning: 'người đi học',
   };
 
   it('reacts with a check mark and posts the win and the next puzzle as embeds', async () => {
     const { listener, message } = build({
       game: 'SCRAMBLE',
-      scramble: { status: 'SOLVED', guess: 'học sinh', next },
+      scramble: { status: 'SOLVED', guess: 'học sinh', meaning: 'người *đi* học', next },
     });
     const incoming = message({ content: 'học sinh' });
     await send(listener, incoming);
     expect(incoming.react).toHaveBeenCalledWith('✅');
     const reply = incoming.reply.mock.calls[0]?.[0] as {
-      embeds: Array<{ description: string }>;
+      embeds: Array<{ description: string; fields?: Array<{ value: string }> }>;
       allowedMentions: unknown;
     };
     expect(reply.allowedMentions).toEqual({ parse: [], repliedUser: false });
@@ -256,7 +257,27 @@ describe('MiniGameListener: scramble', () => {
     expect(reply.embeds[0]?.description).toBe(
       EN.scramble.solved.replace('{user}', `<@${USER}>`).replace('{answer}', 'học sinh'),
     );
+    // The meaning is shown as written, not as markdown.
+    expect(reply.embeds[0]?.fields?.[0]?.value).toBe('người \\*đi\\* học');
     expect(reply.embeds[1]?.description).toContain('**M / È / O / C / N / O**');
+  });
+
+  it('posts the hint that comes with the tenth wrong guess', async () => {
+    const { listener, message } = build({
+      game: 'SCRAMBLE',
+      scramble: { status: 'WRONG', hint: { pattern: 'H _ _   S _ _ _', meaning: 'người ▒▒ đi' } },
+    });
+    const incoming = message({ content: 'hoc sinh' });
+    await send(listener, incoming);
+    expect(incoming.react).toHaveBeenCalledWith('❌');
+    const reply = incoming.reply.mock.calls[0]?.[0] as {
+      embeds: Array<{ title: string; fields: Array<{ value: string }> }>;
+    };
+    expect(reply.embeds[0]?.title).toContain('10');
+    expect(reply.embeds[0]?.fields.map((field) => field.value)).toEqual([
+      '`H _ _   S _ _ _`',
+      'người ▒▒ đi',
+    ]);
   });
 });
 

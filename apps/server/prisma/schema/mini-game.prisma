@@ -27,14 +27,17 @@ model CountingState {
 
 /// The puzzle in play. `round` grows on every new puzzle, so a move judged
 /// against an older puzzle cannot claim the current one.
-/// CHECK (migration `_mini_games`): `answer` and `puzzle` are non-empty, `round` >= 0.
+/// CHECK (migration `_mini_games`): `answer` and `puzzle` are non-empty, `round` >= 0;
+/// (migration `_viet_words`): `wrongGuesses` >= 0.
 model ScrambleState {
-  id        String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  guildId   String   @unique @db.Uuid
-  answer    String
-  puzzle    String
-  round     Int      @default(0)
-  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  id           String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  guildId      String   @unique @db.Uuid
+  answer       String
+  puzzle       String
+  round        Int      @default(0)
+  /// Wrong guesses at the current puzzle; the hint goes out at the tenth.
+  wrongGuesses Int      @default(0)
+  updatedAt    DateTime @updatedAt @db.Timestamptz(3)
 
   guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
 }

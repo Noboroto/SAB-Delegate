@@ -1,14 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { LeaderboardService } from '../game-core/leaderboard.service.js';
-import { GameWordsService } from './game-words.service.js';
+import { VietWordsService } from './viet-words.service.js';
 import {
   parseMove,
+  SCRAMBLE_HINT_AFTER,
   type GameTx,
   type ScrambleOpening,
   type ScrambleOutcome,
 } from './mini-game.types.js';
-import { anagramKey, compactWord, scrambleLetters } from './vietnamese.js';
+import { anagramKey, compactWord, scrambleHint, scrambleLetters } from './vietnamese.js';
 
 /** Letters of a word as the puzzle shows them: tone marks ride on their letter. */
 function letterCount(text: string): number {
@@ -34,7 +35,7 @@ export class ScrambleService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly leaderboard: LeaderboardService,
-    private readonly words: GameWordsService,
+    private readonly words: VietWordsService,
   ) {}
 
   async submit(guildId: string, input: unknown): Promise<ScrambleOutcome> {
@@ -61,14 +62,20 @@ export class ScrambleService {
     // Only a message as long as the answer reads as a guess and gets a cross;
     // any other length is chat and gets no answer.
     if (letterCount(guess) !== letterCount(state.answer)) return { status: 'NOTHING' };
-    if (anagramKey(guess) !== anagramKey(state.answer)) return { status: 'WRONG' };
-    if (!(await this.words.isVietnameseWord(guess))) return { status: 'WRONG' };
+    const found =
+      anagramKey(guess) === anagramKey(state.answer) ? await this.words.find(guess) : null;
+    if (found === null) return this.wrong(row.id, state);
 
     const next = await this.nextPuzzle(state.answer);
     const won = await this.prisma.$transaction(async (tx) => {
       const claimed = await tx.scrambleState.updateMany({
         where: { guildId: row.id, round: state.round },
-        data: { answer: next.answer, puzzle: next.letters, round: { increment: 1 } },
+        data: {
+          answer: next.answer,
+          puzzle: next.letters,
+          round: { increment: 1 },
+          wrongGuesses: 0,
+        },
       });
       if (claimed.count === 0) return false;
       await this.leaderboard.award(tx, row.id, 'SCRAMBLE', move.authorId);
@@ -77,16 +84,44 @@ export class ScrambleService {
     // Lost: the puzzle changed since the read, solved by someone else or
     // skipped. The guess was right for the puzzle it answered, only late, so
     // it is neither judged against the new puzzle nor marked wrong.
-    return won ? { status: 'SOLVED', guess, next } : { status: 'NOTHING' };
+    return won
+      ? { status: 'SOLVED', guess: found.word, meaning: found.meaning, next }
+      : { status: 'NOTHING' };
   }
 
-  /** A new puzzle in place of the current one, whose answer it returns. */
-  async restart(tx: GameTx, guildKey: string): Promise<ScrambleOpening> {
-    const current = await tx.scrambleState.findUnique({
-      where: { guildId: guildKey },
+  /**
+   * Counts a wrong guess against the puzzle it answered; the one that reaches
+   * `SCRAMBLE_HINT_AFTER` brings the hint. The count only grows, so exactly one
+   * guess per puzzle sees that number, even with guesses arriving at once.
+   */
+  private async wrong(
+    guildKey: string,
+    state: { answer: string; round: number },
+  ): Promise<ScrambleOutcome> {
+    const rows = await this.prisma.$queryRaw<{ wrongGuesses: number }[]>`
+      UPDATE "ScrambleState" SET "wrongGuesses" = "wrongGuesses" + 1
+      WHERE "guildId" = ${guildKey}::uuid AND "round" = ${state.round}
+      RETURNING "wrongGuesses"`;
+    if (rows[0]?.wrongGuesses !== SCRAMBLE_HINT_AFTER) return { status: 'WRONG' };
+    const answer = await this.words.find(state.answer);
+    return { status: 'WRONG', hint: scrambleHint(state.answer, answer?.meaning ?? null) };
+  }
+
+  /**
+   * The puzzle that would replace the current one, drawn before the round's
+   * transaction opens: drawing and looking meanings up queries the database, and
+   * doing it inside the transaction would hold two connections at once.
+   */
+  async prepare(guildId: string): Promise<ScrambleOpening> {
+    const current = await this.prisma.scrambleState.findFirst({
+      where: { guild: { discordId: guildId } },
       select: { answer: true },
     });
-    const next = await this.nextPuzzle(current?.answer ?? null);
+    return this.nextPuzzle(current?.answer ?? null);
+  }
+
+  /** Puts `next` (from `prepare`) in place of the current puzzle. */
+  async restart(tx: GameTx, guildKey: string, next: ScrambleOpening): Promise<ScrambleOpening> {
     await tx.scrambleState.createMany({
       data: [{ guildId: guildKey, answer: next.answer, puzzle: next.letters }],
       skipDuplicates: true,
@@ -94,7 +129,12 @@ export class ScrambleService {
     // Also right after the insert: a concurrent restart may have made the row.
     await tx.scrambleState.update({
       where: { guildId: guildKey },
-      data: { answer: next.answer, puzzle: next.letters, round: { increment: 1 } },
+      data: {
+        answer: next.answer,
+        puzzle: next.letters,
+        round: { increment: 1 },
+        wrongGuesses: 0,
+      },
     });
     return next;
   }
@@ -103,6 +143,14 @@ export class ScrambleService {
     let answer = await this.words.pickVietnamese();
     // The same word twice in a row would look like a stuck game.
     if (answer === previous) answer = await this.words.pickVietnamese();
-    return { game: 'SCRAMBLE', answer, letters: scrambleLetters(answer), previous };
+    const previousMeaning =
+      previous === null ? null : ((await this.words.find(previous))?.meaning ?? null);
+    return {
+      game: 'SCRAMBLE',
+      answer,
+      letters: scrambleLetters(answer),
+      previous,
+      previousMeaning,
+    };
   }
 }

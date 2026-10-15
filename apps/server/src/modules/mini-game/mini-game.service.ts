@@ -11,7 +11,7 @@ import { GameChannelService } from '../game-core/game-channel.service.js';
 import { GuildConfigService } from '../guild-config/guild-config.service.js';
 import { CountingService } from './counting.service.js';
 import { formatOpening } from './mini-game.format.js';
-import type { Opening } from './mini-game.types.js';
+import type { GameTx, Opening, ScrambleOpening } from './mini-game.types.js';
 import { ScrambleService } from './scramble.service.js';
 import { WordleService } from './wordle.service.js';
 
@@ -23,6 +23,12 @@ const MISSING_PERMISSIONS = 50013;
 export type RestartReason = 'configure' | 'reset' | 'skip';
 
 type Restarted = { channelId: string; opening: Opening };
+
+/** How a game starts a round; `prepare` runs before the round's transaction. */
+type Round = {
+  prepare?(guildId: string): Promise<ScrambleOpening>;
+  restart(tx: GameTx, guildKey: string, prepared?: ScrambleOpening): Promise<Opening>;
+};
 
 /**
  * Starting rounds of the channel games, for the slash commands: a new round
@@ -54,9 +60,12 @@ export class MiniGameService {
   ): Promise<Restarted | null> {
     const channelId = await this.channels.channelOf(guildId, game);
     if (channelId === null) return null;
+    const round = this.roundOf(game);
+    // Anything a round needs from the database is read before its transaction.
+    const prepared = await round.prepare?.(guildId);
     const opening = await this.prisma.$transaction(async (tx) => {
       const guild = await this.guilds.ensureGuild(guildId, undefined, tx);
-      const started = await this.roundOf(game).restart(tx, guild.id);
+      const started = await round.restart(tx, guild.id, prepared);
       if (reason !== 'configure') {
         await this.audit.record(
           {
@@ -93,7 +102,7 @@ export class MiniGameService {
     }
   }
 
-  private roundOf(game: ChannelGame): Pick<CountingService, 'restart'> {
+  private roundOf(game: ChannelGame): Round {
     switch (game) {
       case 'COUNTING':
         return this.counting;

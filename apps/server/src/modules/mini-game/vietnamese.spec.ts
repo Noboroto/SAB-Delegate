@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { anagramKey, compactWord, scrambleLetters, syllableCount } from './vietnamese.js';
+import {
+  anagramKey,
+  scrambleHint,
+  compactWord,
+  scrambleLetters,
+  syllableCount,
+} from './vietnamese.js';
 
 /** A random source that replays `values` and then repeats the last one. */
 function sequence(values: number[]): () => number {
@@ -128,5 +134,26 @@ describe('scrambleLetters', () => {
       const result = scrambleLetters('tiếng việt').split(' / ');
       expect([...result].sort()).toEqual(Array.from('TIẾNGVIỆT').sort());
     }
+  });
+});
+
+describe('scrambleHint', () => {
+  it('shows the first letter of each syllable and blanks for the rest', () => {
+    expect(scrambleHint('hậu cần', null)).toEqual({ pattern: 'H _ _   C _ _', meaning: null });
+  });
+
+  it('hides every syllable of the answer in the meaning, whatever its case', () => {
+    expect(scrambleHint('hậu cần', 'Công tác Hậu cần cho quân đội').meaning).toBe(
+      'Công tác ▒▒ ▒▒ cho quân đội',
+    );
+  });
+
+  it('does not hide a syllable inside a longer word', () => {
+    expect(scrambleHint('an', 'an toàn, bình an, ban an').meaning).toBe('▒▒ toàn, bình ▒▒, ban ▒▒');
+    expect(scrambleHint('an', 'ăn ngon').meaning).toBe('ăn ngon');
+  });
+
+  it('drops a meaning that would be nothing but masks', () => {
+    expect(scrambleHint('học sinh', 'Học sinh.').meaning).toBeNull();
   });
 });

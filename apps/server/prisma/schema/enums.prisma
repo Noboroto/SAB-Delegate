@@ -37,3 +37,12 @@ enum MiniGame {
   SCRAMBLE
   WORDLE
 }
+
+/// Where the meaning of a Vietnamese word came from. NONE: looked up, nothing found;
+/// never looked up again.
+enum MeaningSource {
+  WIKTIONARY
+  VNTK
+  LLM
+  NONE
+}

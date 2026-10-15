@@ -35,7 +35,12 @@
     "title": "🔤 Vietnamese scramble",
     "prompt": "Rearrange the letters into a Vietnamese word",
     "syllables": "{count} syllables",
-    "solved": "🎉 {user} got it: **{answer}**"
+    "solved": "🎉 {user} got it: **{answer}**",
+    "meaning": "📖 Meaning",
+    "previous": "Previous answer: **{answer}**",
+    "hintTitle": "💡 Hint after {count} wrong guesses",
+    "hintShape": "Shape",
+    "hintMeaning": "Meaning"
   },
   "wordle": {
     "start": "🟩 New Wordle! Guess an English word of {length} letters; the channel has {max} guesses",
@@ -63,7 +68,7 @@
       "setup": "`/game set game:Counting channel:#channel`; `/game reset game:Counting` starts over from 1."
     },
     "SCRAMBLE": {
-      "rules": "The bot shows the shuffled letters of a Vietnamese word of 2–3 syllables. The first to send a real word using exactly those letters scores 1 point and gets a new puzzle. A wrong guess with the right number of letters gets a ❌ and costs nothing; messages of other lengths are chat.",
+      "rules": "The bot shows the shuffled letters of a Vietnamese word of 2–3 syllables. The first to send a real word using exactly those letters scores 1 point and gets a new puzzle. A wrong guess with the right number of letters gets a ❌ and costs nothing; messages of other lengths are chat. After 10 wrong guesses the bot gives a hint; when the word is found or skipped, its meaning is shown.",
       "setup": "`/game set game:Vietnamese scramble channel:#channel`; `/game skip game:Vietnamese scramble` reveals the answer and gives a new one."
     },
     "WORDLE": {

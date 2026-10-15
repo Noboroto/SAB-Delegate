@@ -1,0 +1,15 @@
+/// The Vietnamese word list of the scramble, with each word's meaning once known.
+/// `normalized` (no tone or vowel marks, no spaces) narrows a guess to a few rows,
+/// which the exact spelling is then compared on. CHECK (migration `_viet_words`):
+/// `word` and `normalized` are non-empty; a meaning source other than NONE
+/// carries a meaning.
+model VietWord {
+  id            String         @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  word          String         @unique
+  normalized    String
+  meaning       String?
+  meaningSource MeaningSource?
+  meaningAt     DateTime?      @db.Timestamptz(3)
+
+  @@index([normalized])
+}

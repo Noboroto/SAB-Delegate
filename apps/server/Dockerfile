@@ -82,6 +82,7 @@ COPY apps/server/assets ./apps/server/assets
 RUN cd apps/server && pnpm exec nest build \
 	&& test -s dist/assets/word-dict.json \
 	&& test -s dist/assets/viet-words.txt \
+	&& test -s dist/assets/viet-meanings.tsv \
 	&& test -s dist/assets/wordle-answers.txt
 # `pnpm deploy`, not `pnpm install` + `pnpm prune --prod`: prune does not support
 # a workspace and silently drops packages that only one member uses. `--prod` is

@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AppStateModule } from '../../app-state/app-state.service.js';
 import { AuditModule } from '../../common/audit/audit.module.js';
 import { I18nModule } from '../../i18n/guild-locale.service.js';
 import { GameCoreModule } from '../game-core/game-core.module.js';
@@ -10,6 +11,7 @@ import { GameCommands, GameInfoCommands } from './mini-game.commands.js';
 import { MiniGameListener } from './mini-game.listener.js';
 import { MiniGameService } from './mini-game.service.js';
 import { ScrambleService } from './scramble.service.js';
+import { VietWordsService } from './viet-words.service.js';
 import { WordleService } from './wordle.service.js';
 
 /**
@@ -18,9 +20,17 @@ import { WordleService } from './wordle.service.js';
  * application while a migration is pending; see `feature-modules.ts`.
  */
 @Module({
-  imports: [AuditModule, I18nModule, GuildConfigModule, GameCoreModule, WordGameModule],
+  imports: [
+    AppStateModule,
+    AuditModule,
+    I18nModule,
+    GuildConfigModule,
+    GameCoreModule,
+    WordGameModule,
+  ],
   providers: [
     GameWordsService,
+    VietWordsService,
     CountingService,
     ScrambleService,
     WordleService,

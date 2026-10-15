@@ -78,3 +78,38 @@ export function scrambleLetters(answer: string, random: () => number = Math.rand
   }
   return shuffled.map((letter) => letter.toUpperCase()).join(' / ');
 }
+
+/** A hint at an answer: its shape, and its meaning with the answer hidden. */
+type ScrambleHint = { pattern: string; meaning: string | null };
+
+const MASK = '▒▒';
+
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+}
+
+/**
+ * The first letter of each syllable and blanks for the rest ("H _ _   C _ _"),
+ * and the meaning with every syllable of the answer hidden, as definitions often
+ * repeat the word they define. A meaning that would be left with nothing but
+ * masks is dropped.
+ */
+export function scrambleHint(answer: string, meaning: string | null): ScrambleHint {
+  const syllables = answer.normalize('NFC').trim().split(SPACES).filter(Boolean);
+  const pattern = syllables
+    .map((syllable) => {
+      const [first = '', ...rest] = Array.from(syllable);
+      return [first.toUpperCase(), ...rest.map(() => '_')].join(' ');
+    })
+    .join('   ');
+  if (meaning === null) return { pattern, meaning: null };
+  let masked = meaning.normalize('NFC');
+  for (const syllable of syllables) {
+    masked = masked.replace(
+      new RegExp(`(?<!\\p{L})${escapeRegExp(syllable)}(?!\\p{L})`, 'giu'),
+      MASK,
+    );
+  }
+  const leftover = masked.replaceAll(MASK, '').replace(/[\s\p{P}]/gu, '');
+  return { pattern, meaning: leftover === '' ? null : masked };
+}

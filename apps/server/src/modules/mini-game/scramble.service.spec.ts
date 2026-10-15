@@ -3,7 +3,7 @@ import { ErrorCode } from '@sab/shared';
 import { describe, expect, it, vi } from 'vitest';
 import type { PrismaService } from '../../prisma/prisma.service.js';
 import type { LeaderboardService } from '../game-core/leaderboard.service.js';
-import type { GameWordsService } from './game-words.service.js';
+import type { VietWordsService } from './viet-words.service.js';
 import { ScrambleService } from './scramble.service.js';
 import { compactWord } from './vietnamese.js';
 
@@ -22,6 +22,7 @@ type Setup = {
   words?: string[];
   /** Words `pickVietnamese` hands out, in order. */
   picks?: string[];
+  meanings?: Record<string, string>;
 };
 
 const WORDS = ['học sinh', 'sinh học', 'con mèo', 'hoà bình'];
@@ -83,15 +84,31 @@ function build(setup: Setup = {}) {
     ),
   };
   const tx = { scrambleState };
+  let wrongGuesses = 0;
   const prisma = {
     guild,
+    scrambleState: {
+      findFirst: vi.fn(() =>
+        Promise.resolve(store.puzzle === null ? null : { answer: store.puzzle.answer }),
+      ),
+    },
     $transaction: vi.fn((run: (client: typeof tx) => Promise<unknown>) => run(tx)),
+    // The wrong-guess counter: one more per call, as the UPDATE … RETURNING does.
+    $queryRaw: vi.fn(() => Promise.resolve([{ wrongGuesses: ++wrongGuesses }])),
   };
   const leaderboard = { award: vi.fn().mockResolvedValue(undefined) };
   const picks = [...(setup.picks ?? ['con mèo'])];
   const known = new Set((setup.words ?? WORDS).map(compactWord));
+  const meanings: Record<string, string> = setup.meanings ?? {};
   const words = {
-    isVietnameseWord: vi.fn((text: string) => Promise.resolve(known.has(compactWord(text)))),
+    find: vi.fn((text: string) => {
+      const word = (setup.words ?? WORDS).find((w) => compactWord(w) === compactWord(text));
+      return Promise.resolve(
+        known.has(compactWord(text)) && word !== undefined
+          ? { word, meaning: meanings[word] ?? null }
+          : null,
+      );
+    }),
     pickVietnamese: vi.fn(() =>
       Promise.resolve(picks.length > 1 ? (picks.shift() as string) : (picks[0] as string)),
     ),
@@ -99,7 +116,7 @@ function build(setup: Setup = {}) {
   const service = new ScrambleService(
     prisma as unknown as PrismaService,
     leaderboard as unknown as LeaderboardService,
-    words as unknown as GameWordsService,
+    words as unknown as VietWordsService,
   );
   return { service, store, guild, scrambleState, prisma, leaderboard, words, hooks, tx };
 }
@@ -145,14 +162,14 @@ describe('ScrambleService.submit: what counts as a move', () => {
   it('treats a message of another length as chat', async () => {
     const { service, words, leaderboard } = build();
     await expect(service.submit(GUILD, move('con mèo'))).resolves.toEqual({ status: 'NOTHING' });
-    expect(words.isVietnameseWord).not.toHaveBeenCalled();
+    expect(words.find).not.toHaveBeenCalled();
     expect(leaderboard.award).not.toHaveBeenCalled();
   });
 
   it('marks a guess of the right length made of other letters wrong, without the word list', async () => {
     const { service, words, leaderboard } = build();
     await expect(service.submit(GUILD, move('hoc sinh'))).resolves.toEqual({ status: 'WRONG' });
-    expect(words.isVietnameseWord).not.toHaveBeenCalled();
+    expect(words.find).not.toHaveBeenCalled();
     expect(leaderboard.award).not.toHaveBeenCalled();
   });
 
@@ -192,9 +209,10 @@ describe('ScrambleService.submit: a right answer', () => {
       puzzle: { answer: 'hoà bình', puzzle: 'x' },
       words: ['hoà bình'],
     });
+    // Shown as the list spells it, whatever the player typed.
     await expect(service.submit(GUILD, move('  HÒA   Bình '))).resolves.toMatchObject({
       status: 'SOLVED',
-      guess: 'hòa bình',
+      guess: 'hoà bình',
     });
   });
 
@@ -213,6 +231,31 @@ describe('ScrambleService.submit: a right answer', () => {
     expect(compactWord(result.next.letters.replaceAll(' / ', '').toLowerCase())).not.toBe(
       compactWord('con mèo'),
     );
+  });
+});
+
+describe('ScrambleService: meanings and the hint', () => {
+  it('returns the meaning of the word found, and of the answer a new puzzle replaced', async () => {
+    const { service } = build({
+      picks: ['con mèo'],
+      meanings: { 'sinh học': 'khoa học về sự sống', 'học sinh': 'người đi học' },
+    });
+    await expect(service.submit(GUILD, move('sinh học'))).resolves.toMatchObject({
+      status: 'SOLVED',
+      meaning: 'khoa học về sự sống',
+      next: { previous: 'học sinh', previousMeaning: 'người đi học' },
+    });
+  });
+
+  it('gives the hint with the tenth wrong guess only, the meaning masked', async () => {
+    const { service } = build({ meanings: { 'học sinh': 'người đi học ở trường; học sinh giỏi' } });
+    const results = [];
+    for (let i = 0; i < 11; i += 1) results.push(await service.submit(GUILD, move('hoc sinh')));
+    expect(results.filter((r) => r.status === 'WRONG' && r.hint !== undefined)).toHaveLength(1);
+    expect(results[9]).toEqual({
+      status: 'WRONG',
+      hint: { pattern: 'H _ _   S _ _ _', meaning: 'người đi ▒▒ ở trường; ▒▒ ▒▒ giỏi' },
+    });
   });
 });
 
@@ -243,14 +286,14 @@ describe('ScrambleService.submit: concurrent answers', () => {
 describe('ScrambleService.restart', () => {
   it('replaces the puzzle, advances the round and reports the answer it replaced', async () => {
     const { service, store, tx } = build({ picks: ['con mèo'] });
-    const opening = await service.restart(tx as never, 'guild-key');
+    const opening = await service.restart(tx as never, 'guild-key', await service.prepare(GUILD));
     expect(opening).toMatchObject({ game: 'SCRAMBLE', answer: 'con mèo', previous: 'học sinh' });
     expect(store.puzzle).toMatchObject({ answer: 'con mèo', round: 4 });
   });
 
   it('makes the first puzzle for a server that never had one', async () => {
     const { service, store, tx } = build({ puzzle: null, picks: ['con mèo'] });
-    const opening = await service.restart(tx as never, 'guild-key');
+    const opening = await service.restart(tx as never, 'guild-key', await service.prepare(GUILD));
     expect(opening).toMatchObject({ answer: 'con mèo', previous: null });
     expect(store.puzzle).toMatchObject({ answer: 'con mèo' });
   });

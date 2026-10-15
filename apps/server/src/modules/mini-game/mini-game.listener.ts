@@ -10,6 +10,7 @@ import { GameChannelService } from '../game-core/game-channel.service.js';
 import { CountingService } from './counting.service.js';
 import {
   formatOpening,
+  formatScrambleHint,
   formatScrambleSolved,
   formatWordleTurn,
   type GamePost,
@@ -122,14 +123,18 @@ export class MiniGameListener {
       case 'SCRAMBLE': {
         const { outcome } = move;
         if (outcome.status === 'WRONG') {
-          await this.respond(message, FAILURE_REACTION);
+          await this.respond(
+            message,
+            FAILURE_REACTION,
+            outcome.hint === undefined ? undefined : formatScrambleHint(t, outcome.hint),
+          );
           return;
         }
         if (outcome.status !== 'SOLVED') return;
         await this.respond(
           message,
           SUCCESS_REACTION,
-          formatScrambleSolved(t, outcome.guess, authorId, outcome.next),
+          formatScrambleSolved(t, outcome.guess, outcome.meaning, authorId, outcome.next),
         );
         return;
       }

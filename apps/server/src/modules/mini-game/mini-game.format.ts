@@ -1,7 +1,12 @@
 import { WORDLE_MAX_GUESSES, WORDLE_WORD_LENGTH } from '@sab/shared';
-import type { APIEmbed, BaseMessageOptions } from 'discord.js';
+import { escapeMarkdown, type APIEmbed, type BaseMessageOptions } from 'discord.js';
 import type { translatorFor } from '../../i18n/translator.js';
-import type { Opening, ScrambleOpening, WordleOutcome } from './mini-game.types.js';
+import {
+  SCRAMBLE_HINT_AFTER,
+  type Opening,
+  type ScrambleOpening,
+  type WordleOutcome,
+} from './mini-game.types.js';
 import { syllableCount } from './vietnamese.js';
 import { renderBoard } from './wordle-score.js';
 
@@ -21,8 +26,21 @@ export function formatOpening(t: T, opening: Opening): GamePost {
   switch (opening.game) {
     case 'COUNTING':
       return { content: t('mini-game.counting.start') };
-    case 'SCRAMBLE':
-      return { embeds: [scramblePuzzle(t, opening)] };
+    case 'SCRAMBLE': {
+      // A puzzle that replaces another (skip, reset) first reveals the old answer.
+      const previous =
+        opening.previous === null
+          ? []
+          : [
+              revealed(
+                t,
+                t('mini-game.scramble.previous', { answer: opening.previous }),
+                opening.previousMeaning,
+                BLURPLE,
+              ),
+            ];
+      return { embeds: [...previous, scramblePuzzle(t, opening)] };
+    }
     case 'WORDLE':
       return {
         embeds: [
@@ -50,19 +68,72 @@ function scramblePuzzle(t: T, opening: ScrambleOpening): APIEmbed {
   };
 }
 
+/**
+ * Longest meaning shown. Escaping can at most double it, which stays under
+ * Discord's 1024-character cap on an embed field value.
+ */
+const MEANING_MAX = 500;
+
+/**
+ * External text (Wiktionary, a dictionary, an LLM) shown as written, not as
+ * markdown, and cut to what a field holds.
+ */
+function plain(text: string): string {
+  // Cut by code point before escaping: no split emoji, no lone backslash at the end.
+  const points = Array.from(text);
+  const kept =
+    points.length <= MEANING_MAX ? text : `${points.slice(0, MEANING_MAX).join('').trimEnd()}…`;
+  return escapeMarkdown(kept, { maskedLink: true });
+}
+
+/** An answer made known, with its meaning under it when one is known. */
+function revealed(t: T, description: string, meaning: string | null, color: number): APIEmbed {
+  return {
+    color,
+    description,
+    ...(meaning === null
+      ? {}
+      : { fields: [{ name: t('mini-game.scramble.meaning'), value: plain(meaning) }] }),
+  };
+}
+
+/** The hint of a puzzle: its shape, and its meaning with the answer hidden. */
+export function formatScrambleHint(
+  t: T,
+  hint: { pattern: string; meaning: string | null },
+): GamePost {
+  return {
+    embeds: [
+      {
+        title: t('mini-game.scramble.hintTitle', { count: String(SCRAMBLE_HINT_AFTER) }),
+        color: YELLOW,
+        fields: [
+          { name: t('mini-game.scramble.hintShape'), value: `\`${hint.pattern}\`` },
+          ...(hint.meaning === null
+            ? []
+            : [{ name: t('mini-game.scramble.hintMeaning'), value: plain(hint.meaning) }]),
+        ],
+      },
+    ],
+  };
+}
+
 /** The win, then the next puzzle; a mention inside an embed never notifies. */
 export function formatScrambleSolved(
   t: T,
   guess: string,
+  meaning: string | null,
   authorId: string,
   next: ScrambleOpening,
 ): GamePost {
   return {
     embeds: [
-      {
-        color: GREEN,
-        description: t('mini-game.scramble.solved', { user: `<@${authorId}>`, answer: guess }),
-      },
+      revealed(
+        t,
+        t('mini-game.scramble.solved', { user: `<@${authorId}>`, answer: guess }),
+        meaning,
+        GREEN,
+      ),
       scramblePuzzle(t, next),
     ],
   };

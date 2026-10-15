@@ -35,7 +35,12 @@
     "title": "🔤 Vua Tiếng Việt",
     "prompt": "Sắp xếp các chữ cái thành một từ có nghĩa",
     "syllables": "{count} tiếng",
-    "solved": "🎉 {user} đoán đúng: **{answer}**"
+    "solved": "🎉 {user} đoán đúng: **{answer}**",
+    "meaning": "📖 Nghĩa",
+    "previous": "Đáp án câu trước: **{answer}**",
+    "hintTitle": "💡 Gợi ý sau {count} lần đoán sai",
+    "hintShape": "Hình dạng",
+    "hintMeaning": "Nghĩa"
   },
   "wordle": {
     "start": "🟩 Ô chữ Wordle mới! Đoán một từ tiếng Anh {length} chữ cái, cả kênh có {max} lượt",
@@ -63,7 +68,7 @@
       "setup": "`/game set game:Đếm số channel:#kênh`, `/game reset game:Đếm số` để đếm lại từ 1."
     },
     "SCRAMBLE": {
-      "rules": "Bot đưa các chữ cái bị xáo của một từ tiếng Việt 2–3 tiếng. Ai gửi đúng một từ có nghĩa dùng đủ các chữ cái đó trước thì được +1 điểm, rồi bot ra câu mới. Gửi đủ số chữ cái mà sai thì bot thả ❌, không bị trừ điểm; tin dài ngắn khác được coi là trò chuyện.",
+      "rules": "Bot đưa các chữ cái bị xáo của một từ tiếng Việt 2–3 tiếng. Ai gửi đúng một từ có nghĩa dùng đủ các chữ cái đó trước thì được +1 điểm, rồi bot ra câu mới. Gửi đủ số chữ cái mà sai thì bot thả ❌, không bị trừ điểm; tin dài ngắn khác được coi là trò chuyện. Sau 10 lần đoán sai, bot đưa gợi ý; khi có người đoán đúng hoặc đổi câu, bot kèm nghĩa của từ.",
       "setup": "`/game set game:Vua Tiếng Việt channel:#kênh`, `/game skip game:Vua Tiếng Việt` để lộ đáp án và đổi câu."
     },
     "WORDLE": {
