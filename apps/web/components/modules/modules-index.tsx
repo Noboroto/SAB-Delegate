@@ -16,6 +16,7 @@ export function ModulesIndex({ guildId }: { guildId: string }) {
     note: [t('note'), t('moduleDesc.note')],
     wordGame: [t('wordGame'), t('moduleDesc.wordGame')],
     games: [t('games'), t('moduleDesc.games')],
+    chatbot: [t('chatbot'), t('moduleDesc.chatbot')],
     schedule: [t('schedule'), t('moduleDesc.schedule')],
     messaging: [t('messaging'), t('moduleDesc.messaging')],
   };
