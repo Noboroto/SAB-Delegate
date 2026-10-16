@@ -1,0 +1,6 @@
+{
+  "footer": "-# remaining {remaining} / {total}",
+  "notConfigured": "The chatbot has no language model to ask yet. An admin needs to set one up.",
+  "quotaExhausted": "You have used up your chatbot tokens for this month.",
+  "failed": "I could not get an answer just now. Please try again in a moment."
+}

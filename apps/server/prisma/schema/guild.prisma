@@ -22,4 +22,11 @@ model Guild {
   gameScores     GameScore[]
   scheduled      ScheduledMessage[]
   auditLogs      AuditLog[]
+
+  chatbot                ChatbotConfig?
+  chatbotChannels        ChatbotChannel[]
+  chatbotChannelMemories ChatbotChannelMemory[]
+  chatbotUserMemories    ChatbotUserMemory[]
+  chatbotQuotas          ChatbotUserQuota[]
+  chatbotUsages          ChatbotUsage[]
 }

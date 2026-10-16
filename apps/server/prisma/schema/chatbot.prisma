@@ -1,0 +1,101 @@
+/// A server's chatbot: whether it answers, and the monthly token allowance every
+/// member starts with. The `llm*` columns are an optional override of the global
+/// LlmConfig; the key is stored encrypted (AES-256-GCM, key from env
+/// LLM_KEY_SECRET) and only its last four characters are ever shown.
+/// CHECK (migration `_chatbot`): `defaultMonthlyLimit` is between 0 and 1000000000;
+/// the override is all-or-none: either all four `llm*` columns are NULL, or
+/// `llmBaseUrl` starts with https:// and has a host, `llmModel` and `llmApiKeyEnc`
+/// are non-empty and `llmKeyLast4` has 1 to 4 characters.
+model ChatbotConfig {
+  id                  String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  guildId             String   @unique @db.Uuid
+  enabled             Boolean  @default(false)
+  defaultMonthlyLimit Int      @default(100000)
+  llmBaseUrl          String?
+  llmModel            String?
+  llmApiKeyEnc        String?
+  llmKeyLast4         String?
+  updatedAt           DateTime @updatedAt @db.Timestamptz(3)
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+}
+
+/// A channel where the bot answers when mentioned. A channel is designated once
+/// (`channelId` unique). The number of channels per server is capped by the service.
+/// CHECK (migration `_chatbot`): `channelId` is a snowflake.
+model ChatbotChannel {
+  id        String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  guildId   String   @db.Uuid
+  channelId String   @unique
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@index([guildId])
+}
+
+/// What the bot remembers about a channel, as a summary it rewrote itself.
+/// CHECK (migration `_chatbot`): `channelId` is a snowflake, `summary` has at most
+/// 2000 characters.
+model ChatbotChannelMemory {
+  id        String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  guildId   String   @db.Uuid
+  channelId String
+  summary   String
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@unique([guildId, channelId])
+}
+
+/// What the bot remembers about one member of one server; it never leaves that
+/// server. `turnsSinceSummary` counts the member's replies since the summary was
+/// last rewritten. CHECK (migration `_chatbot`): `userId` is a snowflake,
+/// `summary` has at most 2000 characters, `turnsSinceSummary` >= 0.
+model ChatbotUserMemory {
+  id                String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  guildId           String   @db.Uuid
+  userId            String
+  summary           String
+  turnsSinceSummary Int      @default(0)
+  updatedAt         DateTime @updatedAt @db.Timestamptz(3)
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@unique([guildId, userId])
+}
+
+/// A member's own monthly limit, replacing the server default.
+/// CHECK (migration `_chatbot`): `userId` is a snowflake, `monthlyLimit` is
+/// between 0 and 1000000000.
+model ChatbotUserQuota {
+  id           String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  guildId      String   @db.Uuid
+  userId       String
+  monthlyLimit Int
+  updatedAt    DateTime @updatedAt @db.Timestamptz(3)
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@unique([guildId, userId])
+}
+
+/// Tokens a member spent in one month, and the extra allowance granted for that
+/// month. `period` is the month in the business time zone, `YYYY-MM`.
+/// CHECK (migration `_chatbot`): `userId` is a snowflake, `period` matches
+/// `YYYY-MM`, `used` and `bonus` are between 0 and 1000000000.
+model ChatbotUsage {
+  id        String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  guildId   String   @db.Uuid
+  userId    String
+  period    String
+  used      Int      @default(0)
+  bonus     Int      @default(0)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@unique([guildId, userId, period])
+  @@index([guildId, period])
+}

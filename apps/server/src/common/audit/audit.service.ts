@@ -56,6 +56,13 @@ const PARAM_KEYS: ReadonlySet<string> = new Set([
   'enabled',
   'keyChanged',
   'host',
+  // Chatbot quota and memory.
+  'limit',
+  'defaultLimit',
+  'tokens',
+  'period',
+  'scope',
+  'source',
 ]);
 
 const MAX_PARAM_DEPTH = 4;

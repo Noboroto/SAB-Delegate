@@ -16,6 +16,7 @@
   "DISCORD_CHANNEL_NOT_FOUND": "Không tìm thấy kênh, hoặc bot không truy cập được kênh đó.",
   "DISCORD_MESSAGE_NOT_FOUND": "Không tìm thấy tin nhắn.",
   "CHANNEL_IN_USE": "Kênh này đang dùng cho một trò chơi khác. Chọn kênh khác nhé.",
+  "CHATBOT_CHANNEL_LIMIT_REACHED": "Server này đã có tối đa số kênh chatbot. Hãy xoá bớt một kênh trước.",
   "LLM_NOT_AVAILABLE": "Máy chủ chưa có LLM_KEY_SECRET nên chưa lưu được cài đặt LLM.",
   "LLM_KEY_REQUIRED": "Cần nhập API key (lần đầu lưu, hoặc khi đổi địa chỉ API).",
   "VALIDATION_FAILED": "Một số giá trị không hợp lệ. Hãy kiểm tra lại những gì đã nhập.",

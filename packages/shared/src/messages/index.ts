@@ -21,6 +21,8 @@ import enThread from './en/thread.json';
 import enWeb from './en/web.json';
 import enWordGame from './en/word-game.json';
 import enMiniGame from './en/mini-game.json';
+import enChatbot from './en/chatbot.json';
+import enWebChatbot from './en/web-chatbot.json';
 import enWebCommon from './en/web-common.json';
 import enWebOverview from './en/web-overview.json';
 import enWebSettings from './en/web-settings.json';
@@ -54,6 +56,8 @@ import viThread from './vi/thread.json';
 import viWeb from './vi/web.json';
 import viWordGame from './vi/word-game.json';
 import viMiniGame from './vi/mini-game.json';
+import viChatbot from './vi/chatbot.json';
+import viWebChatbot from './vi/web-chatbot.json';
 import viWebCommon from './vi/web-common.json';
 import viWebOverview from './vi/web-overview.json';
 import viWebSettings from './vi/web-settings.json';
@@ -81,6 +85,7 @@ export const MessageNamespaceSchema = z.enum([
   'note',
   'word-game',
   'mini-game',
+  'chatbot',
   'schedule',
   'messaging',
   'mention',
@@ -105,6 +110,7 @@ export const MessageNamespaceSchema = z.enum([
   'web-commands',
   'web-audit-log',
   'web-api-keys',
+  'web-chatbot',
 ]);
 
 export type MessageNamespace = z.infer<typeof MessageNamespaceSchema>;
@@ -124,6 +130,7 @@ export const MESSAGES = {
     note: viNote,
     'word-game': viWordGame,
     'mini-game': viMiniGame,
+    chatbot: viChatbot,
     schedule: viSchedule,
     messaging: viMessaging,
     mention: viMention,
@@ -148,6 +155,7 @@ export const MESSAGES = {
     'web-commands': viWebCommands,
     'web-audit-log': viWebAuditLog,
     'web-api-keys': viWebApiKeys,
+    'web-chatbot': viWebChatbot,
   },
   en: {
     common: enCommon,
@@ -159,6 +167,7 @@ export const MESSAGES = {
     note: enNote,
     'word-game': enWordGame,
     'mini-game': enMiniGame,
+    chatbot: enChatbot,
     schedule: enSchedule,
     messaging: enMessaging,
     mention: enMention,
@@ -183,5 +192,6 @@ export const MESSAGES = {
     'web-commands': enWebCommands,
     'web-audit-log': enWebAuditLog,
     'web-api-keys': enWebApiKeys,
+    'web-chatbot': enWebChatbot,
   },
 } satisfies Record<Locale, Record<MessageNamespace, object>>;
