@@ -5,7 +5,7 @@ import { errorLabel } from '../../prisma/pool-factory.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { LlmService } from '../llm/llm.service.js';
 import { readAsset } from '../word-game/dictionary.service.js';
-import { compactWord } from './vietnamese.js';
+import { compactWord, sameSyllables } from './vietnamese.js';
 
 const WORDS_ASSET = 'viet-words.txt';
 const MEANINGS_ASSET = 'viet-meanings.tsv';
@@ -106,7 +106,13 @@ export class VietWordsService implements OnApplicationBootstrap {
       take: 50,
     });
     const compact = compactWord(text);
-    return rows.find((row) => compactWord(row.word) === compact) ?? null;
+    // A few listed words differ only in where the syllables split ("kế toán",
+    // "kết oán"): the one split like `text` wins over the first that matches.
+    return (
+      rows.find((row) => sameSyllables(row.word, text)) ??
+      rows.find((row) => compactWord(row.word) === compact) ??
+      null
+    );
   }
 
   /**

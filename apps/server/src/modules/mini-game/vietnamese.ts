@@ -38,6 +38,20 @@ export function compactWord(text: string): string {
 }
 
 /**
+ * The same word split into the same syllables: `compactWord` drops the spaces,
+ * so on its own "trùm ưu" reads like "trù mưu". Case, extra spaces and tone
+ * placement are still forgiven.
+ */
+export function sameSyllables(a: string, b: string): boolean {
+  const left = a.trim().split(SPACES);
+  const right = b.trim().split(SPACES);
+  return (
+    left.length === right.length &&
+    left.every((syllable, i) => compactWord(syllable) === compactWord(right[i] ?? ''))
+  );
+}
+
+/**
  * Equal for two words made of the same letters and the same tone marks, in any
  * order. Letters and tones are compared apart: the puzzle's letters carry their
  * tones, but a tone may move to another syllable and still use the same set,

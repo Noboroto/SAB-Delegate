@@ -9,7 +9,13 @@ import {
   type ScrambleOpening,
   type ScrambleOutcome,
 } from './mini-game.types.js';
-import { anagramKey, compactWord, scrambleHint, scrambleLetters } from './vietnamese.js';
+import {
+  anagramKey,
+  compactWord,
+  sameSyllables,
+  scrambleHint,
+  scrambleLetters,
+} from './vietnamese.js';
 
 /** Letters of a word as the puzzle shows them: tone marks ride on their letter. */
 function letterCount(text: string): number {
@@ -94,15 +100,16 @@ export class ScrambleService {
   /**
    * A listed word spelled by the puzzle's letters, or the answer itself even
    * when it is no longer listed (a puzzle drawn before its word was removed
-   * stays solvable).
+   * stays solvable). The guess must split into the word's syllables: the
+   * look-up ignores spaces, and "trùm ưu" is not "trù mưu".
    */
   private async accept(
     guess: string,
     answer: string,
   ): Promise<{ word: string; meaning: string | null } | null> {
     const found = await this.words.find(guess);
-    if (found !== null) return found;
-    return compactWord(guess) === compactWord(answer) ? { word: answer, meaning: null } : null;
+    if (found !== null && sameSyllables(guess, found.word)) return found;
+    return sameSyllables(guess, answer) ? { word: answer, meaning: null } : null;
   }
 
   /**

@@ -179,6 +179,21 @@ describe('ScrambleService.submit: what counts as a move', () => {
     expect(store.puzzle?.round).toBe(3);
     expect(leaderboard.award).not.toHaveBeenCalled();
   });
+
+  it.each([
+    ['listed', ['trù mưu']],
+    ['no longer listed', ['con mèo']],
+  ])('marks the right letters split into other syllables wrong (%s)', async (_, words) => {
+    const { service, store, leaderboard } = build({
+      puzzle: { answer: 'trù mưu', puzzle: 'x' },
+      words,
+    });
+    for (const guess of ['trùm ưu', 'trùmưu']) {
+      await expect(service.submit(GUILD, move(guess))).resolves.toEqual({ status: 'WRONG' });
+    }
+    expect(store.puzzle?.round).toBe(3);
+    expect(leaderboard.award).not.toHaveBeenCalled();
+  });
 });
 
 describe('ScrambleService.submit: a right answer', () => {

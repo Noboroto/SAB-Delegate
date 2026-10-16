@@ -3,9 +3,23 @@ import {
   anagramKey,
   scrambleHint,
   compactWord,
+  sameSyllables,
   scrambleLetters,
   syllableCount,
 } from './vietnamese.js';
+
+describe('sameSyllables', () => {
+  it('forgives case, extra spaces and tone placement', () => {
+    expect(sameSyllables('  HÒA   Bình ', 'hoà bình')).toBe(true);
+    expect(sameSyllables('trù mưu', 'trù mưu')).toBe(true);
+  });
+
+  it('tells apart the same letters split at another place, or not at all', () => {
+    expect(sameSyllables('trùm ưu', 'trù mưu')).toBe(false);
+    expect(sameSyllables('trùmưu', 'trù mưu')).toBe(false);
+    expect(sameSyllables('sinh học', 'học sinh')).toBe(false);
+  });
+});
 
 /** A random source that replays `values` and then repeats the last one. */
 function sequence(values: number[]): () => number {

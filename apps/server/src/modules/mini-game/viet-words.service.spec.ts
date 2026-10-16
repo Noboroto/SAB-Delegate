@@ -43,3 +43,13 @@ describe('VietWordsService.isVietnameseWord', () => {
     expect(findMany).not.toHaveBeenCalled();
   });
 });
+
+describe('VietWordsService.find', () => {
+  it('picks the listed word split like the text when two differ only in spacing', async () => {
+    const { service } = build(['kế toán', 'kết oán']);
+    await expect(service.find('kết oán')).resolves.toMatchObject({ word: 'kết oán' });
+    await expect(service.find('KẾ  TOÁN')).resolves.toMatchObject({ word: 'kế toán' });
+    // Unspaced text still finds a word.
+    await expect(service.find('kếtoán')).resolves.toMatchObject({ word: 'kế toán' });
+  });
+});
