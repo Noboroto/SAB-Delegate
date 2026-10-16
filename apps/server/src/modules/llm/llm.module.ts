@@ -3,12 +3,14 @@ import { AuditModule } from '../../common/audit/audit.module.js';
 import { restControllers, restImports } from '../../common/rest/rest-wiring.js';
 import { loadEnv } from '../../config/env.js';
 import { LlmController } from './llm.controller.js';
+import { LlmChatService } from './llm-chat.service.js';
 import { LLM_ENV, LlmService } from './llm.service.js';
 
 @Module({
   imports: [AuditModule, ...restImports()],
   providers: [
     LlmService,
+    LlmChatService,
     {
       provide: LLM_ENV,
       useFactory: () => {
@@ -18,6 +20,6 @@ import { LLM_ENV, LlmService } from './llm.service.js';
     },
   ],
   controllers: restControllers([LlmController]),
-  exports: [LlmService],
+  exports: [LlmService, LlmChatService],
 })
 export class LlmModule {}

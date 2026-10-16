@@ -41,7 +41,9 @@ const CompletionSchema = z.object({
     .min(1),
 });
 
-type Target = { baseUrl: string; model: string; apiKey: string };
+/** Everything a call to the endpoint needs; the key is the decrypted secret. */
+const LlmTargetSchema = z.object({ baseUrl: z.string(), model: z.string(), apiKey: z.string() });
+export type LlmTarget = z.infer<typeof LlmTargetSchema>;
 
 function completionsUrl(baseUrl: string): string {
   return `${baseUrl.replace(/\/+$/u, '')}/chat/completions`;
@@ -175,7 +177,7 @@ export class LlmService {
    */
   async explainVietnamese(word: string): Promise<string | null | undefined> {
     if (Date.now() < this.pausedUntil) return undefined;
-    const target = await this.target();
+    const target = await this.globalTarget();
     if (target === null) return undefined;
     const prompt =
       `Giải nghĩa từ tiếng Việt "${word}" như một từ điển: một hoặc hai câu, ` +
@@ -202,7 +204,7 @@ export class LlmService {
   }
 
   private async complete(
-    target: Target,
+    target: LlmTarget,
     prompt: string,
     maxTokens: number,
   ): Promise<{ text: string; cut: boolean }> {
@@ -229,7 +231,7 @@ export class LlmService {
     return { text: choice?.message.content ?? '', cut: choice?.finish_reason === 'length' };
   }
 
-  private post(target: Target, payload: Record<string, unknown>) {
+  private post(target: LlmTarget, payload: Record<string, unknown>) {
     return safePostJson(
       completionsUrl(target.baseUrl),
       { authorization: `Bearer ${target.apiKey}` },
@@ -239,7 +241,7 @@ export class LlmService {
   }
 
   /** The saved settings ready to call, or `null` when switched off or unusable. */
-  private async target(): Promise<Target | null> {
+  async globalTarget(): Promise<LlmTarget | null> {
     if (this.env.secret === undefined) return null;
     const row = await this.row();
     if (row === null || !row.enabled) return null;
@@ -248,7 +250,7 @@ export class LlmService {
       this.logger.warn('The stored LLM API key cannot be read with LLM_KEY_SECRET; enter it again');
       return null;
     }
-    return { baseUrl: row.baseUrl, model: row.model, apiKey };
+    return LlmTargetSchema.parse({ baseUrl: row.baseUrl, model: row.model, apiKey });
   }
 
   private row() {
@@ -256,6 +258,16 @@ export class LlmService {
       where: { singleton: true },
       select: { baseUrl: true, model: true, apiKeyEnc: true, keyLast4: true, enabled: true },
     });
+  }
+
+  /** Encrypts an API key for storage; throws when no secret is configured. */
+  sealKey(plain: string): string {
+    return encryptSecret(plain, this.requireSecret());
+  }
+
+  /** The key behind a `sealKey` value, or `null` when the current secret cannot read it. */
+  openKey(stored: string): string | null {
+    return this.readKey(stored);
   }
 
   private readKey(stored: string): string | null {
