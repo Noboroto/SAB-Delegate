@@ -175,7 +175,13 @@ export class ChatbotQuotaService {
   ): Promise<{ reserved: number; period: string } | { exhausted: true; quota: Quota }> {
     const guild = parseSnowflake(guildId);
     const user = parseSnowflake(userId);
-    const outcome = await this.reserveWith(this.prisma, guild, user, estimate, now);
+    const outcome = await this.reserveWith(
+      this.prisma,
+      await this.guildKey(guild),
+      user,
+      estimate,
+      now,
+    );
     if ('reserved' in outcome) return outcome;
     return { exhausted: true, quota: await this.limitOf(guild, user, outcome.period) };
   }
@@ -200,13 +206,15 @@ export class ChatbotQuotaService {
     const guild = parseSnowflake(guildId);
     const user = parseSnowflake(userId);
     const trigger = parseSnowflake(triggerMessageId);
-    // Resolved first: it may create the server row, which must not be inside the transaction.
-    await this.guildKey(guild);
+    // Resolved first: it may create the server row, which must not be inside the
+    // transaction, and a second pool connection taken while the transaction holds
+    // one can starve the pool under load.
+    const key = await this.guildKey(guild);
     const outcome = await this.prisma.$transaction(async (tx) => {
       const locked = await tx.$queryRaw<{ id: string }[]>`
         SELECT "id" FROM "ChatbotTurn"
         WHERE "triggerMessageId" = ${trigger} AND "status" = 'PENDING' FOR UPDATE`;
-      const reserved = await this.reserveWith(tx, guild, user, estimate, now);
+      const reserved = await this.reserveWith(tx, key, user, estimate, now);
       if (!('reserved' in reserved) || locked.length === 0) return { ...reserved, durable: false };
       await tx.$executeRaw`
         UPDATE "ChatbotTurn"
@@ -292,16 +300,16 @@ export class ChatbotQuotaService {
   }
 
   /** `guild` and `user` are validated snowflakes. */
+  /** `key` is the server row id, resolved by the caller outside any transaction. */
   private async reserveWith(
     db: SqlClient,
-    guild: string,
+    key: string,
     user: string,
     estimate: number,
     now: Date,
   ): Promise<{ reserved: number; period: string } | { period: string }> {
     const period = periodOf(now);
     const wanted = Math.max(1, clampTokens(estimate));
-    const key = await this.guildKey(guild);
 
     await db.chatbotUsage.createMany({
       data: [{ guildId: key, userId: user, period }],

@@ -105,6 +105,8 @@ export class ChatbotRecoveryService implements OnApplicationBootstrap, OnModuleD
   onApplicationBootstrap(): void {
     this.ready.afterReady('chatbot-recovery', async () => {
       await this.sweep();
+      // A shutdown that began during the first sweep already cleared the timer slot.
+      if (this.ready.isStopping()) return;
       this.secondSweep = setTimeout(() => void this.sweep(), SECOND_SWEEP_DELAY_MS);
       this.secondSweep.unref();
     });
