@@ -175,8 +175,14 @@ export {
 } from './schemas/mini-game.js';
 export {
   CHATBOT_DEFAULT_MONTHLY_LIMIT,
+  CHATBOT_HISTORY_RETENTION_DAYS,
   CHATBOT_LIMIT_MAX,
   CHATBOT_MAX_CHANNELS,
+  CHATBOT_RECENT_TURNS,
+  CHATBOT_RECENT_TURNS_MAX_CHARS,
+  CHATBOT_TURN_ANSWER_MAX_CHARS,
+  CHATBOT_TURN_CONTEXT_MAX_BYTES,
+  CHATBOT_TURN_QUESTION_MAX_CHARS,
 } from './constants/chatbot.js';
 export { formatTokenCount } from './utils/format-token-count.js';
 export {
@@ -190,6 +196,14 @@ export {
   ChatbotQuotaListQuerySchema,
   ChatbotQuotaRowSchema,
   ChatbotQuotaSetRequestSchema,
+  ChatbotRecentTurnSchema,
+  ChatbotTurnContextSchema,
+  ChatbotTurnDeleteRequestSchema,
+  ChatbotTurnDeleteResultSchema,
+  ChatbotTurnDetailSchema,
+  ChatbotTurnListQuerySchema,
+  ChatbotTurnRecordSchema,
+  ChatbotTurnRowSchema,
   type ChatbotChannelRequest,
   type ChatbotConfig,
   type ChatbotConfigPatch,
@@ -200,6 +214,14 @@ export {
   type ChatbotQuotaListQuery,
   type ChatbotQuotaRow,
   type ChatbotQuotaSetRequest,
+  type ChatbotRecentTurn,
+  type ChatbotTurnContext,
+  type ChatbotTurnDeleteRequest,
+  type ChatbotTurnDeleteResult,
+  type ChatbotTurnDetail,
+  type ChatbotTurnListQuery,
+  type ChatbotTurnRecord,
+  type ChatbotTurnRow,
 } from './schemas/chatbot.js';
 export {
   LlmBaseUrlSchema,

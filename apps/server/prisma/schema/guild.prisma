@@ -29,4 +29,5 @@ model Guild {
   chatbotUserMemories    ChatbotUserMemory[]
   chatbotQuotas          ChatbotUserQuota[]
   chatbotUsages          ChatbotUsage[]
+  chatbotTurns           ChatbotTurn[]
 }

@@ -46,3 +46,12 @@ enum MeaningSource {
   LLM
   NONE
 }
+
+/// How a chatbot turn ended. OK: the model answered; QUOTA_EXHAUSTED: the member
+/// had no tokens left; NOT_CONFIGURED: no model was available; FAILED: the call failed.
+enum ChatbotTurnStatus {
+  OK
+  QUOTA_EXHAUSTED
+  NOT_CONFIGURED
+  FAILED
+}

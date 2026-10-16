@@ -29,6 +29,7 @@ export const AUDIT_ACTIONS = {
   chatbotQuotaGrant: 'chatbot.quota_grant',
   chatbotQuotaReset: 'chatbot.quota_reset',
   chatbotMemoryClear: 'chatbot.memory_clear',
+  chatbotHistoryDelete: 'chatbot.history_delete',
   scheduleCreate: 'schedule.create',
   scheduleCancel: 'schedule.cancel',
   messageSend: 'message.send',

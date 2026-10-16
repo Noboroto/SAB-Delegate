@@ -1,9 +1,15 @@
 import { z } from 'zod';
 import { ChatbotConfigSchema as ChatbotConfigModelSchema } from '../generated/zod/schemas/models/ChatbotConfig.schema.js';
-import { CHATBOT_LIMIT_MAX, CHATBOT_MAX_CHANNELS } from '../constants/chatbot.js';
+import { ChatbotTurnSchema as ChatbotTurnModelSchema } from '../generated/zod/schemas/models/ChatbotTurn.schema.js';
+import {
+  CHATBOT_LIMIT_MAX,
+  CHATBOT_MAX_CHANNELS,
+  CHATBOT_TURN_ANSWER_MAX_CHARS,
+  CHATBOT_TURN_QUESTION_MAX_CHARS,
+} from '../constants/chatbot.js';
 import { partialWithoutDefaults } from '../utils/partial-without-defaults.js';
 import { ListQuerySchema } from './list-query.js';
-import { LlmSettingsInputSchema } from './llm.js';
+import { LlmSettingsInputSchema, LlmTestResultSchema } from './llm.js';
 import { SnowflakeSchema } from './snowflake.js';
 
 /** A token amount a limit, bonus or spent counter can hold. */
@@ -117,3 +123,167 @@ export const ChatbotMemoryClearResultSchema = z.object({
 });
 
 export type ChatbotMemoryClearResult = z.infer<typeof ChatbotMemoryClearResultSchema>;
+
+// Per-field bounds, so the schema alone limits what one snapshot can hold; the
+// serialized size cap in the service is the final limit.
+const CONTEXT_SYSTEM_MAX = 30_000;
+const CONTEXT_MESSAGE_MAX = 4000;
+const CONTEXT_MEMORY_MAX = 2000;
+const CONTEXT_NAME_MAX = 255;
+const CONTEXT_KIND_MAX = 50;
+const CONTEXT_NOTE_MAX = 500;
+const CONTEXT_ITEMS_MAX = 100;
+const MODEL_NAME_MAX = 200;
+
+/**
+ * What the model was given for one turn, kept so an admin can see why it
+ * answered as it did. Every field but `system` has a default: a snapshot
+ * written by an older build parses instead of being lost. Text is stored as
+ * sent, so none of it is trimmed. Image and file bytes are never part of it;
+ * `attachments` only describes them.
+ */
+export const ChatbotTurnContextSchema = z.object({
+  system: z.string().max(CONTEXT_SYSTEM_MAX),
+  channelMessages: z
+    .array(
+      z.object({
+        authorName: z.string().max(CONTEXT_NAME_MAX),
+        authorId: SnowflakeSchema,
+        content: z.string().max(CONTEXT_MESSAGE_MAX),
+        at: z.iso.datetime(),
+      }),
+    )
+    .max(CONTEXT_ITEMS_MAX)
+    .default([]),
+  memory: z
+    .object({
+      channel: z.string().max(CONTEXT_MEMORY_MAX).optional(),
+      user: z.string().max(CONTEXT_MEMORY_MAX).optional(),
+    })
+    .default({}),
+  /** How many earlier turns of the member were replayed into the prompt. */
+  recentTurns: z.number().int().min(0).default(0),
+  attachments: z
+    .array(
+      z.object({
+        name: z.string().max(CONTEXT_NAME_MAX),
+        kind: z.string().max(CONTEXT_KIND_MAX),
+        bytes: z.number().int().min(0),
+        /** Whether the model actually received it. */
+        included: z.boolean(),
+        note: z.string().max(CONTEXT_NOTE_MAX).optional(),
+      }),
+    )
+    .max(CONTEXT_ITEMS_MAX)
+    .default([]),
+});
+
+export type ChatbotTurnContext = z.infer<typeof ChatbotTurnContextSchema>;
+
+const TurnBaseSchema = ChatbotTurnModelSchema.pick({ status: true, estimated: true }).extend({
+  channelId: SnowflakeSchema,
+  userId: SnowflakeSchema,
+  triggerMessageId: SnowflakeSchema,
+  replyMessageId: SnowflakeSchema.nullable(),
+  /** One of the model call's failure reason codes, never text a provider sent back. */
+  failureReason: LlmTestResultSchema.shape.reason.unwrap().nullable(),
+  question: z.string().max(CHATBOT_TURN_QUESTION_MAX_CHARS),
+  answer: z.string().max(CHATBOT_TURN_ANSWER_MAX_CHARS).nullable(),
+  model: z.string().max(MODEL_NAME_MAX).nullable(),
+  /** `guild`: the server's own model; `global`: the shared one. */
+  llmSource: z.enum(['guild', 'global']).nullable(),
+  inputTokens: z.number().int().min(0),
+  outputTokens: z.number().int().min(0),
+});
+
+/** A turn as the pipeline writes it; the server it belongs to is a Discord id. */
+export const ChatbotTurnRecordSchema = TurnBaseSchema.extend({
+  guildId: SnowflakeSchema,
+  context: ChatbotTurnContextSchema,
+}).refine((turn) => turn.status !== 'OK' || turn.answer !== null, {
+  message: 'an OK turn has an answer',
+  path: ['answer'],
+});
+
+export type ChatbotTurnRecord = z.infer<typeof ChatbotTurnRecordSchema>;
+
+/**
+ * A turn in a list: the context snapshot is only in the detail. Members get
+ * rows of their own turns, never the detail: its snapshot holds other members'
+ * messages and the system prompt.
+ */
+export const ChatbotTurnRowSchema = TurnBaseSchema.extend({
+  id: z.uuid(),
+  createdAt: z.iso.datetime(),
+});
+
+export type ChatbotTurnRow = z.infer<typeof ChatbotTurnRowSchema>;
+
+/**
+ * For admins of the server only. `context` is null when the stored snapshot no
+ * longer parses.
+ */
+export const ChatbotTurnDetailSchema = ChatbotTurnRowSchema.extend({
+  context: ChatbotTurnContextSchema.nullable(),
+});
+
+export type ChatbotTurnDetail = z.infer<typeof ChatbotTurnDetailSchema>;
+
+/** One earlier exchange of a member, replayed into the prompt. Ids let the prompt skip what the live messages already show. */
+export const ChatbotRecentTurnSchema = ChatbotTurnRowSchema.pick({
+  triggerMessageId: true,
+  replyMessageId: true,
+  question: true,
+  createdAt: true,
+}).extend({ answer: z.string() });
+
+export type ChatbotRecentTurn = z.infer<typeof ChatbotRecentTurnSchema>;
+
+export const ChatbotTurnListQuerySchema = ListQuerySchema(['createdAt'])
+  .extend({
+    /** Newest first unless asked otherwise. */
+    order: z.enum(['asc', 'desc']).default('desc'),
+    userId: SnowflakeSchema.optional(),
+    channelId: SnowflakeSchema.optional(),
+    status: ChatbotTurnModelSchema.shape.status.optional(),
+    from: z.iso.datetime().optional(),
+    to: z.iso.datetime().optional(),
+  })
+  .refine((query) => query.from === undefined || query.to === undefined || query.from <= query.to, {
+    message: 'from must not be after to',
+    path: ['from'],
+  });
+
+export type ChatbotTurnListQuery = z.infer<typeof ChatbotTurnListQuerySchema>;
+
+export const ChatbotTurnDeleteRequestSchema = z
+  .object({
+    scope: z.enum(['turn', 'user', 'all']),
+    turnId: z.uuid().optional(),
+    userId: SnowflakeSchema.optional(),
+    /** Count what would go without deleting it. */
+    dryRun: z.boolean().default(false),
+  })
+  // Exactly the ids the scope names: an extra id would be silently ignored and
+  // delete more than the caller meant to. For scope "turn" a userId is an
+  // optional owner check, which is how a member deletes only their own turn.
+  .refine((body) => (body.turnId !== undefined) === (body.scope === 'turn'), {
+    message: 'turnId is required for scope "turn" and refused otherwise',
+    path: ['turnId'],
+  })
+  .refine(
+    (body) => body.scope === 'turn' || (body.userId !== undefined) === (body.scope === 'user'),
+    {
+      message: 'userId is required for scope "user", optional for "turn" and refused otherwise',
+      path: ['userId'],
+    },
+  );
+
+export type ChatbotTurnDeleteRequest = z.infer<typeof ChatbotTurnDeleteRequestSchema>;
+
+export const ChatbotTurnDeleteResultSchema = z.object({
+  dryRun: z.boolean(),
+  count: z.number().int().min(0),
+});
+
+export type ChatbotTurnDeleteResult = z.infer<typeof ChatbotTurnDeleteResultSchema>;

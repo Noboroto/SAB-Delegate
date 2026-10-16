@@ -35,6 +35,7 @@ const PARAM_KEYS: ReadonlySet<string> = new Set([
   'channelId',
   'messageId',
   'threadId',
+  'turnId',
   'roleId',
   'userId',
   'targetId',

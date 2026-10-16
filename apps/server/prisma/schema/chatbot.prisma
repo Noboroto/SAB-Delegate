@@ -99,3 +99,39 @@ model ChatbotUsage {
   @@unique([guildId, userId, period])
   @@index([guildId, period])
 }
+
+/// One exchange with the chatbot, kept so the member's conversation outlives the
+/// live channel messages and so admins can see what was asked and sent to the
+/// model. `triggerMessageId` is unique: a Discord message gets one turn.
+/// `failureReason` is a reason code, never provider text. `context` is the
+/// snapshot of what the model was given (never image or file bytes); it is
+/// Zod-parsed at every read.
+/// CHECK (migration `_chatbot_turns`): `channelId`, `userId`, `triggerMessageId` and
+/// `replyMessageId` are snowflakes, `question` has at most 6000 characters and
+/// `answer` at most 12000, the token counts are >= 0, and `answer` is set when
+/// `status` is OK.
+model ChatbotTurn {
+  id               String            @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  guildId          String            @db.Uuid
+  channelId        String
+  userId           String
+  triggerMessageId String            @unique
+  replyMessageId   String?
+  status           ChatbotTurnStatus
+  failureReason    String?
+  question         String
+  answer           String?
+  model            String?
+  llmSource        String?
+  inputTokens      Int               @default(0)
+  outputTokens     Int               @default(0)
+  estimated        Boolean           @default(false)
+  context          Json
+  createdAt        DateTime          @default(now()) @db.Timestamptz(3)
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@index([guildId, createdAt(sort: Desc)])
+  @@index([guildId, userId, createdAt(sort: Desc)])
+  @@index([createdAt])
+}

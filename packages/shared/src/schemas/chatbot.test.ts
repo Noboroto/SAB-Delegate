@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { CHATBOT_LIMIT_MAX, CHATBOT_MAX_CHANNELS } from '../constants/chatbot.js';
+import {
+  CHATBOT_LIMIT_MAX,
+  CHATBOT_MAX_CHANNELS,
+  CHATBOT_TURN_ANSWER_MAX_CHARS,
+  CHATBOT_TURN_QUESTION_MAX_CHARS,
+} from '../constants/chatbot.js';
 import {
   ChatbotChannelRequestSchema,
   ChatbotConfigPatchSchema,
@@ -10,6 +15,14 @@ import {
   ChatbotQuotaListQuerySchema,
   ChatbotQuotaRowSchema,
   ChatbotQuotaSetRequestSchema,
+  ChatbotRecentTurnSchema,
+  ChatbotTurnContextSchema,
+  ChatbotTurnDeleteRequestSchema,
+  ChatbotTurnDeleteResultSchema,
+  ChatbotTurnDetailSchema,
+  ChatbotTurnListQuerySchema,
+  ChatbotTurnRecordSchema,
+  ChatbotTurnRowSchema,
 } from './chatbot.js';
 
 const ID = '123456789012345678';
@@ -155,5 +168,171 @@ describe('input shapes', () => {
       ChatbotLlmOverrideInputSchema.safeParse({ baseUrl: 'http://example.com/v1', model: 'm' })
         .success,
     ).toBe(false);
+  });
+});
+
+describe('ChatbotTurnContextSchema', () => {
+  it('fills in what a snapshot from an older build lacks', () => {
+    expect(ChatbotTurnContextSchema.parse({ system: 's' })).toEqual({
+      system: 's',
+      channelMessages: [],
+      memory: {},
+      recentTurns: 0,
+      attachments: [],
+    });
+  });
+
+  it('refuses a snapshot without the system prompt or with a bad author id', () => {
+    expect(ChatbotTurnContextSchema.safeParse({}).success).toBe(false);
+    expect(
+      ChatbotTurnContextSchema.safeParse({
+        system: 's',
+        channelMessages: [
+          { authorName: 'a', authorId: 'x', content: 'c', at: '2026-10-16T00:00:00.000Z' },
+        ],
+      }).success,
+    ).toBe(false);
+  });
+
+  it('strips fields it does not know, such as attachment bytes', () => {
+    const parsed = ChatbotTurnContextSchema.parse({
+      system: 's',
+      attachments: [{ name: 'a', kind: 'image', bytes: 3, included: true, data: 'AAAA' }],
+    });
+    expect(parsed.attachments[0]).not.toHaveProperty('data');
+  });
+});
+
+describe('chatbot turn schemas', () => {
+  const record = {
+    guildId: ID,
+    channelId: ID,
+    userId: ID,
+    triggerMessageId: ID,
+    replyMessageId: null,
+    status: 'OK',
+    failureReason: null,
+    question: 'q',
+    answer: 'a',
+    model: null,
+    llmSource: null,
+    inputTokens: 0,
+    outputTokens: 0,
+    estimated: false,
+    context: { system: 's' },
+  };
+
+  it('requires an answer when the turn is OK, and only then', () => {
+    expect(ChatbotTurnRecordSchema.safeParse({ ...record, answer: null }).success).toBe(false);
+    expect(
+      ChatbotTurnRecordSchema.safeParse({ ...record, status: 'FAILED', answer: null }).success,
+    ).toBe(true);
+  });
+
+  it('caps the question and the answer', () => {
+    expect(
+      ChatbotTurnRecordSchema.safeParse({
+        ...record,
+        question: 'x'.repeat(CHATBOT_TURN_QUESTION_MAX_CHARS + 1),
+      }).success,
+    ).toBe(false);
+    expect(
+      ChatbotTurnRecordSchema.safeParse({
+        ...record,
+        answer: 'x'.repeat(CHATBOT_TURN_ANSWER_MAX_CHARS + 1),
+      }).success,
+    ).toBe(false);
+  });
+
+  it('keeps the context and the server out of a list row and puts the context in the detail', () => {
+    expect(Object.keys(ChatbotTurnRowSchema.shape)).not.toContain('context');
+    expect(Object.keys(ChatbotTurnRowSchema.shape)).not.toContain('guildId');
+    expect(Object.keys(ChatbotTurnDetailSchema.shape)).toContain('context');
+    expect(ChatbotTurnDetailSchema.shape.context.safeParse(null).success).toBe(true);
+  });
+
+  it('lists newest first and refuses a reversed time range or an unknown status', () => {
+    expect(ChatbotTurnListQuerySchema.parse({}).order).toBe('desc');
+    expect(
+      ChatbotTurnListQuerySchema.safeParse({
+        from: '2026-10-02T00:00:00.000Z',
+        to: '2026-10-01T00:00:00.000Z',
+      }).success,
+    ).toBe(false);
+    expect(ChatbotTurnListQuerySchema.safeParse({ status: 'DONE' }).success).toBe(false);
+    expect(
+      ChatbotTurnListQuerySchema.safeParse({ status: 'QUOTA_EXHAUSTED', userId: ID }).success,
+    ).toBe(true);
+  });
+
+  describe('ChatbotTurnDeleteRequestSchema', () => {
+    const TURN = '019a0000-0000-7000-8000-000000000001';
+
+    it('wants exactly the id the scope names', () => {
+      const parse = (body: object) => ChatbotTurnDeleteRequestSchema.safeParse(body).success;
+      expect(parse({ scope: 'turn', turnId: TURN })).toBe(true);
+      expect(parse({ scope: 'user', userId: ID })).toBe(true);
+      expect(parse({ scope: 'all' })).toBe(true);
+      expect(parse({ scope: 'turn' })).toBe(false);
+      expect(parse({ scope: 'user' })).toBe(false);
+      expect(parse({ scope: 'all', userId: ID })).toBe(false);
+      // An owner check on one turn is how a member deletes only their own.
+      expect(parse({ scope: 'turn', turnId: TURN, userId: ID })).toBe(true);
+      expect(parse({ scope: 'all', turnId: TURN })).toBe(false);
+      expect(parse({ scope: 'user', userId: ID, turnId: TURN })).toBe(false);
+      expect(parse({ scope: 'all', userId: ID, turnId: TURN })).toBe(false);
+      expect(parse({ scope: 'turn', turnId: 'nope' })).toBe(false);
+    });
+
+    it('defaults to a real delete', () => {
+      expect(ChatbotTurnDeleteRequestSchema.parse({ scope: 'all' }).dryRun).toBe(false);
+    });
+  });
+
+  it('takes only the reason codes of a failed model call as a failure reason', () => {
+    const parse = (failureReason: string | null) =>
+      ChatbotTurnRecordSchema.safeParse({ ...record, status: 'FAILED', failureReason }).success;
+    expect(parse('unreachable')).toBe(true);
+    expect(parse(null)).toBe(true);
+    expect(parse('401 Unauthorized: key sk-123')).toBe(false);
+  });
+
+  it('bounds every text of the context snapshot', () => {
+    const parse = (context: object) =>
+      ChatbotTurnContextSchema.safeParse({ system: 's', ...context }).success;
+    expect(parse({ system: 'x'.repeat(30_001) })).toBe(false);
+    const message = { authorName: 'a', authorId: ID, content: 'c', at: '2026-10-16T00:00:00.000Z' };
+    expect(parse({ channelMessages: [{ ...message, content: 'x'.repeat(4001) }] })).toBe(false);
+    expect(parse({ channelMessages: [{ ...message, authorName: 'x'.repeat(256) }] })).toBe(false);
+    expect(parse({ memory: { user: 'x'.repeat(2001) } })).toBe(false);
+    const file = { name: 'n', kind: 'image', bytes: 1, included: true };
+    expect(parse({ attachments: [{ ...file, note: 'x'.repeat(501) }] })).toBe(false);
+    expect(parse({ attachments: [{ ...file, kind: 'x'.repeat(51) }] })).toBe(false);
+    expect(parse({ attachments: [{ ...file, note: 'x'.repeat(500) }] })).toBe(true);
+  });
+
+  it('describes a recent turn with ISO dates and the ids needed to de-duplicate it', () => {
+    const parsed = ChatbotRecentTurnSchema.parse({
+      triggerMessageId: ID,
+      replyMessageId: null,
+      question: 'q',
+      answer: 'a',
+      createdAt: '2026-10-16T00:00:00.000Z',
+      extra: 1,
+    });
+    expect(Object.keys(parsed).sort()).toEqual([
+      'answer',
+      'createdAt',
+      'question',
+      'replyMessageId',
+      'triggerMessageId',
+    ]);
+  });
+
+  it('describes a delete result by its count', () => {
+    expect(ChatbotTurnDeleteResultSchema.safeParse({ dryRun: true, count: 3 }).success).toBe(true);
+    expect(ChatbotTurnDeleteResultSchema.safeParse({ dryRun: true, count: -1 }).success).toBe(
+      false,
+    );
   });
 });
