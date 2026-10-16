@@ -3,11 +3,11 @@ import { MessageFlags } from 'discord.js';
 import {
   Context,
   IntegerOption,
-  Options,
   SlashCommand,
   StringOption,
   type SlashCommandContext,
 } from 'necord';
+import { Options } from '../../discord/decorators/options.decorator.js';
 import { rootCommandMeta } from '../../discord/command-groups.js';
 import { DiscordCommands } from '../../discord/decorators/discord-commands.decorator.js';
 import { replyInChunks } from '../../discord/helpers/reply.js';
