@@ -4,6 +4,7 @@ import { GuildConfigModule } from '../guild-config/guild-config.module.js';
 import { PgBossModule } from '../../jobs/pg-boss.module.js';
 import { LlmModule } from '../llm/llm.module.js';
 import { ChatbotConfigService } from './chatbot-config.service.js';
+import { ChatbotContextService } from './chatbot-context.service.js';
 import { ChatbotHistoryCron } from './chatbot-history.cron.js';
 import { ChatbotHistoryService } from './chatbot-history.service.js';
 import { ChatbotQuotaService } from './chatbot-quota.service.js';
@@ -15,7 +16,18 @@ import { ChatbotQuotaService } from './chatbot-quota.service.js';
  */
 @Module({
   imports: [AuditModule, GuildConfigModule, LlmModule, PgBossModule],
-  providers: [ChatbotConfigService, ChatbotQuotaService, ChatbotHistoryService, ChatbotHistoryCron],
-  exports: [ChatbotConfigService, ChatbotQuotaService, ChatbotHistoryService],
+  providers: [
+    ChatbotConfigService,
+    ChatbotQuotaService,
+    ChatbotHistoryService,
+    ChatbotHistoryCron,
+    ChatbotContextService,
+  ],
+  exports: [
+    ChatbotConfigService,
+    ChatbotQuotaService,
+    ChatbotHistoryService,
+    ChatbotContextService,
+  ],
 })
 export class ChatbotModule {}

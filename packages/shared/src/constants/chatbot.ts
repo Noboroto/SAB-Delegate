@@ -27,3 +27,30 @@ export const CHATBOT_TURN_ANSWER_MAX_CHARS = 12_000;
 
 /** Largest serialized context snapshot a turn stores. */
 export const CHATBOT_TURN_CONTEXT_MAX_BYTES = 64 * 1024;
+
+/** Earlier channel messages read for each reply (the live window, never stored). */
+export const CHATBOT_CONTEXT_MESSAGES = 50;
+
+/** Characters of channel transcript sent to the model; the oldest lines go first. */
+export const CHATBOT_CONTEXT_MAX_CHARS = 12_000;
+
+/** One transcript line is cut here so a single wall of text cannot take the budget. */
+export const CHATBOT_CONTEXT_LINE_MAX_CHARS = 600;
+
+/** Largest picture sent to the model. */
+export const CHATBOT_IMAGE_MAX_BYTES = 3 * 1024 * 1024;
+
+/** Largest .txt file that is downloaded. */
+export const CHATBOT_TEXT_MAX_BYTES = 100 * 1024;
+
+/** Characters of a .txt file the model gets; the rest is cut with a notice. */
+export const CHATBOT_TEXT_MAX_CHARS = 24_000;
+
+/** Pictures taken from the message and the one it replies to. */
+export const CHATBOT_MAX_IMAGES = 3;
+
+/** Text files taken from the message and the one it replies to. */
+export const CHATBOT_MAX_TEXT_FILES = 1;
+
+/** Longest memory summary; the prompt clips to it as well, so a stored longer one cannot flood it. */
+export const CHATBOT_SUMMARY_MAX_CHARS = 1500;
