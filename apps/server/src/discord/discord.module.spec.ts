@@ -370,6 +370,14 @@ describe('buildNecordOptions', () => {
     expect(buildNecordOptions(env({})).allowedMentions).toEqual({ parse: [] });
   });
 
+  it('gives the REST client the request function that repeats unsent calls', () => {
+    const { rest } = buildNecordOptions(env({}));
+    const client = new Client({ intents: [], rest });
+    expect(typeof rest?.makeRequest).toBe('function');
+    // The same function object reached the client, so it replaced the default.
+    expect(client.rest.options).toMatchObject(rest ?? { missing: true });
+  });
+
   describe('as discord.js applies it to an outgoing message', () => {
     const body = (options: Parameters<typeof MessagePayload.create>[1]) => {
       const client = new Client({
