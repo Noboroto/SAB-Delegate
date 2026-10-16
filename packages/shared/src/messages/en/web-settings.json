@@ -73,6 +73,8 @@
       "baseUrlInvalid": "Enter a valid https address without a query or #.",
       "model": "Model",
       "modelRequired": "Enter a model name.",
+      "fetchModels": "Fetch models",
+      "modelsCount": "{count, plural, one {# model} other {# models}}",
       "apiKey": "API key",
       "apiKeyHelp": "Leave empty to keep the stored key. The key is only sent to the server and never shown again.",
       "apiKeyRequired": "Enter an API key (on the first save or when the API address changes).",

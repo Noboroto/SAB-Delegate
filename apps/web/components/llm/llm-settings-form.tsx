@@ -11,9 +11,10 @@ import {
   type LlmTestResult,
 } from '@sab/shared';
 import { ErrorAlert } from '@/components/data/error-alert';
+import { LlmModelField } from '@/components/llm/llm-model-field';
 import { ActionRow } from '@/components/ui/action-row';
 import { useApiMutation } from '@/lib/api/mutations';
-import { saveLlmSettings, testLlmSettings } from '@/lib/llm/llm-api';
+import { listLlmModels, saveLlmSettings, testLlmSettings } from '@/lib/llm/llm-api';
 import { LLM_PRESET_CUSTOM, LLM_PRESETS, presetOf } from '@/lib/llm/presets';
 
 interface LlmFormValues {
@@ -132,13 +133,7 @@ export function LlmSettingsForm({ guildId, settings }: { guildId: string; settin
         >
           <Input inputMode="url" autoComplete="off" />
         </Form.Item>
-        <Form.Item
-          name="model"
-          label={t('llm.form.model')}
-          rules={[{ required: true, whitespace: true, message: t('llm.form.modelRequired') }]}
-        >
-          <Input autoComplete="off" />
-        </Form.Item>
+        <LlmModelField fetchModels={(input) => listLlmModels(guildId, input)} />
         <Form.Item
           name="apiKey"
           label={t('llm.form.apiKey')}

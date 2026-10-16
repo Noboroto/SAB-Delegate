@@ -73,6 +73,8 @@
       "baseUrlInvalid": "Nhập địa chỉ https hợp lệ, không có tham số hay dấu #.",
       "model": "Mô hình",
       "modelRequired": "Nhập tên mô hình.",
+      "fetchModels": "Lấy danh sách mô hình",
+      "modelsCount": "{count} mô hình",
       "apiKey": "Khoá API",
       "apiKeyHelp": "Để trống để giữ khoá đã lưu. Khoá chỉ được gửi lên máy chủ, không hiện lại.",
       "apiKeyRequired": "Nhập khoá API (lần đầu lưu hoặc khi đổi địa chỉ API).",

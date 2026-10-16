@@ -33,6 +33,8 @@ import {
   ChatbotTurnParamSchema,
   ChatbotUserParamSchema,
   ErrorCode,
+  LlmModelsRequestSchema,
+  LlmModelsResultSchema,
   LlmTestResultSchema,
   z,
   type ChatbotConfig,
@@ -43,6 +45,7 @@ import {
   type ChatbotTurnDeleteResult,
   type ChatbotTurnDetail,
   type ChatbotTurnPage,
+  type LlmModelsResult,
   type LlmTestResult,
 } from '@sab/shared';
 import { Principal, type SessionPrincipal } from '../../auth/principal.decorator.js';
@@ -147,6 +150,16 @@ export class ChatbotController {
     body: z.output<typeof ChatbotLlmOverrideInputSchema>,
   ): Promise<LlmTestResult> {
     return LlmTestResultSchema.parse(await this.config.testOverride(guildId, body));
+  }
+
+  /** Read-only, like the test: the endpoint is asked, nothing is stored. */
+  @Post('llm/models')
+  @HttpCode(200)
+  async listLlmModels(
+    @Param('guildId') guildId: string,
+    @Body({ schema: LlmModelsRequestSchema }) body: z.output<typeof LlmModelsRequestSchema>,
+  ): Promise<LlmModelsResult> {
+    return LlmModelsResultSchema.parse(await this.config.listOverrideModels(guildId, body));
   }
 
   @Get('quota')

@@ -52,12 +52,36 @@ export const LlmSettingsInputSchema = z.object({
 
 export type LlmSettingsInput = z.infer<typeof LlmSettingsInputSchema>;
 
+const LlmFailureReasonSchema = z.enum([
+  'unreachable',
+  'blocked',
+  'unauthorized',
+  'provider_quota',
+  'bad_response',
+]);
+
 export const LlmTestResultSchema = z.object({
   ok: z.boolean(),
   /** Why the test failed; the provider's own error text is never passed on. */
-  reason: z
-    .enum(['unreachable', 'blocked', 'unauthorized', 'provider_quota', 'bad_response'])
-    .optional(),
+  reason: LlmFailureReasonSchema.optional(),
 });
 
 export type LlmTestResult = z.infer<typeof LlmTestResultSchema>;
+
+/**
+ * Asks an endpoint which models it serves. `apiKey` may be left out to use the
+ * stored key, but only while `baseUrl` is the address that key was saved for.
+ */
+export const LlmModelsRequestSchema = z.object({
+  baseUrl: LlmBaseUrlSchema,
+  apiKey: LlmSettingsInputSchema.shape.apiKey,
+});
+
+export type LlmModelsRequest = z.infer<typeof LlmModelsRequestSchema>;
+
+export const LlmModelsResultSchema = z.discriminatedUnion('ok', [
+  z.object({ ok: z.literal(true), models: z.array(z.string()) }),
+  z.object({ ok: z.literal(false), reason: LlmFailureReasonSchema }),
+]);
+
+export type LlmModelsResult = z.infer<typeof LlmModelsResultSchema>;

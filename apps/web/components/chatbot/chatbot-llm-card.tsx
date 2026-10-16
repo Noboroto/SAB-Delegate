@@ -24,11 +24,17 @@ import {
 import { ErrorAlert } from '@/components/data/error-alert';
 import { ReauthAlert } from '@/components/auth/reauth-alert';
 import { ConfirmAction } from '@/components/forms/confirm-action';
+import { LlmModelField } from '@/components/llm/llm-model-field';
 import { ActionRow } from '@/components/ui/action-row';
 import { LinkButton } from '@/components/ui/link-button';
 import type { ApiRequestError } from '@/lib/api/api-response';
 import { useApiMutation } from '@/lib/api/mutations';
-import { clearChatbotLlm, saveChatbotLlm, testChatbotLlm } from '@/lib/chatbot/chatbot-api';
+import {
+  clearChatbotLlm,
+  listChatbotLlmModels,
+  saveChatbotLlm,
+  testChatbotLlm,
+} from '@/lib/chatbot/chatbot-api';
 import { LLM_PRESET_CUSTOM, LLM_PRESETS, presetOf } from '@/lib/llm/presets';
 
 type Llm = ChatbotConfig['llm'];
@@ -211,13 +217,7 @@ export function ChatbotLlmCard({
         >
           <Input inputMode="url" autoComplete="off" />
         </Form.Item>
-        <Form.Item
-          name="model"
-          label={tLlm('llm.form.model')}
-          rules={[{ required: true, whitespace: true, message: tLlm('llm.form.modelRequired') }]}
-        >
-          <Input autoComplete="off" />
-        </Form.Item>
+        <LlmModelField fetchModels={(input) => listChatbotLlmModels(guildId, input)} />
         <Form.Item
           name="apiKey"
           label={tLlm('llm.form.apiKey')}

@@ -11,6 +11,8 @@ import {
   ChatbotQuotaSetRequestSchema,
   ChatbotTurnDeleteRequestSchema,
   ChatbotTurnDeleteResultSchema,
+  LlmModelsRequestSchema,
+  LlmModelsResultSchema,
   LlmTestResultSchema,
   type ChatbotConfig,
   type ChatbotConfigPatch,
@@ -21,6 +23,8 @@ import {
   type ChatbotQuotaRow,
   type ChatbotTurnDeleteResult,
   type ChatbotTurnDeleteTargetSchema,
+  type LlmModelsRequest,
+  type LlmModelsResult,
   type LlmTestResult,
   type z,
 } from '@sab/shared';
@@ -83,6 +87,18 @@ export function testChatbotLlm(
     method: 'POST',
     body: ChatbotLlmOverrideInputSchema.parse(input),
     parser: LlmTestResultSchema,
+  });
+}
+
+/** Asks the server which models the endpoint serves; nothing is stored. */
+export function listChatbotLlmModels(
+  guildId: string,
+  input: LlmModelsRequest,
+): Promise<LlmModelsResult> {
+  return apiFetch(chatbotPath(guildId, 'llm', 'models'), {
+    method: 'POST',
+    body: LlmModelsRequestSchema.parse(input),
+    parser: LlmModelsResultSchema,
   });
 }
 

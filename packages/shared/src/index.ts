@@ -249,9 +249,13 @@ export {
 } from './schemas/chatbot.js';
 export {
   LlmBaseUrlSchema,
+  LlmModelsRequestSchema,
+  LlmModelsResultSchema,
   LlmSettingsInputSchema,
   LlmSettingsSchema,
   LlmTestResultSchema,
+  type LlmModelsRequest,
+  type LlmModelsResult,
   type LlmSettings,
   type LlmSettingsInput,
   type LlmTestResult,

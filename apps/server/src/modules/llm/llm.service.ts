@@ -2,9 +2,11 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
   AUDIT_ACTIONS,
   ErrorCode,
+  LlmModelsRequestSchema,
   LlmSettingsInputSchema,
   z,
   type ActorContext,
+  type LlmModelsResult,
   type LlmSettings,
   type LlmTestResult,
 } from '@sab/shared';
@@ -15,6 +17,7 @@ import { PrismaService } from '../../prisma/prisma.service.js';
 import { ChatbotPauseService, pauseKeyOf } from './chatbot-pause.service.js';
 import { isOutOfCredit } from './llm-chat.service.js';
 import { SafePostError, safePostJson } from './safe-post.js';
+import { safeRequest } from './safe-request.js';
 import { decryptSecret, encryptSecret } from './secret-box.js';
 
 /** The two settings the module reads from the environment (see `LlmModule`). */
@@ -31,6 +34,16 @@ const NO_MEANING = 'NONE';
 const COOLDOWN_MS = 10 * 60_000;
 /** A meaning with a link is not kept: it would show to every server, forever. */
 const LINK = /https?:\/\/|discord\.gg|www\./iu;
+
+/** A model list is a few KB on most providers; the cap bounds what a hostile endpoint can make us read. */
+const MODELS_MAX_BYTES = 2 * 1024 * 1024;
+const MODELS_MAX_COUNT = 1000;
+const MODEL_ID_MAX_LENGTH = 200;
+
+const ModelListSchema = z.object({ data: z.array(z.object({ id: z.string() })) });
+
+/** The key and address a server saved earlier; either may be missing. */
+type StoredLlmKey = { baseUrl: string | null; apiKeyEnc: string | null };
 
 const CompletionSchema = z.object({
   choices: z
@@ -155,17 +168,7 @@ export class LlmService {
     const parsed = LlmSettingsInputSchema.safeParse(input);
     if (!parsed.success) throw new ServiceError(ErrorCode.VALIDATION_FAILED);
     const { baseUrl, model, apiKey } = parsed.data;
-    let key = apiKey;
-    if (key === undefined) {
-      const secret = this.requireSecret();
-      const current = await this.row();
-      // A stored key only ever goes to the address it was saved for.
-      if (current === null || current.baseUrl !== baseUrl) {
-        throw new ServiceError(ErrorCode.LLM_KEY_REQUIRED);
-      }
-      key = decryptSecret(current.apiKeyEnc, secret) ?? undefined;
-      if (key === undefined) throw new ServiceError(ErrorCode.LLM_KEY_REQUIRED);
-    }
+    const key = await this.resolveKey(baseUrl, apiKey, () => this.row());
     try {
       await this.complete({ baseUrl, model, apiKey: key }, 'Trả lời đúng một từ: OK', 5);
       // A working endpoint ends an outage the admin has just fixed (a top-up, a new plan).
@@ -174,6 +177,57 @@ export class LlmService {
     } catch (error) {
       return { ok: false, reason: failureReason(error) };
     }
+  }
+
+  /**
+   * The model ids the endpoint serves, with the given key or, without one, the
+   * stored key of `loadStored` (only for the address it was saved for).
+   */
+  async listModels(
+    input: unknown,
+    loadStored: () => Promise<StoredLlmKey | null>,
+  ): Promise<LlmModelsResult> {
+    const parsed = LlmModelsRequestSchema.safeParse(input);
+    if (!parsed.success) throw new ServiceError(ErrorCode.VALIDATION_FAILED);
+    const { baseUrl, apiKey } = parsed.data;
+    const key = await this.resolveKey(baseUrl, apiKey, loadStored);
+    try {
+      const response = await safeRequest({
+        url: `${baseUrl.replace(/\/+$/u, '')}/models`,
+        method: 'GET',
+        headers: { authorization: `Bearer ${key}`, accept: 'application/json' },
+        timeoutMs: CALL_TIMEOUT_MS,
+        maxBytes: MODELS_MAX_BYTES,
+      });
+      return { ok: true, models: modelIds(response.status, response.body) };
+    } catch (error) {
+      return { ok: false, reason: failureReason(error) };
+    }
+  }
+
+  /** {@link listModels} for the shared LLM: the stored key is the saved global one. */
+  listGlobalModels(input: unknown): Promise<LlmModelsResult> {
+    return this.listModels(input, () => this.row());
+  }
+
+  /**
+   * The key to call `baseUrl` with: the one given, else the stored one, which
+   * only ever goes to the address it was saved for.
+   */
+  private async resolveKey(
+    baseUrl: string,
+    apiKey: string | undefined,
+    loadStored: () => Promise<StoredLlmKey | null>,
+  ): Promise<string> {
+    if (apiKey !== undefined) return apiKey;
+    this.requireSecret();
+    const stored = await loadStored();
+    if (stored === null || stored.baseUrl !== baseUrl || stored.apiKeyEnc === null) {
+      throw new ServiceError(ErrorCode.LLM_KEY_REQUIRED);
+    }
+    const key = this.readKey(stored.apiKeyEnc);
+    if (key === null) throw new ServiceError(ErrorCode.LLM_KEY_REQUIRED);
+    return key;
   }
 
   /**
@@ -292,6 +346,29 @@ export class LlmService {
     if (this.env.secret === undefined) throw new ServiceError(ErrorCode.LLM_NOT_AVAILABLE);
     return this.env.secret;
   }
+}
+
+/** Ids of a `/models` answer, or the failure it is; the provider's text is read, never kept. */
+function modelIds(status: number, body: Buffer): string[] {
+  if (status === 401 || status === 403) throw new LlmUnauthorized();
+  if (isOutOfCredit(status, body.toString('utf8'))) throw new LlmOutOfCredit();
+  // A rate limit or an outage passes; any other refusal means this is not a model list.
+  if (status === 429 || status >= 500) throw new SafePostError('unreachable');
+  if (status !== 200) throw new SafePostError('bad_response');
+  let json: unknown;
+  try {
+    json = JSON.parse(body.toString('utf8'));
+  } catch {
+    throw new SafePostError('bad_response');
+  }
+  const list = ModelListSchema.safeParse(json);
+  if (!list.success) throw new SafePostError('bad_response');
+  const ids = new Set<string>();
+  for (const { id } of list.data.data) {
+    const trimmed = id.trim();
+    if (trimmed !== '' && trimmed.length <= MODEL_ID_MAX_LENGTH) ids.add(trimmed);
+  }
+  return [...ids].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)).slice(0, MODELS_MAX_COUNT);
 }
 
 class LlmUnauthorized extends Error {}

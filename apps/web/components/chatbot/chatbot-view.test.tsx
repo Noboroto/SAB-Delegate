@@ -58,6 +58,8 @@ const TEXT = {
     model: 'Mô hình',
     apiKey: 'Khoá API',
     llmSave: 'Lưu',
+    fetchModels: 'Lấy danh sách mô hình',
+    twoModels: '2 mô hình',
     llmSaved: 'Đã lưu dịch vụ AI.',
     keyRequired: 'Nhập khoá API (lần đầu lưu hoặc khi đổi địa chỉ API).',
     reauth: 'Đăng nhập lại',
@@ -88,6 +90,8 @@ const TEXT = {
     model: 'Model',
     apiKey: 'API key',
     llmSave: 'Save',
+    fetchModels: 'Fetch models',
+    twoModels: '2 models',
     llmSaved: 'The AI service is saved.',
     keyRequired: 'Enter an API key (on the first save or when the API address changes).',
     reauth: 'Sign in again',
@@ -262,6 +266,38 @@ describe.each(SUPPORTED_LOCALES)('ChatbotView settings (%s)', (locale) => {
     await userEvent.type(screen.getByLabelText(text.baseUrl), 'https://example.com/v1');
     await userEvent.type(screen.getByLabelText(text.model), 'model-a');
     await userEvent.click(screen.getByRole('button', { name: text.llmSave }));
+
+    expect(await screen.findByText(text.keyRequired)).toBeInTheDocument();
+    expect(writesOf(fetchMock)).toEqual([]);
+  });
+
+  it('fetches the model list of the typed address from the server route and offers it', async () => {
+    const fetchMock = setup(locale, () => ({ ok: true, models: ['model-b', 'model-a'] }));
+    const button = screen.getByRole('button', { name: text.fetchModels });
+    expect(button).toBeDisabled();
+
+    await userEvent.type(screen.getByLabelText(text.baseUrl), 'https://example.com/v1');
+    expect(button).toBeEnabled();
+    await userEvent.type(screen.getByLabelText(text.apiKey), 'k'.repeat(24));
+    await userEvent.click(button);
+
+    expect(await screen.findByText(text.twoModels)).toBeInTheDocument();
+    expect(writesOf(fetchMock)).toEqual([
+      {
+        path: `${CHATBOT}/llm/models`,
+        method: 'POST',
+        body: { baseUrl: 'https://example.com/v1', apiKey: 'k'.repeat(24) },
+      },
+    ]);
+    await userEvent.type(screen.getByLabelText(text.model), 'model-a');
+    // The list is also mirrored for assistive tech, so an id can appear twice.
+    expect((await screen.findAllByText('model-a')).length).toBeGreaterThan(0);
+  });
+
+  it('asks for a key before fetching when the server has none of its own', async () => {
+    const fetchMock = setup(locale);
+    await userEvent.type(screen.getByLabelText(text.baseUrl), 'https://example.com/v1');
+    await userEvent.click(screen.getByRole('button', { name: text.fetchModels }));
 
     expect(await screen.findByText(text.keyRequired)).toBeInTheDocument();
     expect(writesOf(fetchMock)).toEqual([]);

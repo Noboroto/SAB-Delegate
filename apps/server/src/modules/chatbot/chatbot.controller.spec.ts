@@ -27,6 +27,7 @@ const config = {
   saveOverride: vi.fn(),
   clearOverride: vi.fn(),
   testOverride: vi.fn(),
+  listOverrideModels: vi.fn(),
 };
 const quota = { list: vi.fn(), setLimit: vi.fn(), grant: vi.fn(), reset: vi.fn() };
 const memory = { clear: vi.fn() };
@@ -122,6 +123,11 @@ describe('guards', () => {
         url: `${base}/llm/test`,
         payload: { baseUrl: 'https://x.test', model: 'm' },
       },
+      {
+        method: 'POST',
+        url: `${base}/llm/models`,
+        payload: { baseUrl: 'https://x.test' },
+      },
       { method: 'GET', url: `${base}/quota` },
       put(`${base}/quota/${MEMBER}`, { limit: 5 }),
       { method: 'POST', url: `${base}/quota/${MEMBER}/grant`, payload: { tokens: 5 } },
@@ -144,6 +150,7 @@ describe('guards', () => {
     expect(guardsOf('clearLlm')).toContain(FreshAuthGuard);
     for (const name of [
       'testLlm',
+      'listLlmModels',
       'configure',
       'addChannel',
       'listQuota',
@@ -221,6 +228,40 @@ describe('config and channels', () => {
     expect(tested.statusCode).toBe(200);
     expect(config.testOverride).toHaveBeenCalledWith(GUILD, body);
     expect(config.saveOverride).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('llm models', () => {
+  const url = `${base}/llm/models`;
+
+  it('lists the models for the server, without changing anything', async () => {
+    config.listOverrideModels.mockResolvedValue({ ok: true, models: ['m1', 'm2'] });
+    const payload = { baseUrl: 'https://llm.example.test/v1', apiKey: 'k'.repeat(16) };
+    const response = await inject({ method: 'POST', url, payload: { ...payload, extra: 1 } });
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({ ok: true, models: ['m1', 'm2'] });
+    expect(config.listOverrideModels).toHaveBeenCalledWith(GUILD, payload);
+    expect(config.saveOverride).not.toHaveBeenCalled();
+  });
+
+  it('answers a failure as ok:false with its reason', async () => {
+    config.listOverrideModels.mockResolvedValue({ ok: false, reason: 'bad_response' });
+    const response = await inject({
+      method: 'POST',
+      url,
+      payload: { baseUrl: 'https://llm.example.test/v1' },
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({ ok: false, reason: 'bad_response' });
+  });
+
+  it('refuses an address that is not https', async () => {
+    await expectInvalid(
+      test,
+      { method: 'POST', url, payload: { baseUrl: 'http://llm.example.test/v1' } },
+      'baseUrl',
+    );
+    expect(config.listOverrideModels).not.toHaveBeenCalled();
   });
 });
 

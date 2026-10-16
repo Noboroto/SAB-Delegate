@@ -1,7 +1,11 @@
 import {
+  LlmModelsRequestSchema,
+  LlmModelsResultSchema,
   LlmSettingsInputSchema,
   LlmSettingsSchema,
   LlmTestResultSchema,
+  type LlmModelsRequest,
+  type LlmModelsResult,
   type LlmSettings,
   type LlmSettingsInput,
   type LlmTestResult,
@@ -23,5 +27,14 @@ export function testLlmSettings(guildId: string, input: LlmSettingsInput): Promi
     method: 'POST',
     body: LlmSettingsInputSchema.parse(input),
     parser: LlmTestResultSchema,
+  });
+}
+
+/** Asks the server which models the endpoint serves; nothing is stored. */
+export function listLlmModels(guildId: string, input: LlmModelsRequest): Promise<LlmModelsResult> {
+  return apiFetch(guildApiPath(guildId, 'llm', 'models'), {
+    method: 'POST',
+    body: LlmModelsRequestSchema.parse(input),
+    parser: LlmModelsResultSchema,
   });
 }

@@ -1,10 +1,13 @@
 import { Body, Controller, Get, HttpCode, Param, Post, Put, UseGuards } from '@nestjs/common';
 import {
   ErrorCode,
+  LlmModelsRequestSchema,
+  LlmModelsResultSchema,
   LlmSettingsInputSchema,
   LlmSettingsSchema,
   LlmTestResultSchema,
   z,
+  type LlmModelsResult,
   type LlmSettings,
   type LlmTestResult,
 } from '@sab/shared';
@@ -50,6 +53,17 @@ export class LlmController {
   ): Promise<LlmTestResult> {
     this.assertAdminGuild(guildId);
     return LlmTestResultSchema.parse(await this.llm.test(body));
+  }
+
+  /** Read-only, like the test: the endpoint is asked, nothing is stored. */
+  @Post('models')
+  @HttpCode(200)
+  async models(
+    @Param('guildId') guildId: string,
+    @Body({ schema: LlmModelsRequestSchema }) body: z.output<typeof LlmModelsRequestSchema>,
+  ): Promise<LlmModelsResult> {
+    this.assertAdminGuild(guildId);
+    return LlmModelsResultSchema.parse(await this.llm.listGlobalModels(body));
   }
 
   private assertAdminGuild(guildId: string): void {

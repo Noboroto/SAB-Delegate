@@ -11,6 +11,7 @@ import {
   SnowflakeSchema,
   type ActorContext,
   type ChatbotConfig,
+  type LlmModelsResult,
   type LlmTestResult,
 } from '@sab/shared';
 import { LRUCache } from 'lru-cache';
@@ -523,6 +524,23 @@ export class ChatbotConfigService {
       if (error instanceof LlmChatError) return { ok: false, reason: error.reason };
       throw error;
     }
+  }
+
+  /**
+   * The model ids the endpoint serves. Without a key the server's own stored
+   * one is used, and only for the address it was saved with.
+   */
+  listOverrideModels(guildId: string, input: unknown): Promise<LlmModelsResult> {
+    const id = parseGuildId(guildId);
+    return this.llm.listModels(input, async () => {
+      const current = await this.prisma.chatbotConfig.findFirst({
+        where: { guild: { discordId: id } },
+        select: LLM_COLUMNS,
+      });
+      return current === null
+        ? null
+        : { baseUrl: current.llmBaseUrl, apiKeyEnc: current.llmApiKeyEnc };
+    });
   }
 
   /**
