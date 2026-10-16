@@ -1,7 +1,7 @@
 'use client';
 
-import { useRef, useState } from 'react';
-import { Alert, App, Button, Form, Input, InputNumber, Modal, Radio } from 'antd';
+import { useState } from 'react';
+import { App, Button, Form, Input, InputNumber, Modal, Radio } from 'antd';
 import { useTranslations } from 'next-intl';
 import {
   API_KEY_NAME_MAX_LENGTH,
@@ -15,7 +15,7 @@ import {
 import { ErrorAlert } from '@/components/data/error-alert';
 import { useApiMutation } from '@/lib/api/mutations';
 import { mintApiKey } from '@/lib/api-keys/api-keys-api';
-import { signInWithDiscord } from '@/lib/auth/auth-client';
+import { ReauthAlert } from '@/components/auth/reauth-alert';
 
 type Mode = 'READ' | 'WRITE';
 
@@ -51,9 +51,6 @@ export function CreateKeyModal({ open, onClose, onMinted }: CreateKeyModalProps)
   // Tracked from the change event: `Form.useWatch` warns while the modal (and so the form) is unmounted.
   const [mode, setMode] = useState<Mode>('READ');
   const mint = useApiMutation(mintApiKey);
-  const [signingIn, setSigningIn] = useState(false);
-  // The ref flips at once; state would let two clicks in one frame both start a sign-in.
-  const signInStarted = useRef(false);
 
   const submit = async (values: FormValues) => {
     const parsed = ApiKeyMintSchema.safeParse(values);
@@ -66,18 +63,6 @@ export function CreateKeyModal({ open, onClose, onMinted }: CreateKeyModalProps)
     form.resetFields();
     setMode('READ');
     onMinted(outcome.data);
-  };
-
-  const signInAgain = () => {
-    if (signInStarted.current) return;
-    signInStarted.current = true;
-    setSigningIn(true);
-    signInWithDiscord(RETURN_PATH).catch((error: unknown) => {
-      console.error(error);
-      signInStarted.current = false;
-      setSigningIn(false);
-      void message.error(t('reauth.failed'));
-    });
   };
 
   const close = () => {
@@ -165,16 +150,14 @@ export function CreateKeyModal({ open, onClose, onMinted }: CreateKeyModalProps)
         </Form.Item>
       </Form>
       {needsReauth ? (
-        <Alert
-          type="warning"
-          showIcon
-          title={t('reauth.title')}
-          description={t('reauth.body')}
-          action={
-            <Button loading={signingIn} onClick={signInAgain}>
-              {t('reauth.action')}
-            </Button>
-          }
+        <ReauthAlert
+          returnPath={RETURN_PATH}
+          texts={{
+            title: t('reauth.title'),
+            body: t('reauth.body'),
+            action: t('reauth.action'),
+            failed: t('reauth.failed'),
+          }}
         />
       ) : mint.error === undefined ? null : (
         <ErrorAlert error={mint.error} />

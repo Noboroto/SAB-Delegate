@@ -5,6 +5,7 @@ import { Alert, Button, Modal } from 'antd';
 import { useTranslations } from 'next-intl';
 import { ErrorAlert } from '@/components/data/error-alert';
 import { DryRunPreview, type DryRunPreviewState } from '@/components/data/dry-run-preview';
+import type { ApiRequestError } from '@/lib/api/api-response';
 import { useApiMutation } from '@/lib/api/mutations';
 
 /** How long a plan stays good to confirm; after that the world may have changed under it. */
@@ -32,6 +33,8 @@ interface ConfirmActionProps<TPlan, TResult> {
   /** `false` for a public post (send, poll, edit): it needs a preview, but it destroys nothing. */
   danger?: boolean;
   previewTtlMs?: number;
+  /** Draws a failed confirm in place of the generic alert, e.g. one that carries its own next step; `undefined` keeps the generic one. */
+  renderError?: (error: ApiRequestError) => ReactNode;
 }
 
 /**
@@ -53,6 +56,7 @@ export function ConfirmAction<TPlan, TResult>({
   disabled = false,
   danger = true,
   previewTtlMs = PREVIEW_TTL_MS,
+  renderError,
 }: ConfirmActionProps<TPlan, TResult>) {
   const t = useTranslations('web-common');
   const [open, setOpen] = useState(false);
@@ -154,7 +158,9 @@ export function ConfirmAction<TPlan, TResult>({
           {reviewing && execution.error === undefined ? (
             <Alert type="warning" showIcon title={t('confirm.expired')} />
           ) : null}
-          {execution.error === undefined ? null : <ErrorAlert error={execution.error} />}
+          {execution.error === undefined
+            ? null
+            : (renderError?.(execution.error) ?? <ErrorAlert error={execution.error} />)}
         </div>
       </Modal>
     </>

@@ -44,6 +44,7 @@
     "note": "Notes",
     "wordGame": "Word game",
     "games": "Games",
+    "chatbot": "Chatbot",
     "schedule": "Schedule",
     "messaging": "Messaging",
     "mention": "Mentions",
@@ -59,7 +60,8 @@
       "wordGame": "The word-chain game in a channel.",
       "schedule": "Messages scheduled to be sent later.",
       "messaging": "Send, copy and edit messages, and create polls.",
-      "games": "Rules and set-up of the word chain, counting, the Vietnamese scramble and Wordle."
+      "games": "Rules and set-up of the word chain, counting, the Vietnamese scramble and Wordle.",
+      "chatbot": "Members chat with the bot in chosen channels; set who can use it and how much."
     },
     "modulesSubtitle": "Pick a module to view and change it.",
     "gamesSubtitle": "Games are set up with slash commands in Discord; scores are shown by /leaderboard."

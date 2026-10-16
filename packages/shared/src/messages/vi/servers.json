@@ -44,6 +44,7 @@
     "note": "Ghi chú",
     "wordGame": "Nối từ",
     "games": "Trò chơi",
+    "chatbot": "Chatbot",
     "schedule": "Hẹn giờ",
     "messaging": "Tin nhắn",
     "mention": "Nhắc tên",
@@ -59,7 +60,8 @@
       "wordGame": "Trò chơi nối từ trong một kênh.",
       "schedule": "Tin nhắn hẹn giờ gửi sau.",
       "messaging": "Gửi, chép, sửa tin nhắn và tạo bình chọn.",
-      "games": "Luật và cách cài nối từ, đếm số, Vua Tiếng Việt, Wordle."
+      "games": "Luật và cách cài nối từ, đếm số, Vua Tiếng Việt, Wordle.",
+      "chatbot": "Thành viên trò chuyện với bot ở các kênh đã chọn; đặt ai được dùng và dùng được bao nhiêu."
     },
     "modulesSubtitle": "Chọn một mô-đun để xem và chỉnh.",
     "gamesSubtitle": "Cài trò chơi bằng lệnh slash trong Discord; điểm xem bằng /leaderboard."

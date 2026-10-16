@@ -53,13 +53,13 @@
   },
   "llm": {
     "link": {
-      "title": "LLM giải nghĩa từ",
-      "description": "Chọn dịch vụ AI dùng để giải nghĩa các từ tiếng Việt trong trò chơi.",
+      "title": "LLM dùng chung",
+      "description": "Chọn dịch vụ AI giải nghĩa từ tiếng Việt trong trò chơi và trả lời chatbot của các máy chủ chưa có dịch vụ riêng.",
       "open": "Mở cài đặt LLM"
     },
     "page": {
-      "title": "LLM giải nghĩa từ",
-      "subtitle": "Dịch vụ AI bot dùng để giải nghĩa từ tiếng Việt trong trò chơi.",
+      "title": "LLM dùng chung",
+      "subtitle": "Dịch vụ AI bot dùng để giải nghĩa từ tiếng Việt trong trò chơi và trả lời chatbot của các máy chủ chưa có dịch vụ riêng.",
       "adminOnly": "Chỉ có ở máy chủ quản trị",
       "adminOnlyBody": "Cài đặt này chỉ có ở máy chủ quản trị của bot. Hãy mở trang này từ máy chủ quản trị.",
       "back": "Về cài đặt"
@@ -76,7 +76,7 @@
       "apiKey": "Khoá API",
       "apiKeyHelp": "Để trống để giữ khoá đã lưu. Khoá chỉ được gửi lên máy chủ, không hiện lại.",
       "apiKeyRequired": "Nhập khoá API (lần đầu lưu hoặc khi đổi địa chỉ API).",
-      "enabled": "Bật giải nghĩa bằng LLM",
+      "enabled": "Dùng LLM để giải nghĩa từ và cho chatbot",
       "test": "Kiểm tra kết nối",
       "save": "Lưu",
       "saved": "Đã lưu cài đặt LLM.",

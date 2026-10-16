@@ -18,6 +18,7 @@ export const WEB_NAMESPACES = [
   'web-birthday',
   'web-note',
   'web-word-game',
+  'web-chatbot',
   // The game rules and names, shared with the bot's `/help`.
   'mini-game',
   'web-messaging',

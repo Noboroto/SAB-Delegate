@@ -14,31 +14,13 @@ import { ErrorAlert } from '@/components/data/error-alert';
 import { ActionRow } from '@/components/ui/action-row';
 import { useApiMutation } from '@/lib/api/mutations';
 import { saveLlmSettings, testLlmSettings } from '@/lib/llm/llm-api';
-
-const PRESETS = [
-  { value: 'openai', label: 'OpenAI', baseUrl: 'https://api.openai.com/v1' },
-  { value: 'anthropic', label: 'Anthropic', baseUrl: 'https://api.anthropic.com/v1' },
-  {
-    value: 'gemini',
-    label: 'Google Gemini',
-    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
-  },
-  { value: 'openrouter', label: 'OpenRouter', baseUrl: 'https://openrouter.ai/api/v1' },
-] as const;
-
-const CUSTOM = 'custom';
+import { LLM_PRESET_CUSTOM, LLM_PRESETS, presetOf } from '@/lib/llm/presets';
 
 interface LlmFormValues {
   baseUrl: string;
   model: string;
   apiKey: string;
   enabled: boolean;
-}
-
-/** The preset whose address is `baseUrl`, else the custom entry. */
-function presetOf(baseUrl: string | undefined): string {
-  const address = (baseUrl ?? '').trim();
-  return PRESETS.find((preset) => preset.baseUrl === address)?.value ?? CUSTOM;
 }
 
 export function LlmSettingsForm({ guildId, settings }: { guildId: string; settings: LlmSettings }) {
@@ -120,11 +102,11 @@ export function LlmSettingsForm({ guildId, settings }: { guildId: string; settin
             id="llm-preset"
             value={presetOf(baseUrl)}
             options={[
-              ...PRESETS.map(({ value, label }) => ({ value, label })),
-              { value: CUSTOM, label: t('llm.form.presetCustom') },
+              ...LLM_PRESETS.map(({ value, label }) => ({ value, label })),
+              { value: LLM_PRESET_CUSTOM, label: t('llm.form.presetCustom') },
             ]}
             onChange={(value) => {
-              const preset = PRESETS.find((candidate) => candidate.value === value);
+              const preset = LLM_PRESETS.find((candidate) => candidate.value === value);
               if (preset === undefined) return;
               form.setFieldValue('baseUrl', preset.baseUrl);
               void form.validateFields(['baseUrl', 'apiKey']).catch(() => undefined);

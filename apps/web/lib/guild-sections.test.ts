@@ -22,6 +22,7 @@ describe('GUILD_NAV', () => {
       'modules/note',
       'modules/word-game',
       'modules/games',
+      'modules/chatbot',
       'modules/schedule',
       'modules/messaging',
     ]);
@@ -45,6 +46,7 @@ describe('activeNavKey', () => {
     [`/servers/${G}/modules`, 'modules'],
     [`/servers/${G}/modules/word-game`, 'wordGame'],
     [`/servers/${G}/modules/word-game/`, 'wordGame'],
+    [`/servers/${G}/modules/chatbot`, 'chatbot'],
     [`/servers/${G}/tools/role-assign`, 'roleAssign'],
     [`/servers/${G}/settings`, 'settings'],
   ])('%s selects %s', (pathname, key) => {
