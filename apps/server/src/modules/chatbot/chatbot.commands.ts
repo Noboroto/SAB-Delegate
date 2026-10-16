@@ -162,7 +162,19 @@ class MemberArg {
   readonly user!: { readonly id: string };
 }
 
-class QuotaSetArgs extends MemberArg {
+// Each class declares `user` itself, first: Necord collects option metadata
+// child class first, so an inherited required option would follow the optional
+// ones, and Discord rejects the whole command set (50035) when a required
+// option comes after an optional one.
+class QuotaSetArgs {
+  @UserOption({
+    name: 'user',
+    description: userOptionText['en-US'],
+    description_localizations: userOptionText,
+    required: true,
+  })
+  readonly user!: { readonly id: string };
+
   @IntegerOption({
     name: 'limit',
     description: limitOptionText['en-US'],
@@ -182,7 +194,15 @@ class QuotaSetArgs extends MemberArg {
   readonly clear?: boolean;
 }
 
-class QuotaGrantArgs extends MemberArg {
+class QuotaGrantArgs {
+  @UserOption({
+    name: 'user',
+    description: userOptionText['en-US'],
+    description_localizations: userOptionText,
+    required: true,
+  })
+  readonly user!: { readonly id: string };
+
   @IntegerOption({
     name: 'tokens',
     description: tokensOptionText['en-US'],

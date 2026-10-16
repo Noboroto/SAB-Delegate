@@ -8,6 +8,8 @@ const MAX_CHILDREN = 25;
 const CHAT_INPUT = 1;
 const USER_COMMAND = 2;
 const MESSAGE_COMMAND = 3;
+const SUB_COMMAND = 1;
+const SUB_COMMAND_GROUP = 2;
 
 type Node = Record<string, unknown>;
 
@@ -117,12 +119,22 @@ function checkNode(node: Node, path: string, needsDescription: boolean, problems
     );
   }
   const children = new Set<string>();
+  // Discord rejects the whole command set (50035) when a required option follows
+  // an optional one; measured in production when an inherited option class put
+  // a required option last.
+  let optionalSeen = false;
   for (const option of options) {
     if (!isNode(option)) continue;
     const childName = typeof option['name'] === 'string' ? option['name'] : '';
     const childPath = `${path} ${childName}`;
     if (children.has(childName)) problems.push(`${childPath}: declared more than once`);
     children.add(childName);
+    if (option['type'] !== SUB_COMMAND && option['type'] !== SUB_COMMAND_GROUP) {
+      if (option['required'] === true && optionalSeen) {
+        problems.push(`${childPath}: a required option must come before the optional ones`);
+      }
+      if (option['required'] !== true) optionalSeen = true;
+    }
     // Subcommands, groups and plain options all need a description.
     checkNode(option, childPath, true, problems);
   }

@@ -133,6 +133,30 @@ describe('validateCommandMetadata', () => {
     expect(problems.join('\n')).toContain('/birthday list');
   });
 
+  it('rejects a required option placed after an optional one', () => {
+    const problems = validateCommandMetadata([
+      {
+        name: 'quota',
+        description: 'Quota',
+        type: 1,
+        options: [
+          {
+            name: 'set',
+            description: 'Set',
+            type: 1,
+            options: [
+              { name: 'limit', description: 'Limit', type: 4, required: false },
+              { name: 'user', description: 'User', type: 6, required: true },
+            ],
+          },
+        ],
+      },
+    ]);
+    expect(problems).toEqual([
+      '/quota set user: a required option must come before the optional ones',
+    ]);
+  });
+
   it('rejects more than 25 subcommands under one command', () => {
     const options = Array.from({ length: 26 }, (_, index) => ({
       type: 1,
