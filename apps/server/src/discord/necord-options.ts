@@ -1,6 +1,7 @@
 import { GatewayIntentBits } from 'discord.js';
 import type { NecordModuleOptions } from 'necord';
 import type { DiscordEnv } from './boot-guard.js';
+import { makeRetryingRequest } from './helpers/rest-retry.js';
 
 /**
  * Only what the bot reads. GuildMembers and MessageContent are privileged
@@ -47,5 +48,6 @@ export function buildNecordOptions(
     allowedMentions: { parse: [] },
     skipRegistration: true,
     development,
+    rest: { makeRequest: makeRetryingRequest() },
   };
 }
