@@ -57,3 +57,10 @@ export const CHATBOT_SUMMARY_MAX_CHARS = 1500;
 
 /** Replies of one member between two rewrites of their memory summaries. */
 export const CHATBOT_SUMMARY_EVERY_TURNS = 6;
+
+/**
+ * Most tokens the model may write in one reply. Also part of the reservation,
+ * so it bounds what a single reply can cost a member before the provider's
+ * real count settles it.
+ */
+export const CHATBOT_MAX_OUTPUT_TOKENS = 1000;
