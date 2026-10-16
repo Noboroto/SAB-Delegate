@@ -1,8 +1,10 @@
 import 'reflect-metadata';
+import { Logger } from '@nestjs/common';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { requireDatabaseUrl } from '../../../../../vitest-test-database.mjs';
 import { AuditService } from '../../common/audit/audit.service.js';
 import type { ChannelAccessService } from '../../discord/services/channel-access.service.js';
+import type { DiscordReadyService } from '../../discord/discord-ready.service.js';
 import type { GuildLocaleService } from '../../i18n/guild-locale.service.js';
 import type { PrismaService } from '../../prisma/prisma.service.js';
 import { createTestDatabase, type TestDatabase } from '../../testing/test-database.js';
@@ -13,6 +15,8 @@ import type { ChatbotContextService } from './chatbot-context.service.js';
 import { ChatbotHistoryService } from './chatbot-history.service.js';
 import { ChatbotMemoryService } from './chatbot-memory.service.js';
 import { ChatbotQuotaService } from './chatbot-quota.service.js';
+import { ChatbotRecoveryService } from './chatbot-recovery.service.js';
+import type { ChatbotListener } from './chatbot.listener.js';
 import { ChatbotService } from './chatbot.service.js';
 
 // The same member and channel ids in every server: only the server tells them apart.
@@ -67,6 +71,18 @@ describe('chatbot reply against Postgres', () => {
       },
     };
     return { message: message as never, reply, id };
+  };
+  /** A mention as the listener leaves it: the pending turn exists before the pipeline starts. */
+  const takeIn = async (guildId: string) => {
+    const incoming = fakeMessage(guildId);
+    await history.claimPending({
+      guildId,
+      channelId: CHANNEL,
+      userId: USER,
+      triggerMessageId: incoming.id,
+      question: 'câu hỏi',
+    });
+    return incoming;
   };
   const turnsOf = (guildId: string) =>
     prisma.chatbotTurn.findMany({ where: { guild: { discordId: guildId } } });
@@ -168,12 +184,14 @@ describe('chatbot reply against Postgres', () => {
       estimated: false,
       context: { system: 's', channelMessages: [], memory: {}, recentTurns: 0, attachments: [] },
     });
-    await history.record(earlier(a.discordId, 'A'));
-    await history.record(earlier(b.discordId, 'B'));
+    for (const old of [earlier(a.discordId, 'A'), earlier(b.discordId, 'B')]) {
+      await history.claimPending(old);
+      await history.finalize(old);
+    }
 
-    const first = fakeMessage(a.discordId);
+    const first = await takeIn(a.discordId);
     await service.handle(first.message);
-    const second = fakeMessage(b.discordId);
+    const second = await takeIn(b.discordId);
     await service.handle(second.message);
 
     const [promptA, promptB] = prompts.slice(-2) as [string, string];
@@ -224,7 +242,7 @@ describe('chatbot reply against Postgres', () => {
 
   it('stores one turn per message, however often it is answered', async () => {
     const guild = await newGuild(100_000);
-    const again = fakeMessage(guild.discordId);
+    const again = await takeIn(guild.discordId);
     await service.handle(again.message);
     await service.handle(fakeMessage(guild.discordId, again.id).message);
     expect(await turnsOf(guild.discordId)).toHaveLength(1);
@@ -240,12 +258,12 @@ describe('chatbot reply against Postgres', () => {
         usage: { inputTokens: 200, outputTokens: 200, total: 400, estimated: false },
         cut: false,
       });
-    const answered = fakeMessage(guild.discordId);
+    const answered = await takeIn(guild.discordId);
     await service.handle(answered.message);
     expect(modelCalls).toBe(calls + 1);
     expect(await used(guild.discordId)).toBe(400);
 
-    const refused = fakeMessage(guild.discordId);
+    const refused = await takeIn(guild.discordId);
     await service.handle(refused.message);
     expect(modelCalls).toBe(calls + 1);
     expect(refused.reply.mock.calls[0]?.[0].content).toBe(
@@ -261,7 +279,7 @@ describe('chatbot reply against Postgres', () => {
   it('gives the reserved tokens back when the model fails and records the failure', async () => {
     const guild = await newGuild(100_000);
     behaviour = () => Promise.reject(new LlmChatError('unreachable'));
-    const failed = fakeMessage(guild.discordId);
+    const failed = await takeIn(guild.discordId);
     await service.handle(failed.message);
 
     expect(await used(guild.discordId)).toBe(0);
@@ -275,5 +293,75 @@ describe('chatbot reply against Postgres', () => {
       llmSource: 'global',
     });
     behaviour = answers;
+  });
+
+  it('keeps the hold on the turn while the model is asked and clears it when the reply ends', async () => {
+    const guild = await newGuild(100_000);
+    const incoming = await takeIn(guild.discordId);
+    let during: Awaited<ReturnType<typeof turnOf>> = null;
+    behaviour = async (model) => {
+      during = await turnOf(incoming.id);
+      return answers(model);
+    };
+    await service.handle(incoming.message);
+    const seen = during as Awaited<ReturnType<typeof turnOf>>;
+    expect(seen?.status).toBe('PENDING');
+    expect(seen?.period).toMatch(/^\d{4}-\d{2}$/u);
+    expect(seen?.reservedTokens).toBeGreaterThan(0);
+    const ended = await turnOf(incoming.id);
+    expect(ended).toMatchObject({ status: 'OK', reservedTokens: 0 });
+    expect(ended?.replyMessageId).toMatch(/^\d+$/u);
+    expect(await used(guild.discordId)).toBe(200);
+    behaviour = answers;
+  });
+
+  it('charges nothing more when a restart gave the hold back while the reply was still running', async () => {
+    const guild = await newGuild(100_000);
+    const incoming = await takeIn(guild.discordId);
+    behaviour = async (model) => {
+      // What recovery does to a pending turn: take the hold off the row and refund it.
+      await quota.refundTurn(guild.discordId, USER, incoming.id);
+      return answers(model);
+    };
+    await service.handle(incoming.message);
+    expect(await used(guild.discordId)).toBe(0);
+    expect((await turnOf(incoming.id))?.status).toBe('OK');
+    behaviour = answers;
+  });
+
+  it('does not answer again a turn whose reply went out but was never finished', async () => {
+    const guild = await newGuild(100_000);
+    const incoming = await takeIn(guild.discordId);
+    // The process dies after the reply is sent and before the turn is closed.
+    const finalize = vi.spyOn(history, 'finalize').mockRejectedValueOnce(new Error('killed'));
+    const warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    await service.handle(incoming.message);
+    finalize.mockRestore();
+    warn.mockRestore();
+    const cut = await turnOf(incoming.id);
+    expect(cut?.status).toBe('PENDING');
+    expect(cut?.replyMessageId).toMatch(/^\d+$/u);
+
+    const idle = new Date(Date.now() - 600_000);
+    await prisma.chatbotTurn.update({
+      where: { triggerMessageId: incoming.id },
+      data: { createdAt: idle, updatedAt: idle },
+    });
+    const enqueue = vi.fn(() => Promise.resolve(true));
+    const recovery = new ChatbotRecoveryService(
+      history,
+      quota,
+      {
+        routeOf: vi.fn(() => Promise.resolve({ enabled: true })),
+      } as unknown as ChatbotConfigService,
+      { enqueue } as unknown as ChatbotListener,
+      { isStopping: () => false } as unknown as DiscordReadyService,
+      { user: null, channels: { fetch: vi.fn(() => Promise.resolve(null)) } },
+    );
+    await recovery.sweep(new Date());
+    expect(enqueue).not.toHaveBeenCalled();
+    expect((await turnOf(incoming.id))?.status).toBe('EXPIRED');
+    // The reply was settled before it was sent, so nothing is left to give back.
+    expect(await used(guild.discordId)).toBe(200);
   });
 });

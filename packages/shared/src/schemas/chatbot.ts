@@ -196,8 +196,12 @@ const TurnBaseSchema = ChatbotTurnModelSchema.pick({ status: true, estimated: tr
   outputTokens: z.number().int().min(0),
 });
 
-/** A turn as the pipeline writes it; the server it belongs to is a Discord id. */
+/**
+ * A turn as the pipeline finishes it; the server it belongs to is a Discord id.
+ * PENDING and EXPIRED are states of the intake and recovery, never an outcome.
+ */
 export const ChatbotTurnRecordSchema = TurnBaseSchema.extend({
+  status: TurnBaseSchema.shape.status.exclude(['PENDING', 'EXPIRED']),
   guildId: SnowflakeSchema,
   context: ChatbotTurnContextSchema,
 }).refine((turn) => turn.status !== 'OK' || turn.answer !== null, {

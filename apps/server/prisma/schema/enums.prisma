@@ -47,11 +47,16 @@ enum MeaningSource {
   NONE
 }
 
-/// How a chatbot turn ended. OK: the model answered; QUOTA_EXHAUSTED: the member
-/// had no tokens left; NOT_CONFIGURED: no model was available; FAILED: the call failed.
+/// How a chatbot turn ended. PENDING: taken in, no outcome yet; OK: the model answered;
+/// QUOTA_EXHAUSTED: the member had no tokens left; NOT_CONFIGURED: no model was
+/// available; FAILED: the call failed; EXPIRED: closed without a new reply (too old to
+/// answer after a restart, no longer a chatbot channel, message gone, or the member was
+/// already being answered).
 enum ChatbotTurnStatus {
   OK
   QUOTA_EXHAUSTED
   NOT_CONFIGURED
   FAILED
+  PENDING
+  EXPIRED
 }

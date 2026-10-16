@@ -106,10 +106,16 @@ model ChatbotUsage {
 /// `failureReason` is a reason code, never provider text. `context` is the
 /// snapshot of what the model was given (never image or file bytes); it is
 /// Zod-parsed at every read.
+/// A row is written as PENDING the moment a mention is taken in, so a restart can
+/// answer what it cut off; only a PENDING row ever moves to its final status.
+/// `reservedTokens` is the allowance held in `period` for the model call; it is
+/// zeroed by whoever settles or refunds it, so a hold is given back at most once.
 /// CHECK (migration `_chatbot_turns`): `channelId`, `userId`, `triggerMessageId` and
 /// `replyMessageId` are snowflakes, `question` has at most 6000 characters and
 /// `answer` at most 12000, the token counts are >= 0, and `answer` is set when
-/// `status` is OK.
+/// `status` is OK. CHECK (migration `_chatbot_turn_pending`): `reservedTokens` is
+/// between 0 and 1000000000, `period` is `YYYY-MM` when set, and a held amount
+/// comes with its `period`.
 model ChatbotTurn {
   id               String            @id @default(dbgenerated("uuidv7()")) @db.Uuid
   guildId          String            @db.Uuid
@@ -127,11 +133,15 @@ model ChatbotTurn {
   outputTokens     Int               @default(0)
   estimated        Boolean           @default(false)
   context          Json
+  reservedTokens   Int               @default(0)
+  period           String?
   createdAt        DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime          @default(now()) @updatedAt @db.Timestamptz(3)
 
   guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
 
   @@index([guildId, createdAt(sort: Desc)])
   @@index([guildId, userId, createdAt(sort: Desc)])
   @@index([createdAt])
+  @@index([status, createdAt])
 }

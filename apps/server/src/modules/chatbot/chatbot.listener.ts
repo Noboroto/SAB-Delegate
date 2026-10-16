@@ -8,6 +8,7 @@ import { ChannelQueue } from '../../discord/helpers/channel-queue.js';
 import { discordErrorCode } from '../../discord/helpers/reply.js';
 import { errorLabel } from '../../prisma/pool-factory.js';
 import { ChatbotConfigService } from './chatbot-config.service.js';
+import { ChatbotHistoryService } from './chatbot-history.service.js';
 import { ChatbotService } from './chatbot.service.js';
 
 /**
@@ -27,8 +28,9 @@ const BUSY_REACTION = '⏳';
 
 /**
  * Turns a mention of the bot (or a reply to one of its messages) in a
- * designated channel into a chatbot reply. Everything else is ignored before
- * any request is made. Errors are left to the exception filter, which reports
+ * designated channel into a chatbot reply, after writing it down as a pending
+ * turn so a restart can answer it. Everything else is ignored before any
+ * request is made. Errors are left to the exception filter, which reports
  * them to #bot-log.
  */
 @DiscordCommands()
@@ -43,6 +45,7 @@ export class ChatbotListener {
     private readonly config: ChatbotConfigService,
     private readonly service: ChatbotService,
     private readonly ready: DiscordReadyService,
+    private readonly history: ChatbotHistoryService,
   ) {}
 
   @On('messageCreate')
@@ -79,7 +82,14 @@ export class ChatbotListener {
     if (route?.enabled !== true) return;
     if (!mentioned && !answersBot && !(await this.repliesToBotMessage(message))) return;
 
-    if (!(await this.enqueue(message))) await this.showBusy(message);
+    // The turn row decides who answers: a redelivery, or another process that
+    // took the message first, loses here.
+    if (!(await this.claim(message))) return;
+
+    if (!(await this.enqueue(message))) {
+      await this.closeBusy(message.id);
+      await this.showBusy(message);
+    }
   }
 
   /**
@@ -101,6 +111,41 @@ export class ChatbotListener {
       }
     });
     return true;
+  }
+
+  /**
+   * Whether this process may answer `message`. When the database cannot be
+   * reached the message is answered anyway, unrecorded, as before turns were
+   * written down: a dropped reply is worse than a missing history row.
+   */
+  private async claim(message: {
+    id: string;
+    guildId: string;
+    channelId: string;
+    content: string;
+    author: { id: string };
+  }): Promise<boolean> {
+    try {
+      return await this.history.claimPending({
+        guildId: message.guildId,
+        channelId: message.channelId,
+        userId: message.author.id,
+        triggerMessageId: message.id,
+        question: message.content,
+      });
+    } catch (error) {
+      this.logger.warn(`Could not write a chat turn down (${errorLabel(error)})`);
+      return true;
+    }
+  }
+
+  /** A message that will not be answered must not stay pending, or a restart would answer it. */
+  private async closeBusy(triggerMessageId: string): Promise<void> {
+    try {
+      await this.history.expirePending(triggerMessageId);
+    } catch (error) {
+      this.logger.warn(`Could not close a chat turn that was not answered (${errorLabel(error)})`);
+    }
   }
 
   /** The replied-to payload can be missing (a reply the gateway did not expand); then the message is fetched. */

@@ -217,6 +217,130 @@ describe('chatbot quota against Postgres', () => {
     });
   });
 
+  describe('holds kept on a turn', () => {
+    let nextMessage = 320000000000001000n;
+    /** A pending turn of `user` in `guild`, the row a hold is written on. */
+    const pendingTurn = async (guild: string, user: string) => {
+      const triggerMessageId = String((nextMessage += 1n));
+      const key = await keyOfGuild(guild);
+      await prisma.chatbotTurn.create({
+        data: {
+          guildId: key,
+          channelId: '220000000000001001',
+          userId: user,
+          triggerMessageId,
+          status: 'PENDING',
+          question: 'q',
+          context: { system: '' },
+        },
+      });
+      return triggerMessageId;
+    };
+    const turnRow = (triggerMessageId: string) =>
+      prisma.chatbotTurn.findUniqueOrThrow({ where: { triggerMessageId } });
+
+    it('writes the hold on the turn in the same step that charges the member', async () => {
+      const guild = await newGuild(1_000);
+      const user = newUser();
+      const trigger = await pendingTurn(guild, user);
+      const held = await quota.reserveForTurn(guild, user, 300, trigger, NOW);
+      expect(held).toEqual({ reserved: 300, period: PERIOD, durable: true });
+      expect(await turnRow(trigger)).toMatchObject({ reservedTokens: 300, period: PERIOD });
+      expect((await usageRows(guild, user))[0]?.used).toBe(300);
+    });
+
+    it('charges a member whose turn is not pending, without a record to keep', async () => {
+      const guild = await newGuild(1_000);
+      const user = newUser();
+      const held = await quota.reserveForTurn(guild, user, 100, '320000000099999999', NOW);
+      expect(held).toEqual({ reserved: 100, period: PERIOD, durable: false });
+      expect((await usageRows(guild, user))[0]?.used).toBe(100);
+    });
+
+    it('reports an exhausted member and writes nothing on the turn', async () => {
+      const guild = await newGuild(100);
+      const user = newUser();
+      await quota.reserve(guild, user, 100, NOW);
+      const trigger = await pendingTurn(guild, user);
+      const held = await quota.reserveForTurn(guild, user, 50, trigger, NOW);
+      expect(held).toMatchObject({ exhausted: true });
+      expect(await turnRow(trigger)).toMatchObject({ reservedTokens: 0, period: null });
+    });
+
+    it('settles the hold from the row and returns the month as the statement left it', async () => {
+      const guild = await newGuild(1_000);
+      const user = newUser();
+      const trigger = await pendingTurn(guild, user);
+      await quota.reserveForTurn(guild, user, 300, trigger, NOW);
+      const settled = await quota.settleTurn(guild, user, trigger, 120);
+      expect(settled).toMatchObject({ used: 120, remaining: 880 });
+      expect((await usageRows(guild, user))[0]?.used).toBe(120);
+      expect((await turnRow(trigger)).reservedTokens).toBe(0);
+    });
+
+    it('settles in the month the hold was made in', async () => {
+      const guild = await newGuild(1_000);
+      const user = newUser();
+      const trigger = await pendingTurn(guild, user);
+      await quota.reserveForTurn(guild, user, 200, trigger, new Date('2026-09-30T12:00:00Z'));
+      await quota.settleTurn(guild, user, trigger, 50);
+      const rows = await usageRows(guild, user);
+      expect(rows.map((row) => [row.period, row.used])).toEqual([['2026-09', 50]]);
+    });
+
+    it('lets exactly one of a settle and a refund have the hold', async () => {
+      const guild = await newGuild(1_000);
+      const user = newUser();
+      const trigger = await pendingTurn(guild, user);
+      await quota.reserveForTurn(guild, user, 300, trigger, NOW);
+      const [settled, refunded] = await Promise.all([
+        quota.settleTurn(guild, user, trigger, 100),
+        quota.refundTurn(guild, user, trigger),
+      ]);
+      // Either the settle charged 100 and the refund found nothing, or the other way round.
+      const used = (await usageRows(guild, user))[0]?.used;
+      if (settled === null) {
+        expect([refunded, used]).toEqual([300, 0]);
+      } else {
+        expect([refunded, used]).toEqual([0, 100]);
+      }
+    });
+
+    it('refunds once however many callers race for the hold', async () => {
+      const guild = await newGuild(1_000);
+      const user = newUser();
+      const trigger = await pendingTurn(guild, user);
+      await quota.reserveForTurn(guild, user, 300, trigger, NOW);
+      await quota.reserve(guild, user, 200, NOW);
+      const given = await Promise.all(
+        Array.from({ length: 6 }, () => quota.refundTurn(guild, user, trigger)),
+      );
+      expect(given.filter((amount) => amount > 0)).toEqual([300]);
+      expect((await usageRows(guild, user))[0]?.used).toBe(200);
+    });
+
+    it('gives back nothing and charges nothing for a turn without a hold', async () => {
+      const guild = await newGuild(1_000);
+      const user = newUser();
+      const trigger = await pendingTurn(guild, user);
+      await expect(quota.refundTurn(guild, user, trigger)).resolves.toBe(0);
+      await expect(quota.settleTurn(guild, user, trigger, 10)).resolves.toBeNull();
+      expect(await usageRows(guild, user)).toEqual([]);
+    });
+
+    it('reports the month as it stands when the usage row is gone', async () => {
+      const guild = await newGuild(1_000);
+      const user = newUser();
+      const trigger = await pendingTurn(guild, user);
+      await quota.reserveForTurn(guild, user, 300, trigger, NOW);
+      // The usage row is gone, so the settlement matches nothing; the hold is
+      // taken together with it and the call reports the month as it stands.
+      await prisma.chatbotUsage.deleteMany({ where: { userId: user } });
+      await expect(quota.settleTurn(guild, user, trigger, 10)).resolves.toMatchObject({ used: 0 });
+      expect((await turnRow(trigger)).reservedTokens).toBe(0);
+    });
+  });
+
   describe('the CHECK constraints', () => {
     it('reject a negative counter, a malformed period and a negative limit', async () => {
       const guild = await newGuild();

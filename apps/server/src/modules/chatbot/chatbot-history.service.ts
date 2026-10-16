@@ -18,6 +18,7 @@ import {
   z,
   type ActorContext,
   type ChatbotRecentTurn,
+  type ChatbotTurnContext,
   type ChatbotTurnDeleteResult,
   type ChatbotTurnDetail,
   type ChatbotTurnListQuery,
@@ -28,8 +29,6 @@ import { AuditService } from '../../common/audit/audit.service.js';
 import { ServiceError } from '../../common/errors/service-error.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { GuildConfigService } from '../guild-config/guild-config.service.js';
-
-type Db = Pick<Prisma.TransactionClient, 'guild' | 'chatbotTurn'>;
 
 /** Rows deleted per statement by the purge and by bulk deletes. */
 const PURGE_BATCH = 1000;
@@ -55,6 +54,15 @@ const ROW_SELECT = {
 } satisfies Prisma.ChatbotTurnSelect;
 
 type RowColumns = Prisma.ChatbotTurnGetPayload<{ select: typeof ROW_SELECT }>;
+
+/** What a turn that has not reached the model has sent it: nothing. */
+export const EMPTY_TURN_CONTEXT: ChatbotTurnContext = {
+  system: '',
+  channelMessages: [],
+  memory: {},
+  recentTurns: 0,
+  attachments: [],
+};
 
 const TRUNCATION_MARK = '…';
 
@@ -101,42 +109,148 @@ export class ChatbotHistoryService {
   ) {}
 
   /**
-   * Stores a turn. A turn already stored for the same Discord message is kept
-   * as it is, so a redelivery that failed can never degrade an answered turn;
-   * it only fills in a reply message id the first write did not have. Text
-   * over the caps is cut with a visible mark rather than refused, so a long
-   * answer that was already sent is not lost from the history.
+   * Takes a mention in: writes its turn as PENDING, once. `false` when the
+   * message already has a turn (a redelivery, or another process got there
+   * first), in which case the caller must not answer it. The unique message id
+   * decides the winner inside the database, so it holds across processes.
    */
-  async record(turn: ChatbotTurnRecord, tx?: Prisma.TransactionClient): Promise<void> {
+  async claimPending(
+    claim: Pick<
+      ChatbotTurnRecord,
+      'guildId' | 'channelId' | 'userId' | 'triggerMessageId' | 'question'
+    >,
+  ): Promise<boolean> {
+    // Validated before the server row is touched: a bad id must not create one.
+    const ids = {
+      channelId: parseSnowflake(claim.channelId),
+      userId: parseSnowflake(claim.userId),
+      triggerMessageId: parseSnowflake(claim.triggerMessageId),
+    };
+    const guild = await this.guilds.ensureGuild(parseSnowflake(claim.guildId));
+    const { count } = await this.prisma.chatbotTurn.createMany({
+      data: [
+        {
+          ...ids,
+          guildId: guild.id,
+          status: 'PENDING',
+          question: clip(claim.question, CHATBOT_TURN_QUESTION_MAX_CHARS),
+          context: EMPTY_TURN_CONTEXT,
+        },
+      ],
+      skipDuplicates: true,
+    });
+    return count === 1;
+  }
+
+  /**
+   * Stores the id of the first reply message as soon as it is out, so a
+   * restart that lands before the turn is finished sees the member was already
+   * answered and never answers twice.
+   */
+  async markReplied(triggerMessageId: string, replyMessageId: string): Promise<void> {
+    await this.prisma.chatbotTurn.updateMany({
+      where: {
+        triggerMessageId: parseSnowflake(triggerMessageId),
+        status: 'PENDING',
+        replyMessageId: null,
+      },
+      data: { replyMessageId: parseSnowflake(replyMessageId) },
+    });
+  }
+
+  /** Closes a pending turn with no reply. `false` when it was no longer pending. */
+  async expirePending(triggerMessageId: string): Promise<boolean> {
+    const { count } = await this.prisma.chatbotTurn.updateMany({
+      where: { triggerMessageId: parseSnowflake(triggerMessageId), status: 'PENDING' },
+      data: { status: 'EXPIRED' },
+    });
+    return count === 1;
+  }
+
+  /**
+   * Pending turns, oldest first, that were taken in before `createdBefore` and
+   * not touched since `idleBefore`, the page after `after`. The page position
+   * is a keyset on (createdAt, id) rather than a cursor row: a turn that has
+   * since left the pending state would make a cursor on it skip its neighbours.
+   * Every server.
+   */
+  async pendingBefore(options: {
+    createdBefore: Date;
+    idleBefore: Date;
+    take: number;
+    after?: { createdAt: Date; id: string };
+  }) {
+    const { createdBefore, idleBefore, take, after } = options;
+    const rows = await this.prisma.chatbotTurn.findMany({
+      where: {
+        status: 'PENDING',
+        createdAt: { lt: createdBefore },
+        updatedAt: { lt: idleBefore },
+        ...(after === undefined
+          ? {}
+          : {
+              OR: [
+                { createdAt: { gt: after.createdAt } },
+                { createdAt: after.createdAt, id: { gt: after.id } },
+              ],
+            }),
+      },
+      select: {
+        id: true,
+        channelId: true,
+        userId: true,
+        triggerMessageId: true,
+        replyMessageId: true,
+        reservedTokens: true,
+        createdAt: true,
+        guild: { select: { discordId: true } },
+      },
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+      take,
+    });
+    return rows.map(({ guild, ...row }) => ({ ...row, guildId: guild.discordId }));
+  }
+
+  /**
+   * Finishes a turn with its outcome, only while it is still pending: a turn
+   * that is already finished (answered, expired) is never degraded or
+   * rewritten. `false` when there was no pending turn to finish. Text over the
+   * caps is cut with a visible mark rather than refused, so a long answer that
+   * was already sent is not lost from the history. A null `replyMessageId`
+   * keeps one stored earlier.
+   */
+  async finalize(turn: ChatbotTurnRecord): Promise<boolean> {
     const parsed = ChatbotTurnRecordSchema.safeParse({
       ...turn,
       question: clip(turn.question, CHATBOT_TURN_QUESTION_MAX_CHARS),
       answer: turn.answer === null ? null : clip(turn.answer, CHATBOT_TURN_ANSWER_MAX_CHARS),
     });
     if (!parsed.success) throw new ServiceError(ErrorCode.VALIDATION_FAILED);
-    const { guildId, context, ...columns } = parsed.data;
+    const { guildId, triggerMessageId, replyMessageId, context, ...rest } = parsed.data;
     // The builder truncates to this cap; a snapshot over it is a bug there and
     // must not fill the table.
     if (Buffer.byteLength(JSON.stringify(context)) > CHATBOT_TURN_CONTEXT_MAX_BYTES) {
       throw new ServiceError(ErrorCode.VALIDATION_FAILED);
     }
-    const guild = await this.guilds.ensureGuild(guildId, undefined, tx);
-    const db: Db = tx ?? this.prisma;
-    await db.chatbotTurn.createMany({
-      data: [{ ...columns, context, guildId: guild.id }],
-      skipDuplicates: true,
+    const { count } = await this.prisma.chatbotTurn.updateMany({
+      // Scoped to the server and to the pending state: nothing else is touched.
+      where: { triggerMessageId, guild: { discordId: guildId }, status: 'PENDING' },
+      data: {
+        status: rest.status,
+        failureReason: rest.failureReason,
+        question: rest.question,
+        answer: rest.answer,
+        model: rest.model,
+        llmSource: rest.llmSource,
+        inputTokens: rest.inputTokens,
+        outputTokens: rest.outputTokens,
+        estimated: rest.estimated,
+        context,
+        reservedTokens: 0,
+        ...(replyMessageId === null ? {} : { replyMessageId }),
+      },
     });
-    if (columns.replyMessageId !== null) {
-      // Scoped to the server and to a missing reply id: nothing else is touched.
-      await db.chatbotTurn.updateMany({
-        where: {
-          triggerMessageId: columns.triggerMessageId,
-          guildId: guild.id,
-          replyMessageId: null,
-        },
-        data: { replyMessageId: columns.replyMessageId },
-      });
-    }
+    return count === 1;
   }
 
   /**
@@ -262,6 +376,9 @@ export class ChatbotHistoryService {
     const { scope, turnId, userId, dryRun } = parsed.data;
     const where = {
       guild: { discordId: guild },
+      // A pending turn may hold tokens that only its own end or a restart gives
+      // back; deleting it would strand them, so it waits until it has ended.
+      status: { not: 'PENDING' },
       ...(scope === 'turn' ? { id: turnId } : {}),
       ...(userId === undefined ? {} : { userId }),
     } satisfies Prisma.ChatbotTurnWhereInput;

@@ -40,6 +40,39 @@ const SORT_COLUMNS = {
   userId: Prisma.sql`"userId"`,
 } satisfies Record<NonNullable<ChatbotQuotaListQuery['sort']>, Prisma.Sql>;
 
+/** Queries the usage and turn rows: the pool itself, or a transaction. */
+type SqlClient = Pick<Prisma.TransactionClient, '$queryRaw' | '$executeRaw' | 'chatbotUsage'>;
+
+/** Short statements only; a wait longer than this means something is stuck. */
+const TURN_TX = { maxWait: 5_000, timeout: 15_000 };
+
+/**
+ * Takes the hold off a turn: locks the row, zeroes `reservedTokens` and
+ * returns what it was. `null` when there was none, so of any callers racing
+ * for one hold exactly one gets it.
+ */
+async function takeHold(
+  db: SqlClient,
+  triggerMessageId: string,
+): Promise<{ reserved: number; period: string } | null> {
+  const rows = await db.$queryRaw<{ reserved: number; period: string | null }[]>`
+    WITH held AS (
+      SELECT "id", "reservedTokens", "period" FROM "ChatbotTurn"
+      WHERE "triggerMessageId" = ${triggerMessageId} AND "reservedTokens" > 0
+      FOR UPDATE
+    )
+    UPDATE "ChatbotTurn" t
+    SET "reservedTokens" = 0, "updatedAt" = now()
+    FROM held
+    WHERE t."id" = held."id"
+    RETURNING held."reservedTokens" AS "reserved", held."period" AS "period"`;
+  const row = rows[0];
+  // The table CHECK ties a hold to its period, so a missing one is not expected.
+  return row === undefined || row.period === null
+    ? null
+    : { reserved: row.reserved, period: row.period };
+}
+
 const DIGITS = /^[0-9]+$/;
 
 function parseSnowflake(value: string): string {
@@ -142,11 +175,135 @@ export class ChatbotQuotaService {
   ): Promise<{ reserved: number; period: string } | { exhausted: true; quota: Quota }> {
     const guild = parseSnowflake(guildId);
     const user = parseSnowflake(userId);
+    const outcome = await this.reserveWith(this.prisma, guild, user, estimate, now);
+    if ('reserved' in outcome) return outcome;
+    return { exhausted: true, quota: await this.limitOf(guild, user, outcome.period) };
+  }
+
+  /**
+   * Like `reserve`, and in the same transaction writes the hold on the pending
+   * turn of `triggerMessageId`, so a crash cannot leave tokens held that no
+   * row knows about. `durable` is false when there is no pending turn to
+   * record it on; the caller then settles or refunds with the plain methods.
+   * The turn row is locked before the usage row, the order every method that
+   * touches both uses, so none of them can deadlock another.
+   */
+  async reserveForTurn(
+    guildId: string,
+    userId: string,
+    estimate: number,
+    triggerMessageId: string,
+    now: Date = new Date(),
+  ): Promise<
+    { reserved: number; period: string; durable: boolean } | { exhausted: true; quota: Quota }
+  > {
+    const guild = parseSnowflake(guildId);
+    const user = parseSnowflake(userId);
+    const trigger = parseSnowflake(triggerMessageId);
+    // Resolved first: it may create the server row, which must not be inside the transaction.
+    await this.guildKey(guild);
+    const outcome = await this.prisma.$transaction(async (tx) => {
+      const locked = await tx.$queryRaw<{ id: string }[]>`
+        SELECT "id" FROM "ChatbotTurn"
+        WHERE "triggerMessageId" = ${trigger} AND "status" = 'PENDING' FOR UPDATE`;
+      const reserved = await this.reserveWith(tx, guild, user, estimate, now);
+      if (!('reserved' in reserved) || locked.length === 0) return { ...reserved, durable: false };
+      await tx.$executeRaw`
+        UPDATE "ChatbotTurn"
+        SET "reservedTokens" = ${reserved.reserved}::int, "period" = ${reserved.period}, "updatedAt" = now()
+        WHERE "triggerMessageId" = ${trigger} AND "status" = 'PENDING'`;
+      return { ...reserved, durable: true };
+    }, TURN_TX);
+    if ('reserved' in outcome) return outcome;
+    return { exhausted: true, quota: await this.limitOf(guild, user, outcome.period) };
+  }
+
+  /**
+   * Replaces the reservation with what the call really cost and returns the
+   * month as the same statement left it, which is what the footer shows. The
+   * period is the one the reservation was made in, so a call that runs across
+   * midnight still lands in the month it started in.
+   */
+  async settle(
+    guildId: string,
+    userId: string,
+    period: string,
+    reserved: number,
+    actual: number,
+  ): Promise<Quota> {
+    return this.settleWith(
+      this.prisma,
+      parseSnowflake(guildId),
+      parseSnowflake(userId),
+      period,
+      reserved,
+      actual,
+    );
+  }
+
+  /**
+   * Settles the hold written on the turn: takes it off the row and applies the
+   * settlement in one transaction, so the member is never charged without a
+   * record and a hold is settled by one caller only. `null` when the hold was
+   * already taken (a restart gave it back), in which case nothing is charged.
+   */
+  async settleTurn(
+    guildId: string,
+    userId: string,
+    triggerMessageId: string,
+    actual: number,
+  ): Promise<Quota | null> {
+    const guild = parseSnowflake(guildId);
+    const user = parseSnowflake(userId);
+    const trigger = parseSnowflake(triggerMessageId);
+    return this.prisma.$transaction(async (tx) => {
+      const held = await takeHold(tx, trigger);
+      if (held === null) return null;
+      return this.settleWith(tx, guild, user, held.period, held.reserved, actual);
+    }, TURN_TX);
+  }
+
+  /**
+   * Gives back the hold written on the turn, taking it off the row in the same
+   * transaction; two callers racing cannot both refund. Returns the tokens
+   * given back, 0 when there was no hold. A failure leaves the hold on the row.
+   */
+  async refundTurn(guildId: string, userId: string, triggerMessageId: string): Promise<number> {
+    const guild = parseSnowflake(guildId);
+    const user = parseSnowflake(userId);
+    const trigger = parseSnowflake(triggerMessageId);
+    return this.prisma.$transaction(async (tx) => {
+      const held = await takeHold(tx, trigger);
+      if (held === null) return 0;
+      await this.refundWith(tx, guild, user, held.period, held.reserved);
+      return held.reserved;
+    }, TURN_TX);
+  }
+
+  /** Gives a reservation back after a failed call. The caller makes sure it does so once. */
+  async refund(guildId: string, userId: string, period: string, reserved: number): Promise<void> {
+    await this.refundWith(
+      this.prisma,
+      parseSnowflake(guildId),
+      parseSnowflake(userId),
+      period,
+      reserved,
+    );
+  }
+
+  /** `guild` and `user` are validated snowflakes. */
+  private async reserveWith(
+    db: SqlClient,
+    guild: string,
+    user: string,
+    estimate: number,
+    now: Date,
+  ): Promise<{ reserved: number; period: string } | { period: string }> {
     const period = periodOf(now);
     const wanted = Math.max(1, clampTokens(estimate));
     const key = await this.guildKey(guild);
 
-    await this.prisma.chatbotUsage.createMany({
+    await db.chatbotUsage.createMany({
       data: [{ guildId: key, userId: user, period }],
       skipDuplicates: true,
     });
@@ -154,7 +311,7 @@ export class ChatbotQuotaService {
     // and then read the row as the winner left it; the limit is read in the
     // same statement. `used` stays within its CHECK even when limit and bonus
     // together exceed it.
-    const rows = await this.prisma.$queryRaw<{ reserved: number }[]>`
+    const rows = await db.$queryRaw<{ reserved: number }[]>`
       WITH ${limitCte(Prisma.sql`${key}::uuid`, user)},
       cur AS (
         SELECT "id", "used" FROM "ChatbotUsage"
@@ -171,27 +328,19 @@ export class ChatbotQuotaService {
       WHERE u."id" = cur."id" AND u."used" < lim."limit"::bigint + u."bonus"
       RETURNING (u."used" - cur."used") AS "reserved"`;
     const reserved = rows[0]?.reserved ?? 0;
-    if (reserved > 0) return { reserved, period };
-    return { exhausted: true, quota: await this.limitOf(guild, user, period) };
+    return reserved > 0 ? { reserved, period } : { period };
   }
 
-  /**
-   * Replaces the reservation with what the call really cost and returns the
-   * month as the same statement left it, which is what the footer shows. The
-   * period is the one the reservation was made in, so a call that runs across
-   * midnight still lands in the month it started in.
-   */
-  async settle(
-    guildId: string,
-    userId: string,
+  private async settleWith(
+    db: SqlClient,
+    guild: string,
+    user: string,
     period: string,
     reserved: number,
     actual: number,
   ): Promise<Quota> {
-    const guild = parseSnowflake(guildId);
-    const user = parseSnowflake(userId);
     // `used` is capped by its CHECK; a violation would lose the whole spend record.
-    const rows = await this.prisma.$queryRaw<QuotaColumns[]>`
+    const rows = await db.$queryRaw<QuotaColumns[]>`
       WITH ${limitCte(Prisma.sql`(SELECT "id" FROM "Guild" WHERE "discordId" = ${guild})`, user)}
       UPDATE "ChatbotUsage" u
       SET "used" = LEAST(
@@ -211,11 +360,14 @@ export class ChatbotQuotaService {
     return toQuota(row);
   }
 
-  /** Gives a reservation back after a failed call. The caller makes sure it does so once. */
-  async refund(guildId: string, userId: string, period: string, reserved: number): Promise<void> {
-    const guild = parseSnowflake(guildId);
-    const user = parseSnowflake(userId);
-    const count = await this.prisma.$executeRaw`
+  private async refundWith(
+    db: SqlClient,
+    guild: string,
+    user: string,
+    period: string,
+    reserved: number,
+  ): Promise<void> {
+    const count = await db.$executeRaw`
       UPDATE "ChatbotUsage"
       SET "used" = GREATEST(0, "used" - ${clampTokens(reserved)}::int), "updatedAt" = now()
       WHERE "userId" = ${user} AND "period" = ${period}

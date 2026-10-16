@@ -4,6 +4,7 @@ import { MessageReferenceType } from 'discord.js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { DiscordReadyService } from '../../discord/discord-ready.service.js';
 import type { ChatbotConfigService } from './chatbot-config.service.js';
+import type { ChatbotHistoryService } from './chatbot-history.service.js';
 import { ChatbotListener } from './chatbot.listener.js';
 import type { ChatbotService } from './chatbot.service.js';
 
@@ -20,11 +21,14 @@ afterEach(() => {
 
 type Setup = {
   route?: { enabled: boolean } | null;
+  /** What the claim on the turn answers; `false` is a message another process took. */
+  claim?: boolean;
   stopping?: boolean;
 };
 
 type MessageOptions = {
   id?: string;
+  content?: string;
   authorId?: string;
   bot?: boolean;
   guildId?: string | null;
@@ -47,10 +51,13 @@ function build(setup: Setup = {}) {
     .fn()
     .mockResolvedValue(setup.route === undefined ? { enabled: true } : setup.route);
   const handle = vi.fn().mockResolvedValue(undefined);
+  const claimPending = vi.fn().mockResolvedValue(setup.claim ?? true);
+  const expirePending = vi.fn().mockResolvedValue(true);
   const listener = new ChatbotListener(
     { routeOf } as unknown as ChatbotConfigService,
     { handle } as unknown as ChatbotService,
     { isStopping: () => setup.stopping ?? false } as unknown as DiscordReadyService,
+    { claimPending, expirePending } as unknown as ChatbotHistoryService,
   );
   const message = (options: MessageOptions = {}) => {
     counter += 1;
@@ -60,6 +67,7 @@ function build(setup: Setup = {}) {
       id: options.id ?? `5000000000000${String(counter).padStart(5, '0')}`,
       guildId,
       channelId: CHANNEL,
+      content: options.content ?? 'hỏi gì đó',
       author: { id: options.authorId ?? USER, bot: options.bot ?? false },
       client: { user: { id: BOT } },
       inGuild: () => guildId !== null,
@@ -85,7 +93,7 @@ function build(setup: Setup = {}) {
       react: vi.fn(options.react ?? (() => Promise.resolve(undefined))),
     };
   };
-  return { listener, routeOf, handle, message };
+  return { listener, routeOf, handle, claimPending, expirePending, message };
 }
 
 const send = (listener: ChatbotListener, incoming: unknown) =>
@@ -284,6 +292,100 @@ describe('ChatbotListener: what triggers a reply', () => {
     // The copy is dropped before any lookup, and is not mistaken for a busy member.
     expect(routeOf).toHaveBeenCalledTimes(1);
     expect(incoming.react).not.toHaveBeenCalled();
+  });
+});
+
+describe('ChatbotListener: durable intake', () => {
+  it('writes the turn down before it is queued, with what is needed to answer it later', async () => {
+    const { listener, claimPending, handle, message } = build();
+    const incoming = message({ mentionsBot: true, content: 'xin chào' });
+    await send(listener, incoming);
+    expect(claimPending).toHaveBeenCalledWith({
+      guildId: GUILD,
+      channelId: CHANNEL,
+      userId: USER,
+      triggerMessageId: incoming.id,
+      question: 'xin chào',
+    });
+    expect(claimPending.mock.invocationCallOrder[0]).toBeLessThan(
+      handle.mock.invocationCallOrder[0] ?? 0,
+    );
+  });
+
+  it('stops when another process or an earlier delivery already holds the turn', async () => {
+    const { listener, handle, expirePending, message } = build({ claim: false });
+    const incoming = message({ mentionsBot: true });
+    await send(listener, incoming);
+    expect(handle).not.toHaveBeenCalled();
+    expect(incoming.react).not.toHaveBeenCalled();
+    expect(expirePending).not.toHaveBeenCalled();
+  });
+
+  it('writes nothing down for a message that is no trigger or is outside a chatbot channel', async () => {
+    vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    const plain = build();
+    await send(plain.listener, plain.message());
+    const elsewhere = build({ route: null });
+    await send(elsewhere.listener, elsewhere.message({ mentionsBot: true }));
+    const notBotReply = build();
+    await send(
+      notBotReply.listener,
+      notBotReply.message({ repliedUserId: OTHER_USER, referenceId: '600000000000000001' }),
+    );
+    expect(plain.claimPending).not.toHaveBeenCalled();
+    expect(elsewhere.claimPending).not.toHaveBeenCalled();
+    expect(notBotReply.claimPending).not.toHaveBeenCalled();
+  });
+
+  it('closes the turn of a message it marks busy, so a restart does not answer it', async () => {
+    const { listener, handle, expirePending, message } = build();
+    const release = gate();
+    handle.mockReturnValueOnce(release.opened);
+    const first = send(listener, message({ mentionsBot: true }));
+    await vi.waitFor(() => expect(handle).toHaveBeenCalledTimes(1));
+
+    const second = message({ mentionsBot: true });
+    await send(listener, second);
+    expect(expirePending).toHaveBeenCalledTimes(1);
+    expect(expirePending).toHaveBeenCalledWith(second.id);
+    expect(second.react).toHaveBeenCalledWith('⏳');
+    release.open();
+    await first;
+  });
+
+  it('still marks busy when closing that turn fails, and does not raise it', async () => {
+    const warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    const { listener, handle, expirePending, message } = build();
+    expirePending.mockRejectedValueOnce(new Error('db down'));
+    const release = gate();
+    handle.mockReturnValueOnce(release.opened);
+    const first = send(listener, message({ mentionsBot: true }));
+    await vi.waitFor(() => expect(handle).toHaveBeenCalledTimes(1));
+    const second = message({ mentionsBot: true });
+    await expect(send(listener, second)).resolves.toBeUndefined();
+    expect(second.react).toHaveBeenCalledWith('⏳');
+    expect(warn).toHaveBeenCalledTimes(1);
+    release.open();
+    await first;
+  });
+
+  it('still answers, and logs by class only, when the turn cannot be written down', async () => {
+    const warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    const { listener, handle, claimPending, message } = build();
+    claimPending.mockRejectedValueOnce(new Error('secret text of the failure'));
+    const incoming = message({ mentionsBot: true });
+    await expect(send(listener, incoming)).resolves.toBeUndefined();
+    expect(handle).toHaveBeenCalledWith(incoming);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(String(warn.mock.calls[0]?.[0])).not.toContain('secret text');
+  });
+
+  it('does not claim again when recovery replays a turn through enqueue', async () => {
+    const { listener, handle, claimPending, message } = build();
+    const incoming = message();
+    await expect(listener.enqueue(incoming as never)).resolves.toBe(true);
+    expect(handle).toHaveBeenCalledWith(incoming);
+    expect(claimPending).not.toHaveBeenCalled();
   });
 });
 

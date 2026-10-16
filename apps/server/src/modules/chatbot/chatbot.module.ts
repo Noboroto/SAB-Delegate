@@ -9,6 +9,7 @@ import { ChatbotContextService } from './chatbot-context.service.js';
 import { ChatbotHistoryCron } from './chatbot-history.cron.js';
 import { ChatbotHistoryService } from './chatbot-history.service.js';
 import { ChatbotMemoryService } from './chatbot-memory.service.js';
+import { ChatbotRecoveryService } from './chatbot-recovery.service.js';
 import { ChatbotQuotaService } from './chatbot-quota.service.js';
 import { ChatbotListener } from './chatbot.listener.js';
 import { ChatbotService } from './chatbot.service.js';
@@ -30,6 +31,7 @@ import { ChatbotService } from './chatbot.service.js';
     ChatbotMemoryService,
     ChatbotService,
     ChatbotListener,
+    ChatbotRecoveryService,
   ],
   exports: [
     ChatbotConfigService,

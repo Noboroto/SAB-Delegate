@@ -2,7 +2,6 @@ import { Injectable, Logger, type OnModuleDestroy } from '@nestjs/common';
 import {
   CHATBOT_MAX_OUTPUT_TOKENS,
   formatTokenCount,
-  type ChatbotTurnContext,
   type ChatbotTurnRecord,
   type Locale,
 } from '@sab/shared';
@@ -22,7 +21,7 @@ import type { LlmTarget } from '../llm/llm.service.js';
 import { loadAttachments } from './chatbot-attachments.js';
 import { ChatbotConfigService } from './chatbot-config.service.js';
 import { ChatbotContextService } from './chatbot-context.service.js';
-import { ChatbotHistoryService } from './chatbot-history.service.js';
+import { ChatbotHistoryService, EMPTY_TURN_CONTEXT } from './chatbot-history.service.js';
 import { ChatbotMemoryService } from './chatbot-memory.service.js';
 import { buildChatPrompt } from './chatbot-prompt.js';
 import { ChatbotQuotaService } from './chatbot-quota.service.js';
@@ -58,15 +57,6 @@ const SHUTDOWN_WAIT_MS = 20_000;
 /** One warning per server per this long for a rejected key: every message would otherwise repeat it. */
 const KEY_WARNING_TTL_MS = 10 * 60_000;
 
-/** What a turn that never reached the model sent: nothing. */
-const EMPTY_CONTEXT: ChatbotTurnContext = {
-  system: '',
-  channelMessages: [],
-  memory: {},
-  recentTurns: 0,
-  attachments: [],
-};
-
 type Translator = ReturnType<typeof translatorFor>;
 
 /**
@@ -93,7 +83,12 @@ type TriggerMessage = Parameters<ChatbotContextService['collectFrom']>[0] & {
 
 type ChatResult = Awaited<ReturnType<LlmChatService['chat']>>;
 
-type Reservation = { reserved: number; period: string };
+/**
+ * Tokens held for the model call. `durable`: the hold is also written on the
+ * turn row, so settling or refunding goes through the row, which gives it to
+ * one taker only.
+ */
+type Reservation = { reserved: number; period: string; durable: boolean };
 
 /** The member's month as the footer shows it. */
 type Standing = { remaining: number; total: number };
@@ -132,7 +127,10 @@ function withDeadline<T>(work: Promise<T>, ms: number, label: string): Promise<T
   return Promise.race([work, late]).finally(() => clearTimeout(timer));
 }
 
-function refusal(status: 'QUOTA_EXHAUSTED' | 'NOT_CONFIGURED', question: string): TurnFields {
+function bareTurn(
+  status: 'QUOTA_EXHAUSTED' | 'NOT_CONFIGURED' | 'FAILED',
+  question: string,
+): TurnFields {
   return {
     status,
     failureReason: null,
@@ -143,7 +141,7 @@ function refusal(status: 'QUOTA_EXHAUSTED' | 'NOT_CONFIGURED', question: string)
     inputTokens: 0,
     outputTokens: 0,
     estimated: false,
-    context: EMPTY_CONTEXT,
+    context: EMPTY_TURN_CONTEXT,
   };
 }
 
@@ -210,6 +208,7 @@ export class ChatbotService implements OnModuleDestroy {
     } catch (error) {
       // A bug: the member still gets an apology, and the error still reaches #bot-log.
       await this.apologize(message, t, locale);
+      await this.closeFailed(message);
       throw error;
     }
     const replyMessageId = await this.send(
@@ -217,7 +216,7 @@ export class ChatbotService implements OnModuleDestroy {
       answer.body,
       this.footerOf(t, locale, answer.standing),
     );
-    await this.record(message, replyMessageId, answer.turn);
+    await this.finalize(message, replyMessageId, answer.turn);
     if (answer.learned !== undefined && replyMessageId !== null) {
       this.remember(guildId, channelId, userId, answer.learned);
     }
@@ -256,14 +255,14 @@ export class ChatbotService implements OnModuleDestroy {
       return {
         body: t('chatbot.notConfigured'),
         standing: before,
-        turn: refusal('NOT_CONFIGURED', asked),
+        turn: bareTurn('NOT_CONFIGURED', asked),
       };
     }
     if (before.remaining === 0) {
       return {
         body: t('chatbot.quotaExhausted'),
         standing: before,
-        turn: refusal('QUOTA_EXHAUSTED', asked),
+        turn: bareTurn('QUOTA_EXHAUSTED', asked),
       };
     }
 
@@ -288,21 +287,23 @@ export class ChatbotService implements OnModuleDestroy {
 
       const estimate =
         estimateTokens(prompt.estimateChars, prompt.imageCount) + CHATBOT_MAX_OUTPUT_TOKENS;
-      const reservation = await this.quota.reserve(guildId, userId, estimate);
+      const reservation = await this.quota.reserveForTurn(guildId, userId, estimate, message.id);
       if ('exhausted' in reservation) {
         return {
           body: t('chatbot.quotaExhausted'),
           standing: reservation.quota,
-          turn: refusal('QUOTA_EXHAUSTED', context.triggerText),
+          turn: bareTurn('QUOTA_EXHAUSTED', context.triggerText),
         };
       }
-      held = reservation;
+      // The hold is on the turn row already: it was written with the reservation.
+      const hold: Reservation = reservation;
+      held = hold;
 
       const { model } = resolved.target;
       const asking = await this.ask(resolved.target, prompt);
       if ('reason' in asking) {
         held = null;
-        await this.giveBack(guildId, userId, reservation);
+        await this.giveBack(message.id, guildId, userId, hold);
         if (asking.reason === 'unauthorized') this.warnRejectedKey(guildId, resolved.source);
         return {
           body: t('chatbot.failed'),
@@ -324,7 +325,14 @@ export class ChatbotService implements OnModuleDestroy {
 
       const { result } = asking;
       held = null;
-      const standing = await this.settle(guildId, userId, reservation, result.usage.total, before);
+      const standing = await this.settle(
+        message.id,
+        guildId,
+        userId,
+        hold,
+        result.usage.total,
+        before,
+      );
       const text = result.text.trim();
       const body = result.cut ? `${text}…` : text;
       return {
@@ -358,7 +366,7 @@ export class ChatbotService implements OnModuleDestroy {
       };
     } finally {
       stopTyping();
-      if (held !== null) await this.giveBack(guildId, userId, held);
+      if (held !== null) await this.giveBack(message.id, guildId, userId, held);
     }
   }
 
@@ -386,6 +394,7 @@ export class ChatbotService implements OnModuleDestroy {
    * reservation stays charged and the footer shows the best figure at hand.
    */
   private async settle(
+    triggerMessageId: string,
     guildId: string,
     userId: string,
     held: Reservation,
@@ -393,7 +402,13 @@ export class ChatbotService implements OnModuleDestroy {
     before: Standing,
   ): Promise<Standing> {
     try {
-      return await this.quota.settle(guildId, userId, held.period, held.reserved, actual);
+      if (!held.durable) {
+        return await this.quota.settle(guildId, userId, held.period, held.reserved, actual);
+      }
+      // Null: a restart already gave the hold back, so charging the real cost
+      // on top would count the call twice.
+      const settled = await this.quota.settleTurn(guildId, userId, triggerMessageId, actual);
+      return settled ?? (await this.currentOr(guildId, userId, before));
     } catch (error) {
       this.logger.error(`Chatbot settle failed for server ${guildId} (${errorLabel(error)})`);
       return this.currentOr(guildId, userId, {
@@ -416,9 +431,15 @@ export class ChatbotService implements OnModuleDestroy {
   }
 
   /** A failed refund must not hide the call's own outcome; the reservation then stays charged. */
-  private async giveBack(guildId: string, userId: string, held: Reservation): Promise<void> {
+  private async giveBack(
+    triggerMessageId: string,
+    guildId: string,
+    userId: string,
+    held: Reservation,
+  ): Promise<void> {
     try {
-      await this.quota.refund(guildId, userId, held.period, held.reserved);
+      if (held.durable) await this.quota.refundTurn(guildId, userId, triggerMessageId);
+      else await this.quota.refund(guildId, userId, held.period, held.reserved);
     } catch (error) {
       this.logger.error(`Chatbot refund failed for server ${guildId} (${errorLabel(error)})`);
     }
@@ -475,6 +496,7 @@ export class ChatbotService implements OnModuleDestroy {
         });
         firstId = sent.id;
       }
+      await this.noteReplied(message.id, firstId);
       for (const content of rest) {
         await message.channel.send({ content, allowedMentions: { parse: [] } });
       }
@@ -485,13 +507,22 @@ export class ChatbotService implements OnModuleDestroy {
     return firstId;
   }
 
-  private async record(
+  /** Best effort: without it only a restart in this very instant could answer twice. */
+  private async noteReplied(triggerMessageId: string, replyMessageId: string): Promise<void> {
+    try {
+      await this.history.markReplied(triggerMessageId, replyMessageId);
+    } catch (error) {
+      this.logger.warn(`Could not note a chatbot reply on its turn (${errorLabel(error)})`);
+    }
+  }
+
+  private async finalize(
     message: TriggerMessage,
     replyMessageId: string | null,
     turn: TurnFields,
   ): Promise<void> {
     try {
-      await this.history.record({
+      const closed = await this.history.finalize({
         guildId: message.guildId,
         channelId: message.channelId,
         userId: message.author.id,
@@ -499,9 +530,19 @@ export class ChatbotService implements OnModuleDestroy {
         replyMessageId,
         ...turn,
       });
+      if (!closed) this.logger.warn('A chatbot turn was no longer pending when its reply ended');
     } catch (error) {
       // The reply is already out; losing its history row must not turn into a second reply.
       this.logger.warn(`Could not store a chatbot turn (${errorLabel(error)})`);
+    }
+  }
+
+  /** A bug ended the turn: close it so a restart does not answer it a second time. */
+  private async closeFailed(message: TriggerMessage): Promise<void> {
+    try {
+      await this.finalize(message, null, bareTurn('FAILED', questionOf(message)));
+    } catch (error) {
+      this.logger.warn(`Could not close a failed chatbot turn (${errorLabel(error)})`);
     }
   }
 

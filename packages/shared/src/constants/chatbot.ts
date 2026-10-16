@@ -64,3 +64,6 @@ export const CHATBOT_SUMMARY_EVERY_TURNS = 6;
  * real count settles it.
  */
 export const CHATBOT_MAX_OUTPUT_TOKENS = 1000;
+
+/** After a restart, a mention taken in but not answered is still answered when it is at most this old. */
+export const CHATBOT_RECOVERY_MAX_AGE_MS = 10 * 60_000;

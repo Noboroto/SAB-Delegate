@@ -229,6 +229,14 @@ describe('chatbot turn schemas', () => {
     ).toBe(true);
   });
 
+  it('takes only an outcome as the end of a turn, never the intake or recovery states', () => {
+    for (const status of ['PENDING', 'EXPIRED']) {
+      expect(ChatbotTurnRecordSchema.safeParse({ ...record, status, answer: null }).success).toBe(
+        false,
+      );
+    }
+  });
+
   it('caps the question and the answer', () => {
     expect(
       ChatbotTurnRecordSchema.safeParse({
