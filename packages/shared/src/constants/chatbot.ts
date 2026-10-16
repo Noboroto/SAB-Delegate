@@ -54,3 +54,6 @@ export const CHATBOT_MAX_TEXT_FILES = 1;
 
 /** Longest memory summary; the prompt clips to it as well, so a stored longer one cannot flood it. */
 export const CHATBOT_SUMMARY_MAX_CHARS = 1500;
+
+/** Replies of one member between two rewrites of their memory summaries. */
+export const CHATBOT_SUMMARY_EVERY_TURNS = 6;

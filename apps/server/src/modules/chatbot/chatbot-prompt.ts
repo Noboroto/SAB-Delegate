@@ -100,7 +100,7 @@ function neutralize(text: string): string {
 }
 
 /** A member-chosen name made safe for the system prompt and for a quoted tag attribute. */
-function plainName(name: string): string {
+export function plainName(name: string): string {
   const cleaned = name
     .replace(INVISIBLES, ' ')
     .replace(OPENING_ANGLES, ' ')
@@ -163,7 +163,7 @@ function newestWithinBudget(lines: readonly Line[]): Line[] {
   return kept.reverse();
 }
 
-function block(tag: string, body: string, attributes = ''): string {
+export function block(tag: string, body: string, attributes = ''): string {
   return `<${tag}${attributes}>\n${neutralize(body)}\n</${tag}>`;
 }
 
