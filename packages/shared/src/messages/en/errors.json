@@ -15,7 +15,7 @@
   "DISCORD_MISSING_PERMISSIONS": "The bot cannot {permission, select, view {view this channel} send {send messages in this channel} other {use this channel}}. Grant it that permission and try again.",
   "DISCORD_CHANNEL_NOT_FOUND": "Channel not found, or the bot cannot access it.",
   "DISCORD_MESSAGE_NOT_FOUND": "Message not found.",
-  "CHANNEL_IN_USE": "This channel already hosts another game. Pick another one.",
+  "CHANNEL_IN_USE": "This channel is already used by a game or the chatbot. Pick another one.",
   "CHATBOT_CHANNEL_LIMIT_REACHED": "This server already has the maximum number of chatbot channels. Remove one first.",
   "LLM_NOT_AVAILABLE": "The server has no LLM_KEY_SECRET, so LLM settings cannot be saved yet.",
   "LLM_KEY_REQUIRED": "An API key is required (on the first save, or when the API address changes).",

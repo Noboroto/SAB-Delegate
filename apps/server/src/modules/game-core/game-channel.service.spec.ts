@@ -19,6 +19,8 @@ type Setup = {
   rows?: Row[];
   access?: 'ok' | 'not-found' | 'forbidden';
   wordChannelId?: string | null;
+  /** Whether the target channel is a chatbot channel. */
+  chatbot?: boolean;
   /** What `gameChannel.findUnique` finds for the target channel. */
   holder?: { game: string } | null;
   createError?: Error;
@@ -48,7 +50,10 @@ function build(setup: Setup = {}) {
       Promise.resolve(setup.wordChannelId === where.wordChannelId ? { id: 'config' } : null),
     ),
   };
-  const tx = { gameChannel, guildConfig };
+  const chatbotChannel = {
+    findUnique: vi.fn(() => Promise.resolve(setup.chatbot === true ? { id: 'chatbot' } : null)),
+  };
+  const tx = { gameChannel, guildConfig, chatbotChannel };
   const prisma = {
     gameChannel,
     $transaction: vi.fn((run: (client: typeof tx) => Promise<unknown>) => run(tx)),
@@ -56,6 +61,7 @@ function build(setup: Setup = {}) {
   const audit = { record: vi.fn().mockResolvedValue(undefined) };
   const guilds = {
     ensureGuild: vi.fn().mockResolvedValue({ id: 'guild-key' }),
+    lockChannelClaim: vi.fn().mockResolvedValue(undefined),
   };
   const access = { check: vi.fn().mockResolvedValue(setup.access ?? 'ok') };
   const service = new GameChannelService(
@@ -64,7 +70,7 @@ function build(setup: Setup = {}) {
     guilds as unknown as GuildConfigService,
     access as unknown as ChannelAccessService,
   );
-  return { service, prisma, gameChannel, guildConfig, audit, guilds, access };
+  return { service, prisma, gameChannel, guildConfig, chatbotChannel, audit, guilds, access };
 }
 
 describe('GameChannelService.routeOf', () => {
@@ -200,6 +206,27 @@ describe('GameChannelService.set', () => {
     expect(gameChannel.deleteMany).not.toHaveBeenCalled();
     expect(gameChannel.create).not.toHaveBeenCalled();
     expect(audit.record).not.toHaveBeenCalled();
+  });
+
+  it('is TAKEN when the channel is a chatbot channel, writing nothing', async () => {
+    const { service, gameChannel, audit } = build({ chatbot: true });
+    await expect(service.set(GUILD, 'COUNTING', CHANNEL, ACTOR)).resolves.toEqual({
+      status: 'TAKEN',
+      game: 'CHATBOT',
+    });
+    expect(gameChannel.deleteMany).not.toHaveBeenCalled();
+    expect(gameChannel.create).not.toHaveBeenCalled();
+    expect(audit.record).not.toHaveBeenCalled();
+  });
+
+  it('takes the channel claim lock before reading any other claim', async () => {
+    const { service, guilds, guildConfig, chatbotChannel, gameChannel } = build();
+    await service.set(GUILD, 'COUNTING', CHANNEL, ACTOR);
+    expect(guilds.lockChannelClaim).toHaveBeenCalledWith(CHANNEL, expect.anything());
+    const lock = guilds.lockChannelClaim.mock.invocationCallOrder[0] ?? Infinity;
+    for (const read of [guildConfig.findFirst, chatbotChannel.findUnique, gameChannel.findUnique]) {
+      expect(lock).toBeLessThan(read.mock.invocationCallOrder[0] ?? 0);
+    }
   });
 
   it('is not TAKEN by a word chain channel that is a different channel', async () => {

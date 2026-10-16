@@ -5,6 +5,7 @@ import { ActivityModule } from './activity/activity.module.js';
 import { ApiKeyModule } from './api-key/api-key.module.js';
 import { AttendanceModule } from './attendance/attendance.module.js';
 import { BirthdayModule } from './birthday/birthday.module.js';
+import { ChatbotModule } from './chatbot/chatbot.module.js';
 import { GuildConfigModule } from './guild-config/guild-config.module.js';
 import { InfoModule } from './info/info.module.js';
 import { MentionModule } from './mention/mention.module.js';
@@ -45,6 +46,7 @@ export const DISCORD_FEATURE_MODULES: readonly Type[] = [
   AttendanceModule,
   InfoModule,
   ApiKeyModule,
+  ChatbotModule,
 ];
 
 /** Reads the raw environment like `DiscordModule.forRoot`: Nest builds the module graph before anything is parsed. */

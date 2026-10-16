@@ -20,7 +20,8 @@
     "WORD_CHAIN": "Word chain",
     "COUNTING": "Counting",
     "SCRAMBLE": "Vietnamese scramble",
-    "WORDLE": "Wordle"
+    "WORDLE": "Wordle",
+    "CHATBOT": "Chatbot"
   },
   "confirmation": "{channel} is now the {game} channel",
   "notConfigured": "No {game} channel yet. Use `/game set` first",

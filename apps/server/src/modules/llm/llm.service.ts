@@ -265,6 +265,11 @@ export class LlmService {
     return encryptSecret(plain, this.requireSecret());
   }
 
+  /** Throws `LLM_NOT_AVAILABLE` when the server has no secret to seal keys with. */
+  assertSecretAvailable(): void {
+    this.requireSecret();
+  }
+
   /** The key behind a `sealKey` value, or `null` when the current secret cannot read it. */
   openKey(stored: string): string | null {
     return this.readKey(stored);

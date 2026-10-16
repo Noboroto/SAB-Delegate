@@ -18,7 +18,10 @@ import { ChannelAccessService } from '../../discord/services/channel-access.serv
 import { PrismaService } from '../../prisma/prisma.service.js';
 
 type Db = Pick<Prisma.TransactionClient, 'guild' | 'guildConfig'>;
-type GameChannelDb = Pick<Prisma.TransactionClient, 'gameChannel'>;
+type ChannelClaimDb = Pick<
+  Prisma.TransactionClient,
+  '$executeRaw' | 'gameChannel' | 'chatbotChannel'
+>;
 
 /** The server's own row: `id` is the internal key other tables reference. */
 type GuildRecord = {
@@ -270,13 +273,31 @@ export class GuildConfigService {
   }
 
   /**
-   * `CHANNEL_IN_USE` when `channelId` hosts a channel game: the word chain
-   * there would judge every message a second time. Run it inside the
-   * transaction that sets the word channel.
+   * Serialises everything that claims `channelId` for a feature (the word chain,
+   * a channel game, the chatbot) until the transaction ends. The claims live in
+   * different tables, so no unique key can stop two of them from taking the same
+   * channel at once; whoever holds the lock reads the others' committed rows.
    */
-  async assertNotGameChannel(channelId: string, db: GameChannelDb = this.prisma): Promise<void> {
-    const holder = await db.gameChannel.findUnique({ where: { channelId }, select: { id: true } });
-    if (holder !== null) throw new ServiceError(ErrorCode.CHANNEL_IN_USE);
+  async lockChannelClaim(
+    channelId: string,
+    tx: Pick<Prisma.TransactionClient, '$executeRaw'>,
+  ): Promise<void> {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`channel-claim:${channelId}`}, 0))`;
+  }
+
+  /**
+   * `CHANNEL_IN_USE` when `channelId` hosts a channel game or the chatbot: the
+   * word chain there would judge every message a second time. Takes the channel
+   * claim lock, so it must run inside the transaction that sets the word channel.
+   */
+  async assertNotGameChannel(channelId: string, tx: ChannelClaimDb): Promise<void> {
+    await this.lockChannelClaim(channelId, tx);
+    const game = await tx.gameChannel.findUnique({ where: { channelId }, select: { id: true } });
+    const chatbot = await tx.chatbotChannel.findUnique({
+      where: { channelId },
+      select: { id: true },
+    });
+    if (game !== null || chatbot !== null) throw new ServiceError(ErrorCode.CHANNEL_IN_USE);
   }
 
   private readRow(db: Pick<Prisma.TransactionClient, 'guild'>, discordId: string) {

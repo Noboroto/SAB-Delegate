@@ -20,7 +20,8 @@
     "WORD_CHAIN": "Nối từ",
     "COUNTING": "Đếm số",
     "SCRAMBLE": "Vua Tiếng Việt",
-    "WORDLE": "Wordle"
+    "WORDLE": "Wordle",
+    "CHATBOT": "Chatbot"
   },
   "confirmation": "Đã chọn {channel} làm kênh chơi {game}",
   "notConfigured": "Chưa chọn kênh chơi {game}. Dùng `/game set` trước nhé",

@@ -19,8 +19,8 @@ type Routes = ReadonlyMap<string, ChannelGame>;
 
 export type SetChannelResult =
   | { status: 'OK' }
-  /** The channel already hosts this other game; nothing changed. */
-  | { status: 'TAKEN'; game: MiniGame };
+  /** The channel already hosts this other game, or the chatbot; nothing changed. */
+  | { status: 'TAKEN'; game: MiniGame | 'CHATBOT' };
 
 /**
  * Every message the bot sees asks for the route; a changed channel reaches this
@@ -122,13 +122,19 @@ export class GameChannelService {
     try {
       const result = await this.prisma.$transaction(async (tx): Promise<SetChannelResult> => {
         const guild = await this.guilds.ensureGuild(id, undefined, tx);
-        // Read in the transaction, next to the write, so a concurrent `/word set`
-        // to the same channel is seen by one of the two.
+        // Held until commit: a concurrent `/word set` or chatbot channel on the
+        // same channel waits here, then reads this write instead of racing it.
+        await this.guilds.lockChannelClaim(channel.data, tx);
         const word = await tx.guildConfig.findFirst({
           where: { wordChannelId: channel.data },
           select: { id: true },
         });
         if (word !== null) return { status: 'TAKEN', game: 'WORD_CHAIN' };
+        const chatbot = await tx.chatbotChannel.findUnique({
+          where: { channelId: channel.data },
+          select: { id: true },
+        });
+        if (chatbot !== null) return { status: 'TAKEN', game: 'CHATBOT' };
         const holder = await tx.gameChannel.findUnique({
           where: { channelId: channel.data },
           select: { game: true },

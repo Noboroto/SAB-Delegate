@@ -67,6 +67,15 @@ beforeEach(() => {
   post.mockReset();
 });
 
+describe('LlmService.assertSecretAvailable', () => {
+  it('throws without LLM_KEY_SECRET and passes with it', () => {
+    expect(() => build({ secret: null }).service.assertSecretAvailable()).toThrow(
+      expect.objectContaining({ code: ErrorCode.LLM_NOT_AVAILABLE }),
+    );
+    expect(() => build().service.assertSecretAvailable()).not.toThrow();
+  });
+});
+
 describe('LlmService.save', () => {
   it('refuses to save without LLM_KEY_SECRET', async () => {
     const { service } = build({ secret: null });

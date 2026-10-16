@@ -46,6 +46,8 @@ function build(options: { access?: ChannelAccess } = {}) {
       update: vi.fn().mockResolvedValue({}),
     },
     gameChannel: { findUnique: vi.fn().mockResolvedValue(null) },
+    chatbotChannel: { findUnique: vi.fn().mockResolvedValue(null) },
+    $executeRaw: vi.fn().mockResolvedValue(1),
     $transaction: vi.fn(),
   };
   prisma.$transaction.mockImplementation((work: (tx: typeof prisma) => unknown) => work(prisma));
@@ -80,6 +82,31 @@ describe('GuildConfigService.patch validation', () => {
     );
     expect(prisma.guildConfig.update).not.toHaveBeenCalled();
     expect(audit.record).not.toHaveBeenCalled();
+  });
+
+  it('refuses a word channel that is a chatbot channel, writing nothing', async () => {
+    const { prisma, audit, service } = build();
+    prisma.chatbotChannel.findUnique.mockResolvedValueOnce({ id: 'chatbot-channel' });
+    await expect(service.patch(GUILD, { wordChannelId: CHANNEL }, ACTOR)).rejects.toEqual(
+      failsWith(ErrorCode.CHANNEL_IN_USE),
+    );
+    expect(prisma.guildConfig.update).not.toHaveBeenCalled();
+    expect(audit.record).not.toHaveBeenCalled();
+  });
+
+  it('takes the channel claim lock before it reads the other claims of a word channel', async () => {
+    const { prisma, service } = build();
+    await service.patch(GUILD, { wordChannelId: CHANNEL }, ACTOR);
+    expect(prisma.$executeRaw).toHaveBeenCalledTimes(1);
+    const lock = prisma.$executeRaw.mock.invocationCallOrder[0] ?? Infinity;
+    expect(lock).toBeLessThan(prisma.gameChannel.findUnique.mock.invocationCallOrder[0] ?? 0);
+    expect(lock).toBeLessThan(prisma.chatbotChannel.findUnique.mock.invocationCallOrder[0] ?? 0);
+  });
+
+  it('takes no channel claim lock when the word channel is not touched', async () => {
+    const { prisma, service } = build();
+    await service.patch(GUILD, { logChannelId: CHANNEL }, ACTOR);
+    expect(prisma.$executeRaw).not.toHaveBeenCalled();
   });
 
   it('holds the intro channel to read access and the others to send access', async () => {
