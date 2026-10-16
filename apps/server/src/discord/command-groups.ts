@@ -25,6 +25,9 @@ const SPECS = {
   set: { permissions: PermissionFlagsBits.Administrator },
   word: { permissions: PermissionFlagsBits.ManageMessages },
   game: { permissions: PermissionFlagsBits.ManageMessages },
+  // `chatbot` is for the managers of a server; `chat` is every member's own view.
+  chatbot: { permissions: PermissionFlagsBits.ManageGuild },
+  chat: {},
   note: {},
   get: {},
   mention: { permissions: PermissionFlagsBits.UseApplicationCommands },
@@ -54,6 +57,8 @@ const GROUP_NAMES = [
   'set',
   'word',
   'game',
+  'chatbot',
+  'chat',
   'note',
   'get',
   'mention',

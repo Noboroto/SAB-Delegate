@@ -55,5 +55,11 @@
   },
   "help": {
     "description": "Xem luật và cách cài một trò chơi"
+  },
+  "chatbot": {
+    "description": "Cài đặt chatbot: kênh, hạn mức token và trí nhớ"
+  },
+  "chat": {
+    "description": "Mức dùng, trí nhớ và lịch sử chatbot của bạn trong server này"
   }
 }

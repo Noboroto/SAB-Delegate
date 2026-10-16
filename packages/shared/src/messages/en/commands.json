@@ -55,5 +55,11 @@
   },
   "help": {
     "description": "Show the rules and set-up of a game"
+  },
+  "chatbot": {
+    "description": "Set up the chatbot: channels, token limits and memory"
+  },
+  "chat": {
+    "description": "Your chatbot usage, memory and history in this server"
   }
 }

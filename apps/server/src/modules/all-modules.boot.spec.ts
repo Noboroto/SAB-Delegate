@@ -64,8 +64,8 @@ const LEGACY_ROOT_COMMANDS = [
   'word',
 ];
 
-/** Root commands added after the previous bot: the channel games, scores and help. */
-const ADDED_ROOT_COMMANDS = ['game', 'help', 'leaderboard'];
+/** Root commands added after the previous bot: the channel games, scores, help and the chatbot. */
+const ADDED_ROOT_COMMANDS = ['chat', 'chatbot', 'game', 'help', 'leaderboard'];
 
 /** The four message context menus; Discord allows five, one slot stays free. */
 const MESSAGE_CONTEXT_MENUS = [

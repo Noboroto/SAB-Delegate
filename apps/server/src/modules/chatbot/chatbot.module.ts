@@ -13,6 +13,8 @@ import { ChatbotMemoryService } from './chatbot-memory.service.js';
 import { ChatbotNamesService } from './chatbot-names.service.js';
 import { ChatbotRecoveryService } from './chatbot-recovery.service.js';
 import { ChatbotQuotaService } from './chatbot-quota.service.js';
+import { ChatbotCommands } from './chatbot.commands.js';
+import { ChatbotSelfCommands } from './chatbot-self.commands.js';
 import { ChatbotController } from './chatbot.controller.js';
 import { ChatbotListener } from './chatbot.listener.js';
 import { ChatbotService } from './chatbot.service.js';
@@ -37,6 +39,8 @@ import { ChatbotService } from './chatbot.service.js';
     ChatbotService,
     ChatbotListener,
     ChatbotRecoveryService,
+    ChatbotCommands,
+    ChatbotSelfCommands,
   ],
   exports: [
     ChatbotConfigService,

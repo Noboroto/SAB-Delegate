@@ -3,5 +3,141 @@
   "notConfigured": "Chatbot chưa có mô hình ngôn ngữ để hỏi. Quản trị viên cần cài đặt trước.",
   "quotaExhausted": "Bạn đã dùng hết token chatbot của tháng này.",
   "failed": "Mình chưa lấy được câu trả lời lúc này. Bạn thử lại sau một lát nhé.",
-  "paused": "Chatbot tạm dừng vì hết hạn mức API. Admin đã được báo, bạn thử lại sau nhé."
+  "paused": "Chatbot tạm dừng vì hết hạn mức API. Admin đã được báo, bạn thử lại sau nhé.",
+  "commands": {
+    "status": {
+      "description": "Xem chatbot bật hay tắt, các kênh, hạn mức mặc định và mô hình"
+    },
+    "enable": {
+      "description": "Bật chatbot trong server này"
+    },
+    "disable": {
+      "description": "Tắt chatbot trong server này"
+    },
+    "channelAdd": {
+      "description": "Cho chatbot trả lời khi được nhắc tên trong một kênh"
+    },
+    "channelRemove": {
+      "description": "Dừng chatbot trả lời trong một kênh"
+    },
+    "limit": {
+      "description": "Đặt hạn mức token hằng tháng mặc định cho mỗi thành viên"
+    },
+    "quotaSet": {
+      "description": "Đặt hạn mức token hằng tháng riêng cho một thành viên, hoặc gỡ bỏ"
+    },
+    "quotaGrant": {
+      "description": "Cộng hoặc trừ token thưởng của một thành viên trong tháng này"
+    },
+    "quotaReset": {
+      "description": "Đặt lại số token một thành viên đã dùng trong tháng này"
+    },
+    "usage": {
+      "description": "Xem token tháng này của một thành viên, hoặc 10 người dùng nhiều nhất"
+    },
+    "memoryClear": {
+      "description": "Xoá trí nhớ của chatbot về một thành viên, một kênh hoặc tất cả"
+    },
+    "memory": {
+      "description": "Xem chatbot nhớ gì về bạn trong server này"
+    },
+    "selfMemoryClear": {
+      "description": "Cho chatbot quên những gì nó nhớ về bạn ở đây"
+    },
+    "selfUsage": {
+      "description": "Xem số token chatbot bạn còn lại trong tháng này"
+    },
+    "history": {
+      "description": "Xem 5 cuộc trò chuyện chatbot gần nhất của bạn trong server này"
+    },
+    "historyClear": {
+      "description": "Xoá các cuộc trò chuyện chatbot của bạn trong server này"
+    },
+    "channelOption": {
+      "description": "Kênh"
+    },
+    "userOption": {
+      "description": "Thành viên"
+    },
+    "amountOption": {
+      "description": "Số token mỗi thành viên mỗi tháng"
+    },
+    "limitOption": {
+      "description": "Số token hằng tháng của thành viên này"
+    },
+    "clearOption": {
+      "description": "Gỡ hạn mức riêng của thành viên và dùng mặc định của server"
+    },
+    "tokensOption": {
+      "description": "Số token cộng thêm; số âm là trừ bớt"
+    },
+    "scopeOption": {
+      "description": "Phạm vi cần xoá"
+    },
+    "scopeUser": {
+      "description": "Một thành viên"
+    },
+    "scopeChannel": {
+      "description": "Một kênh"
+    },
+    "scopeAll": {
+      "description": "Tất cả trong server này"
+    },
+    "usageUserOption": {
+      "description": "Chỉ xem thành viên này; để trống để xem top 10"
+    },
+    "clearUserOption": {
+      "description": "Thành viên cần xoá (phạm vi: một thành viên)"
+    },
+    "clearChannelOption": {
+      "description": "Kênh cần xoá (phạm vi: một kênh)"
+    }
+  },
+  "slash": {
+    "status": {
+      "body": "Chatbot: **{state}**\nKênh: {channels}\nHạn mức mặc định: {limit} token mỗi thành viên mỗi tháng\nMô hình: {model}",
+      "on": "bật",
+      "off": "tắt",
+      "noChannels": "chưa có",
+      "source": {
+        "guild": "mô hình riêng của server",
+        "global": "mô hình dùng chung",
+        "none": "chưa có mô hình"
+      },
+      "key": "khoá kết thúc bằng {last4}",
+      "paused": "Đang tạm dừng đến {until}: nhà cung cấp đã hết hạn mức.",
+      "dashboardHint": "Cài đặt mô hình trên trang quản trị."
+    },
+    "enabled": "Chatbot đã bật.",
+    "disabled": "Chatbot đã tắt.",
+    "channelAdded": "Chatbot giờ trả lời trong {channel}.",
+    "channelRemoved": "Chatbot không còn trả lời trong {channel}.",
+    "limitSet": "Hạn mức mặc định giờ là {limit} token mỗi thành viên mỗi tháng.",
+    "quotaSet": "{user} giờ có hạn mức riêng {limit} token mỗi tháng.",
+    "quotaCleared": "{user} đã quay về hạn mức mặc định của server.",
+    "grantAdded": "Đã cộng {tokens} token thưởng cho {user} trong tháng này.",
+    "grantTaken": "Đã trừ {tokens} token thưởng của {user} trong tháng này.",
+    "quotaReset": "Đã đặt lại {used} token {user} đã dùng trong tháng này.",
+    "standing": "{user}: đã dùng {used}, còn lại {remaining} / {total}",
+    "usageSelf": "Tháng này bạn đã dùng {used} token, còn lại {remaining} / {total}.",
+    "usageTopTitle": "Những thành viên dùng nhiều token nhất tháng này:",
+    "usageTopEmpty": "Tháng này chưa ai dùng chatbot.",
+    "memoryCleared": "Đã xoá {users} trí nhớ thành viên và {channels} trí nhớ kênh.",
+    "memoryShow": "Mình nhớ về bạn trong server này:\n{summary}",
+    "memoryNone": "Mình chưa nhớ gì về bạn trong server này.",
+    "selfMemoryCleared": "Mình đã quên những gì từng nhớ về bạn trong server này.",
+    "selfMemoryNothing": "Mình chưa nhớ gì về bạn ở đây.",
+    "historyTitle": "{count} cuộc trò chuyện chatbot gần nhất của bạn ở đây:",
+    "historyEntry": "{when} trong {channel}\nHỏi: {question}\nĐáp: {answer}",
+    "historyEmpty": "Bạn chưa có cuộc trò chuyện chatbot nào trong server này.",
+    "historyStatus": {
+      "OK": "(không có câu trả lời)",
+      "PENDING": "(đang trả lời)",
+      "EXPIRED": "(chưa kịp trả lời)",
+      "QUOTA_EXHAUSTED": "(đã hết token)",
+      "NOT_CONFIGURED": "(chưa cài mô hình)",
+      "FAILED": "(bị lỗi)"
+    },
+    "historyCleared": "Đã xoá {count} cuộc trò chuyện của bạn trong server này."
+  }
 }

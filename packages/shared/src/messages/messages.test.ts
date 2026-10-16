@@ -118,7 +118,7 @@ describe('message catalog parity', () => {
         );
       }
     }
-    expect([...catalog('en').keys()].filter((p) => p.startsWith('commands.')).length).toBe(19);
+    expect([...catalog('en').keys()].filter((p) => p.startsWith('commands.')).length).toBe(21);
   });
 });
 

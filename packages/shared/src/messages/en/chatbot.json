@@ -3,5 +3,141 @@
   "notConfigured": "The chatbot has no language model to ask yet. An admin needs to set one up.",
   "quotaExhausted": "You have used up your chatbot tokens for this month.",
   "failed": "I could not get an answer just now. Please try again in a moment.",
-  "paused": "The chatbot is paused because its API allowance ran out. Admins have been told; please try again later."
+  "paused": "The chatbot is paused because its API allowance ran out. Admins have been told; please try again later.",
+  "commands": {
+    "status": {
+      "description": "Show if the chatbot is on, its channels, default limit and model"
+    },
+    "enable": {
+      "description": "Turn the chatbot on in this server"
+    },
+    "disable": {
+      "description": "Turn the chatbot off in this server"
+    },
+    "channelAdd": {
+      "description": "Let the chatbot answer mentions in a channel"
+    },
+    "channelRemove": {
+      "description": "Stop the chatbot answering in a channel"
+    },
+    "limit": {
+      "description": "Set the default monthly token limit per member"
+    },
+    "quotaSet": {
+      "description": "Give a member their own monthly token limit, or remove it"
+    },
+    "quotaGrant": {
+      "description": "Add or take back bonus tokens for a member this month"
+    },
+    "quotaReset": {
+      "description": "Reset the tokens a member has used this month"
+    },
+    "usage": {
+      "description": "Show one member's tokens this month, or the top 10"
+    },
+    "memoryClear": {
+      "description": "Make the chatbot forget a member, a channel or everything"
+    },
+    "memory": {
+      "description": "Show what the chatbot remembers about you in this server"
+    },
+    "selfMemoryClear": {
+      "description": "Make the chatbot forget what it remembers about you here"
+    },
+    "selfUsage": {
+      "description": "Show your chatbot tokens left this month"
+    },
+    "history": {
+      "description": "Show your last 5 chatbot conversations in this server"
+    },
+    "historyClear": {
+      "description": "Delete your chatbot conversations in this server"
+    },
+    "channelOption": {
+      "description": "The channel"
+    },
+    "userOption": {
+      "description": "The member"
+    },
+    "amountOption": {
+      "description": "Tokens per member per month"
+    },
+    "limitOption": {
+      "description": "Monthly tokens for this member"
+    },
+    "clearOption": {
+      "description": "Remove the member's own limit and use the server default"
+    },
+    "tokensOption": {
+      "description": "Tokens to add; a negative number takes back"
+    },
+    "scopeOption": {
+      "description": "What to clear"
+    },
+    "scopeUser": {
+      "description": "One member"
+    },
+    "scopeChannel": {
+      "description": "One channel"
+    },
+    "scopeAll": {
+      "description": "Everything in this server"
+    },
+    "usageUserOption": {
+      "description": "Show this member only; leave empty for the top 10"
+    },
+    "clearUserOption": {
+      "description": "The member to clear (scope: one member)"
+    },
+    "clearChannelOption": {
+      "description": "The channel to clear (scope: one channel)"
+    }
+  },
+  "slash": {
+    "status": {
+      "body": "Chatbot: **{state}**\nChannels: {channels}\nDefault limit: {limit} tokens per member per month\nModel: {model}",
+      "on": "on",
+      "off": "off",
+      "noChannels": "none",
+      "source": {
+        "guild": "this server's own model",
+        "global": "the shared model",
+        "none": "no model yet"
+      },
+      "key": "key ending {last4}",
+      "paused": "Paused until {until}: the provider ran out of credit.",
+      "dashboardHint": "Set the model on the dashboard."
+    },
+    "enabled": "The chatbot is on.",
+    "disabled": "The chatbot is off.",
+    "channelAdded": "The chatbot now answers in {channel}.",
+    "channelRemoved": "The chatbot no longer answers in {channel}.",
+    "limitSet": "The default limit is now {limit} tokens per member per month.",
+    "quotaSet": "{user} now has their own limit of {limit} tokens per month.",
+    "quotaCleared": "{user} is back to the server default limit.",
+    "grantAdded": "Added {tokens} bonus tokens for {user} this month.",
+    "grantTaken": "Took back {tokens} bonus tokens from {user} this month.",
+    "quotaReset": "Cleared the {used} tokens {user} used this month.",
+    "standing": "{user}: used {used}, remaining {remaining} / {total}",
+    "usageSelf": "This month you used {used} tokens, remaining {remaining} / {total}.",
+    "usageTopTitle": "Top members by tokens used this month:",
+    "usageTopEmpty": "Nobody has used the chatbot this month.",
+    "memoryCleared": "Cleared {users} member memories and {channels} channel memories.",
+    "memoryShow": "What I remember about you in this server:\n{summary}",
+    "memoryNone": "I remember nothing about you in this server yet.",
+    "selfMemoryCleared": "I forgot what I remembered about you in this server.",
+    "selfMemoryNothing": "I had nothing remembered about you here.",
+    "historyTitle": "Your last {count} chatbot conversations here:",
+    "historyEntry": "{when} in {channel}\nQ: {question}\nA: {answer}",
+    "historyEmpty": "You have no chatbot conversations in this server.",
+    "historyStatus": {
+      "OK": "(no answer)",
+      "PENDING": "(being answered)",
+      "EXPIRED": "(never answered)",
+      "QUOTA_EXHAUSTED": "(no tokens were left)",
+      "NOT_CONFIGURED": "(no model was set up)",
+      "FAILED": "(it failed)"
+    },
+    "historyCleared": "Deleted {count} of your conversations in this server."
+  }
 }
