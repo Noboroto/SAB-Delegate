@@ -31,7 +31,7 @@ Bảng này, `env.ts`, khối `environment:` của compose và `.env.example` ph
 
 | Service | Biến |
 | --- | --- |
-| `sab-server` | `APP_ENV`, **`DISCORD_TOKEN`**, `DISCORD_CLIENT_ID`, `DISCORD_ALLOWED_APP_IDS`, `ADMIN_GUILD_ID`, `MIGRATION_PENDING` (mặc định compose `true`: thiếu hay trống thì bot không đăng nhập; chạy thật phải đặt `false` rõ ràng), `COMMANDS_FORCE_RESET`, `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, **`POSTGRES_PASSWORD`** (role runtime), `DB_POOL_MAX`, `PGBOSS_POOL_MAX`, `PGBOSS_WORKERS_ENABLED`, `**`DISCORD_CLIENT_SECRET`**, **`BETTER_AUTH_SECRET`** (≥ 32 ký tự), `APP_URL` (origin https không path, ví dụ `https://bot.sabies.vn`), `TRUSTED_PROXY_IPS` (danh sách IP/CIDR phân cách phẩy; xem mục Release 2), `MCP_ENABLED` (mặc định `true`; `false` gỡ route `/mcp`; route chỉ có khi REST bật, tức là có `APP_URL`, và production còn cần `TRUSTED_PROXY_IPS`), `LOG_LEVEL`. Bốn biến REST/đăng nhập đi cùng nhau: có `APP_URL` mà thiếu ba biến kia (production) thì server từ chối khởi động; bỏ trống cả bốn = chỉ chạy bot `DISCORD_DEV_GUILD_ID` chỉ ở dev cục bộ, CẤM ở production |
+| `sab-server` | `APP_ENV`, **`DISCORD_TOKEN`**, `DISCORD_CLIENT_ID`, `DISCORD_ALLOWED_APP_IDS`, `ADMIN_GUILD_ID`, `MIGRATION_PENDING` (mặc định compose `true`: thiếu hay trống thì bot không đăng nhập; chạy thật phải đặt `false` rõ ràng), `COMMANDS_FORCE_RESET`, `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, **`POSTGRES_PASSWORD`** (role runtime), `DB_POOL_MAX`, `PGBOSS_POOL_MAX`, `PGBOSS_WORKERS_ENABLED`, **`DISCORD_CLIENT_SECRET`**, **`BETTER_AUTH_SECRET`** (≥ 32 ký tự), **`LLM_KEY_SECRET`** (≥ 32 ký tự, tuỳ chọn; mã hoá khoá API của mô hình ngôn ngữ, xem mục Chatbot), `APP_URL` (origin https không path, ví dụ `https://bot.sabies.vn`), `TRUSTED_PROXY_IPS` (danh sách IP/CIDR phân cách phẩy; xem mục Release 2), `MCP_ENABLED` (mặc định `true`; `false` gỡ route `/mcp`; route chỉ có khi REST bật, tức là có `APP_URL`, và production còn cần `TRUSTED_PROXY_IPS`), `LOG_LEVEL`. Bốn biến REST/đăng nhập đi cùng nhau: có `APP_URL` mà thiếu ba biến kia (production) thì server từ chối khởi động; bỏ trống cả bốn = chỉ chạy bot `DISCORD_DEV_GUILD_ID` chỉ ở dev cục bộ, CẤM ở production |
 | `sab-release` | `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER` (role runtime, để cấp quyền), `POSTGRES_MIGRATE_USER`, **`POSTGRES_MIGRATE_PASSWORD`**, `BACKUP_DIR`, `BACKUP_KEEP_PRE_MIGRATE`. Không có `BACKUP_ENABLED`: release luôn dump DB không rỗng (xem mục Backup) |
 | `sab-web` | `NODE_ENV`, `PORT`, `HOSTNAME` (hằng số của image, không đặt trên Coolify). KHÔNG `DISCORD_*`, `POSTGRES_*`, `BETTER_AUTH_*`, `TOKENS`, không bí mật nào. `SERVER_INTERNAL_URL` cố ý vắng: đích rewrite được nướng vào image lúc build (mặc định `http://sab-server:3100`) |
 | `sab-backup` | `TZ`, `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_BACKUP_USER`, **`POSTGRES_BACKUP_PASSWORD`**, `BACKUP_DIR`, `BACKUP_ENABLED`, `BACKUP_KEEP_DAILY` |
@@ -41,6 +41,16 @@ Bảng này, `env.ts`, khối `environment:` của compose và `.env.example` ph
 Bảng đã đối chiếu với `coolify.compose.yml` (2026-10-15). `COMMANDS_FORCE_RESET` chỉ đặt tạm, xem mục đăng ký lại lệnh.
 
 Kiểm: `docker exec <container> env | cut -d= -f1` cho từng container, so với bảng; không `TOKENS`. Không in giá trị, không `docker compose config` đã nội suy.
+
+## Chatbot
+
+Không có biến môi trường hay bước vận hành mới; chỉ cần `LLM_KEY_SECRET` đã có sẵn. Thiết kế: `docs/architecture.md` mục Chatbot.
+
+- `LLM_KEY_SECRET` (đã có trong `coolify.compose.yml`) mã hoá khoá API của mô hình dùng chung và của từng guild. Thiếu thì không lưu được cấu hình mô hình nên chatbot không có gì để hỏi. ĐỔI giá trị làm mọi khoá đã lưu không giải mã được: guild có mô hình riêng sẽ bị coi là chưa cài (không lặng lẽ dùng khoá dùng chung) và phải nhập lại khoá.
+- Chatbot mặc định tắt ở mọi guild; bật từng guild bằng `/chatbot enable` hoặc dashboard, nên deploy không đổi hành vi của guild nào.
+- Các migration `*_chatbot*` chỉ thêm bảng, cột và giá trị enum, đi theo luồng `sab-release` thường lệ (dump `pre-migrate` rồi `migrate deploy`); không cần bước tay.
+- Khởi động lại là an toàn: lời nhắc dở dang được hoàn token và trả lời lại nếu không quá 10 phút tuổi. Không có bước dọn tay.
+- Nhà cung cấp hết credit thì admin guild quản trị thấy cảnh báo ở `#bot-log`; chatbot của mô hình đó tự thử lại sau 15 phút.
 
 ## Trước lần deploy đầu
 

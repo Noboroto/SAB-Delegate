@@ -75,6 +75,60 @@ Thứ tự quan trọng vì job đang chạy vẫn dùng client và pool:
 
 **Hẹn giờ gửi tin.** Lệnh ghi một dòng trong DB rồi, SAU commit, đẩy job (queue `scheduled-message-send`, id job = id dòng, nên retry không tạo job trùng). Worker nhận job, giữ lease trên dòng bằng cập nhật có điều kiện rồi mới gửi; ghi kết quả cũng có điều kiện theo lease. Tiến trình chết giữa lúc gửi thì lease hết hạn và lần chạy sau gửi nốt (at-least-once, cửa sổ trùng hẹp). Lịch KHÔNG còn mất khi deploy, khác bản cũ giữ trong RAM. Nội dung/tệp đọc lúc đến giờ (`schedule-copy`).
 
+## Chatbot
+
+Một câu trả lời đi từ lời nhắc bot tới dòng cuối. Mã nằm ở `apps/server/src/modules/chatbot/` (nghe tin: `chatbot.listener.ts`; một lượt trả lời: `chatbot.service.ts`), gọi mô hình ở `apps/server/src/modules/llm/llm-chat.service.ts`. Mặc định TẮT cho mọi guild; guild phải bật và chỉ định kênh (lệnh: `docs/commands.md` mục 17; công cụ MCP: `docs/mcp.md`). Hằng số (trần, cửa sổ, hạn mức mặc định, thời hạn) ở `packages/shared/src/constants/chatbot.ts`; chỗ nào dưới đây nói "hằng số" là chỗ đó.
+
+```
+messageCreate (tin trong guild, không phải bot)
+  -> khớp kênh đã chỉ định + guild bật?        (route có cache ngắn, thread tính theo kênh cha)
+  -> nhắc bot HOẶC trả lời một tin của bot?     (@everyone/@role không tính)
+  -> claimPending: ghi dòng ChatbotTurn PENDING (triggerMessageId UNIQUE)   <- thua = bỏ
+  -> người này đang có câu trả lời chạy?  có: thả ⏳, đóng dòng, dừng
+  -> hàng đợi theo kênh -> giới hạn đồng thời chung (3 câu cùng lúc, mọi guild)
+       chọn mô hình: của guild, hay dùng chung, hay không có (trả lời "chưa cài")
+       hết token tháng -> trả lời "hết token"; mô hình đang tạm dừng -> trả lời "tạm dừng"
+       đọc ngữ cảnh: tin kênh gần nhất + tóm tắt kênh + tóm tắt người hỏi + vài lượt gần nhất của họ + ảnh / .txt
+       quota.reserveForTurn: giữ chỗ token, GHI giữ chỗ lên dòng PENDING cùng transaction
+       LlmChatService.chat: SDK `ai` qua transport chống SSRF
+       settleTurn (dùng số token nhà cung cấp báo) | refundTurn (lỗi)
+       gửi trả lời (chia khối), cuối là `-# còn lại x / tổng`
+       finalize dòng ChatbotTurn (OK / QUOTA_EXHAUSTED / NOT_CONFIGURED / FAILED)
+       nền: đếm lượt; đủ chu kỳ thì viết lại tóm tắt (tính vào token của người hỏi)
+```
+
+Quyết định và lý do:
+
+| Quyết định | Lý do |
+| --- | --- |
+| Dòng `ChatbotTurn` là hàng đợi bền; KHÔNG dùng pg-boss cho câu trả lời | pg-boss thêm độ trễ nhận job và có thể xử lý đôi (lần gửi lại + tiến trình khác). Ở đây `triggerMessageId` UNIQUE quyết định ai trả lời: bản giao lại hoặc tiến trình khác thua ngay ở bước ghi. Trả lời chậm là lỗi nhìn thấy được, nên không có hop trung gian |
+| Ghi PENDING TRƯỚC khi làm gì khác | Khởi động lại giữa chừng không làm mất lời nhắc. Không ghi được vào DB thì VẪN trả lời (không ghi lịch sử) vì mất câu trả lời tệ hơn mất một dòng lịch sử |
+| Mỗi thành viên một câu trả lời tại một thời điểm; mỗi kênh một hàng đợi | Chặn một người đốt token song song và giữ đúng thứ tự trả lời trong kênh. Tin thứ hai của người đó bị thả ⏳ và bỏ qua, không xếp hàng |
+| Giữ chỗ token trước khi gọi mô hình, quyết toán theo số nhà cung cấp báo | Hai câu trả lời đồng thời của một người không tiêu cùng token: các bộ đếm đổi bằng một câu SQL. Nhà cung cấp không báo token thì dùng ước lượng theo số ký tự và đánh dấu `estimated`. Hạn mức có thể bị vượt tối đa một lần gọi, lần sau bị chặn |
+| Giữ chỗ nằm trên dòng lượt, người đầu tiên lấy được thì nhả về 0 | Quyết toán và hoàn trả đi qua một dòng đã khoá: đúng một bên lấy được. Khởi động lại đã hoàn trả thì lần quyết toán muộn trả `null` và KHÔNG tính tiền lần hai |
+| Tháng hạn mức theo múi giờ nghiệp vụ (`Asia/Ho_Chi_Minh`), chốt theo tháng LÚC GIỮ CHỖ | Cuộc gọi chạy qua nửa đêm vẫn vào tháng nó bắt đầu |
+| Tóm tắt viết lại SAU khi gửi trả lời, trong tiến trình, không qua pg-boss | Mất một lần tóm tắt chỉ làm chậm trí nhớ (không mất dữ liệu); số token của nó nằm ở dòng cuối của lần sau. Tắt máy chờ tối đa 20 s cho các việc nền này |
+| Ngữ cảnh kênh là cửa sổ đọc trực tiếp, KHÔNG lưu | Chỉ ảnh chụp những gì mô hình nhận được cho từng lượt (không có byte ảnh hay tệp) được lưu trên dòng lượt, để quản trị xem lại; tin kênh gốc vẫn là của Discord |
+| Ảnh và `.txt` lấy từ tin nhắn và tin được trả lời | Giới hạn kích thước và số lượng ở hằng số; phần quá dài bị cắt kèm thông báo |
+| Bộ nhớ theo guild, không bao giờ qua guild khác | Mọi dòng bộ nhớ, hạn mức, lượt đều khoá bằng id guild; chỉ tóm tắt của chính người hỏi được đưa vào prompt |
+| Câu trả lời không ping ai | `allowedMentions` rỗng; chỉ người hỏi bị ping bằng cơ chế trả lời. Tin của người hỏi đã bị xoá thì gửi tin thường có nhắc tên họ |
+
+### Hạn mức
+
+Mỗi thành viên mỗi guild mỗi tháng: hạn mức (riêng, hoặc mặc định của guild, hoặc mặc định cài sẵn) cộng thưởng của tháng, trừ đã dùng. Dòng cuối của câu trả lời là số CÒN LẠI sau chính câu đó, nên bằng với `/chat usage`. Hết token: trả lời ngắn, không gọi mô hình, không đọc kênh. Cuộc gọi lỗi thì hoàn trả đủ phần giữ chỗ; lỗi quyết toán thì phần giữ chỗ vẫn bị tính (câu trả lời quan trọng hơn sổ sách tuyệt đối).
+
+### Khởi động lại
+
+Sau `clientReady`, `ChatbotRecoveryService` quét các dòng PENDING được ghi TRƯỚC khi tiến trình này khởi động: hoàn trả phần giữ chỗ (đúng một lần), rồi hoặc trả lời lại (qua chính hàng đợi của listener) nếu lời nhắc không quá 10 phút tuổi, kênh còn được chỉ định và bot chưa trả lời, hoặc đóng là EXPIRED không trả lời. Dòng vừa được chạm trong hai phút có thể vẫn đang được tiến trình cũ xử lý nên lượt quét đầu bỏ qua; một lượt quét nữa sau khoảng chờ đó nhặt phần còn lại. Câu trả lời đến quá muộn chỉ làm kênh rối, nên chủ bot chọn hết hạn sau 10 phút.
+
+### Nhà cung cấp hết credit
+
+Khi nhà cung cấp từ chối vì hết credit (402, hoặc 429/400 có từ khoá hết số dư; hạn mức theo phút/ngày thì KHÔNG tính), mô hình đó bị tạm dừng 15 phút: tin của thành viên được trả lời ngay "tạm dừng" thay vì trả tiền cho cuộc gọi chắc chắn lỗi, lượt ghi `provider_quota`. Lần từ chối đầu tiên của một đợt gửi một embed vào `#bot-log` của guild quản trị (tên model và host, không bao giờ có khoá hay lời nhà cung cấp). Hết cửa sổ thì cho đúng một cuộc gọi thử; thành công thì xoá tạm dừng, vẫn từ chối thì gia hạn. Trạng thái nằm trong RAM: khởi động lại thì thử lại ngay. Lưu, xoá hoặc thử thành công mô hình của guild (hay lưu lại mô hình dùng chung) thì xoá tạm dừng tương ứng. `/chatbot status` cho thấy đang tạm dừng đến khi nào. Mã: `apps/server/src/modules/llm/chatbot-pause.service.ts`.
+
+### Dữ liệu và lưu giữ
+
+Schema: `apps/server/prisma/schema/chatbot.prisma` (ba migration cùng tiền tố `chatbot`, thuần additive, đi theo luồng `migrate deploy` thường lệ; ràng buộc CHECK viết tay ở cuối từng `migration.sql`). Mọi bảng chatbot xoá theo `Guild` (cascade). Lịch sử lượt hỏi đáp bị xoá sau 90 ngày bởi job pg-boss `15 3 * * *` giờ nghiệp vụ (`chatbot-history.cron.ts`), xoá theo lô, chạy lại an toàn. Quản trị cũng xoá được theo lượt / thành viên / toàn guild (dashboard, MCP), thành viên xoá lịch sử và bộ nhớ của mình bằng `/chat`. Khoá API của guild lưu mã hoá bằng `LLM_KEY_SECRET`, chỉ hiện 4 ký tự cuối; guild có mô hình riêng mà khoá không giải mã được thì bị coi là "chưa cài", KHÔNG lặng lẽ dùng khoá dùng chung.
+
 ## Sổ tay đọc tiếp
 
 - Số đo thật và gói đã loại: `docs/stack-decisions.md`.

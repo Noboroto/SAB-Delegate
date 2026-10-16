@@ -184,6 +184,37 @@ Ai dùng: Quản lý kênh. Trả lời công khai, không ping. `1-emoji` `2-na
 
 - Khác đã duyệt: `category` tuỳ chọn; bỏ trống thì dùng category trong cấu hình guild, không có thì dùng category cố định của bản cũ.
 
+## 17. `/chatbot` — quản lý chatbot của máy chủ
+
+Ai dùng: Quản lý máy chủ (`ManageGuild`, cùng quy tắc với dashboard). Mọi subcommand trả riêng, không ping gì (`allowedMentions` rỗng), không kiểm quyền người gọi; lệnh phá huỷ áp dụng ngay, không hỏi xác nhận. Trong DM báo lỗi không có máy chủ. Khoá và địa chỉ mô hình ngôn ngữ của máy chủ CHỈ đặt trên dashboard: option slash để lại khoá trong log kênh.
+
+| Subcommand                                | Làm gì                                                                                                                                                   |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `status`                                  | Bật hay tắt, các kênh, hạn mức mặc định, mô hình đang dùng (của máy chủ hay dùng chung, tên model, 4 ký tự cuối khoá); đang tạm dừng vì hết credit thì ghi đến lúc nào |
+| `enable` / `disable`                      | Bật / tắt chatbot (mặc định tắt)                                                                                                                         |
+| `channel-add` `channel`                   | Cho chatbot trả lời khi được nhắc ở kênh này (kênh chữ, announcement, thread). Từ chối nếu kênh thuộc trò chơi / nối từ hoặc đã đủ số kênh tối đa        |
+| `channel-remove` `channel`                | Thôi trả lời ở kênh; đồng thời xoá bộ nhớ của kênh                                                                                                       |
+| `limit` `amount`                          | Hạn mức token hằng tháng mặc định cho mỗi thành viên (0 đến 1 tỷ)                                                                                       |
+| `quota-set` `user` `[limit]` `[clear]`    | Hạn mức riêng của một thành viên; đúng MỘT trong `limit` hoặc `clear` (bỏ hạn mức riêng, về mặc định), cả hai hay không có đều bị từ chối                  |
+| `quota-grant` `user` `tokens`             | Cộng token thưởng cho tháng này; số âm thu hồi lần thưởng trước, thưởng không xuống dưới 0                                                               |
+| `quota-reset` `user`                      | Đặt lại phần đã dùng của tháng này về 0, giữ thưởng; không hoàn tác                                                                                      |
+| `usage` `[user]`                          | Một thành viên: đã dùng, còn lại, tổng. Bỏ trống: 10 người dùng nhiều nhất tháng này                                                                     |
+| `memory-clear` `scope` `[user]` `[channel]` | Xoá bộ nhớ chatbot trong máy chủ này; `scope` = `user` (cần `user`) / `channel` (cần `channel`) / `all`. Id không thuộc `scope` bị service từ chối       |
+
+Số lượng kênh tối đa, hạn mức mặc định và các trần nằm ở `packages/shared/src/constants/chatbot.ts`. Cách bot trả lời, hạn mức và bộ nhớ: `docs/architecture.md` mục chatbot.
+
+## 18. `/chat` — phần của riêng thành viên
+
+Ai dùng: mọi người (không đặt quyền mặc định). Trả riêng. Mọi lệnh khoá theo id người gọi VÀ máy chủ hiện tại: chỉ thấy dòng của chính mình, không bao giờ thấy chữ của người khác hay ngữ cảnh đã gửi cho mô hình.
+
+| Subcommand      | Làm gì                                                                                                       |
+| --------------- | ------------------------------------------------------------------------------------------------------------ |
+| `memory`        | Xem bản tóm tắt chatbot nhớ về mình trong máy chủ này                                                         |
+| `memory-clear`  | Xoá bản tóm tắt đó                                                                                           |
+| `usage`         | Đã dùng, còn lại, tổng của tháng này (cùng số với dòng cuối câu trả lời)                                     |
+| `history`       | 5 lượt hỏi đáp gần nhất của mình (câu hỏi và trả lời được rút gọn)                                           |
+| `history-clear` | Xoá lịch sử hỏi đáp của mình trong máy chủ này, báo số lượt đã xoá                                           |
+
 ---
 
 ## Menu chuột phải trên tin nhắn (4)
@@ -207,6 +238,7 @@ Bản cũ không có. Không đặt guild-only. Mọi menu mở hộp thoại ho
 | Nối từ         | Trong kênh đặt bởi `/word set`: bot thả phản ứng và trả lời theo luật nối từ; tin chat thường trong kênh được bỏ qua, trò đã đạt `max-words` thì im lặng đến khi `/word reset`                                                                                                                                                                                                                  |
 | Nghĩa của từ   | Từ được chấp nhận: sau ✅ bot trả lời (không ping, không xem trước link) từ loại, nghĩa Anh-Anh + ví dụ (en.wiktionary, dự phòng Datamuse), nghĩa tiếng Việt (vi.wiktionary, dự phòng dịch máy MyMemory, có ghi "dịch máy") và link Anh-Anh / Anh-Việt / Oxford. Tra trực tiếp, chỉ nhớ tạm trong RAM (5000 từ, 24 giờ); mọi nguồn lỗi thì chỉ có ✅. Việc chấm từ không phụ thuộc vào phần này |
 | Auto-react     | Tin chứa cụm trong từ điển phản ứng, hoặc có `react <emoji>`, được bot thả emoji tương ứng; áp dụng cả khi sửa tin. Emoji lỗi (thiếu quyền, server không có) bị bỏ qua, không báo người dùng                                                                                                                                                                                                    |
+| Chatbot        | Máy chủ phải bật (`/chatbot enable`) và có kênh (`/chatbot channel-add`). Trong kênh đó, nhắc thẳng bot hoặc trả lời một tin của bot thì bot trả lời bằng tin trả lời (ping người hỏi, không ping ai khác), kèm dòng cuối `-# còn lại x / tổng`. `@everyone`/`@role` không phải câu hỏi. Người đang chờ câu trả lời mà gửi thêm thì tin mới được thả ⏳ và bỏ qua. Thiết kế đầy đủ: `docs/architecture.md` |
 | Báo lỗi        | Lỗi bất ngờ khi chạy lệnh được gửi vào kênh `bot-log` của guild quản trị (không ping); người gọi chỉ thấy câu thông báo chung, không thấy chi tiết                                                                                                                                                                                                                                              |
 
 ## Lệnh đã bỏ
