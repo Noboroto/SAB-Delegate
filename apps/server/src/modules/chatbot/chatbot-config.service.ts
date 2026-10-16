@@ -48,6 +48,9 @@ const NO_OVERRIDE = {
   llmKeyLast4: null,
 } satisfies Prisma.ChatbotConfigUpdateInput;
 
+/** `dryRun` checks and previews without writing, auditing or taking a lock. */
+type ConfigWriteOptions = { dryRun?: boolean };
+
 type ConfigDb = Pick<Prisma.TransactionClient, 'chatbotConfig'>;
 
 function parseGuildId(guildId: string): string {
@@ -198,8 +201,17 @@ export class ChatbotConfigService {
     return null;
   }
 
-  /** Turns the chatbot on or off and/or sets the default monthly limit; the rest is left alone. */
-  async configure(guildId: string, patch: unknown, actor: ActorContext): Promise<ChatbotConfig> {
+  /**
+   * Turns the chatbot on or off and/or sets the default monthly limit; the rest
+   * is left alone. `dryRun` validates the same way and answers the config as it
+   * would become, writing and auditing nothing.
+   */
+  async configure(
+    guildId: string,
+    patch: unknown,
+    actor: ActorContext,
+    options: ConfigWriteOptions = {},
+  ): Promise<ChatbotConfig> {
     const id = parseGuildId(guildId);
     const parsed = ChatbotConfigPatchSchema.safeParse(patch);
     // A patch that names nothing would bump `updatedAt` and audit a non-change.
@@ -211,6 +223,7 @@ export class ChatbotConfigService {
         : { defaultMonthlyLimit: parsed.data.defaultMonthlyLimit }),
     };
     if (Object.keys(changes).length === 0) throw new ServiceError(ErrorCode.VALIDATION_FAILED);
+    if (options.dryRun === true) return { ...(await this.get(id)), ...changes };
     try {
       await this.prisma.$transaction(async (tx) => {
         const guild = await this.guilds.ensureGuild(id, undefined, tx);
@@ -245,9 +258,16 @@ export class ChatbotConfigService {
   /**
    * Designates `channelId`. Discord is asked before the transaction opens: a
    * network call must not hold a database transaction. Designating a channel
-   * the server already has is a no-op.
+   * the server already has is a no-op. `dryRun` runs the same checks without the
+   * claim lock or a write and answers the config as it would become; a real
+   * call answers nothing.
    */
-  async addChannel(guildId: string, channelId: string, actor: ActorContext): Promise<void> {
+  async addChannel(
+    guildId: string,
+    channelId: string,
+    actor: ActorContext,
+    options: ConfigWriteOptions = {},
+  ): Promise<ChatbotConfig | undefined> {
     const id = parseGuildId(guildId);
     const channel = SnowflakeSchema.safeParse(channelId);
     if (!channel.success) throw new ServiceError(ErrorCode.VALIDATION_FAILED);
@@ -261,6 +281,7 @@ export class ChatbotConfigService {
         throw new ServiceError(ErrorCode.DISCORD_MISSING_PERMISSIONS, { permission: need });
       }
     }
+    if (options.dryRun === true) return this.previewAddChannel(id, channel.data);
     try {
       await this.prisma.$transaction(async (tx) => {
         const guild = await this.guilds.ensureGuild(id, undefined, tx);
@@ -315,13 +336,48 @@ export class ChatbotConfigService {
     } finally {
       this.forget(id);
     }
+    return undefined;
   }
 
-  /** Undesignates `channelId` and forgets what the bot remembered about it. */
-  async removeChannel(guildId: string, channelId: string, actor: ActorContext): Promise<void> {
+  /** The checks of {@link addChannel} that only read, so a preview refuses what the real call would. */
+  private async previewAddChannel(guildId: string, channelId: string): Promise<ChatbotConfig> {
+    const current = await this.get(guildId);
+    if (current.channels.includes(channelId)) return current;
+    const [holder, word, game] = await Promise.all([
+      this.prisma.chatbotChannel.findUnique({ where: { channelId }, select: { id: true } }),
+      this.prisma.guildConfig.findFirst({
+        where: { wordChannelId: channelId },
+        select: { id: true },
+      }),
+      this.prisma.gameChannel.findUnique({ where: { channelId }, select: { id: true } }),
+    ]);
+    if (holder !== null || word !== null || game !== null) {
+      throw new ServiceError(ErrorCode.CHANNEL_IN_USE);
+    }
+    if (current.channels.length >= CHATBOT_MAX_CHANNELS) {
+      throw new ServiceError(ErrorCode.CHATBOT_CHANNEL_LIMIT_REACHED);
+    }
+    return { ...current, channels: [...current.channels, channelId] };
+  }
+
+  /**
+   * Undesignates `channelId` and forgets what the bot remembered about it.
+   * `dryRun` answers the config as it would become and writes nothing; a real
+   * call answers nothing.
+   */
+  async removeChannel(
+    guildId: string,
+    channelId: string,
+    actor: ActorContext,
+    options: ConfigWriteOptions = {},
+  ): Promise<ChatbotConfig | undefined> {
     const id = parseGuildId(guildId);
     const channel = SnowflakeSchema.safeParse(channelId);
     if (!channel.success) throw new ServiceError(ErrorCode.VALIDATION_FAILED);
+    if (options.dryRun === true) {
+      const current = await this.get(id);
+      return { ...current, channels: current.channels.filter((known) => known !== channel.data) };
+    }
     try {
       await this.prisma.$transaction(async (tx) => {
         const guild = await tx.guild.findUnique({ where: { discordId: id }, select: { id: true } });
@@ -347,6 +403,7 @@ export class ChatbotConfigService {
     } finally {
       this.forget(id);
     }
+    return undefined;
   }
 
   /**

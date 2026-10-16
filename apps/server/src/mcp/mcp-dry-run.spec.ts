@@ -34,6 +34,14 @@ const DRY_RUN_ARGS: Readonly<Record<string, Record<string, unknown>>> = {
   poll_create: { channelId: CHANNEL, choices: 3 },
   schedule_create: { channelId: CHANNEL, content: 'hello', runAt: '2099-01-01T00:00:00Z' },
   schedule_cancel: { seq: 3 },
+  chatbot_config_set: { enabled: true },
+  chatbot_channel_add: { channelId: CHANNEL },
+  chatbot_channel_remove: { channelId: CHANNEL },
+  chatbot_quota_set: { userId: USER, limit: 500 },
+  chatbot_quota_grant: { userId: USER, tokens: 100 },
+  chatbot_quota_reset: { userId: USER },
+  chatbot_memory_clear: { scope: 'all' },
+  chatbot_turn_delete: { scope: 'all' },
 };
 
 type Call = { target: string; args: unknown[] };

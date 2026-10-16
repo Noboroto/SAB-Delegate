@@ -511,6 +511,8 @@ describe('chatbot quota against Postgres', () => {
       const base = { page: 1, pageSize: 20, order: 'asc' as const };
       const all = await quota.list(guild, { ...base, sort: 'used', order: 'desc' }, NOW);
       expect(all.total).toBe(3);
+      expect(all.period).toBe('2026-10');
+      expect(all.defaultLimit).toBe(1_000);
       expect(all.items).toEqual([
         { userId: both, used: 900, limit: 2_000, bonus: 10, overridden: true, remaining: 1_110 },
         { userId: onlyUsage, used: 300, limit: 1_000, bonus: 0, overridden: false, remaining: 700 },
@@ -537,7 +539,9 @@ describe('chatbot quota against Postgres', () => {
     it('does not show another server', async () => {
       const [one, two] = [await newGuild(), await newGuild()];
       await quota.reserve(one, newUser(), 10, NOW);
-      await expect(quota.list(two, { page: 1, pageSize: 20, order: 'asc' }, NOW)).resolves.toEqual({
+      await expect(
+        quota.list(two, { page: 1, pageSize: 20, order: 'asc' }, NOW),
+      ).resolves.toMatchObject({
         items: [],
         total: 0,
       });

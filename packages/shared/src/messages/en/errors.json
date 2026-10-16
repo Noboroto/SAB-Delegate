@@ -17,6 +17,7 @@
   "DISCORD_MESSAGE_NOT_FOUND": "Message not found.",
   "CHANNEL_IN_USE": "This channel is already used by a game or the chatbot. Pick another one.",
   "CHATBOT_CHANNEL_LIMIT_REACHED": "This server already has the maximum number of chatbot channels. Remove one first.",
+  "CHATBOT_TURN_NOT_FOUND": "That chatbot exchange was not found. It may have been deleted already.",
   "LLM_NOT_AVAILABLE": "The server has no LLM_KEY_SECRET, so LLM settings cannot be saved yet.",
   "LLM_KEY_REQUIRED": "An API key is required (on the first save, or when the API address changes).",
   "VALIDATION_FAILED": "Some values are not valid. Check what you entered and try again.",

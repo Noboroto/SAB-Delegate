@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuditModule } from '../../common/audit/audit.module.js';
+import { restControllers, restImports } from '../../common/rest/rest-wiring.js';
 import { GuildConfigModule } from '../guild-config/guild-config.module.js';
 import { I18nModule } from '../../i18n/guild-locale.service.js';
 import { PgBossModule } from '../../jobs/pg-boss.module.js';
@@ -9,8 +10,10 @@ import { ChatbotContextService } from './chatbot-context.service.js';
 import { ChatbotHistoryCron } from './chatbot-history.cron.js';
 import { ChatbotHistoryService } from './chatbot-history.service.js';
 import { ChatbotMemoryService } from './chatbot-memory.service.js';
+import { ChatbotNamesService } from './chatbot-names.service.js';
 import { ChatbotRecoveryService } from './chatbot-recovery.service.js';
 import { ChatbotQuotaService } from './chatbot-quota.service.js';
+import { ChatbotController } from './chatbot.controller.js';
 import { ChatbotListener } from './chatbot.listener.js';
 import { ChatbotService } from './chatbot.service.js';
 
@@ -21,7 +24,8 @@ import { ChatbotService } from './chatbot.service.js';
  * `feature-modules.ts`.
  */
 @Module({
-  imports: [AuditModule, GuildConfigModule, I18nModule, LlmModule, PgBossModule],
+  imports: [AuditModule, GuildConfigModule, I18nModule, LlmModule, PgBossModule, ...restImports()],
+  controllers: restControllers([ChatbotController]),
   providers: [
     ChatbotConfigService,
     ChatbotQuotaService,
@@ -29,6 +33,7 @@ import { ChatbotService } from './chatbot.service.js';
     ChatbotHistoryCron,
     ChatbotContextService,
     ChatbotMemoryService,
+    ChatbotNamesService,
     ChatbotService,
     ChatbotListener,
     ChatbotRecoveryService,

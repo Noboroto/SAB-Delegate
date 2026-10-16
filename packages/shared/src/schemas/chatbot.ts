@@ -10,6 +10,7 @@ import {
 import { partialWithoutDefaults } from '../utils/partial-without-defaults.js';
 import { ListQuerySchema } from './list-query.js';
 import { LlmSettingsInputSchema, LlmTestResultSchema } from './llm.js';
+import { PaginatedSchema } from './pagination.js';
 import { SnowflakeSchema } from './snowflake.js';
 
 /** A token amount a limit, bonus or spent counter can hold. */
@@ -80,6 +81,31 @@ export const ChatbotQuotaRowSchema = z.object({
 
 export type ChatbotQuotaRow = z.infer<typeof ChatbotQuotaRowSchema>;
 
+/** The month's members, with the month they are counted in and the default a member without a limit of their own gets. */
+export const ChatbotQuotaPageSchema = PaginatedSchema(ChatbotQuotaRowSchema).extend({
+  /** The quota month, `YYYY-MM` in the business time zone. */
+  period: z.string().regex(/^\d{4}-\d{2}$/),
+  defaultLimit: TokenLimitSchema,
+});
+
+export type ChatbotQuotaPage = z.infer<typeof ChatbotQuotaPageSchema>;
+
+/** The member a route names. */
+export const ChatbotUserParamSchema = z.object({ userId: SnowflakeSchema });
+
+export const ChatbotQuotaResetRequestSchema = z.object({
+  /** Report what would be cleared without clearing it. */
+  dryRun: z.boolean().default(false),
+});
+
+export const ChatbotQuotaResetResultSchema = z.object({
+  dryRun: z.boolean(),
+  /** What the member had spent this month, before the reset. */
+  used: z.number().int().min(0),
+});
+
+export type ChatbotQuotaResetResult = z.infer<typeof ChatbotQuotaResetResultSchema>;
+
 /** `null` drops the member's own limit, so the server default applies again. */
 export const ChatbotQuotaSetRequestSchema = z.object({ limit: TokenLimitSchema.nullable() });
 
@@ -97,14 +123,17 @@ export const ChatbotQuotaGrantRequestSchema = z.object({
 
 export type ChatbotQuotaGrantRequest = z.infer<typeof ChatbotQuotaGrantRequestSchema>;
 
-export const ChatbotMemoryClearRequestSchema = z
-  .object({
-    scope: z.enum(['user', 'channel', 'all']),
-    userId: SnowflakeSchema.optional(),
-    channelId: SnowflakeSchema.optional(),
-    /** Count what would go without deleting it. */
-    dryRun: z.boolean().default(false),
-  })
+/** What a memory clear targets; MCP takes it without `dryRun`, which its write guard supplies. */
+export const ChatbotMemoryClearTargetSchema = z.object({
+  scope: z.enum(['user', 'channel', 'all']),
+  userId: SnowflakeSchema.optional(),
+  channelId: SnowflakeSchema.optional(),
+});
+
+export const ChatbotMemoryClearRequestSchema = ChatbotMemoryClearTargetSchema.extend({
+  /** Count what would go without deleting it. */
+  dryRun: z.boolean().default(false),
+})
   // Exactly the id the scope names: an extra id would be silently ignored and
   // clear more than the caller meant to.
   .refine((body) => (body.userId !== undefined) === (body.scope === 'user'), {
@@ -225,6 +254,18 @@ export const ChatbotTurnRowSchema = TurnBaseSchema.extend({
 
 export type ChatbotTurnRow = z.infer<typeof ChatbotTurnRowSchema>;
 
+/** A turn in a list, with the name the member has in the server; null once they have left. */
+const ChatbotTurnListRowSchema = ChatbotTurnRowSchema.extend({
+  displayName: ChatbotQuotaRowSchema.shape.displayName,
+});
+
+export const ChatbotTurnPageSchema = PaginatedSchema(ChatbotTurnListRowSchema);
+
+export type ChatbotTurnPage = z.infer<typeof ChatbotTurnPageSchema>;
+
+/** The turn a route names. */
+export const ChatbotTurnParamSchema = z.object({ id: z.uuid() });
+
 /**
  * For admins of the server only. `context` is null when the stored snapshot no
  * longer parses.
@@ -262,14 +303,17 @@ export const ChatbotTurnListQuerySchema = ListQuerySchema(['createdAt'])
 
 export type ChatbotTurnListQuery = z.infer<typeof ChatbotTurnListQuerySchema>;
 
-export const ChatbotTurnDeleteRequestSchema = z
-  .object({
-    scope: z.enum(['turn', 'user', 'all']),
-    turnId: z.uuid().optional(),
-    userId: SnowflakeSchema.optional(),
-    /** Count what would go without deleting it. */
-    dryRun: z.boolean().default(false),
-  })
+/** What a turn delete targets; MCP takes it without `dryRun`, which its write guard supplies. */
+export const ChatbotTurnDeleteTargetSchema = z.object({
+  scope: z.enum(['turn', 'user', 'all']),
+  turnId: z.uuid().optional(),
+  userId: SnowflakeSchema.optional(),
+});
+
+export const ChatbotTurnDeleteRequestSchema = ChatbotTurnDeleteTargetSchema.extend({
+  /** Count what would go without deleting it. */
+  dryRun: z.boolean().default(false),
+})
   // Exactly the ids the scope names: an extra id would be silently ignored and
   // delete more than the caller meant to. For scope "turn" a userId is an
   // optional owner check, which is how a member deletes only their own turn.

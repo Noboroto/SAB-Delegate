@@ -494,6 +494,70 @@ describe('ChatbotConfigService.addChannel', () => {
   });
 });
 
+describe('ChatbotConfigService dryRun', () => {
+  const row = (channels: string[]) => ({
+    chatbot: { enabled: false, defaultMonthlyLimit: 100_000 },
+    chatbotChannels: channels.map((channelId) => ({ channelId })),
+  });
+  const untouched = ({ prisma, audit, guilds }: ReturnType<typeof build>) => {
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(audit.record).not.toHaveBeenCalled();
+    expect(guilds.lockChannelClaim).not.toHaveBeenCalled();
+  };
+
+  it('configure answers the config with the change applied and writes nothing', async () => {
+    const built = build({ row: row([CHANNEL]) });
+    const preview = await built.service.configure(GUILD, { enabled: true }, ACTOR, {
+      dryRun: true,
+    });
+    expect(preview).toMatchObject({ enabled: true, defaultMonthlyLimit: 100_000 });
+    untouched(built);
+    await expect(built.service.configure(GUILD, {}, ACTOR, { dryRun: true })).rejects.toMatchObject(
+      { code: ErrorCode.VALIDATION_FAILED },
+    );
+  });
+
+  it('addChannel checks access and ownership like a real call, then adds in memory only', async () => {
+    const built = build({ row: row([]) });
+    const preview = await built.service.addChannel(GUILD, CHANNEL, ACTOR, { dryRun: true });
+    expect(preview?.channels).toEqual([CHANNEL]);
+    untouched(built);
+
+    const denied = build({ access: 'forbidden' });
+    await expect(
+      denied.service.addChannel(GUILD, CHANNEL, ACTOR, { dryRun: true }),
+    ).rejects.toMatchObject({ code: ErrorCode.DISCORD_MISSING_PERMISSIONS });
+    for (const setup of [{ holder: { guildId: 'other' } }, { word: true }, { game: true }]) {
+      const taken = build({ row: row([]), ...setup });
+      await expect(
+        taken.service.addChannel(GUILD, CHANNEL, ACTOR, { dryRun: true }),
+      ).rejects.toMatchObject({ code: ErrorCode.CHANNEL_IN_USE });
+    }
+    const full = build({
+      row: row(
+        Array.from({ length: CHATBOT_MAX_CHANNELS }, (_, n) => String(300_000_000_000_000_000 + n)),
+      ),
+    });
+    await expect(
+      full.service.addChannel(GUILD, CHANNEL, ACTOR, { dryRun: true }),
+    ).rejects.toMatchObject({ code: ErrorCode.CHATBOT_CHANNEL_LIMIT_REACHED });
+  });
+
+  it('addChannel on a channel the server already has answers the config unchanged', async () => {
+    const built = build({ row: row([CHANNEL]), holder: { guildId: 'guild-key' } });
+    const preview = await built.service.addChannel(GUILD, CHANNEL, ACTOR, { dryRun: true });
+    expect(preview?.channels).toEqual([CHANNEL]);
+  });
+
+  it('removeChannel answers the config without the channel and writes nothing', async () => {
+    const built = build({ row: row([CHANNEL, '777777777777777777']) });
+    const preview = await built.service.removeChannel(GUILD, CHANNEL, ACTOR, { dryRun: true });
+    expect(preview?.channels).toEqual(['777777777777777777']);
+    expect(built.chatbotChannel.deleteMany).not.toHaveBeenCalled();
+    untouched(built);
+  });
+});
+
 describe('ChatbotConfigService.removeChannel', () => {
   it('deletes the channel and its memory together, then audits', async () => {
     const { service, chatbotChannel, chatbotChannelMemory, audit, prisma } = build();

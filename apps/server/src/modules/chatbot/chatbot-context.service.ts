@@ -3,9 +3,7 @@ import { CHATBOT_CONTEXT_LINE_MAX_CHARS, CHATBOT_CONTEXT_MESSAGES } from '@sab/s
 import type { Message } from 'discord.js';
 import { clipText } from './chatbot-prompt.js';
 import { describeFailure, type loadAttachments } from './chatbot-attachments.js';
-
-/** How long the one batched member lookup may take before names fall back to usernames. */
-const MEMBER_FETCH_TIMEOUT_MS = 5_000;
+import { lookupDisplayNames } from './chatbot-member-names.js';
 
 const NO_CONTENT = '(không có nội dung)';
 
@@ -186,24 +184,18 @@ export class ChatbotContextService {
     botName: string,
   ): Promise<Map<string, string>> {
     const names = new Map<string, string>([[botId, botName]]);
-    const missing = new Set<string>();
+    const unknown = new Set<string>();
     for (const source of sources) {
       const id = source.author.id;
       if (names.has(id)) continue;
-      const known = source.member?.displayName ?? members.cache.get(id)?.displayName;
-      if (known === undefined) missing.add(id);
+      const known = source.member?.displayName;
+      if (known === undefined) unknown.add(id);
       else names.set(id, known);
     }
-    if (missing.size === 0) return names;
-    try {
-      const found = await members.fetch({
-        user: [...missing],
-        time: MEMBER_FETCH_TIMEOUT_MS,
-      });
-      for (const member of found.values()) names.set(member.id, member.displayName);
-    } catch (error) {
+    const found = await lookupDisplayNames(members, unknown, (error) => {
       this.logger.warn(`Member lookup failed (${describeFailure(error)})`);
-    }
+    });
+    for (const [id, name] of found) names.set(id, name);
     return names;
   }
 }

@@ -26,6 +26,8 @@ type Quota = Pick<ChatbotQuotaRow, 'used' | 'limit' | 'bonus' | 'overridden' | '
 
 type QuotaListItem = Omit<ChatbotQuotaRow, 'displayName'>;
 
+type QuotaPage = { items: QuotaListItem[]; total: number; period: string; defaultLimit: number };
+
 type QuotaColumns = {
   limit: number;
   bonus: number;
@@ -383,17 +385,35 @@ export class ChatbotQuotaService {
     if (count === 0) this.warnNoRow('refund', guild, user, period);
   }
 
-  /** Gives the member their own monthly limit, or `null` to fall back to the server default. */
+  /**
+   * Gives the member their own monthly limit, or `null` to fall back to the
+   * server default. `dryRun` answers the month as it would become and writes
+   * nothing.
+   */
   async setLimit(
     guildId: string,
     userId: string,
     limit: number | null,
     actor: ActorContext,
+    options: { dryRun?: boolean } = {},
   ): Promise<Quota> {
     const guild = parseSnowflake(guildId);
     const user = parseSnowflake(userId);
     const parsed = ChatbotQuotaSetRequestSchema.safeParse({ limit });
     if (!parsed.success) throw new ServiceError(ErrorCode.VALIDATION_FAILED);
+    if (options.dryRun === true) {
+      const current = await this.limitOf(guild, user);
+      const config = await this.prisma.chatbotConfig.findFirst({
+        where: { guild: { discordId: guild } },
+        select: { defaultMonthlyLimit: true },
+      });
+      return toQuota({
+        limit: parsed.data.limit ?? config?.defaultMonthlyLimit ?? CHATBOT_DEFAULT_MONTHLY_LIMIT,
+        bonus: current.bonus,
+        used: current.used,
+        overridden: parsed.data.limit !== null,
+      });
+    }
 
     await this.prisma.$transaction(async (tx) => {
       const row = await this.guilds.ensureGuild(guild, undefined, tx);
@@ -421,7 +441,8 @@ export class ChatbotQuotaService {
 
   /**
    * Adds `tokens` (negative takes back) to this month's bonus. The bonus never
-   * drops below zero and never passes the column ceiling.
+   * drops below zero and never passes the column ceiling. `dryRun` answers the
+   * month as it would become and writes nothing.
    */
   async grant(
     guildId: string,
@@ -429,12 +450,20 @@ export class ChatbotQuotaService {
     tokens: number,
     actor: ActorContext,
     now: Date = new Date(),
+    options: { dryRun?: boolean } = {},
   ): Promise<Quota> {
     const guild = parseSnowflake(guildId);
     const user = parseSnowflake(userId);
     const parsed = ChatbotQuotaGrantRequestSchema.safeParse({ tokens });
     if (!parsed.success) throw new ServiceError(ErrorCode.VALIDATION_FAILED);
     const period = periodOf(now);
+    if (options.dryRun === true) {
+      const current = await this.limitOf(guild, user, period);
+      return toQuota({
+        ...current,
+        bonus: Math.min(CHATBOT_LIMIT_MAX, Math.max(0, current.bonus + parsed.data.tokens)),
+      });
+    }
 
     await this.prisma.$transaction(async (tx) => {
       const row = await this.guilds.ensureGuild(guild, undefined, tx);
@@ -515,13 +544,20 @@ export class ChatbotQuotaService {
     guildId: string,
     query: ChatbotQuotaListQuery,
     now: Date = new Date(),
-  ): Promise<{ items: QuotaListItem[]; total: number }> {
+  ): Promise<QuotaPage> {
     const guild = parseSnowflake(guildId);
+    // The month and the default are answered with the page so a caller shows
+    // the ones the rows were counted with.
     const period = periodOf(now);
+    const config = await this.prisma.chatbotConfig.findFirst({
+      where: { guild: { discordId: guild } },
+      select: { defaultMonthlyLimit: true },
+    });
+    const defaultLimit = clampTokens(config?.defaultMonthlyLimit ?? CHATBOT_DEFAULT_MONTHLY_LIMIT);
     const search = query.q;
     // Member ids are digits; any other search text can match nothing.
     if (search !== undefined && search !== '' && !DIGITS.test(search)) {
-      return { items: [], total: 0 };
+      return { items: [], total: 0, period, defaultLimit };
     }
     const filter =
       search === undefined || search === ''
@@ -575,6 +611,8 @@ export class ChatbotQuotaService {
         };
       }),
       total: counted[0]?.total ?? 0,
+      period,
+      defaultLimit,
     };
   }
 

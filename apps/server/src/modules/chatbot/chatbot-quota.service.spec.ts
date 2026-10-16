@@ -14,6 +14,8 @@ type Setup = {
   /** What `$queryRaw` resolves, call after call. */
   raw?: unknown[][];
   guildKey?: string | null;
+  /** The server's default monthly limit, when it set one. */
+  defaultLimit?: number;
 };
 
 function build(setup: Setup = {}) {
@@ -30,6 +32,13 @@ function build(setup: Setup = {}) {
         .mockResolvedValue(setup.guildKey === null ? null : { id: setup.guildKey ?? 'guild-key' }),
     },
     chatbotUsage: { createMany: vi.fn().mockResolvedValue({ count: 1 }) },
+    chatbotConfig: {
+      findFirst: vi
+        .fn()
+        .mockResolvedValue(
+          setup.defaultLimit === undefined ? null : { defaultMonthlyLimit: setup.defaultLimit },
+        ),
+    },
   };
   const ensureGuild = vi.fn().mockResolvedValue({ id: 'created-key' });
   const service = new ChatbotQuotaService(
@@ -218,6 +227,54 @@ describe('ChatbotQuotaService (unit)', () => {
       expect(prisma.$transaction).not.toHaveBeenCalled();
     });
 
+    it('previews a limit and a cleared limit without a transaction', async () => {
+      const month = { limit: 100, bonus: 5, used: 40, overridden: false };
+      const own = build({ raw: [[month]] });
+      await expect(
+        own.service.setLimit(GUILD, USER, 300, actor, { dryRun: true }),
+      ).resolves.toMatchObject({
+        limit: 300,
+        overridden: true,
+        bonus: 5,
+        used: 40,
+        remaining: 265,
+      });
+      const cleared = build({
+        raw: [[{ ...month, limit: 300, overridden: true }]],
+        defaultLimit: 80,
+      });
+      await expect(
+        cleared.service.setLimit(GUILD, USER, null, actor, { dryRun: true }),
+      ).resolves.toMatchObject({ limit: 80, overridden: false });
+      expect(own.prisma.$transaction).not.toHaveBeenCalled();
+      expect(cleared.prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('validates a previewed limit and grant like a real one', async () => {
+      const { service, prisma } = build();
+      await expect(
+        service.setLimit(GUILD, USER, -1, actor, { dryRun: true }),
+      ).rejects.toMatchObject({ code: ErrorCode.VALIDATION_FAILED });
+      await expect(
+        service.grant(GUILD, USER, 0, actor, new Date(), { dryRun: true }),
+      ).rejects.toMatchObject({ code: ErrorCode.VALIDATION_FAILED });
+      expect(prisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('previews a grant with the bonus kept between zero and the ceiling', async () => {
+      const month = { limit: 100, bonus: 5, used: 0, overridden: false };
+      const up = build({ raw: [[month]] });
+      await expect(
+        up.service.grant(GUILD, USER, 10, actor, new Date(), { dryRun: true }),
+      ).resolves.toMatchObject({ bonus: 15, remaining: 115 });
+      const down = build({ raw: [[month]] });
+      await expect(
+        down.service.grant(GUILD, USER, -50, actor, new Date(), { dryRun: true }),
+      ).resolves.toMatchObject({ bonus: 0 });
+      expect(up.prisma.$transaction).not.toHaveBeenCalled();
+      expect(up.prisma.$executeRaw).not.toHaveBeenCalled();
+    });
+
     it('reports a dry-run reset without opening a transaction', async () => {
       const { service, prisma } = build({
         raw: [[{ limit: 100, bonus: 0, used: 42, overridden: false }]],
@@ -235,9 +292,10 @@ describe('ChatbotQuotaService (unit)', () => {
 
     it('matches nothing for a search that cannot be a member id, without a query', async () => {
       const { service, prisma } = build();
-      await expect(service.list(GUILD, { ...base, q: 'abc%' })).resolves.toEqual({
+      await expect(service.list(GUILD, { ...base, q: 'abc%' })).resolves.toMatchObject({
         items: [],
         total: 0,
+        defaultLimit: CHATBOT_DEFAULT_MONTHLY_LIMIT,
       });
       expect(prisma.$queryRaw).not.toHaveBeenCalled();
     });
@@ -246,9 +304,12 @@ describe('ChatbotQuotaService (unit)', () => {
       const { service } = build({
         raw: [[{ userId: USER, used: 9, bonus: 1, limit: 5, overridden: true }], [{ total: 41 }]],
       });
-      await expect(service.list(GUILD, base)).resolves.toEqual({
+      const page = await service.list(GUILD, base, new Date('2026-10-15T05:00:00Z'));
+      expect(page).toEqual({
         items: [{ userId: USER, used: 9, limit: 5, bonus: 1, overridden: true, remaining: 0 }],
         total: 41,
+        period: '2026-10',
+        defaultLimit: CHATBOT_DEFAULT_MONTHLY_LIMIT,
       });
     });
   });
