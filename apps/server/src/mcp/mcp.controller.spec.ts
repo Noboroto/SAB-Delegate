@@ -56,6 +56,18 @@ describe('McpController', () => {
       new FastifyAdapter(fastifyOptions(['127.0.0.1'])),
     );
     installMcpHooks(app.getHttpAdapter().getInstance());
+    // `inject` hands the handler a fake socket without `destroySoon`, which the
+    // MCP transport's node adapter calls from a timer when a response ends
+    // before the request body was read; on a loaded machine that timer fires
+    // during the run and surfaces as an uncaught error. Real sockets have it.
+    app
+      .getHttpAdapter()
+      .getInstance()
+      .addHook('onRequest', (request, _reply, done) => {
+        const socket = request.raw.socket as { destroySoon?: () => void; destroy?: () => void };
+        socket.destroySoon ??= () => socket.destroy?.();
+        done();
+      });
     await app.init();
     await app.getHttpAdapter().getInstance().ready();
   });
