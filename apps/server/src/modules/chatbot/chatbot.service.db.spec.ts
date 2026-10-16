@@ -14,6 +14,7 @@ import type { ChatbotConfigService } from './chatbot-config.service.js';
 import type { ChatbotContextService } from './chatbot-context.service.js';
 import { ChatbotHistoryService } from './chatbot-history.service.js';
 import { ChatbotMemoryService } from './chatbot-memory.service.js';
+import { ChatbotPauseService } from '../llm/chatbot-pause.service.js';
 import { ChatbotQuotaService } from './chatbot-quota.service.js';
 import { ChatbotRecoveryService } from './chatbot-recovery.service.js';
 import type { ChatbotListener } from './chatbot.listener.js';
@@ -153,6 +154,7 @@ describe('chatbot reply against Postgres', () => {
       history,
       llm as unknown as LlmChatService,
       { resolve: vi.fn().mockResolvedValue('vi') } as unknown as GuildLocaleService,
+      new ChatbotPauseService(),
     );
     behaviour = answers;
   });

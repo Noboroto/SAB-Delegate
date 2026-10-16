@@ -12,6 +12,8 @@ import pLimit from 'p-limit';
 import { AuditService } from '../../common/audit/audit.service.js';
 import { ServiceError } from '../../common/errors/service-error.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
+import { ChatbotPauseService, pauseKeyOf } from './chatbot-pause.service.js';
+import { isOutOfCredit } from './llm-chat.service.js';
 import { SafePostError, safePostJson } from './safe-post.js';
 import { decryptSecret, encryptSecret } from './secret-box.js';
 
@@ -70,6 +72,7 @@ export class LlmService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     @Inject(LLM_ENV) private readonly env: LlmEnv,
+    private readonly pause: ChatbotPauseService,
   ) {}
 
   /** The admin guild's id: the only server whose managers configure the LLM. */
@@ -122,6 +125,7 @@ export class LlmService {
 
     // New settings deserve a new try, whatever the old ones did.
     this.pausedUntil = 0;
+    this.pause.clearGlobal();
     await this.prisma.$transaction(async (tx) => {
       await tx.llmConfig.upsert({
         where: { singleton: true },
@@ -164,6 +168,8 @@ export class LlmService {
     }
     try {
       await this.complete({ baseUrl, model, apiKey: key }, 'Trả lời đúng một từ: OK', 5);
+      // A working endpoint ends an outage the admin has just fixed (a top-up, a new plan).
+      this.pause.clear(pauseKeyOf(null, baseUrl, model, key.slice(-4)));
       return { ok: true };
     } catch (error) {
       return { ok: false, reason: failureReason(error) };
@@ -225,6 +231,9 @@ export class LlmService {
       });
     }
     if (response.status === 401 || response.status === 403) throw new LlmUnauthorized();
+    if (isOutOfCredit(response.status, JSON.stringify(response.body ?? ''))) {
+      throw new LlmOutOfCredit();
+    }
     const parsed = CompletionSchema.safeParse(response.body);
     if (response.status !== 200 || !parsed.success) throw new SafePostError('bad_response');
     const choice = parsed.data.choices[0];
@@ -286,9 +295,11 @@ export class LlmService {
 }
 
 class LlmUnauthorized extends Error {}
+class LlmOutOfCredit extends Error {}
 
 function failureReason(error: unknown): NonNullable<LlmTestResult['reason']> {
   if (error instanceof LlmUnauthorized) return 'unauthorized';
+  if (error instanceof LlmOutOfCredit) return 'provider_quota';
   if (error instanceof SafePostError) {
     return error.reason === 'too_large' ? 'bad_response' : error.reason;
   }

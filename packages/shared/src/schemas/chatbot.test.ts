@@ -47,6 +47,19 @@ describe('ChatbotConfigSchema', () => {
     expect(parsed).not.toHaveProperty('llmApiKeyEnc');
   });
 
+  it('carries the pause deadline only as an ISO time and may omit it', () => {
+    const base = {
+      enabled: true,
+      defaultMonthlyLimit: 0,
+      channels: [],
+      llm: { source: 'global', baseUrl: null, model: null, keyLast4: null, globalAvailable: true },
+    };
+    const withPause = (pausedUntil: string) => ({ ...base, llm: { ...base.llm, pausedUntil } });
+    expect(ChatbotConfigSchema.safeParse(base).success).toBe(true);
+    expect(ChatbotConfigSchema.safeParse(withPause('2026-10-16T08:30:00.000Z')).success).toBe(true);
+    expect(ChatbotConfigSchema.safeParse(withPause('half past eight')).success).toBe(false);
+  });
+
   it('caps the channel list at the allowed number', () => {
     const base = {
       enabled: true,

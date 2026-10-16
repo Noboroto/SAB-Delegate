@@ -1,7 +1,9 @@
+import { randomBytes } from 'node:crypto';
 import { ErrorCode } from '@sab/shared';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AuditService } from '../../common/audit/audit.service.js';
 import type { PrismaService } from '../../prisma/prisma.service.js';
+import { ChatbotPauseService, pauseKeyOf } from './chatbot-pause.service.js';
 import { LlmService } from './llm.service.js';
 import type * as SafePost from './safe-post.js';
 import { SafePostError } from './safe-post.js';
@@ -27,6 +29,7 @@ type Row = {
 };
 
 function build(options: { secret?: string | null; row?: Row | null } = {}) {
+  const pause = new ChatbotPauseService();
   let row: Row | null = options.row ?? null;
   const llmConfig = {
     findUnique: vi.fn(() => Promise.resolve(row === null ? null : { ...row })),
@@ -45,8 +48,9 @@ function build(options: { secret?: string | null; row?: Row | null } = {}) {
     prisma as unknown as PrismaService,
     audit as unknown as AuditService,
     { secret, adminGuildId: ADMIN },
+    pause,
   );
-  return { service, llmConfig, audit, stored: () => row };
+  return { service, llmConfig, audit, pause, stored: () => row };
 }
 
 const saved = (overrides: Partial<Row> = {}): Row => ({
@@ -182,6 +186,59 @@ describe('LlmService.test', () => {
     await expect(
       service.test({ baseUrl: BASE, model: 'm', enabled: true, apiKey: 'sk-test-key-0001' }),
     ).resolves.toEqual({ ok: false, reason: 'bad_response' });
+  });
+});
+
+describe('LlmService: provider out of credit', () => {
+  const key = `fx-${randomBytes(8).toString('hex')}`;
+  const input = { baseUrl: BASE, model: 'm', enabled: true, apiKey: key };
+  const pauseKey = pauseKeyOf(null, BASE, 'm', key.slice(-4));
+
+  it.each([
+    [402, { error: 'pay up' }],
+    [429, { error: { code: 'insufficient_quota' } }],
+  ])('reports a %i as provider_quota', async (status, body) => {
+    const { service } = build();
+    post.mockResolvedValueOnce({ status, body });
+    await expect(service.test(input)).resolves.toEqual({ ok: false, reason: 'provider_quota' });
+  });
+
+  it('does not read a per-minute quota 429 as an empty account', async () => {
+    const { service } = build();
+    post.mockResolvedValueOnce({
+      status: 429,
+      body: { error: { message: 'Quota exceeded for metric x, limit: 15 per minute' } },
+    });
+    await expect(service.test(input)).resolves.toEqual({ ok: false, reason: 'bad_response' });
+  });
+
+  it('still reports a plain 429 as an unexpected answer', async () => {
+    const { service } = build();
+    post.mockResolvedValueOnce({ status: 429, body: { error: 'slow down' } });
+    await expect(service.test(input)).resolves.toEqual({ ok: false, reason: 'bad_response' });
+  });
+
+  it('ends the pause of that very model when the test works, and only then', async () => {
+    const { service, pause } = build();
+    pause.trip(pauseKey, null, 0);
+    post.mockResolvedValueOnce({ status: 402, body: null });
+    await service.test(input);
+    expect(pause.pausedUntil(pauseKey)).not.toBeNull();
+
+    post.mockResolvedValueOnce(answer('OK'));
+    await service.test({ ...input, model: 'other' });
+    expect(pause.pausedUntil(pauseKey)).not.toBeNull();
+
+    post.mockResolvedValueOnce(answer('OK'));
+    await service.test(input);
+    expect(pause.pausedUntil(pauseKey)).toBeNull();
+  });
+
+  it('gives saved settings a fresh start', async () => {
+    const { service, pause } = build();
+    pause.trip(pauseKey, null, 0);
+    await service.save(input, ACTOR);
+    expect(pause.pausedUntil(pauseKey)).toBeNull();
   });
 });
 

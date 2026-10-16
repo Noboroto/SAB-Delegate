@@ -21,6 +21,7 @@ import { PrismaService } from '../../prisma/prisma.service.js';
 import { GuildConfigService } from '../guild-config/guild-config.service.js';
 import { LlmChatError, LlmChatService } from '../llm/llm-chat.service.js';
 import { LlmService, type LlmTarget } from '../llm/llm.service.js';
+import { ChatbotPauseService, pauseKeyOf } from '../llm/chatbot-pause.service.js';
 
 /** One server's chatbot as far as routing a message needs. */
 type Route = { enabled: boolean; channels: ReadonlySet<string> };
@@ -90,7 +91,13 @@ export class ChatbotConfigService {
     private readonly channelAccess: ChannelAccessService,
     private readonly llm: LlmService,
     private readonly chat: LlmChatService,
+    private readonly pause: ChatbotPauseService,
   ) {}
+
+  /** The server whose `#bot-log` hears about the bot's own problems. */
+  get alertGuildId(): string {
+    return this.llm.adminGuildId;
+  }
 
   /**
    * Whether the chatbot is on in `channelId`: `null` for any channel that is
@@ -135,10 +142,12 @@ export class ChatbotConfigService {
       },
     });
     const config = row?.chatbot;
-    const globalAvailable = (await this.llm.globalTarget()) !== null;
+    const globalTarget = await this.llm.globalTarget();
+    const globalAvailable = globalTarget !== null;
     const own = config?.llmBaseUrl != null;
     let source: 'guild' | 'global' | 'none' = globalAvailable ? 'global' : 'none';
     if (own) source = 'guild';
+    const pausedUntil = this.pausedUntilOf(id, source, config, globalTarget);
     return ChatbotConfigSchema.parse({
       enabled: config?.enabled ?? false,
       defaultMonthlyLimit: config?.defaultMonthlyLimit ?? CHATBOT_DEFAULT_MONTHLY_LIMIT,
@@ -153,8 +162,40 @@ export class ChatbotConfigService {
             ? (config.llmKeyLast4 ?? null)
             : null,
         globalAvailable,
+        ...(pausedUntil === null ? {} : { pausedUntil: pausedUntil.toISOString() }),
       },
     });
+  }
+
+  /** When calls to the model that answers for the server resume, `null` if they are not held back. */
+  private pausedUntilOf(
+    guildId: string,
+    source: 'guild' | 'global' | 'none',
+    own:
+      | { llmBaseUrl: string | null; llmModel: string | null; llmApiKeyEnc: string | null }
+      | null
+      | undefined,
+    globalTarget: LlmTarget | null,
+  ): Date | null {
+    if (source === 'global' && globalTarget !== null) {
+      const { baseUrl, model, apiKey } = globalTarget;
+      return this.pause.pausedUntil(pauseKeyOf(null, baseUrl, model, apiKey.slice(-4)));
+    }
+    if (
+      source === 'guild' &&
+      own?.llmBaseUrl != null &&
+      own.llmModel != null &&
+      own.llmApiKeyEnc != null
+    ) {
+      // The runtime keys the pause by the opened key's tail, not by the stored
+      // column, so the dashboard asks the same way; an unreadable key answers nothing.
+      const apiKey = this.llm.openKey(own.llmApiKeyEnc);
+      if (apiKey === null) return null;
+      return this.pause.pausedUntil(
+        pauseKeyOf(guildId, own.llmBaseUrl, own.llmModel, apiKey.slice(-4)),
+      );
+    }
+    return null;
   }
 
   /** Turns the chatbot on or off and/or sets the default monthly limit; the rest is left alone. */
@@ -370,6 +411,8 @@ export class ChatbotConfigService {
       );
     });
     this.unreadableWarned.delete(id);
+    // New settings deserve a new try, whatever the old ones did.
+    this.pause.clearGuild(id);
     return this.get(id);
   }
 
@@ -388,6 +431,7 @@ export class ChatbotConfigService {
       );
     });
     this.unreadableWarned.delete(id);
+    this.pause.clearGuild(id);
     return this.get(id);
   }
 
@@ -415,6 +459,8 @@ export class ChatbotConfigService {
     }
     try {
       await this.chat.ping({ baseUrl, model, apiKey });
+      // A working endpoint ends an outage the admin has just fixed (a top-up, a new plan).
+      this.pause.clear(pauseKeyOf(id, baseUrl, model, apiKey.slice(-4)));
       return { ok: true };
     } catch (error) {
       if (error instanceof LlmChatError) return { ok: false, reason: error.reason };

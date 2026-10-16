@@ -67,3 +67,6 @@ export const CHATBOT_MAX_OUTPUT_TOKENS = 1000;
 
 /** After a restart, a mention taken in but not answered is still answered when it is at most this old. */
 export const CHATBOT_RECOVERY_MAX_AGE_MS = 10 * 60_000;
+
+/** How long calls to a model are held back after its provider reported no credit left. */
+export const CHATBOT_PROVIDER_PAUSE_MS = 15 * 60_000;

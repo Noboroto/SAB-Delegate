@@ -55,7 +55,9 @@ export type LlmSettingsInput = z.infer<typeof LlmSettingsInputSchema>;
 export const LlmTestResultSchema = z.object({
   ok: z.boolean(),
   /** Why the test failed; the provider's own error text is never passed on. */
-  reason: z.enum(['unreachable', 'blocked', 'unauthorized', 'bad_response']).optional(),
+  reason: z
+    .enum(['unreachable', 'blocked', 'unauthorized', 'provider_quota', 'bad_response'])
+    .optional(),
 });
 
 export type LlmTestResult = z.infer<typeof LlmTestResultSchema>;

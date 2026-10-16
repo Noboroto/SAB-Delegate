@@ -9,10 +9,12 @@ import type { GuildConfigService } from '../guild-config/guild-config.service.js
 import { LlmChatError, type LlmChatService } from '../llm/llm-chat.service.js';
 import type { LlmService } from '../llm/llm.service.js';
 import { ChatbotConfigService } from './chatbot-config.service.js';
+import { ChatbotPauseService, pauseKeyOf } from '../llm/chatbot-pause.service.js';
 
 const GUILD = '100000000000000001';
 const CHANNEL = '200000000000000001';
 const OTHER_CHANNEL = '200000000000000002';
+const ADMIN_GUILD = '700000000000000001';
 const ACTOR: ActorContext = { source: 'HTTP', userId: '300000000000000001' };
 const URL_A = 'https://api.example.test/v1';
 const URL_B = 'https://other.example.test/v1';
@@ -108,11 +110,13 @@ function build(setup: Setup = {}) {
       if (setup.noSecret === true) throw new ServiceError(ErrorCode.LLM_NOT_AVAILABLE);
     }),
     sealKey: vi.fn((plain: string) => `sealed:${plain}`),
+    adminGuildId: ADMIN_GUILD,
     openKey: vi.fn((stored: string) =>
       setup.unreadable === true ? null : stored.replace(/^sealed:/u, ''),
     ),
   };
   const chat = { ping: vi.fn().mockResolvedValue(undefined) };
+  const pause = new ChatbotPauseService();
   const service = new ChatbotConfigService(
     prisma as unknown as PrismaService,
     audit as unknown as AuditService,
@@ -120,9 +124,11 @@ function build(setup: Setup = {}) {
     access as unknown as ChannelAccessService,
     llm as unknown as LlmService,
     chat as unknown as LlmChatService,
+    pause,
   );
   return {
     service,
+    pause,
     prisma,
     tx,
     chatbotChannel,
@@ -686,6 +692,89 @@ describe('ChatbotConfigService.testOverride', () => {
     const bug = new Error('bug');
     chat.ping.mockRejectedValueOnce(bug);
     await expect(service.testOverride(GUILD, input)).rejects.toBe(bug);
+  });
+});
+
+describe('ChatbotConfigService: provider out of credit', () => {
+  const ownKey = keyOf('own');
+  const own = {
+    llmBaseUrl: URL_A,
+    llmModel: 'gpt',
+    llmApiKeyEnc: `sealed:${ownKey}`,
+    llmKeyLast4: ownKey.slice(-4),
+  };
+  const ownRow = { chatbot: { ...DEFAULTS, ...own }, chatbotChannels: [] };
+  const ownPauseKey = pauseKeyOf(GUILD, URL_A, 'gpt', ownKey.slice(-4));
+  const sharedKey = keyOf('shared');
+  const shared = { baseUrl: URL_B, model: 'm', apiKey: sharedKey };
+  const sharedPauseKey = pauseKeyOf(null, URL_B, 'm', sharedKey.slice(-4));
+
+  it('shows when the own model resumes, and nothing once the window has passed', async () => {
+    const { service, pause } = build({ row: ownRow });
+    expect((await service.get(GUILD)).llm.pausedUntil).toBeUndefined();
+    const { until } = pause.trip(ownPauseKey, GUILD, 0);
+    expect((await service.get(GUILD)).llm.pausedUntil).toBe(until.toISOString());
+  });
+
+  it('keys the own pause by the opened key even when the stored last four are missing', async () => {
+    const { service, pause } = build({
+      row: { chatbot: { ...DEFAULTS, ...own, llmKeyLast4: null }, chatbotChannels: [] },
+    });
+    const { until } = pause.trip(ownPauseKey, GUILD, 0);
+    expect((await service.get(GUILD)).llm.pausedUntil).toBe(until.toISOString());
+  });
+
+  it('shows the shared pause only for servers that use the shared model', async () => {
+    const sharedRow = { chatbot: DEFAULTS, chatbotChannels: [] };
+    const { service, pause } = build({ row: sharedRow, globalTarget: shared });
+    const { until } = pause.trip(sharedPauseKey, null, 0);
+    expect((await service.get(GUILD)).llm.pausedUntil).toBe(until.toISOString());
+
+    const withOwn = build({ row: ownRow, globalTarget: shared });
+    withOwn.pause.trip(sharedPauseKey, null, 0);
+    expect((await withOwn.service.get(GUILD)).llm.pausedUntil).toBeUndefined();
+  });
+
+  it('shows the own pause as nothing when the pause belongs to another server', async () => {
+    const { service, pause } = build({ row: ownRow });
+    pause.trip(pauseKeyOf('100000000000000009', URL_A, 'gpt', ownKey.slice(-4)), GUILD, 0);
+    expect((await service.get(GUILD)).llm.pausedUntil).toBeUndefined();
+  });
+
+  it('forgets the pause when the override is saved or cleared', async () => {
+    const saved = build({ row: ownRow });
+    saved.pause.trip(ownPauseKey, GUILD, 0);
+    await saved.service.saveOverride(
+      GUILD,
+      { baseUrl: URL_A, model: 'gpt', apiKey: ownKey },
+      ACTOR,
+    );
+    expect(saved.pause.pausedUntil(ownPauseKey)).toBeNull();
+
+    const cleared = build({ row: ownRow });
+    cleared.pause.trip(ownPauseKey, GUILD, 0);
+    await cleared.service.clearOverride(GUILD, ACTOR);
+    expect(cleared.pause.pausedUntil(ownPauseKey)).toBeNull();
+  });
+
+  it('ends the pause when a test of that very model works, and not when it fails', async () => {
+    const { service, pause, chat } = build();
+    const input = { baseUrl: URL_A, model: 'gpt', apiKey: ownKey };
+    pause.trip(ownPauseKey, GUILD, 0);
+    chat.ping.mockRejectedValueOnce(new LlmChatError('provider_quota'));
+    await expect(service.testOverride(GUILD, input)).resolves.toEqual({
+      ok: false,
+      reason: 'provider_quota',
+    });
+    expect(pause.pausedUntil(ownPauseKey)).not.toBeNull();
+    await service.testOverride(GUILD, { ...input, model: 'other' });
+    expect(pause.pausedUntil(ownPauseKey)).not.toBeNull();
+    await service.testOverride(GUILD, input);
+    expect(pause.pausedUntil(ownPauseKey)).toBeNull();
+  });
+
+  it('names the admin server whose #bot-log hears about it', () => {
+    expect(build().service.alertGuildId).toBe(ADMIN_GUILD);
   });
 });
 

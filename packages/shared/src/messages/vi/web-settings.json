@@ -85,6 +85,7 @@
         "unreachable": "Không kết nối được tới địa chỉ API. Kiểm tra lại địa chỉ.",
         "blocked": "Địa chỉ này không được phép dùng.",
         "unauthorized": "Khoá API bị từ chối. Kiểm tra lại khoá.",
+        "provider_quota": "Dịch vụ báo đã hết hạn mức hoặc số dư API. Hãy nạp thêm hoặc dùng khoá khác.",
         "bad_response": "Dịch vụ trả về kết quả không đúng định dạng. Kiểm tra lại địa chỉ và mô hình."
       }
     }

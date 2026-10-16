@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({ fetch: vi.fn(), makeSafeFetch: vi.fn() }));
@@ -152,6 +153,62 @@ describe('LlmChatService.chat', () => {
     mocks.fetch.mockResolvedValue(reply(status, { error: { message: 'slow down' } }));
     await expect(service.chat(target, request)).rejects.toEqual(new LlmChatError('unreachable'));
     expect(mocks.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('maps 402 to provider_quota and does not retry', async () => {
+    mocks.fetch.mockResolvedValue(reply(402, { error: { message: 'pay up' } }));
+    await expect(service.chat(target, request)).rejects.toEqual(new LlmChatError('provider_quota'));
+    expect(mocks.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    'insufficient_quota',
+    'Billing hard limit reached',
+    'You exceeded your current quota, please check your plan',
+    'No CREDIT left',
+  ])('maps a 429 whose body says "%s" to provider_quota', async (words) => {
+    mocks.fetch.mockResolvedValue(reply(429, { error: { message: words } }));
+    await expect(service.chat(target, request)).rejects.toEqual(new LlmChatError('provider_quota'));
+  });
+
+  it.each([
+    'Quota exceeded for metric generate_content_requests, limit: 15 per minute',
+    'Rate limit reached for requests, billing is fine',
+    'insufficient_quota but only 3 requests per second allowed',
+    'slow down',
+  ])('maps a 429 about a passing rate limit ("%s") to unreachable', async (words) => {
+    mocks.fetch.mockResolvedValue(reply(429, { error: { message: words } }));
+    await expect(service.chat(target, request)).rejects.toEqual(new LlmChatError('unreachable'));
+  });
+
+  it.each([
+    [429, 'exceeded_current_quota_error'],
+    [400, 'Your credit balance is too low to access the Anthropic API'],
+  ])('maps a %i saying "%s" to provider_quota', async (status, words) => {
+    mocks.fetch.mockResolvedValue(reply(status, { error: { type: words, message: words } }));
+    await expect(service.chat(target, request)).rejects.toEqual(new LlmChatError('provider_quota'));
+    expect(mocks.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps any other 400 a bad response, even when it mentions credit elsewhere', async () => {
+    mocks.fetch.mockResolvedValue(reply(400, { error: { message: 'invalid model name' } }));
+    await expect(service.chat(target, request)).rejects.toEqual(new LlmChatError('bad_response'));
+    mocks.fetch.mockResolvedValue(reply(400, { error: { message: 'credit_card field unknown' } }));
+    await expect(service.chat(target, request)).rejects.toEqual(new LlmChatError('bad_response'));
+  });
+
+  it('keeps nothing of the provider body when it reports no credit', async () => {
+    const distinctive = `body-${randomBytes(8).toString('hex')}`;
+    mocks.fetch.mockResolvedValue(
+      reply(429, { error: { code: 'insufficient_quota', distinctive } }),
+    );
+    const error = (await service.chat(target, request).catch((e: unknown) => e)) as Error;
+    expect(JSON.stringify(error, Object.getOwnPropertyNames(error))).not.toContain(distinctive);
+  });
+
+  it('does not read a 500 whose body mentions credit as an empty account', async () => {
+    mocks.fetch.mockResolvedValue(reply(500, { error: { message: 'credit service down' } }));
+    await expect(service.chat(target, request)).rejects.toEqual(new LlmChatError('unreachable'));
   });
 
   it('builds the transport with the call limits and no host allow-list', async () => {

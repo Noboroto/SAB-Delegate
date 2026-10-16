@@ -23,6 +23,7 @@ import { ChatbotConfigService } from './chatbot-config.service.js';
 import { ChatbotContextService } from './chatbot-context.service.js';
 import { ChatbotHistoryService, EMPTY_TURN_CONTEXT } from './chatbot-history.service.js';
 import { ChatbotMemoryService } from './chatbot-memory.service.js';
+import { ChatbotPauseService, pauseKeyOf } from '../llm/chatbot-pause.service.js';
 import { buildChatPrompt } from './chatbot-prompt.js';
 import { ChatbotQuotaService } from './chatbot-quota.service.js';
 import { formatReply } from './chatbot.format.js';
@@ -67,6 +68,8 @@ type Translator = ReturnType<typeof translatorFor>;
 type TriggerMessage = Parameters<ChatbotContextService['collectFrom']>[0] & {
   guildId: string;
   channelId: string;
+  /** Only to find `#bot-log` when a model's provider runs out of credit. */
+  client: { guilds: { cache: { get(id: string): unknown } } };
   reply(options: {
     content: string;
     allowedMentions: { parse: []; repliedUser: boolean };
@@ -171,6 +174,7 @@ export class ChatbotService implements OnModuleDestroy {
     private readonly history: ChatbotHistoryService,
     private readonly llm: LlmChatService,
     private readonly locales: GuildLocaleService,
+    private readonly pause: ChatbotPauseService,
   ) {}
 
   /** Answers the message that addressed the bot. A Discord failure on the way out is logged, not thrown. */
@@ -266,9 +270,33 @@ export class ChatbotService implements OnModuleDestroy {
       };
     }
 
+    // The model's provider has no credit left: no point in reading the channel or paying for a call.
+    const { target } = resolved;
+    const pauseKey = pauseKeyOf(
+      resolved.source === 'guild' ? guildId : null,
+      target.baseUrl,
+      target.model,
+      target.apiKey.slice(-4),
+    );
+    const ticket = this.pause.admit(pauseKey);
+    if (ticket === null) {
+      return {
+        body: t('chatbot.paused'),
+        standing: before,
+        turn: {
+          ...bareTurn('FAILED', asked),
+          failureReason: 'provider_quota',
+          model: target.model,
+          llmSource: resolved.source,
+        },
+      };
+    }
+
     const stopTyping = this.keepTyping(message);
     // Set from the moment tokens are held until they are settled or returned.
     let held: Reservation | null = null;
+    // The admitted call may be the single probe after a pause; its outcome must always reach the pause.
+    let reported = false;
     try {
       const [context, memory, recentTurns] = await Promise.all([
         this.context.collectFrom(message),
@@ -299,14 +327,22 @@ export class ChatbotService implements OnModuleDestroy {
       const hold: Reservation = reservation;
       held = hold;
 
-      const { model } = resolved.target;
-      const asking = await this.ask(resolved.target, prompt);
+      const { model } = target;
+      const asking = await this.ask(target, prompt);
+      reported = true;
+      this.noteOutcome(
+        message,
+        resolved,
+        pauseKey,
+        ticket,
+        'reason' in asking ? asking.reason : null,
+      );
       if ('reason' in asking) {
         held = null;
         await this.giveBack(message.id, guildId, userId, hold);
         if (asking.reason === 'unauthorized') this.warnRejectedKey(guildId, resolved.source);
         return {
-          body: t('chatbot.failed'),
+          body: t(asking.reason === 'provider_quota' ? 'chatbot.paused' : 'chatbot.failed'),
           standing: await this.currentOr(guildId, userId, before),
           turn: {
             status: 'FAILED',
@@ -366,8 +402,45 @@ export class ChatbotService implements OnModuleDestroy {
       };
     } finally {
       stopTyping();
+      if (!reported) this.pause.release(pauseKey, ticket);
       if (held !== null) await this.giveBack(message.id, guildId, userId, held);
     }
+  }
+
+  /**
+   * Tells the pause how the call ended. The first refusal of an outage also
+   * alerts the admins, in the background: a slow Discord send must not hold
+   * the member's slot or their refund.
+   */
+  private noteOutcome(
+    message: TriggerMessage,
+    resolved: { target: LlmTarget; source: 'guild' | 'global' },
+    key: string,
+    ticket: number,
+    reason: ChatFailureReason | null,
+  ): void {
+    if (reason === null) {
+      this.pause.succeed(key, ticket);
+      return;
+    }
+    if (reason !== 'provider_quota') {
+      this.pause.release(key, ticket);
+      return;
+    }
+    const guildId = resolved.source === 'guild' ? message.guildId : null;
+    const { started, until } = this.pause.trip(key, guildId, ticket);
+    if (!started) return;
+    this.logger.warn(
+      `The ${resolved.source} chatbot model ran out of provider credit; paused until ${until.toISOString()}`,
+    );
+    this.track(
+      this.pause.announce(message.client, this.config.alertGuildId, {
+        guildId,
+        baseUrl: resolved.target.baseUrl,
+        model: resolved.target.model,
+        until,
+      }),
+    );
   }
 
   /** An empty answer is a failure: the member got nothing for their tokens. */

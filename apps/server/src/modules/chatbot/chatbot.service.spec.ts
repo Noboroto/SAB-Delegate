@@ -1,6 +1,11 @@
+import { randomBytes } from 'node:crypto';
 import 'reflect-metadata';
 import { Test } from '@nestjs/testing';
-import { CHATBOT_MAX_OUTPUT_TOKENS, MESSAGE_MAX_LENGTH } from '@sab/shared';
+import {
+  CHATBOT_MAX_OUTPUT_TOKENS,
+  CHATBOT_PROVIDER_PAUSE_MS,
+  MESSAGE_MAX_LENGTH,
+} from '@sab/shared';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { GuildLocaleService } from '../../i18n/guild-locale.service.js';
 import { LlmChatError, LlmChatService } from '../llm/llm-chat.service.js';
@@ -8,6 +13,7 @@ import { ChatbotConfigService } from './chatbot-config.service.js';
 import { ChatbotContextService } from './chatbot-context.service.js';
 import { ChatbotHistoryService } from './chatbot-history.service.js';
 import { ChatbotMemoryService } from './chatbot-memory.service.js';
+import { ChatbotPauseService } from '../llm/chatbot-pause.service.js';
 import { ChatbotQuotaService } from './chatbot-quota.service.js';
 import { ChatbotListener } from './chatbot.listener.js';
 import { ChatbotService } from './chatbot.service.js';
@@ -21,6 +27,7 @@ import {
   LIMIT,
   PERIOD,
   TARGET,
+  ADMIN_GUILD,
   quotaFake,
   USAGE,
   build,
@@ -588,6 +595,184 @@ describe('ChatbotService: after the reply', () => {
   });
 });
 
+describe('ChatbotService: provider out of credit', () => {
+  const noCredit = () => Promise.reject(new LlmChatError('provider_quota'));
+  const GLOBAL = { target: TARGET, source: 'global' as const };
+  const OWN = { target: TARGET, source: 'guild' as const };
+
+  it('refunds, says the chatbot is paused, records the reason and tells #bot-log once', async () => {
+    const quota = quotaFake();
+    const { service, finalize } = build({ quota, chat: noCredit });
+    const sent = fakeMessage();
+    await service.handle(sent.message);
+
+    expect(quota.refund).toHaveBeenCalledTimes(1);
+    expect(quota.state.used).toBe(0);
+    expect(posted(sent)).toEqual([
+      'Chatbot tạm dừng vì hết hạn mức API. Admin đã được báo, bạn thử lại sau nhé.\n-# còn lại 100.000 / 100.000',
+    ]);
+    expect(finalize.mock.calls[0]?.[0]).toMatchObject({
+      status: 'FAILED',
+      failureReason: 'provider_quota',
+      llmSource: 'global',
+    });
+    expect(sent.logSend).toHaveBeenCalledTimes(1);
+  });
+
+  it('answers a paused model at once: no context, no reservation, no call', async () => {
+    const quota = quotaFake();
+    const pause = new ChatbotPauseService();
+    const first = build({ quota, pause, chat: noCredit });
+    await first.service.handle(fakeMessage().message);
+
+    const second = build({ quota, pause });
+    const sent = fakeMessage();
+    await second.service.handle(sent.message);
+
+    expect(second.collectFrom).not.toHaveBeenCalled();
+    expect(second.chat).not.toHaveBeenCalled();
+    expect(quota.reserveForTurn).toHaveBeenCalledTimes(1);
+    expect(posted(sent)[0]).toBe(
+      'Chatbot tạm dừng vì hết hạn mức API. Admin đã được báo, bạn thử lại sau nhé.\n-# còn lại 100.000 / 100.000',
+    );
+    expect(second.finalize.mock.calls[0]?.[0]).toMatchObject({
+      status: 'FAILED',
+      failureReason: 'provider_quota',
+      model: TARGET.model,
+      llmSource: 'global',
+    });
+    // Blocked messages are not outages: nothing more for #bot-log.
+    expect(sent.logSend).not.toHaveBeenCalled();
+  });
+
+  it('does not hold the reply or the refund while the alert is still being sent', async () => {
+    const quota = quotaFake();
+    const pause = new ChatbotPauseService();
+    vi.spyOn(pause, 'announce').mockReturnValue(new Promise(() => undefined));
+    const { service } = build({ quota, pause, chat: noCredit });
+    const sent = fakeMessage();
+    await service.handle(sent.message);
+    expect(quota.refund).toHaveBeenCalledTimes(1);
+    expect(posted(sent)[0]).toContain('tạm dừng');
+  });
+
+  it('lets a call from before the outage finish without ending or renewing it', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-16T08:00:00.000Z'));
+    const pause = new ChatbotPauseService();
+    vi.spyOn(pause, 'announce').mockResolvedValue(undefined);
+    let finishSlow!: () => void;
+    const slow = build({
+      pause,
+      chat: () =>
+        new Promise((resolve) => {
+          finishSlow = () => resolve({ text: 'muộn', usage: USAGE, cut: false });
+        }),
+    });
+    const slowReply = slow.service.handle(fakeMessage().message);
+    await vi.waitFor(() => expect(slow.chat).toHaveBeenCalledTimes(1));
+
+    await build({ pause, chat: noCredit }).service.handle(fakeMessage().message);
+    finishSlow();
+    await slowReply;
+
+    const next = build({ pause });
+    await next.service.handle(fakeMessage().message);
+    expect(next.chat).not.toHaveBeenCalled();
+  });
+
+  it('posts one alert for twenty mentions that all meet the empty account', async () => {
+    const pause = new ChatbotPauseService();
+    const announce = vi.spyOn(pause, 'announce').mockResolvedValue(undefined);
+    const { service } = build({ pause, chat: noCredit });
+    await Promise.all(Array.from({ length: 20 }, () => service.handle(fakeMessage().message)));
+    expect(announce).toHaveBeenCalledTimes(1);
+    expect(announce).toHaveBeenCalledWith(
+      expect.anything(),
+      ADMIN_GUILD,
+      expect.objectContaining({ guildId: null, model: TARGET.model }),
+    );
+  });
+
+  it('lets one call through after the window: success clears, another refusal pauses again quietly', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-16T08:00:00.000Z'));
+    const pause = new ChatbotPauseService();
+    const announce = vi.spyOn(pause, 'announce').mockResolvedValue(undefined);
+    await build({ pause, chat: noCredit }).service.handle(fakeMessage().message);
+
+    vi.setSystemTime(new Date(Date.now() + CHATBOT_PROVIDER_PAUSE_MS));
+    const stillEmpty = build({ pause, chat: noCredit });
+    await stillEmpty.service.handle(fakeMessage().message);
+    expect(stillEmpty.chat).toHaveBeenCalledTimes(1);
+    expect(announce).toHaveBeenCalledTimes(1);
+    // The renewed window blocks again.
+    const blocked = build({ pause });
+    await blocked.service.handle(fakeMessage().message);
+    expect(blocked.chat).not.toHaveBeenCalled();
+
+    vi.setSystemTime(new Date(Date.now() + CHATBOT_PROVIDER_PAUSE_MS));
+    const topped = build({ pause });
+    await topped.service.handle(fakeMessage().message);
+    expect(topped.chat).toHaveBeenCalledTimes(1);
+    const after = build({ pause });
+    await after.service.handle(fakeMessage().message);
+    expect(after.chat).toHaveBeenCalledTimes(1);
+  });
+
+  it('frees the single probe when its call fails for another reason', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-16T08:00:00.000Z'));
+    const pause = new ChatbotPauseService();
+    vi.spyOn(pause, 'announce').mockResolvedValue(undefined);
+    await build({ pause, chat: noCredit }).service.handle(fakeMessage().message);
+    vi.setSystemTime(new Date(Date.now() + CHATBOT_PROVIDER_PAUSE_MS));
+
+    const broken = build({ pause, chat: () => Promise.reject(new LlmChatError('unreachable')) });
+    await broken.service.handle(fakeMessage().message);
+    const next = build({ pause });
+    await next.service.handle(fakeMessage().message);
+    expect(next.chat).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps a server's own key and the shared key apart, and never falls back", async () => {
+    const pause = new ChatbotPauseService();
+    vi.spyOn(pause, 'announce').mockResolvedValue(undefined);
+    await build({ pause, target: OWN, chat: noCredit }).service.handle(fakeMessage().message);
+
+    const shared = build({ pause, target: GLOBAL });
+    await shared.service.handle(fakeMessage().message);
+    expect(shared.chat).toHaveBeenCalledTimes(1);
+
+    const own = build({ pause, target: OWN });
+    const sent = fakeMessage();
+    await own.service.handle(sent.message);
+    expect(own.chat).not.toHaveBeenCalled();
+    expect(posted(sent)[0]).toContain('tạm dừng');
+  });
+
+  it('puts neither the key nor the provider text in the alert or the logs', async () => {
+    const logs = silenceLogs();
+    const providerText = `provider-${randomBytes(8).toString('hex')}`;
+    const target = { ...TARGET, apiKey: SECRET_KEY };
+    const { service } = build({
+      target: { target, source: 'guild' },
+      chat: () =>
+        Promise.reject(Object.assign(new LlmChatError('provider_quota'), { providerText })),
+    });
+    const sent = fakeMessage();
+    await service.handle(sent.message);
+
+    const everything = JSON.stringify([
+      sent.logSend.mock.calls,
+      logs.warn.mock.calls,
+      logs.error.mock.calls,
+    ]);
+    expect(everything).not.toContain(SECRET_KEY);
+    expect(sent.logSend).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('ChatbotModule wiring', () => {
   it('resolves the service and the listener through the container', async () => {
     const moduleRef = await Test.createTestingModule({
@@ -609,6 +794,7 @@ describe('ChatbotModule wiring', () => {
       ChatbotHistoryService,
       LlmChatService,
       GuildLocaleService,
+      ChatbotPauseService,
     ]);
     const listenerDeps = Reflect.getMetadata('design:paramtypes', ChatbotListener) as unknown[];
     expect(listenerDeps).toHaveLength(4);

@@ -2,5 +2,6 @@
   "footer": "-# còn lại {remaining} / {total}",
   "notConfigured": "Chatbot chưa có mô hình ngôn ngữ để hỏi. Quản trị viên cần cài đặt trước.",
   "quotaExhausted": "Bạn đã dùng hết token chatbot của tháng này.",
-  "failed": "Mình chưa lấy được câu trả lời lúc này. Bạn thử lại sau một lát nhé."
+  "failed": "Mình chưa lấy được câu trả lời lúc này. Bạn thử lại sau một lát nhé.",
+  "paused": "Chatbot tạm dừng vì hết hạn mức API. Admin đã được báo, bạn thử lại sau nhé."
 }

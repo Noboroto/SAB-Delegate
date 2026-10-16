@@ -11,6 +11,7 @@ import { GameChannelService } from '../game-core/game-channel.service.js';
 import { GuildConfigService } from '../guild-config/guild-config.service.js';
 import type { LlmChatService } from '../llm/llm-chat.service.js';
 import { LlmService } from '../llm/llm.service.js';
+import { ChatbotPauseService } from '../llm/chatbot-pause.service.js';
 import { ChatbotConfigService } from './chatbot-config.service.js';
 
 const ACTOR: ActorContext = { source: 'HTTP', userId: '300000000000000001' };
@@ -54,7 +55,13 @@ describe('chatbot config against Postgres', () => {
       guilds,
       access as unknown as ChannelAccessService,
     );
-    const llm = new LlmService(prisma, audit, { secret: llmSecret, adminGuildId: newGuild() });
+    const pause = new ChatbotPauseService();
+    const llm = new LlmService(
+      prisma,
+      audit,
+      { secret: llmSecret, adminGuildId: newGuild() },
+      pause,
+    );
     chatbot = new ChatbotConfigService(
       prisma,
       audit,
@@ -62,6 +69,7 @@ describe('chatbot config against Postgres', () => {
       access as unknown as ChannelAccessService,
       llm,
       { ping: vi.fn().mockResolvedValue(undefined) } as unknown as LlmChatService,
+      pause,
     );
   });
 

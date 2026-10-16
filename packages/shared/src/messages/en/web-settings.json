@@ -85,6 +85,7 @@
         "unreachable": "Could not reach the API address. Check the address.",
         "blocked": "This address is not allowed.",
         "unauthorized": "The API key was rejected. Check the key.",
+        "provider_quota": "The service says the API allowance or credit has run out. Top it up or use another key.",
         "bad_response": "The service answered in an unexpected format. Check the address and model."
       }
     }

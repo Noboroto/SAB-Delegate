@@ -48,6 +48,26 @@ export function estimateTokens(chars: number, images = 0): number {
   return Math.ceil(chars / CHARS_PER_TOKEN) + images * TOKENS_PER_IMAGE;
 }
 
+/** What providers put in a 429 body when the account, not the request rate, is the problem. */
+const OUT_OF_CREDIT_WORDS =
+  /insufficient_quota|billing|credit|payment|exceeded your current quota|exceeded_current_quota|out of credits/iu;
+/** Anthropic-compatible APIs answer an empty balance with a 400, so a 400 needs this exact wording. */
+const EMPTY_BALANCE_WORDS = /credit balance is too low/iu;
+/** A per-minute or per-day quota is a rate limit: it lifts by itself within moments. */
+const RATE_LIMIT_WORDS = /per[_ ]?(?:minute|second|hour|day)|rate[_ ]?limit|requests? per/iu;
+
+/**
+ * Whether a refusal means the account ran out of credit rather than a passing
+ * overload. The body is only read to decide; neither it nor any part of it is
+ * kept or logged.
+ */
+export function isOutOfCredit(status: number | undefined, body: string | undefined): boolean {
+  if (status === 402) return true;
+  if (body === undefined || RATE_LIMIT_WORDS.test(body)) return false;
+  if (status === 400) return EMPTY_BALANCE_WORDS.test(body);
+  return status === 429 && OUT_OF_CREDIT_WORDS.test(body);
+}
+
 function failureOf(error: unknown): LlmChatError {
   if (error instanceof LlmChatError) return error;
   if (error instanceof SafePostError) {
@@ -55,6 +75,7 @@ function failureOf(error: unknown): LlmChatError {
   }
   if (APICallError.isInstance(error)) {
     const status = error.statusCode;
+    if (isOutOfCredit(status, error.responseBody)) return new LlmChatError('provider_quota');
     if (status === 401 || status === 403) return new LlmChatError('unauthorized');
     // Rate limits and provider outages pass; asking again later may work.
     if (status === 429 || (status !== undefined && status >= 500)) {

@@ -7,6 +7,7 @@ import type { ChatbotConfigService } from './chatbot-config.service.js';
 import type { ChatbotContextService } from './chatbot-context.service.js';
 import type { ChatbotHistoryService } from './chatbot-history.service.js';
 import type { ChatbotMemoryService } from './chatbot-memory.service.js';
+import { ChatbotPauseService } from '../llm/chatbot-pause.service.js';
 import type { ChatbotQuotaService } from './chatbot-quota.service.js';
 import { ChatbotService } from './chatbot.service.js';
 
@@ -22,6 +23,7 @@ export const TRIGGER = '500000000000000001';
 export const REPLY = '500000000000000002';
 export const LIMIT = 100_000;
 export const PERIOD = '2026-10';
+export const ADMIN_GUILD = '700000000000000001';
 
 export const TARGET = { baseUrl: 'https://llm.example/v1', model: 'model-x', apiKey: 'k' };
 
@@ -127,6 +129,7 @@ type Setup = {
   target?: { target: typeof TARGET; source: 'guild' | 'global' } | null;
   chat?: (...args: unknown[]) => Promise<unknown>;
   due?: boolean;
+  pause?: ChatbotPauseService;
 };
 
 export function build(setup: Setup = {}) {
@@ -163,20 +166,23 @@ export function build(setup: Setup = {}) {
   const markReplied = vi.fn((_trigger: string, _reply: string) => Promise.resolve());
   const recentFor = vi.fn((_guild: string, _user: string) => Promise.resolve([]));
   const resolve = vi.fn((_guild: string) => Promise.resolve(setup.locale ?? 'vi'));
+  const pause = setup.pause ?? new ChatbotPauseService();
   const service = new ChatbotService(
-    { resolveTarget } as unknown as ChatbotConfigService,
+    { resolveTarget, alertGuildId: ADMIN_GUILD } as unknown as ChatbotConfigService,
     quota as unknown as ChatbotQuotaService,
     { collectFrom } as unknown as ChatbotContextService,
     { read, noteTurn, summarize } as unknown as ChatbotMemoryService,
     { finalize, recentFor, markReplied } as unknown as ChatbotHistoryService,
     { chat } as unknown as LlmChatService,
     { resolve } as unknown as GuildLocaleService,
+    pause,
   );
   return {
     service,
     calls,
     quota,
     resolveTarget,
+    pause,
     collectFrom,
     chat,
     read,
@@ -200,6 +206,12 @@ export function fakeMessage(options: { reply?: () => Promise<unknown> } = {}) {
   );
   const send = vi.fn((_options: SentOptions) => Promise.resolve({ id: '500000000000000009' }));
   const sendTyping = vi.fn(() => Promise.resolve(undefined));
+  // The admin server's #bot-log, where the alert about an empty provider account goes.
+  const logSend = vi.fn((_options: { embeds: Array<{ fields: Array<{ value: string }> }> }) =>
+    Promise.resolve(undefined),
+  );
+  const logChannel = { name: 'bot-log', isTextBased: () => true, send: logSend };
+  const adminGuild = { name: 'Admin', channels: { cache: { find: () => logChannel } } };
   const message = {
     id: TRIGGER,
     guildId: GUILD,
@@ -207,11 +219,19 @@ export function fakeMessage(options: { reply?: () => Promise<unknown> } = {}) {
     author: { id: USER },
     cleanContent: '@Sabi Xin chào bot',
     guild: { members: { me: { displayName: 'Sabi' } } },
-    client: { user: { id: BOT, displayName: 'Sabi' } },
+    client: {
+      user: { id: BOT, displayName: 'Sabi' },
+      guilds: {
+        cache: {
+          get: (id: string) =>
+            id === ADMIN_GUILD ? adminGuild : id === GUILD ? { name: 'Máy chủ thử' } : undefined,
+        },
+      },
+    },
     reply,
     channel: { send, sendTyping },
   };
-  return { message: message as never, reply, send, sendTyping };
+  return { message: message as never, reply, send, sendTyping, logSend };
 }
 
 export function silenceLogs() {

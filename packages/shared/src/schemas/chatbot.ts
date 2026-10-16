@@ -34,6 +34,8 @@ export const ChatbotConfigSchema = ChatbotConfigModelSchema.pick({
     keyLast4: z.string().nullable(),
     /** Whether the shared model exists and is switched on. */
     globalAvailable: z.boolean(),
+    /** Set while the provider refused for lack of credit and calls to this model are held back. */
+    pausedUntil: z.iso.datetime().optional(),
   }),
 });
 
