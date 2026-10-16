@@ -1,13 +1,7 @@
 import { PURGE_COUNT_MAX } from '@sab/shared';
 import { MessageFlags } from 'discord.js';
-import {
-  Context,
-  IntegerOption,
-  Options,
-  StringOption,
-  Subcommand,
-  type SlashCommandContext,
-} from 'necord';
+import { Context, IntegerOption, StringOption, Subcommand, type SlashCommandContext } from 'necord';
+import { Options } from '../../discord/decorators/options.decorator.js';
 import { CommandGroup } from '../../discord/command-groups.js';
 import { DiscordCommands } from '../../discord/decorators/discord-commands.decorator.js';
 import { localizations } from '../../i18n/localizations.js';

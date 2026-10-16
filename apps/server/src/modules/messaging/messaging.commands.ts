@@ -16,11 +16,11 @@ import {
   ChannelOption,
   Context,
   IntegerOption,
-  Options,
   StringOption,
   Subcommand,
   type SlashCommandContext,
 } from 'necord';
+import { Options } from '../../discord/decorators/options.decorator.js';
 import { BotMessageGroup } from '../../discord/command-groups.js';
 import { DiscordCommands } from '../../discord/decorators/discord-commands.decorator.js';
 import { showModalFirst } from '../../discord/helpers/modal.js';

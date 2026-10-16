@@ -1,4 +1,5 @@
-import { Context, Options, Subcommand, type SlashCommandContext } from 'necord';
+import { Context, Subcommand, type SlashCommandContext } from 'necord';
+import { Options } from '../../discord/decorators/options.decorator.js';
 import { ThreadGroup } from '../../discord/command-groups.js';
 import { DiscordCommands } from '../../discord/decorators/discord-commands.decorator.js';
 import { localizations } from '../../i18n/localizations.js';

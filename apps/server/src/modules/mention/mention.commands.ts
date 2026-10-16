@@ -1,5 +1,6 @@
 import { UseInterceptors } from '@nestjs/common';
-import { Context, Options, Subcommand, type SlashCommandContext } from 'necord';
+import { Context, Subcommand, type SlashCommandContext } from 'necord';
+import { Options } from '../../discord/decorators/options.decorator.js';
 import { CommandGroup } from '../../discord/command-groups.js';
 import { DiscordCommands } from '../../discord/decorators/discord-commands.decorator.js';
 import { ReactionAutocompleteInterceptor } from '../../discord/interceptors/reaction-autocomplete.interceptor.js';

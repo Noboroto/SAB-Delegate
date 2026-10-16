@@ -17,13 +17,13 @@ import {
   BooleanOption,
   ChannelOption,
   Context,
-  Options,
   RoleOption,
   StringOption,
   Subcommand,
   UserOption,
   type SlashCommandContext,
 } from 'necord';
+import { Options } from '../../discord/decorators/options.decorator.js';
 import { ServiceError } from '../../common/errors/service-error.js';
 import { CommandGroup } from '../../discord/command-groups.js';
 import { DiscordCommands } from '../../discord/decorators/discord-commands.decorator.js';
