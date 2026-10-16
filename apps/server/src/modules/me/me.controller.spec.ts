@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import { randomBytes } from 'node:crypto';
 import cookie from '@fastify/cookie';
 import rateLimit from '@fastify/rate-limit';
-import { Global, Module } from '@nestjs/common';
+import { Global, Logger, Module } from '@nestjs/common';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { Test } from '@nestjs/testing';
 import {
@@ -18,6 +18,10 @@ import { REST_SETTINGS } from '../../auth/better-auth.js';
 import type { PrincipalRequest } from '../../auth/principal.decorator.js';
 import { SessionService } from '../../auth/session.service.js';
 import { ServiceError } from '../../common/errors/service-error.js';
+import {
+  DiscordUserClient,
+  type DiscordProfile,
+} from '../../common/guild-access/discord-user.client.js';
 import {
   UserGuildsClient,
   type ManageableGuild,
@@ -66,6 +70,7 @@ const sessions = {
     Promise.resolve(typeof headers['x-token'] === 'string' ? headers['x-token'] : null),
 };
 
+const discordUser = { profileOf: vi.fn<(id: string, token: string) => Promise<DiscordProfile>>() };
 const oauth = { manageableGuilds: vi.fn<(token: string) => Promise<ManageableGuild[]>>() };
 
 @Global()
@@ -97,6 +102,8 @@ beforeAll(async () => {
     .useValue(sessions)
     .overrideProvider(UserGuildsClient)
     .useValue(oauth)
+    .overrideProvider(DiscordUserClient)
+    .useValue(discordUser)
     .compile();
   app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
   await app.register(cookie);
@@ -111,6 +118,7 @@ afterAll(async () => {
 
 beforeEach(() => {
   oauth.manageableGuilds.mockReset();
+  discordUser.profileOf.mockReset();
 });
 
 const asUser = (id: string, extra: Record<string, string> = {}) => ({ 'x-user': id, ...extra });
@@ -122,13 +130,57 @@ describe('GET /api/me', () => {
     expect(response.json<{ code: string }>().code).toBe('AUTH_UNAUTHENTICATED');
   });
 
-  it('returns the Discord account and nothing else of the session', async () => {
-    const response = await app.inject({
-      method: 'GET',
-      url: '/api/me',
-      headers: asUser(randomId(1)),
+  const PROFILE: DiscordProfile = {
+    username: 'sabi',
+    globalName: 'Sabi Bot',
+    avatarUrl: 'https://cdn.discordapp.com/embed/avatars/3.png',
+  };
+  const meRequest = (n: number, headers: Record<string, string> = {}) => ({
+    method: 'GET' as const,
+    url: '/api/me',
+    headers: asUser(randomId(n), headers),
+  });
+
+  it('returns the account with the name and picture Discord shows for it', async () => {
+    discordUser.profileOf.mockResolvedValue(PROFILE);
+    const response = await app.inject(meRequest(1, { 'x-token': ACCESS_TOKEN }));
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({ discordUserId: randomId(1), ...PROFILE });
+    expect(discordUser.profileOf).toHaveBeenCalledWith(randomId(1), ACCESS_TOKEN);
+  });
+
+  it('keeps the globalName null for an account without a display name', async () => {
+    discordUser.profileOf.mockResolvedValue({ ...PROFILE, globalName: null });
+    const response = await app.inject(meRequest(2, { 'x-token': ACCESS_TOKEN }));
+    expect(response.json<{ globalName: null }>().globalName).toBeNull();
+  });
+
+  it('answers 200 with nulls when the login holds no Discord token', async () => {
+    const response = await app.inject(meRequest(3));
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      discordUserId: randomId(3),
+      username: null,
+      globalName: null,
+      avatarUrl: null,
     });
-    expect(response.json()).toEqual({ discordUserId: randomId(1) });
+    expect(discordUser.profileOf).not.toHaveBeenCalled();
+  });
+
+  it('answers 200 with nulls when Discord fails, and never logs the token', async () => {
+    const warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    discordUser.profileOf.mockRejectedValue(new Error(`Bearer ${ACCESS_TOKEN} rejected`));
+    const response = await app.inject(meRequest(4, { 'x-token': ACCESS_TOKEN }));
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      discordUserId: randomId(4),
+      username: null,
+      globalName: null,
+      avatarUrl: null,
+    });
+    expect(warn).toHaveBeenCalledOnce();
+    expect(JSON.stringify(warn.mock.calls)).not.toContain(ACCESS_TOKEN);
+    warn.mockRestore();
   });
 });
 

@@ -24,6 +24,7 @@
   },
   "userMenu": {
     "label": "Account",
+    "labelNamed": "Account: {name}",
     "account": "Discord account",
     "signOut": "Sign out",
     "signOutFailed": "Could not sign out. Please try again."

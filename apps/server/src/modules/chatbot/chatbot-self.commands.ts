@@ -7,6 +7,7 @@ import { localizations } from '../../i18n/localizations.js';
 import { clipText } from './chatbot-prompt.js';
 import { ChatbotHistoryService } from './chatbot-history.service.js';
 import { ChatbotMemoryService } from './chatbot-memory.service.js';
+import { resetMarkup } from './chatbot-period.js';
 import { ChatbotQuotaService } from './chatbot-quota.service.js';
 import { actorOf, answer, openReply, type Translator } from './chatbot.commands.js';
 
@@ -103,6 +104,7 @@ export class ChatbotSelfCommands {
         used: formatTokenCount(quota.used, locale),
         remaining: formatTokenCount(quota.remaining, locale),
         total: formatTokenCount(quota.total, locale),
+        reset: resetMarkup(new Date()),
       }),
     );
   }

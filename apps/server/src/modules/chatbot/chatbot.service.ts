@@ -24,7 +24,9 @@ import { ChatbotContextService } from './chatbot-context.service.js';
 import { ChatbotHistoryService, EMPTY_TURN_CONTEXT } from './chatbot-history.service.js';
 import { ChatbotMemoryService } from './chatbot-memory.service.js';
 import { ChatbotPauseService, pauseKeyOf } from '../llm/chatbot-pause.service.js';
-import { buildChatPrompt } from './chatbot-prompt.js';
+import { authorLabel, buildChatPrompt } from './chatbot-prompt.js';
+import { mentionMembers } from './chatbot-mentions.js';
+import { resetMarkup } from './chatbot-period.js';
 import { ChatbotQuotaService } from './chatbot-quota.service.js';
 import { formatReply } from './chatbot.format.js';
 
@@ -230,6 +232,8 @@ export class ChatbotService implements OnModuleDestroy {
     return t('chatbot.footer', {
       remaining: formatTokenCount(standing.remaining, locale),
       total: formatTokenCount(standing.total, locale),
+      // The standing is always this month's, so the allowance renews at the next month start.
+      reset: resetMarkup(new Date()),
     });
   }
 
@@ -369,7 +373,13 @@ export class ChatbotService implements OnModuleDestroy {
         result.usage.total,
         before,
       );
-      const text = result.text.trim();
+      // Only members the model was shown can be pinged, and a plain @Name of one becomes a mention.
+      const shownLines =
+        context.replied === null ? context.messages : [context.replied, ...context.messages];
+      const text = mentionMembers(result.text.trim(), [
+        { id: context.speaker.id, name: authorLabel(context.speaker.name) },
+        ...shownLines.map((line) => ({ id: line.authorId, name: authorLabel(line.authorName) })),
+      ]);
       const body = result.cut ? `${text}…` : text;
       return {
         body,

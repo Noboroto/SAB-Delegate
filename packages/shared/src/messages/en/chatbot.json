@@ -1,5 +1,5 @@
 {
-  "footer": "-# remaining {remaining} / {total}",
+  "footer": "-# remaining {remaining} / {total} · resets {reset}",
   "notConfigured": "The chatbot has no language model to ask yet. An admin needs to set one up.",
   "quotaExhausted": "You have used up your chatbot tokens for this month.",
   "failed": "I could not get an answer just now. Please try again in a moment.",
@@ -118,8 +118,9 @@
     "grantAdded": "Added {tokens} bonus tokens for {user} this month.",
     "grantTaken": "Took back {tokens} bonus tokens from {user} this month.",
     "quotaReset": "Cleared the {used} tokens {user} used this month.",
+    "resetShort": "resets {reset}",
     "standing": "{user}: used {used}, remaining {remaining} / {total}",
-    "usageSelf": "This month you used {used} tokens, remaining {remaining} / {total}.",
+    "usageSelf": "This month you used {used} tokens, remaining {remaining} / {total}. Resets {reset}.",
     "usageTopTitle": "Top members by tokens used this month:",
     "usageTopEmpty": "Nobody has used the chatbot this month.",
     "memoryCleared": "Cleared {users} member memories and {channels} channel memories.",

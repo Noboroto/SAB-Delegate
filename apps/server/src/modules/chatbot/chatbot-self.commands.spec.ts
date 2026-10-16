@@ -1,12 +1,22 @@
 import 'reflect-metadata';
 import { ErrorCode, MESSAGES } from '@sab/shared';
 import { MessageFlags } from 'discord.js';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { GuildLocaleService } from '../../i18n/guild-locale.service.js';
 import type { ChatbotHistoryService } from './chatbot-history.service.js';
 import type { ChatbotMemoryService } from './chatbot-memory.service.js';
 import type { ChatbotQuotaService } from './chatbot-quota.service.js';
 import { ChatbotSelfCommands } from './chatbot-self.commands.js';
+
+// The reply names when the allowance renews, which depends on the clock.
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-10-16T08:00:00.000Z'));
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 const GUILD = '100000000000000001';
 const ME = '100000000000000002';
@@ -122,14 +132,18 @@ describe('/chat', () => {
     const target = interaction();
     await commands.onUsage([target] as never);
     expect(quota.limitOf).toHaveBeenCalledWith(GUILD, ME);
-    expect(sent(target)).toBe('This month you used 12,345 tokens, remaining 87,655 / 100,000.');
+    expect(sent(target)).toBe(
+      'This month you used 12,345 tokens, remaining 87,655 / 100,000. Resets <t:1793466000:R>.',
+    );
   });
 
   it('usage groups digits by the language of the server', async () => {
     const { commands, interaction } = build('vi');
     const target = interaction();
     await commands.onUsage([target] as never);
-    expect(sent(target)).toBe('Tháng này bạn đã dùng 12.345 token, còn lại 87.655 / 100.000.');
+    expect(sent(target)).toBe(
+      'Tháng này bạn đã dùng 12.345 token, còn lại 87.655 / 100.000. Làm mới <t:1793466000:R>.',
+    );
   });
 
   it('history reads the caller last five turns, rows only', async () => {

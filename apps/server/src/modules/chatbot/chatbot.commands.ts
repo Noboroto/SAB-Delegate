@@ -31,6 +31,7 @@ import { localizations } from '../../i18n/localizations.js';
 import { translatorFor } from '../../i18n/translator.js';
 import { ChatbotConfigService } from './chatbot-config.service.js';
 import { ChatbotMemoryService } from './chatbot-memory.service.js';
+import { resetMarkup } from './chatbot-period.js';
 import { ChatbotQuotaService } from './chatbot-quota.service.js';
 
 export type Translator = ReturnType<typeof translatorFor>;
@@ -443,7 +444,9 @@ export class ChatbotCommands {
     const { guildId, locale, t } = await openReply(interaction, this.locales);
     if (user !== undefined) {
       const quota = await this.quota.limitOf(guildId, user.id);
-      await answer(interaction, standingLine(t, locale, user.id, quota));
+      // One member's line carries the renewal; in the top list it would repeat on every row.
+      const reset = t('chatbot.slash.resetShort', { reset: resetMarkup(new Date()) });
+      await answer(interaction, `${standingLine(t, locale, user.id, quota)} · ${reset}`);
       return;
     }
     const { items } = await this.quota.list(guildId, TOP_USAGE_QUERY);

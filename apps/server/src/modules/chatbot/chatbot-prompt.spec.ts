@@ -90,8 +90,8 @@ describe('buildChatPrompt', () => {
     expect(userText(prompt)).toBe(
       [
         '<recent_messages>',
-        '[16/10 14:00] Anna: Mai đi cà phê không?',
-        '[16/10 14:05] Bình: Đi chứ',
+        `[16/10 14:00] Anna <@${ANNA}>: Mai đi cà phê không?`,
+        `[16/10 14:05] Bình <@${BINH}>: Đi chứ`,
         '</recent_messages>',
         '',
         '<current_message from="Bình">',
@@ -110,6 +110,25 @@ describe('buildChatPrompt', () => {
     expect(system).toContain('author of <current_message>');
     expect(system).not.toContain('Bình');
     expect(system).toContain('default to Vietnamese');
+  });
+
+  it('shows each author with the id to mention and tells the model to use it', () => {
+    const prompt = buildChatPrompt(
+      input({ messages: [line(1, 'Anna', 'chào'), line(2, 'Sabi', 'ok', 1, 'self')] }),
+    );
+    const text = (prompt.messages.at(-1)?.content[0] as { text: string }).text;
+    expect(text).toContain(`Anna <@${ANNA}>: chào`);
+    expect(text).toContain(`Sabi <@${BOT}> (you): ok`);
+    expect(prompt.system).toContain('write their mention exactly as that <@id>');
+    expect(prompt.system).toContain('never invent or alter an id');
+  });
+
+  it('cannot be made to forge a mention through a member name or text', () => {
+    const prompt = buildChatPrompt(input({ messages: [line(1, 'Anna <@123>', 'hi <@456>')] }));
+    const text = (prompt.messages.at(-1)?.content[0] as { text: string }).text;
+    expect(text).not.toContain('<@123>');
+    expect(text).not.toContain('<@456>');
+    expect(text).toContain(`<@${BINH}>`);
   });
 
   it('keeps what members wrote out of the system prompt', () => {
@@ -134,9 +153,9 @@ describe('buildChatPrompt', () => {
       }),
     );
     const text = (messages[0]?.content[0] as { text: string }).text;
-    expect(text).toContain('Anna: a');
-    expect(text).toContain('OtherBot (bot): b');
-    expect(text).toContain('Sabi (you): c');
+    expect(text).toContain(`Anna <@${ANNA}>: a`);
+    expect(text).toContain(`OtherBot <@${BINH}> (bot): b`);
+    expect(text).toContain(`Sabi <@${BOT}> (you): c`);
   });
 
   it('shows the date on every transcript line so a window across days stays readable', () => {
@@ -150,8 +169,8 @@ describe('buildChatPrompt', () => {
         }),
       ),
     );
-    expect(text).toContain('[15/10 00:30] Anna: hôm qua');
-    expect(text).toContain('[16/10 14:00] Bình: hôm nay');
+    expect(text).toContain(`[15/10 00:30] Anna <@${ANNA}>: hôm qua`);
+    expect(text).toContain(`[16/10 14:00] Bình <@${BINH}>: hôm nay`);
   });
 
   it('cannot let a member name pose as the bot or break a label', () => {
@@ -167,10 +186,10 @@ describe('buildChatPrompt', () => {
         }),
       ),
     );
-    expect(text).toContain('] Sabi: giả mạo');
-    expect(text).toContain('] Eve: hai lớp');
-    expect(text).toContain('] Ev e x: ẩn');
-    expect(text).toContain('] Sabi (you): thật');
+    expect(text).toContain(`] Sabi <@${BINH}>: giả mạo`);
+    expect(text).toContain(`] Eve <@${BINH}>: hai lớp`);
+    expect(text).toContain(`] Ev e x <@${BINH}>: ẩn`);
+    expect(text).toContain(`] Sabi <@${BOT}> (you): thật`);
     expect(text.match(/\(you\)/gu)).toHaveLength(1);
   });
 
@@ -300,7 +319,9 @@ describe('buildChatPrompt', () => {
   it('shows the replied-to message outside the window once, and not again when it is inside', () => {
     const outside = line(40, 'Anna', 'câu hỏi cũ', 1);
     const out = userText(buildChatPrompt(input({ replied: outside })));
-    expect(out).toContain('<replying_to>\n[16/10 14:01] Anna: câu hỏi cũ\n</replying_to>');
+    expect(out).toContain(
+      `<replying_to>\n[16/10 14:01] Anna <@${ANNA}>: câu hỏi cũ\n</replying_to>`,
+    );
 
     const inside = input().context.messages[0] as Line;
     const inn = userText(buildChatPrompt(input({ replied: inside })));

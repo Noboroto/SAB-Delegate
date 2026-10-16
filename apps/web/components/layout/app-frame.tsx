@@ -4,12 +4,13 @@ import { Layout } from 'antd';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
+import type { Me } from '@sab/shared';
 import { UserMenu } from '@/components/auth/user-menu';
 import { LangSwitcher } from '@/components/lang-switcher';
 import { ThemeSwitcher } from '@/components/theme-switcher';
 
 /** Header (brand, language, theme, account) and the content area every signed-in page sits in. */
-export function AppFrame({ children }: { children: React.ReactNode }) {
+export function AppFrame({ account, children }: { account: Me; children: React.ReactNode }) {
   const t = useTranslations('web');
 
   return (
@@ -42,7 +43,7 @@ export function AppFrame({ children }: { children: React.ReactNode }) {
         </Link>
         <LangSwitcher />
         <ThemeSwitcher />
-        <UserMenu />
+        <UserMenu account={account} />
       </Layout.Header>
       {/* Not `Layout.Content`: it renders its own `<main>`, and a page may have only one. */}
       <main id="main" className="page-main" style={{ flex: 'auto', minHeight: 0 }}>

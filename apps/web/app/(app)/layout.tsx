@@ -8,6 +8,6 @@ import { serverFetch } from '@/lib/api/server-fetch';
  * proxy's cookie test is only a shortcut for visitors with no cookie at all.)
  */
 export default async function SignedInLayout({ children }: { children: React.ReactNode }) {
-  await serverFetch('/api/me', { parser: MeSchema });
-  return <AppFrame>{children}</AppFrame>;
+  const me = await serverFetch('/api/me', { parser: MeSchema });
+  return <AppFrame account={me}>{children}</AppFrame>;
 }

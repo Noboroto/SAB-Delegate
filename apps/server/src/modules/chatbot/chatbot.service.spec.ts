@@ -6,7 +6,7 @@ import {
   CHATBOT_PROVIDER_PAUSE_MS,
   MESSAGE_MAX_LENGTH,
 } from '@sab/shared';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { GuildLocaleService } from '../../i18n/guild-locale.service.js';
 import { LlmChatError, LlmChatService } from '../llm/llm-chat.service.js';
 import { ChatbotConfigService } from './chatbot-config.service.js';
@@ -37,6 +37,12 @@ import {
   posted,
 } from './chatbot.service.test-fixtures.js';
 
+// The footer names when the allowance renews, which depends on the clock.
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-10-16T08:00:00.000Z'));
+});
+
 afterEach(() => {
   vi.restoreAllMocks();
   vi.useRealTimers();
@@ -57,7 +63,9 @@ describe('ChatbotService: a normal reply', () => {
     expect(quota.refund).not.toHaveBeenCalled();
 
     expect(sent.reply).toHaveBeenCalledTimes(1);
-    expect(sent.reply.mock.calls[0]?.[0].content).toBe('Chào bạn!\n-# còn lại 99.500 / 100.000');
+    expect(sent.reply.mock.calls[0]?.[0].content).toBe(
+      'Chào bạn!\n-# còn lại 99.500 / 100.000 · làm mới <t:1793466000:R>',
+    );
     expect(chat).toHaveBeenCalledTimes(1);
     expect(finalize).toHaveBeenCalledTimes(1);
     expect(noteTurn).toHaveBeenCalledWith(GUILD, USER);
@@ -67,7 +75,9 @@ describe('ChatbotService: a normal reply', () => {
     const { service } = build({ locale: 'en' });
     const sent = fakeMessage();
     await service.handle(sent.message);
-    expect(sent.reply.mock.calls[0]?.[0].content).toBe('Chào bạn!\n-# remaining 99,500 / 100,000');
+    expect(sent.reply.mock.calls[0]?.[0].content).toBe(
+      'Chào bạn!\n-# remaining 99,500 / 100,000 · resets <t:1793466000:R>',
+    );
   });
 
   it('shows the allowance after settling, not what was left before the call', async () => {
@@ -76,7 +86,9 @@ describe('ChatbotService: a normal reply', () => {
     const sent = fakeMessage();
     await service.handle(sent.message);
     // 60.000 were left before; the call really cost 500.
-    expect(posted(sent)[0]).toBe('Chào bạn!\n-# còn lại 59.500 / 100.000');
+    expect(posted(sent)[0]).toBe(
+      'Chào bạn!\n-# còn lại 59.500 / 100.000 · làm mới <t:1793466000:R>',
+    );
   });
 
   it('pings the asker through the reply and nothing else', async () => {
@@ -168,7 +180,7 @@ describe('ChatbotService: a normal reply', () => {
     expect(sent.send).toHaveBeenCalledTimes(parts.length - 1);
     for (const part of parts) expect(part.length).toBeLessThanOrEqual(MESSAGE_MAX_LENGTH);
     expect(parts.filter((part) => part.includes('-# còn lại'))).toHaveLength(1);
-    expect(parts.at(-1)).toContain('-# còn lại 99.500 / 100.000');
+    expect(parts.at(-1)).toContain('-# còn lại 99.500 / 100.000 · làm mới <t:1793466000:R>');
     // Follow-ups never ping anybody.
     for (const [options] of sent.send.mock.calls) {
       expect(options.allowedMentions).toEqual({ parse: [] });
@@ -218,7 +230,7 @@ describe('ChatbotService: replies that never reach the model', () => {
     await service.onModuleDestroy();
 
     expect(posted(sent)).toEqual([
-      'Bạn đã dùng hết token chatbot của tháng này.\n-# còn lại 0 / 100.000',
+      'Bạn đã dùng hết token chatbot của tháng này.\n-# còn lại 0 / 100.000 · làm mới <t:1793466000:R>',
     ]);
     expect(collectFrom).not.toHaveBeenCalled();
     expect(chat).not.toHaveBeenCalled();
@@ -239,7 +251,7 @@ describe('ChatbotService: replies that never reach the model', () => {
     const sent = fakeMessage();
     await service.handle(sent.message);
     expect(posted(sent)[0]).toBe(
-      'You have used up your chatbot tokens for this month.\n-# remaining 0 / 2,500',
+      'You have used up your chatbot tokens for this month.\n-# remaining 0 / 2,500 · resets <t:1793466000:R>',
     );
   });
 
@@ -256,7 +268,7 @@ describe('ChatbotService: replies that never reach the model', () => {
     expect(quota.settle).not.toHaveBeenCalled();
     expect(quota.refund).not.toHaveBeenCalled();
     expect(posted(sent)[0]).toBe(
-      'Bạn đã dùng hết token chatbot của tháng này.\n-# còn lại 0 / 100.000',
+      'Bạn đã dùng hết token chatbot của tháng này.\n-# còn lại 0 / 100.000 · làm mới <t:1793466000:R>',
     );
     expect(finalize.mock.calls[0]?.[0]).toMatchObject({
       status: 'QUOTA_EXHAUSTED',
@@ -271,7 +283,7 @@ describe('ChatbotService: replies that never reach the model', () => {
     await service.handle(sent.message);
 
     expect(posted(sent)).toEqual([
-      'Chatbot chưa có mô hình ngôn ngữ để hỏi. Quản trị viên cần cài đặt trước.\n-# còn lại 99.000 / 100.000',
+      'Chatbot chưa có mô hình ngôn ngữ để hỏi. Quản trị viên cần cài đặt trước.\n-# còn lại 99.000 / 100.000 · làm mới <t:1793466000:R>',
     ]);
     expect(chat).not.toHaveBeenCalled();
     expect(collectFrom).not.toHaveBeenCalled();
@@ -295,7 +307,7 @@ describe('ChatbotService: a failed model call', () => {
     expect(quota.settle).not.toHaveBeenCalled();
     expect(quota.state.used).toBe(10_000);
     expect(posted(sent)).toEqual([
-      'Mình chưa lấy được câu trả lời lúc này. Bạn thử lại sau một lát nhé.\n-# còn lại 90.000 / 100.000',
+      'Mình chưa lấy được câu trả lời lúc này. Bạn thử lại sau một lát nhé.\n-# còn lại 90.000 / 100.000 · làm mới <t:1793466000:R>',
     ]);
     expect(finalize.mock.calls[0]?.[0]).toMatchObject({
       status: 'FAILED',
@@ -348,7 +360,7 @@ describe('ChatbotService: a failed model call', () => {
     expect(quota.refund).toHaveBeenCalledTimes(1);
     expect(quota.state.used).toBe(0);
     expect(posted(sent)).toEqual([
-      'Mình chưa lấy được câu trả lời lúc này. Bạn thử lại sau một lát nhé.\n-# còn lại 100.000 / 100.000',
+      'Mình chưa lấy được câu trả lời lúc này. Bạn thử lại sau một lát nhé.\n-# còn lại 100.000 / 100.000 · làm mới <t:1793466000:R>',
     ]);
     // Closed, so a restart does not answer the same message a second time.
     expect(finalize).toHaveBeenCalledTimes(1);
@@ -439,7 +451,9 @@ describe('ChatbotService: when the database fails around the reply', () => {
     const sent = fakeMessage();
     await service.handle(sent.message);
     // 99.000 were left before; the call cost 500.
-    expect(posted(sent)).toEqual(['Chào bạn!\n-# còn lại 98.500 / 100.000']);
+    expect(posted(sent)).toEqual([
+      'Chào bạn!\n-# còn lại 98.500 / 100.000 · làm mới <t:1793466000:R>',
+    ]);
     expect(quota.refund).not.toHaveBeenCalled();
     expect(logs.error).toHaveBeenCalledTimes(2);
   });
@@ -455,7 +469,7 @@ describe('ChatbotService: when the database fails around the reply', () => {
     quota.limitOf.mockRejectedValue(new Error('db down'));
     const sent = fakeMessage();
     await service.handle(sent.message);
-    expect(posted(sent)[0]).toContain('-# còn lại 99.000 / 100.000');
+    expect(posted(sent)[0]).toContain('-# còn lại 99.000 / 100.000 · làm mới <t:1793466000:R>');
     expect(quota.refund).toHaveBeenCalledTimes(1);
   });
 });
@@ -469,7 +483,9 @@ describe('ChatbotService: where the reply goes', () => {
     await service.handle(sent.message);
     expect(sent.send).toHaveBeenCalledTimes(1);
     const [options] = sent.send.mock.calls[0] ?? [];
-    expect(options?.content).toBe(`<@${USER}> Chào bạn!\n-# còn lại 99.500 / 100.000`);
+    expect(options?.content).toBe(
+      `<@${USER}> Chào bạn!\n-# còn lại 99.500 / 100.000 · làm mới <t:1793466000:R>`,
+    );
     // Only the asker can be pinged; the model's own text cannot.
     expect(options?.allowedMentions).toEqual({ parse: [], users: [USER] });
     expect(finalize.mock.calls[0]?.[0]).toMatchObject({
@@ -609,7 +625,7 @@ describe('ChatbotService: provider out of credit', () => {
     expect(quota.refund).toHaveBeenCalledTimes(1);
     expect(quota.state.used).toBe(0);
     expect(posted(sent)).toEqual([
-      'Chatbot tạm dừng vì hết hạn mức API. Admin đã được báo, bạn thử lại sau nhé.\n-# còn lại 100.000 / 100.000',
+      'Chatbot tạm dừng vì hết hạn mức API. Admin đã được báo, bạn thử lại sau nhé.\n-# còn lại 100.000 / 100.000 · làm mới <t:1793466000:R>',
     ]);
     expect(finalize.mock.calls[0]?.[0]).toMatchObject({
       status: 'FAILED',
@@ -633,7 +649,7 @@ describe('ChatbotService: provider out of credit', () => {
     expect(second.chat).not.toHaveBeenCalled();
     expect(quota.reserveForTurn).toHaveBeenCalledTimes(1);
     expect(posted(sent)[0]).toBe(
-      'Chatbot tạm dừng vì hết hạn mức API. Admin đã được báo, bạn thử lại sau nhé.\n-# còn lại 100.000 / 100.000',
+      'Chatbot tạm dừng vì hết hạn mức API. Admin đã được báo, bạn thử lại sau nhé.\n-# còn lại 100.000 / 100.000 · làm mới <t:1793466000:R>',
     );
     expect(second.finalize.mock.calls[0]?.[0]).toMatchObject({
       status: 'FAILED',

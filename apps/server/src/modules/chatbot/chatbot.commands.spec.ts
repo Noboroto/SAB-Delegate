@@ -1,12 +1,22 @@
 import 'reflect-metadata';
 import { CHATBOT_LIMIT_MAX, ErrorCode, MESSAGES } from '@sab/shared';
 import { ChannelType, MessageFlags } from 'discord.js';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { GuildLocaleService } from '../../i18n/guild-locale.service.js';
 import type { ChatbotConfigService } from './chatbot-config.service.js';
 import type { ChatbotMemoryService } from './chatbot-memory.service.js';
 import type { ChatbotQuotaService } from './chatbot-quota.service.js';
 import { ChatbotCommands } from './chatbot.commands.js';
+
+// The reply names when the allowance renews, which depends on the clock.
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-10-16T08:00:00.000Z'));
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 const GUILD = '100000000000000001';
 const ADMIN = '100000000000000002';
@@ -219,7 +229,9 @@ describe('/chatbot', () => {
     await commands.onUsage([target] as never, { user: { id: MEMBER } });
     expect(quota.limitOf).toHaveBeenCalledWith(GUILD, MEMBER);
     expect(quota.list).not.toHaveBeenCalled();
-    expect(sent(target)).toBe(`<@${MEMBER}>: used 1,200, remaining 4,300 / 5,500`);
+    expect(sent(target)).toBe(
+      `<@${MEMBER}>: used 1,200, remaining 4,300 / 5,500 · resets <t:1793466000:R>`,
+    );
   });
 
   it('usage without a member lists the ten biggest spenders of the month', async () => {

@@ -69,25 +69,29 @@ function translateFailure(error: unknown): unknown {
 }
 
 /**
- * Calls Discord as the person, with the access token from their login cookie.
- * Each call gets its own REST instance: the library's rate-limit state is per
- * instance, and one person's 429 must not reject another person's request.
- * It rejects on a rate limit instead of sleeping, so a request never waits on
- * Discord's `retry-after`.
+ * A REST instance that calls Discord as the person, with the access token from
+ * their login cookie. Each call site gets its own instance: the library's
+ * rate-limit state is per instance, and one person's 429 must not reject
+ * another person's request. It rejects on a rate limit instead of sleeping, so
+ * a request never waits on Discord's `retry-after`.
  */
+export function createUserRest(accessToken: string): REST {
+  return new REST({
+    authPrefix: 'Bearer',
+    version: '10',
+    timeout: REQUEST_TIMEOUT_MS,
+    retries: 1,
+    rejectOnRateLimit: () => true,
+    // No background sweepers: they would outlive a one-call instance.
+    hashSweepInterval: 0,
+    handlerSweepInterval: 0,
+  }).setToken(accessToken);
+}
+
+/** Lists the person's servers from Discord with their own access token. */
 @Injectable()
 export class UserGuildsClient {
   manageableGuilds(accessToken: string): Promise<ManageableGuild[]> {
-    const rest = new REST({
-      authPrefix: 'Bearer',
-      version: '10',
-      timeout: REQUEST_TIMEOUT_MS,
-      retries: 1,
-      rejectOnRateLimit: () => true,
-      // No background sweepers: they would outlive a one-call instance.
-      hashSweepInterval: 0,
-      handlerSweepInterval: 0,
-    }).setToken(accessToken);
-    return fetchManageableGuilds(rest);
+    return fetchManageableGuilds(createUserRest(accessToken));
   }
 }

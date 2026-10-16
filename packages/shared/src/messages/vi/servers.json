@@ -24,6 +24,7 @@
   },
   "userMenu": {
     "label": "Tài khoản",
+    "labelNamed": "Tài khoản: {name}",
     "account": "Tài khoản Discord",
     "signOut": "Đăng xuất",
     "signOutFailed": "Không đăng xuất được. Vui lòng thử lại."

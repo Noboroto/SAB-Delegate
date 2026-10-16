@@ -1,8 +1,18 @@
 import { z } from 'zod';
 import { SnowflakeSchema } from './snowflake.js';
 
-/** The signed-in person as the cookie proves it: only the Discord account, nothing is stored about them. */
-export const MeSchema = z.object({ discordUserId: SnowflakeSchema });
+/**
+ * The signed-in person: the Discord account the cookie proves, plus the name
+ * and picture Discord shows for it. The login stores neither, so they are read
+ * live and are all null when Discord cannot be asked (expired token, outage).
+ * `avatarUrl` is a Discord CDN address, the default picture when there is none.
+ */
+export const MeSchema = z.object({
+  discordUserId: SnowflakeSchema,
+  username: z.string().nullable(),
+  globalName: z.string().nullable(),
+  avatarUrl: z.url().nullable(),
+});
 
 /** What the web app needs to build the "add the bot" link of one server. */
 export const BotInviteSchema = z.object({

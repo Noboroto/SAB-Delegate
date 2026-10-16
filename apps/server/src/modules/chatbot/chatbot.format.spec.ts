@@ -2,7 +2,7 @@ import { MESSAGE_MAX_LENGTH } from '@sab/shared';
 import { describe, expect, it } from 'vitest';
 import { formatReply } from './chatbot.format.js';
 
-const FOOTER = '-# còn lại 99.999 / 100.000';
+const FOOTER = '-# còn lại 99.999 / 100.000 · làm mới <t:1793466000:R>';
 const LINE = `\n${FOOTER}`;
 
 /** Deterministic pseudo-random numbers, so a failure reproduces. */

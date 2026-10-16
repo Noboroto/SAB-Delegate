@@ -16,11 +16,18 @@ vi.mock('@/lib/auth/auth-client', () => ({ signOut: vi.fn() }));
 import { ThemeProvider } from '../ui/theme-provider';
 import { AppFrame } from './app-frame';
 
+const ACCOUNT = {
+  discordUserId: '200000000000000001',
+  username: null,
+  globalName: null,
+  avatarUrl: null,
+};
+
 describe('AppFrame', () => {
   it('has exactly one main landmark, the target of the skip link, around the page', () => {
     const { container } = renderWithProviders(
       <ThemeProvider initialMode="light" initialResolved="light">
-        <AppFrame>
+        <AppFrame account={ACCOUNT}>
           <p>page</p>
         </AppFrame>
       </ThemeProvider>,
