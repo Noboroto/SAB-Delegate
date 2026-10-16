@@ -28,7 +28,7 @@ describe('ChatbotService: the deadline', () => {
       quota,
       chat: async () => {
         await new Promise<void>((resolve) => gates.push(resolve));
-        return { text: 'muộn', usage: USAGE, cut: false };
+        return { text: 'muộn', usage: USAGE, cut: false, toolCalls: [] };
       },
     });
     const first = Array.from({ length: 3 }, () => service.handle(fakeMessage().message));
@@ -154,7 +154,7 @@ describe('ChatbotService: the reply is noted on the turn as soon as it is out', 
   it('stores the id of the first part before the rest of a long answer is sent', async () => {
     const long = 'a'.repeat(MESSAGE_MAX_LENGTH * 2);
     const { service, markReplied, finalize } = build({
-      chat: () => Promise.resolve({ text: long, usage: USAGE, cut: false }),
+      chat: () => Promise.resolve({ text: long, usage: USAGE, cut: false, toolCalls: [] }),
     });
     const sent = fakeMessage();
     await service.handle(sent.message);
@@ -179,7 +179,7 @@ describe('ChatbotService: the reply is noted on the turn as soon as it is out', 
     const logs = silenceLogs();
     const long = 'a'.repeat(MESSAGE_MAX_LENGTH * 2);
     const { service, markReplied } = build({
-      chat: () => Promise.resolve({ text: long, usage: USAGE, cut: false }),
+      chat: () => Promise.resolve({ text: long, usage: USAGE, cut: false, toolCalls: [] }),
     });
     markReplied.mockRejectedValueOnce(new Error('db down'));
     const sent = fakeMessage();
@@ -208,7 +208,7 @@ describe('ChatbotService: limits and shutdown', () => {
         peak = Math.max(peak, running);
         await new Promise<void>((resolve) => gates.push(resolve));
         running -= 1;
-        return { text: 'ok', usage: USAGE, cut: false };
+        return { text: 'ok', usage: USAGE, cut: false, toolCalls: [] };
       },
     });
     const jobs = Array.from({ length: 5 }, () => service.handle(fakeMessage().message));
@@ -233,7 +233,7 @@ describe('ChatbotService: limits and shutdown', () => {
       quota,
       chat: async () => {
         await slow;
-        return { text: 'muộn', usage: USAGE, cut: false };
+        return { text: 'muộn', usage: USAGE, cut: false, toolCalls: [] };
       },
     });
     const sent = fakeMessage();

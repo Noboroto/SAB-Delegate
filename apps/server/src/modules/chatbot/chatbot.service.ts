@@ -1,10 +1,12 @@
 import { Injectable, Logger, type OnModuleDestroy } from '@nestjs/common';
 import {
   CHATBOT_MAX_OUTPUT_TOKENS,
+  CHATBOT_TURN_CONTEXT_MAX_BYTES,
   formatTokenCount,
   type ChatbotTurnRecord,
   type Locale,
 } from '@sab/shared';
+import type { ToolSet } from 'ai';
 import { LRUCache } from 'lru-cache';
 import pLimit from 'p-limit';
 import { GuildLocaleService } from '../../i18n/guild-locale.service.js';
@@ -23,6 +25,7 @@ import { ChatbotConfigService } from './chatbot-config.service.js';
 import { ChatbotContextService } from './chatbot-context.service.js';
 import { ChatbotHistoryService, EMPTY_TURN_CONTEXT } from './chatbot-history.service.js';
 import { ChatbotMemoryService } from './chatbot-memory.service.js';
+import { ChatbotToolsService } from './chatbot-tools.service.js';
 import { ChatbotPauseService, pauseKeyOf } from '../llm/chatbot-pause.service.js';
 import { authorLabel, buildChatPrompt } from './chatbot-prompt.js';
 import { mentionMembers } from './chatbot-mentions.js';
@@ -36,7 +39,19 @@ import { formatReply } from './chatbot.format.js';
  */
 const CHAT_CONCURRENCY = 3;
 
-const CALL_TIMEOUT_MS = 60_000;
+/**
+ * Longest the model calls of one reply may take together, tools included. The
+ * rest of `ANSWER_TIMEOUT_MS` is left for reading the channel and holding tokens
+ * before the call, and for settling and sending after it, so the call ends and
+ * its tokens settle before the reply gives up.
+ */
+const CALL_TIMEOUT_MS = 65_000;
+
+/** Tool calls kept on a turn's snapshot; kept few so the snapshot stays under its size cap. */
+const MAX_RECORDED_TOOL_CALLS = 20;
+
+/** Model calls one reply may make while using tools; the last is made without them so it always ends in text. */
+const TOOL_STEPS = 3;
 
 /**
  * Longest one reply may take once it has a slot. The wait for a slot is not
@@ -124,6 +139,27 @@ function questionOf(message: TriggerMessage): string {
   return text === '' ? NO_CONTENT : text;
 }
 
+/**
+ * The snapshot with the tool calls of the turn. The history service drops a
+ * snapshot over its byte cap altogether, so calls are shed from the end until
+ * it fits and the rest of the context is kept.
+ */
+function withToolCalls(
+  snapshot: TurnFields['context'],
+  calls: ChatResult['toolCalls'],
+): TurnFields['context'] {
+  if (calls.length === 0) return snapshot;
+  const kept = calls.slice(0, MAX_RECORDED_TOOL_CALLS);
+  while (kept.length > 0) {
+    const context = { ...snapshot, toolCalls: kept };
+    if (Buffer.byteLength(JSON.stringify(context)) <= CHATBOT_TURN_CONTEXT_MAX_BYTES) {
+      return context;
+    }
+    kept.pop();
+  }
+  return snapshot;
+}
+
 function withDeadline<T>(work: Promise<T>, ms: number, label: string): Promise<T> {
   let timer: NodeJS.Timeout | undefined;
   const late = new Promise<never>((_, reject) => {
@@ -177,6 +213,7 @@ export class ChatbotService implements OnModuleDestroy {
     private readonly llm: LlmChatService,
     private readonly locales: GuildLocaleService,
     private readonly pause: ChatbotPauseService,
+    private readonly tools: ChatbotToolsService,
   ) {}
 
   /** Answers the message that addressed the bot. A Discord failure on the way out is logged, not thrown. */
@@ -210,7 +247,7 @@ export class ChatbotService implements OnModuleDestroy {
 
     let answer: Answer;
     try {
-      answer = await this.answer(message, t);
+      answer = await this.answer(message, t, locale);
     } catch (error) {
       // A bug: the member still gets an apology, and the error still reaches #bot-log.
       await this.apologize(message, t, locale);
@@ -251,7 +288,7 @@ export class ChatbotService implements OnModuleDestroy {
    * Decides the reply. Whatever is set aside for the model call is settled,
    * or given back, before this returns or throws.
    */
-  private async answer(message: TriggerMessage, t: Translator): Promise<Answer> {
+  private async answer(message: TriggerMessage, t: Translator, locale: Locale): Promise<Answer> {
     const { guildId } = message;
     const userId = message.author.id;
     const [resolved, before] = await Promise.all([
@@ -313,10 +350,15 @@ export class ChatbotService implements OnModuleDestroy {
         attachments,
         recentTurns,
         now: new Date(),
+        model: { name: target.model, source: resolved.source },
         channelMemory: memory.channel ?? undefined,
         userMemory: memory.user ?? undefined,
       });
 
+      // The hold covers one call. Extra tool steps resend the prompt and may
+      // overshoot it; settling charges the real usage and the allowance is
+      // clamped at 0 remaining, a bounded overdraft rather than a hold sized
+      // for the worst case that would lock out members with a small balance.
       const estimate =
         estimateTokens(prompt.estimateChars, prompt.imageCount) + CHATBOT_MAX_OUTPUT_TOKENS;
       const reservation = await this.quota.reserveForTurn(guildId, userId, estimate, message.id);
@@ -332,7 +374,17 @@ export class ChatbotService implements OnModuleDestroy {
       held = hold;
 
       const { model } = target;
-      const asking = await this.ask(target, prompt);
+      const asking = await this.ask(
+        target,
+        prompt,
+        this.tools.build({
+          guildId,
+          askerId: userId,
+          held: hold.reserved,
+          locale,
+          model: { name: target.model, source: resolved.source },
+        }),
+      );
       reported = true;
       this.noteOutcome(
         message,
@@ -394,7 +446,7 @@ export class ChatbotService implements OnModuleDestroy {
           inputTokens: result.usage.inputTokens,
           outputTokens: result.usage.outputTokens,
           estimated: result.usage.estimated,
-          context: prompt.snapshot,
+          context: withToolCalls(prompt.snapshot, result.toolCalls),
         },
         learned: {
           speakerName: context.speaker.name,
@@ -457,12 +509,15 @@ export class ChatbotService implements OnModuleDestroy {
   private async ask(
     target: LlmTarget,
     prompt: ReturnType<typeof buildChatPrompt>,
+    tools: ToolSet,
   ): Promise<{ result: ChatResult } | { reason: ChatFailureReason }> {
     try {
       const result = await this.llm.chat(target, {
         system: prompt.system,
         messages: prompt.messages,
         maxOutputTokens: CHATBOT_MAX_OUTPUT_TOKENS,
+        tools,
+        maxSteps: TOOL_STEPS,
         signal: AbortSignal.timeout(CALL_TIMEOUT_MS),
       });
       return result.text.trim() === '' ? { reason: 'bad_response' } : { result };

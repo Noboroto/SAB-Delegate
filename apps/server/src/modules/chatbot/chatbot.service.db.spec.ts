@@ -18,6 +18,7 @@ import { ChatbotPauseService } from '../llm/chatbot-pause.service.js';
 import { ChatbotQuotaService } from './chatbot-quota.service.js';
 import { ChatbotRecoveryService } from './chatbot-recovery.service.js';
 import type { ChatbotListener } from './chatbot.listener.js';
+import type { ChatbotToolsService } from './chatbot-tools.service.js';
 import { ChatbotService } from './chatbot.service.js';
 
 // The same member and channel ids in every server: only the server tells them apart.
@@ -94,6 +95,7 @@ describe('chatbot reply against Postgres', () => {
       text: `trả lời cho ${model}`,
       usage: { inputTokens: 100, outputTokens: 100, total: 200, estimated: false },
       cut: false,
+      toolCalls: [],
     });
   const used = async (guildId: string) => (await quota.limitOf(guildId, USER)).used;
 
@@ -155,6 +157,7 @@ describe('chatbot reply against Postgres', () => {
       llm as unknown as LlmChatService,
       { resolve: vi.fn().mockResolvedValue('vi') } as unknown as GuildLocaleService,
       new ChatbotPauseService(),
+      { build: () => ({}) } as unknown as ChatbotToolsService,
     );
     behaviour = answers;
   });
@@ -259,6 +262,7 @@ describe('chatbot reply against Postgres', () => {
         text: 'dài',
         usage: { inputTokens: 200, outputTokens: 200, total: 400, estimated: false },
         cut: false,
+        toolCalls: [],
       });
     const answered = await takeIn(guild.discordId);
     await service.handle(answered.message);

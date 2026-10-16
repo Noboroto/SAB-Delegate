@@ -207,6 +207,22 @@ export const ChatbotTurnContextSchema = z.object({
     )
     .max(CONTEXT_ITEMS_MAX)
     .default([]),
+  /**
+   * Tools the model called, in order. Absent on turns of builds without tools,
+   * and kept optional so those rows still read back unchanged.
+   */
+  toolCalls: z
+    .array(
+      z.object({
+        name: z.string().max(CONTEXT_KIND_MAX),
+        /** The arguments as the model sent them, as clipped JSON text. */
+        args: z.string().max(CONTEXT_NOTE_MAX),
+        /** Size of what the tool returned; the result itself is not kept. */
+        resultBytes: z.number().int().min(0),
+      }),
+    )
+    .max(CONTEXT_ITEMS_MAX)
+    .optional(),
 });
 
 export type ChatbotTurnContext = z.infer<typeof ChatbotTurnContextSchema>;

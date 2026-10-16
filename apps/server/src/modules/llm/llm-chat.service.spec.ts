@@ -1,4 +1,6 @@
 import { randomBytes } from 'node:crypto';
+import { z } from '@sab/shared';
+import { tool } from 'ai';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({ fetch: vi.fn(), makeSafeFetch: vi.fn() }));
@@ -100,6 +102,7 @@ describe('LlmChatService.chat', () => {
       text: 'x',
       usage: { inputTokens: 11, outputTokens: 7, total: 18, estimated: false },
       cut: true,
+      toolCalls: [],
     });
   });
 
@@ -297,6 +300,146 @@ describe('LlmChatService.chat', () => {
   it('rejects an answer that is not a chat completion', async () => {
     mocks.fetch.mockResolvedValue(reply(200, { nope: true }));
     await expect(service.chat(target, request)).rejects.toEqual(new LlmChatError('bad_response'));
+  });
+});
+
+function toolCall(
+  id: string,
+  usage: { prompt_tokens: number; completion_tokens: number; total_tokens: number } | null = {
+    prompt_tokens: 10,
+    completion_tokens: 2,
+    total_tokens: 12,
+  },
+) {
+  return completion({
+    choices: [
+      {
+        index: 0,
+        message: {
+          role: 'assistant',
+          content: null,
+          tool_calls: [
+            { id, type: 'function', function: { name: 'lookup', arguments: '{"q":"abc"}' } },
+          ],
+        },
+        finish_reason: 'tool_calls',
+      },
+    ],
+    usage: usage ?? undefined,
+  });
+}
+
+describe('LlmChatService.chat with tools', () => {
+  const execute = vi.fn((_input: { q: string }) => ({ found: 'yes' }));
+  const tools = {
+    lookup: tool({ description: 'look', inputSchema: z.object({ q: z.string() }), execute }),
+  };
+
+  beforeEach(() => {
+    execute.mockClear();
+  });
+
+  it('runs the tool, sums the usage of every step and reports the calls', async () => {
+    mocks.fetch
+      .mockResolvedValueOnce(reply(200, toolCall('call_1')))
+      .mockResolvedValueOnce(
+        reply(
+          200,
+          completion({ usage: { prompt_tokens: 30, completion_tokens: 5, total_tokens: 35 } }),
+        ),
+      );
+    const result = await service.chat(target, { ...request, tools, maxSteps: 3 });
+
+    expect(execute).toHaveBeenCalledWith({ q: 'abc' }, expect.anything());
+    expect(result.text).toBe('hello');
+    expect(result.usage).toEqual({
+      inputTokens: 40,
+      outputTokens: 7,
+      total: 47,
+      estimated: false,
+    });
+    expect(result.toolCalls).toEqual([
+      { name: 'lookup', args: '{"q":"abc"}', resultBytes: JSON.stringify({ found: 'yes' }).length },
+    ]);
+    expect(sentBody(0).tools).toHaveLength(1);
+    const second = sentBody(1).messages as { role: string }[];
+    expect(second.at(-1)?.role).toBe('tool');
+  });
+
+  it('forbids a tool on the last step, so a model that keeps calling still ends in text', async () => {
+    mocks.fetch
+      .mockResolvedValueOnce(reply(200, toolCall('call_1')))
+      .mockResolvedValueOnce(reply(200, completion()));
+    await service.chat(target, { ...request, tools, maxSteps: 2 });
+    expect(sentBody(0).tool_choice).toBe('auto');
+    expect(sentBody(1).tool_choice).toBe('none');
+    expect(mocks.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('counts the whole chat as estimated when one step reported no usage', async () => {
+    mocks.fetch
+      .mockResolvedValueOnce(reply(200, toolCall('call_1', null)))
+      .mockResolvedValueOnce(reply(200, completion()));
+    const result = await service.chat(target, { ...request, tools, maxSteps: 3 });
+    expect(result.usage.estimated).toBe(true);
+    expect(result.usage.total).toBeGreaterThan(0);
+  });
+
+  it('retries once without tools when the endpoint refuses them, and remembers it', async () => {
+    mocks.fetch
+      .mockResolvedValueOnce(
+        reply(400, { error: { message: "Unknown parameter: 'tools' is not supported" } }),
+      )
+      .mockImplementation(() => Promise.resolve(reply(200, completion())));
+
+    await service.chat(target, { ...request, tools, maxSteps: 3 });
+    expect(mocks.fetch).toHaveBeenCalledTimes(2);
+    expect(sentBody(0)).toHaveProperty('tools');
+    expect(sentBody(1)).not.toHaveProperty('tools');
+
+    await service.chat(target, { ...request, tools, maxSteps: 3 });
+    expect(mocks.fetch).toHaveBeenCalledTimes(3);
+    expect(sentBody(2)).not.toHaveProperty('tools');
+  });
+
+  it('does not take a 400 about something else for a tools refusal', async () => {
+    mocks.fetch.mockResolvedValue(reply(400, { error: { message: 'bad model' } }));
+    await expect(service.chat(target, { ...request, tools, maxSteps: 3 })).rejects.toEqual(
+      new LlmChatError('bad_response'),
+    );
+    expect(mocks.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not remember a refusal when the retry without tools fails too', async () => {
+    mocks.fetch
+      .mockResolvedValueOnce(
+        reply(400, { error: { message: "Unknown parameter: 'tools' is not supported" } }),
+      )
+      .mockResolvedValueOnce(reply(401, { error: { message: 'bad key' } }))
+      .mockImplementation(() => Promise.resolve(reply(200, completion())));
+
+    await expect(service.chat(target, { ...request, tools, maxSteps: 3 })).rejects.toEqual(
+      new LlmChatError('unauthorized'),
+    );
+    await service.chat(target, { ...request, tools, maxSteps: 3 });
+    expect(sentBody(2)).toHaveProperty('tools');
+  });
+
+  it('keeps tools on after an unrelated 400 that mentions a function', async () => {
+    mocks.fetch.mockResolvedValueOnce(
+      reply(400, { error: { message: 'invalid value in function body of the prompt' } }),
+    );
+    await expect(service.chat(target, { ...request, tools, maxSteps: 3 })).rejects.toEqual(
+      new LlmChatError('bad_response'),
+    );
+    expect(mocks.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('sends no tools when none are given', async () => {
+    mocks.fetch.mockResolvedValue(reply(200, completion()));
+    const result = await service.chat(target, request);
+    expect(sentBody()).not.toHaveProperty('tools');
+    expect(result.toolCalls).toEqual([]);
   });
 });
 

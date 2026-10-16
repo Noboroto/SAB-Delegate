@@ -8,6 +8,7 @@ import type { ChatbotContextService } from './chatbot-context.service.js';
 import type { ChatbotHistoryService } from './chatbot-history.service.js';
 import type { ChatbotMemoryService } from './chatbot-memory.service.js';
 import { ChatbotPauseService } from '../llm/chatbot-pause.service.js';
+import type { ChatbotToolsService } from './chatbot-tools.service.js';
 import type { ChatbotQuotaService } from './chatbot-quota.service.js';
 import { ChatbotService } from './chatbot.service.js';
 
@@ -148,7 +149,7 @@ export function build(setup: Setup = {}) {
     setup.chat ??
     (() => {
       calls.push('chat');
-      return Promise.resolve({ text: 'Chào bạn!', usage: USAGE, cut: false });
+      return Promise.resolve({ text: 'Chào bạn!', usage: USAGE, cut: false, toolCalls: [] });
     });
   const chat = vi.fn(answer);
   const read = vi.fn((_guild: string, _channel: string, _user: string) =>
@@ -167,6 +168,7 @@ export function build(setup: Setup = {}) {
   const recentFor = vi.fn((_guild: string, _user: string) => Promise.resolve([]));
   const resolve = vi.fn((_guild: string) => Promise.resolve(setup.locale ?? 'vi'));
   const pause = setup.pause ?? new ChatbotPauseService();
+  const build = vi.fn((_scope: object) => ({}));
   const service = new ChatbotService(
     { resolveTarget, alertGuildId: ADMIN_GUILD } as unknown as ChatbotConfigService,
     quota as unknown as ChatbotQuotaService,
@@ -176,6 +178,7 @@ export function build(setup: Setup = {}) {
     { chat } as unknown as LlmChatService,
     { resolve } as unknown as GuildLocaleService,
     pause,
+    { build } as unknown as ChatbotToolsService,
   );
   return {
     service,
@@ -192,6 +195,7 @@ export function build(setup: Setup = {}) {
     markReplied,
     recentFor,
     resolve,
+    buildTools: build,
   };
 }
 

@@ -15,6 +15,7 @@ import { ChatbotHistoryService } from './chatbot-history.service.js';
 import { ChatbotMemoryService } from './chatbot-memory.service.js';
 import { ChatbotPauseService } from '../llm/chatbot-pause.service.js';
 import { ChatbotQuotaService } from './chatbot-quota.service.js';
+import { ChatbotToolsService } from './chatbot-tools.service.js';
 import { ChatbotListener } from './chatbot.listener.js';
 import { ChatbotService } from './chatbot.service.js';
 import {
@@ -94,7 +95,12 @@ describe('ChatbotService: a normal reply', () => {
   it('pings the asker through the reply and nothing else', async () => {
     const { service } = build({
       chat: () =>
-        Promise.resolve({ text: 'Hi @everyone @here <@&123> <@456>', usage: USAGE, cut: false }),
+        Promise.resolve({
+          text: 'Hi @everyone @here <@&123> <@456>',
+          usage: USAGE,
+          cut: false,
+          toolCalls: [],
+        }),
     });
     const sent = fakeMessage();
     await service.handle(sent.message);
@@ -159,7 +165,7 @@ describe('ChatbotService: a normal reply', () => {
 
   it('marks an answer the model cut off', async () => {
     const { service } = build({
-      chat: () => Promise.resolve({ text: 'Một nửa', usage: USAGE, cut: true }),
+      chat: () => Promise.resolve({ text: 'Một nửa', usage: USAGE, cut: true, toolCalls: [] }),
     });
     const sent = fakeMessage();
     await service.handle(sent.message);
@@ -170,7 +176,7 @@ describe('ChatbotService: a normal reply', () => {
     const line = 'y'.repeat(99);
     const text = Array.from({ length: 60 }, () => line).join('\n');
     const { service, finalize } = build({
-      chat: () => Promise.resolve({ text, usage: USAGE, cut: false }),
+      chat: () => Promise.resolve({ text, usage: USAGE, cut: false, toolCalls: [] }),
     });
     const sent = fakeMessage();
     await service.handle(sent.message);
@@ -197,7 +203,7 @@ describe('ChatbotService: a normal reply', () => {
     const { service } = build({
       chat: async () => {
         await slow;
-        return { text: 'xong', usage: USAGE, cut: false };
+        return { text: 'xong', usage: USAGE, cut: false, toolCalls: [] };
       },
     });
     const sent = fakeMessage();
@@ -326,7 +332,7 @@ describe('ChatbotService: a failed model call', () => {
     const quota = quotaFake();
     const { service, finalize } = build({
       quota,
-      chat: () => Promise.resolve({ text: '  \n ', usage: USAGE, cut: false }),
+      chat: () => Promise.resolve({ text: '  \n ', usage: USAGE, cut: false, toolCalls: [] }),
     });
     const sent = fakeMessage();
     await service.handle(sent.message);
@@ -498,7 +504,7 @@ describe('ChatbotService: where the reply goes', () => {
     silenceLogs();
     const text = Array.from({ length: 60 }, () => 'y'.repeat(99)).join('\n');
     const { service } = build({
-      chat: () => Promise.resolve({ text, usage: USAGE, cut: false }),
+      chat: () => Promise.resolve({ text, usage: USAGE, cut: false, toolCalls: [] }),
     });
     const gone = Object.assign(new Error('Unknown Message'), { code: 10008 });
     const sent = fakeMessage({ reply: () => Promise.reject(gone) });
@@ -682,7 +688,7 @@ describe('ChatbotService: provider out of credit', () => {
       pause,
       chat: () =>
         new Promise((resolve) => {
-          finishSlow = () => resolve({ text: 'muộn', usage: USAGE, cut: false });
+          finishSlow = () => resolve({ text: 'muộn', usage: USAGE, cut: false, toolCalls: [] });
         }),
     });
     const slowReply = slow.service.handle(fakeMessage().message);
@@ -811,6 +817,7 @@ describe('ChatbotModule wiring', () => {
       LlmChatService,
       GuildLocaleService,
       ChatbotPauseService,
+      ChatbotToolsService,
     ]);
     const listenerDeps = Reflect.getMetadata('design:paramtypes', ChatbotListener) as unknown[];
     expect(listenerDeps).toHaveLength(4);

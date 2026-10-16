@@ -195,6 +195,20 @@ describe('ChatbotTurnContextSchema', () => {
     });
   });
 
+  it('reads a snapshot with tool calls and one without', () => {
+    const call = { name: 'my_quota', args: '{}', resultBytes: 120 };
+    expect(ChatbotTurnContextSchema.parse({ system: 's', toolCalls: [call] }).toolCalls).toEqual([
+      call,
+    ]);
+    expect(ChatbotTurnContextSchema.parse({ system: 's' }).toolCalls).toBeUndefined();
+    expect(
+      ChatbotTurnContextSchema.safeParse({
+        system: 's',
+        toolCalls: [{ name: 'x', args: 'a'.repeat(501), resultBytes: 1 }],
+      }).success,
+    ).toBe(false);
+  });
+
   it('refuses a snapshot without the system prompt or with a bad author id', () => {
     expect(ChatbotTurnContextSchema.safeParse({}).success).toBe(false);
     expect(
