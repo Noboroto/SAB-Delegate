@@ -29,7 +29,7 @@ export const WordStatus = WordStatusSchema.enum;
 const MaxWordsSchema = z.number().int().min(WORD_MAX_WORDS_MIN).max(WORD_MAX_WORDS_MAX);
 
 /**
- * Input of `WordGameService.configure` (`/word set`, REST, MCP). A new channel
+ * Input of `WordGameService.configure` (`/game set` for the word chain, REST, MCP). A new channel
  * starts a new round; a limit alone leaves the round that is being played alone.
  */
 export const WordGameConfigSchema = z

@@ -26,6 +26,12 @@ const USER = '440000000000002001';
 const CHANNEL = '240000000000002001';
 const BOT = '940000000000002001';
 
+/** The quota footer ends with the Discord timestamp of the next reset, which moves with the clock. */
+function withReset(text: string): RegExp {
+  const escaped = text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`^${escaped} · làm mới <t:\\d+:R>$`);
+}
+
 describe('chatbot reply against Postgres', () => {
   let database: TestDatabase;
   let prisma: PrismaService;
@@ -216,11 +222,11 @@ describe('chatbot reply against Postgres', () => {
     // Each server spent from its own allowance and shows its own total.
     expect(await used(a.discordId)).toBe(200);
     expect(await used(b.discordId)).toBe(200);
-    expect(first.reply.mock.calls[0]?.[0].content).toBe(
-      `trả lời cho ${a.discordId}\n-# còn lại 99.800 / 100.000`,
+    expect(first.reply.mock.calls[0]?.[0].content).toMatch(
+      withReset(`trả lời cho ${a.discordId}\n-# còn lại 99.800 / 100.000`),
     );
-    expect(second.reply.mock.calls[0]?.[0].content).toBe(
-      `trả lời cho ${b.discordId}\n-# còn lại 49.800 / 50.000`,
+    expect(second.reply.mock.calls[0]?.[0].content).toMatch(
+      withReset(`trả lời cho ${b.discordId}\n-# còn lại 49.800 / 50.000`),
     );
 
     // One new turn per server, written under the server it happened in, with its own memory.
@@ -272,8 +278,8 @@ describe('chatbot reply against Postgres', () => {
     const refused = await takeIn(guild.discordId);
     await service.handle(refused.message);
     expect(modelCalls).toBe(calls + 1);
-    expect(refused.reply.mock.calls[0]?.[0].content).toBe(
-      'Bạn đã dùng hết token chatbot của tháng này.\n-# còn lại 0 / 300',
+    expect(refused.reply.mock.calls[0]?.[0].content).toMatch(
+      withReset('Bạn đã dùng hết token chatbot của tháng này.\n-# còn lại 0 / 300'),
     );
     expect((await turnOf(answered.id))?.status).toBe('OK');
     const turn = await turnOf(refused.id);
@@ -289,8 +295,10 @@ describe('chatbot reply against Postgres', () => {
     await service.handle(failed.message);
 
     expect(await used(guild.discordId)).toBe(0);
-    expect(failed.reply.mock.calls[0]?.[0].content).toBe(
-      'Mình chưa lấy được câu trả lời lúc này. Bạn thử lại sau một lát nhé.\n-# còn lại 100.000 / 100.000',
+    expect(failed.reply.mock.calls[0]?.[0].content).toMatch(
+      withReset(
+        'Mình chưa lấy được câu trả lời lúc này. Bạn thử lại sau một lát nhé.\n-# còn lại 100.000 / 100.000',
+      ),
     );
     expect(await turnOf(failed.id)).toMatchObject({
       status: 'FAILED',

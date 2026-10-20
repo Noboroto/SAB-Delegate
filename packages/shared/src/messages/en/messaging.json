@@ -5,7 +5,7 @@
     "editCopy": { "description": "Edit a bot message with the content of another message" },
     "editSend": { "description": "Edit a message sent by this bot" },
     "react": { "description": "React to a message, optionally adding numbered poll choices" },
-    "contentOption": { "description": "Message text; leave empty to type it in a dialog" },
+    "contentOption": { "description": "Message text" },
     "destinationOption": { "description": "Channel to send to; defaults to this channel" },
     "replyMessageOption": {
       "description": "Link of the message to reply to; used instead of the destination"
@@ -29,7 +29,6 @@
     "reply": { "name": "Reply as bot" }
   },
   "modal": {
-    "send": { "title": "Send a message" },
     "reply": { "title": "Reply as bot" },
     "edit": { "title": "Edit bot message" },
     "contentLabel": "Message"

@@ -14,6 +14,9 @@
     },
     "channelOption": {
       "description": "The channel to play in"
+    },
+    "maxWordsOption": {
+      "description": "Word chain only: most words per round, min 200, default 3000 (ignored for other games)"
     }
   },
   "names": {
@@ -62,7 +65,7 @@
   "help": {
     "WORD_CHAIN": {
       "rules": "Each player sends an English word starting with the last letter of the previous one. No repeated words, nobody twice in a row. Each accepted word scores 1 point.",
-      "setup": "`/word set channel:#channel` picks the channel (optional `max-words`); `/word reset` starts over."
+      "setup": "`/game set game:Word chain channel:#channel` picks the channel (optional `max-words`); `/game reset game:Word chain` starts over."
     },
     "COUNTING": {
       "rules": "The channel counts 1, 2, 3… one number per message, nobody twice in a row. A wrong number or a second number in a row starts over from 1; the record stays. Each right number scores 1 point. Messages that are not numbers are ignored.",

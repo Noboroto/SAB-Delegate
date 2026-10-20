@@ -7,7 +7,7 @@
     "react": {
       "description": "Thả biểu cảm vào tin nhắn, có thể kèm các lựa chọn bình chọn đánh số"
     },
-    "contentOption": { "description": "Nội dung tin nhắn; bỏ trống để nhập trong hộp thoại" },
+    "contentOption": { "description": "Nội dung tin nhắn" },
     "destinationOption": { "description": "Kênh nhận tin; mặc định là kênh hiện tại" },
     "replyMessageOption": {
       "description": "Liên kết tin nhắn cần trả lời; dùng thay cho kênh nhận tin"
@@ -29,7 +29,6 @@
     "reply": { "name": "Trả lời bằng bot" }
   },
   "modal": {
-    "send": { "title": "Gửi tin nhắn" },
     "reply": { "title": "Trả lời bằng bot" },
     "edit": { "title": "Sửa tin nhắn của bot" },
     "contentLabel": "Nội dung"

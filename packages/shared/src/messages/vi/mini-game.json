@@ -14,6 +14,9 @@
     },
     "channelOption": {
       "description": "Kênh chơi"
+    },
+    "maxWordsOption": {
+      "description": "Chỉ cho nối từ: số từ tối đa, tối thiểu 200, mặc định 3000 (bỏ qua với trò khác)"
     }
   },
   "names": {
@@ -62,7 +65,7 @@
   "help": {
     "WORD_CHAIN": {
       "rules": "Mỗi người gửi một từ tiếng Anh bắt đầu bằng chữ cái cuối của từ trước. Không lặp từ, không nối hai lần liên tiếp. Mỗi từ được nhận +1 điểm.",
-      "setup": "`/word set channel:#kênh` để chọn kênh (tuỳ chọn `max-words`), `/word reset` để chơi lại."
+      "setup": "`/game set game:Nối từ channel:#kênh` để chọn kênh (tuỳ chọn `max-words`), `/game reset game:Nối từ` để chơi lại."
     },
     "COUNTING": {
       "rules": "Cả kênh đếm 1, 2, 3… mỗi tin một số. Không ai đếm hai lần liên tiếp. Sai số hoặc đếm liên tiếp thì đếm lại từ 1, kỷ lục vẫn giữ. Mỗi số đúng +1 điểm. Tin không phải số được bỏ qua.",

@@ -8,7 +8,7 @@ model GuildConfig {
   activityCategoryId String?
   wordChannelId      String?
   /// CHECK (migration `_checks`): >= 200.
-  wordMaxWords       Int      @default(1500)
+  wordMaxWords       Int      @default(3000)
   updatedAt          DateTime @updatedAt @db.Timestamptz(3)
 
   guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)

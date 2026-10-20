@@ -1,8 +1,10 @@
 import {
-  ChannelGameSchema,
   ErrorCode,
   MiniGameSchema,
   SkippableGameSchema,
+  WORD_MAX_WORDS_DEFAULT,
+  WORD_MAX_WORDS_MAX,
+  WORD_MAX_WORDS_MIN,
   type ActorContext,
   type ChannelGame,
   type MiniGame,
@@ -18,6 +20,7 @@ import {
 import {
   ChannelOption,
   Context,
+  IntegerOption,
   SlashCommand,
   StringOption,
   Subcommand,
@@ -30,6 +33,7 @@ import { DiscordCommands } from '../../discord/decorators/discord-commands.decor
 import { GuildLocaleService } from '../../i18n/guild-locale.service.js';
 import { localizations } from '../../i18n/localizations.js';
 import { translatorFor } from '../../i18n/translator.js';
+import { WordGameService } from '../word-game/word-game.service.js';
 import { GameChannelService } from '../game-core/game-channel.service.js';
 import { LeaderboardService } from '../game-core/leaderboard.service.js';
 import { MiniGameService, type RestartReason } from './mini-game.service.js';
@@ -56,21 +60,29 @@ const ALL_GAMES = MiniGameSchema.options;
 const gameText = localizations('mini-game.commands.gameOption.description');
 const channelText = localizations('mini-game.commands.channelOption.description');
 const setText = localizations('mini-game.commands.set.description');
+const maxWordsText = localizations('mini-game.commands.maxWordsOption.description');
 const resetText = localizations('mini-game.commands.reset.description');
 const skipText = localizations('mini-game.commands.skip.description');
 
-class ChannelGameOption {
-  @StringOption({
-    name: 'game',
-    description: gameText['en-US'],
-    description_localizations: gameText,
-    choices: choices(ChannelGameSchema.options),
-    required: true,
-  })
+const GAME_OPTION = {
+  name: 'game',
+  description: gameText['en-US'],
+  description_localizations: gameText,
+  choices: choices(ALL_GAMES),
+  required: true,
+} as const;
+
+class AnyGameOption {
+  @StringOption(GAME_OPTION)
   readonly game!: string;
 }
 
-class GameSetOptions extends ChannelGameOption {
+// Declared flat: Necord lists a subclass's own options before the inherited ones, which would
+// put the optional max-words ahead of the required game and make Discord reject the command.
+class GameSetOptions {
+  @StringOption(GAME_OPTION)
+  readonly game!: string;
+
   @ChannelOption({
     name: 'channel',
     description: channelText['en-US'],
@@ -79,6 +91,17 @@ class GameSetOptions extends ChannelGameOption {
     required: true,
   })
   readonly channel!: { readonly id: string };
+
+  // Optional options come after the required ones; only the word chain reads it.
+  @IntegerOption({
+    name: 'max-words',
+    description: maxWordsText['en-US'],
+    description_localizations: maxWordsText,
+    min_value: WORD_MAX_WORDS_MIN,
+    max_value: WORD_MAX_WORDS_MAX,
+    required: false,
+  })
+  readonly maxWords?: number;
 }
 
 class GameSkipOptions {
@@ -87,17 +110,6 @@ class GameSkipOptions {
     description: gameText['en-US'],
     description_localizations: gameText,
     choices: choices(SkippableGameSchema.options),
-    required: true,
-  })
-  readonly game!: string;
-}
-
-class AnyGameOption {
-  @StringOption({
-    name: 'game',
-    description: gameText['en-US'],
-    description_localizations: gameText,
-    choices: choices(ALL_GAMES),
     required: true,
   })
   readonly game!: string;
@@ -125,7 +137,8 @@ function actorOf(interaction: SlashCommandContext[0]): ActorContext {
 }
 
 /**
- * `/game set|reset|skip`. Who may run them is decided by the group's default
+ * `/game set|reset|skip`, the word chain included (except `skip`: it has no
+ * puzzle to reveal). Who may run them is decided by the group's default
  * permission in Discord; nothing is checked here. Answers are private: the
  * round's opening, posted in the game channel, is what the room sees.
  */
@@ -135,16 +148,22 @@ export class GameCommands {
   constructor(
     private readonly games: MiniGameService,
     private readonly channels: GameChannelService,
+    private readonly wordGame: WordGameService,
     private readonly locales: GuildLocaleService,
   ) {}
 
   @Subcommand({ name: 'set', description: setText['en-US'], descriptionLocalizations: setText })
   async onSet(
     @Context() [interaction]: SlashCommandContext,
-    @Options() { game: value, channel }: GameSetOptions,
+    @Options() { game: value, channel, maxWords }: GameSetOptions,
   ): Promise<void> {
     const guildId = guildOf(interaction);
-    const game = parseGame(ChannelGameSchema, value);
+    const picked = parseGame(MiniGameSchema, value);
+    if (picked === 'WORD_CHAIN') {
+      await this.setWordChain(interaction, guildId, channel.id, maxWords);
+      return;
+    }
+    const game = picked;
     // The channel check against Discord and the writes can outlast the 3 s
     // window for a first reply.
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
@@ -176,9 +195,14 @@ export class GameCommands {
   })
   async onReset(
     @Context() [interaction]: SlashCommandContext,
-    @Options() { game: value }: ChannelGameOption,
+    @Options() { game: value }: AnyGameOption,
   ): Promise<void> {
-    await this.restartFromCommand(interaction, parseGame(ChannelGameSchema, value), 'reset');
+    const game = parseGame(MiniGameSchema, value);
+    if (game === 'WORD_CHAIN') {
+      await this.resetWordChain(interaction);
+      return;
+    }
+    await this.restartFromCommand(interaction, game, 'reset');
   }
 
   @Subcommand({ name: 'skip', description: skipText['en-US'], descriptionLocalizations: skipText })
@@ -187,6 +211,46 @@ export class GameCommands {
     @Options() { game: value }: GameSkipOptions,
   ): Promise<void> {
     await this.restartFromCommand(interaction, parseGame(SkippableGameSchema, value), 'skip');
+  }
+
+  /**
+   * The word chain keeps its own state and limit, so it is configured through
+   * its own service rather than the channel-game registry.
+   */
+  private async setWordChain(
+    interaction: SlashCommandContext[0],
+    guildId: string,
+    channelId: string,
+    maxWords: number | undefined,
+  ): Promise<void> {
+    // The channel check against Discord (inside `configure`, before any write),
+    // the writes and the opening message can outlast the 3 s window for a first reply.
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+    await this.wordGame.configure(
+      guildId,
+      { channelId, maxWords: maxWords ?? WORD_MAX_WORDS_DEFAULT },
+      actorOf(interaction),
+    );
+    await this.wordGame.announceStart(guildId, channelId);
+
+    const t = translatorFor(await this.locales.resolve(guildId, interaction));
+    await interaction.editReply(t('word-game.confirmation', { channel: `<#${channelId}>` }));
+  }
+
+  private async resetWordChain(interaction: SlashCommandContext[0]): Promise<void> {
+    const guildId = guildOf(interaction);
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+    const result = await this.wordGame.reset(guildId, actorOf(interaction));
+    const t = translatorFor(await this.locales.resolve(guildId, interaction));
+    if (result.status === 'NOT_CONFIGURED' || result.channelId === null) {
+      await interaction.editReply(t('word-game.notConfigured'));
+      return;
+    }
+
+    await this.wordGame.announceStart(guildId, result.channelId);
+    await interaction.editReply(t('word-game.confirmation', { channel: `<#${result.channelId}>` }));
   }
 
   private async restartFromCommand(

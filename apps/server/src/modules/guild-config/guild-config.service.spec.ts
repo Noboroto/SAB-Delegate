@@ -225,7 +225,7 @@ describe('GuildConfigService.patch with dryRun', () => {
     const { prisma, service } = build();
     prisma.guild.findUnique.mockResolvedValueOnce(null);
     const result = await service.patch(GUILD, { wordMaxWords: 300 }, ACTOR, { dryRun: true });
-    expect(result.before).toMatchObject({ locale: 'vi', wordMaxWords: 1500, logChannelId: null });
+    expect(result.before).toMatchObject({ locale: 'vi', wordMaxWords: 3000, logChannelId: null });
     expect(result.after.wordMaxWords).toBe(300);
   });
 
@@ -344,7 +344,7 @@ describe('GuildConfigService.get', () => {
     const { prisma, service } = build();
     prisma.guild.findUnique.mockResolvedValueOnce({ locale: 'vi', config: null });
     await expect(service.get(GUILD)).resolves.toMatchObject({
-      wordMaxWords: 1500,
+      wordMaxWords: 3000,
       introChannelId: null,
     });
   });

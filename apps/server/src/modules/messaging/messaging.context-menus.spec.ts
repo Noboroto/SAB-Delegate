@@ -10,7 +10,6 @@ import type { MessagingService } from './messaging.service.js';
 
 const GUILD = '100000000000000001';
 const CHANNEL = '200000000000000001';
-const OTHER_CHANNEL = '200000000000000002';
 const MESSAGE = '300000000000000001';
 const BOT = '400000000000000001';
 const USER = '400000000000000002';
@@ -146,20 +145,6 @@ const answer = (target: { editReply: { mock: { calls: unknown[][] } } }) =>
   (target.editReply.mock.calls[0]?.[0] as { content: string }).content;
 
 describe('MessagingModals', () => {
-  it('sends the typed text to the channel in the dialog id', async () => {
-    const { modals, messaging, submission } = build();
-    const target = submission('typed text');
-    await modals.onSend([target] as never, OTHER_CHANNEL, '-');
-
-    expect(target.deferReply).toHaveBeenCalledWith({ flags: MessageFlags.Ephemeral });
-    expect(messaging.sendMessage).toHaveBeenCalledWith(
-      GUILD,
-      { channelId: OTHER_CHANNEL, content: 'typed text' },
-      { source: 'DISCORD', userId: USER },
-    );
-    expect(answer(target)).toBe(T.sent);
-  });
-
   it('replies to the message in the dialog id', async () => {
     const { modals, messaging, submission } = build();
     await modals.onSend([submission('typed text')] as never, CHANNEL, MESSAGE);
@@ -174,7 +159,7 @@ describe('MessagingModals', () => {
   it('refuses a dialog submitted with only spaces', async () => {
     const { modals, messaging, submission } = build();
     const target = submission('   ');
-    await modals.onSend([target] as never, CHANNEL, '-');
+    await modals.onSend([target] as never, CHANNEL, MESSAGE);
     expect(messaging.sendMessage).not.toHaveBeenCalled();
     expect(answer(target)).toBe(T.emptyContent);
   });
@@ -188,7 +173,7 @@ describe('MessagingModals', () => {
       }),
     );
     const target = submission('x');
-    await modals.onSend([target] as never, CHANNEL, '-');
+    await modals.onSend([target] as never, CHANNEL, MESSAGE);
     expect(answer(target)).toBe('Cannot send: Missing Permissions');
   });
 

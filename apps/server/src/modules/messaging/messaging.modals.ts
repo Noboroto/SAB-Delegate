@@ -17,16 +17,14 @@ import { MessagingService } from './messaging.service.js';
 /** Dialog ids carry what the dialog acts on, since it is answered in a later request. */
 const SEND_MODAL_PREFIX = 'bm-send';
 const EDIT_MODAL_PREFIX = 'bm-edit';
-/** Stands for "no message to reply to" in a send dialog's id, which needs a value there. */
-const NO_REPLY = '-';
 
 const CONTENT_INPUT = 'content';
 
-/** A dialog to type a message in; with `replyMessageId` the message is posted as a reply to it. */
+/** A dialog to type a reply to `replyMessageId`, posted in `channelId`. */
 export function buildSendModal(
   locale: string,
   channelId: string,
-  replyMessageId?: string,
+  replyMessageId: string,
 ): ModalBuilder {
   const t = translatorFor(locale);
   const input = new TextInputBuilder()
@@ -37,12 +35,8 @@ export function buildSendModal(
     .setMaxLength(MESSAGE_MAX_LENGTH);
 
   return new ModalBuilder()
-    .setCustomId(`${SEND_MODAL_PREFIX}/${channelId}/${replyMessageId ?? NO_REPLY}`)
-    .setTitle(
-      replyMessageId === undefined
-        ? t('messaging.modal.send.title')
-        : t('messaging.modal.reply.title'),
-    )
+    .setCustomId(`${SEND_MODAL_PREFIX}/${channelId}/${replyMessageId}`)
+    .setTitle(t('messaging.modal.reply.title'))
     .addLabelComponents(
       new LabelBuilder().setLabel(t('messaging.modal.contentLabel')).setTextInputComponent(input),
     );
@@ -73,7 +67,7 @@ export function buildEditModal(
 }
 
 /**
- * The submitted dialogs of `/bot-message send|edit-send` and of the "Reply as
+ * The submitted dialogs of `/bot-message edit-send` and of the "Reply as
  * bot" and "Edit bot message" menus. The answer is private, as the commands'
  * always were.
  */
@@ -104,9 +98,7 @@ export class MessagingModals {
         {
           channelId,
           content,
-          ...(replyMessageId === NO_REPLY
-            ? {}
-            : { replyTo: { channelId, messageId: replyMessageId } }),
+          replyTo: { channelId, messageId: replyMessageId },
         },
         slashActor(interaction),
       );

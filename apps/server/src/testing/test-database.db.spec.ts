@@ -354,7 +354,7 @@ describe('schema and migrations', () => {
       ).rejects.toThrow(CHECK_VIOLATION);
       await expect(
         database.prisma.guildConfig.create({ data: { guildId: other, logChannelId: SNOWFLAKE } }),
-      ).resolves.toMatchObject({ wordMaxWords: 1500 });
+      ).resolves.toMatchObject({ wordMaxWords: 3000 });
     });
 
     it('requires a lease on every SENDING birthday run', async () => {

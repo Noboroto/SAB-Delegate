@@ -2,7 +2,6 @@ import 'reflect-metadata';
 import { Test } from '@nestjs/testing';
 import { describe, expect, it } from 'vitest';
 import { DICTIONARY_SOURCE, DictionaryService } from './dictionary.service.js';
-import { WordGameCommands } from './word-game.commands.js';
 import { WordGameListener } from './word-game.listener.js';
 import { WordGameModule } from './word-game.module.js';
 import { WordGameService } from './word-game.service.js';
@@ -23,7 +22,6 @@ describe('WordGameModule', () => {
 
     expect(moduleRef.get(WordGameService)).toBeInstanceOf(WordGameService);
     expect(moduleRef.get(WordGameListener)).toBeInstanceOf(WordGameListener);
-    expect(moduleRef.get(WordGameCommands)).toBeInstanceOf(WordGameCommands);
     expect(moduleRef.get(WordDefinitionService)).toBeInstanceOf(WordDefinitionService);
     await moduleRef.close();
   });

@@ -30,7 +30,7 @@ import { MessageResolver } from '../../discord/services/message-resolver.service
 import { GuildLocaleService } from '../../i18n/guild-locale.service.js';
 import { localizations } from '../../i18n/localizations.js';
 import { translatorFor } from '../../i18n/translator.js';
-import { buildEditModal, buildSendModal } from './messaging.modals.js';
+import { buildEditModal } from './messaging.modals.js';
 import {
   answerPrivately,
   channelOf,
@@ -70,16 +70,15 @@ const reactChoiceCountText = localizations('messaging.commands.reactChoiceCountO
 type ChannelRef = { readonly id: string };
 
 class SendOptions {
-  /** Left out, the command opens a dialog for the text instead. */
   @StringOption({
     name: 'content',
     description: contentText['en-US'],
     description_localizations: contentText,
-    required: false,
+    required: true,
     min_length: 1,
     max_length: MESSAGE_MAX_LENGTH,
   })
-  readonly content?: string;
+  readonly content!: string;
 
   @ChannelOption({
     name: 'destination',
@@ -211,11 +210,6 @@ export class MessagingCommands {
     @Context() [interaction]: SlashCommandContext,
     @Options() { content, destination, replyMessage }: SendOptions,
   ): Promise<void> {
-    if (content === undefined) {
-      await this.openSendDialog(interaction, destination?.id, replyMessage);
-      return;
-    }
-
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     const t = await this.translator(interaction);
     if (content.trim() === '') {
@@ -382,38 +376,6 @@ export class MessagingCommands {
       );
       return t('messaging.done');
     });
-  }
-
-  /**
-   * A dialog has to be the first response, so the reply link is only read
-   * here, not fetched: whether it resolves is found out when the dialog is
-   * submitted.
-   */
-  private async openSendDialog(
-    interaction: SlashCommandContext[0],
-    destinationId: string | undefined,
-    replyMessage: string | undefined,
-  ): Promise<void> {
-    const here = channelOf(interaction);
-    let channelId = destinationId ?? here;
-    let replyMessageId: string | undefined;
-
-    if (replyMessage !== undefined) {
-      const ref = parseMessageRef(replyMessage, { channelId: here });
-      if (!ref.ok) {
-        const t = await this.translator(interaction);
-        await replyInChunks(interaction, t(`errors.invalidLink.${ref.reason}`), {
-          ephemeral: true,
-        });
-        return;
-      }
-      channelId = ref.channelId;
-      replyMessageId = ref.messageId;
-    }
-    await showModalFirst(
-      interaction,
-      buildSendModal(interaction.locale, channelId, replyMessageId),
-    );
   }
 
   /** The message a link names, or undefined after telling the person why there is none. */

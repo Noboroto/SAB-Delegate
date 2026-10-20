@@ -7,8 +7,8 @@ import { SnowflakeSchema } from './snowflake.js';
 /** The word game needs room for a real chain; below this it ends before it starts. */
 export const WORD_MAX_WORDS_MIN = 200;
 
-/** What a server gets when `/word set` names no limit; matches the column default. */
-export const WORD_MAX_WORDS_DEFAULT = 1500;
+/** What a server gets when `/game set` for the word chain names no limit; matches the column default. */
+export const WORD_MAX_WORDS_DEFAULT = 3000;
 
 /** Largest value the `Int` column holds; a bigger number would fail at the database. */
 export const WORD_MAX_WORDS_MAX = 2_147_483_647;

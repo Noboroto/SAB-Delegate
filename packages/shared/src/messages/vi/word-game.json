@@ -1,18 +1,4 @@
 {
-  "commands": {
-    "set": {
-      "description": "Chọn phòng để bắt đầu chơi nối chữ"
-    },
-    "reset": {
-      "description": "Đặt lại ván nối chữ, giữ nguyên phòng chơi và giới hạn"
-    },
-    "channelOption": {
-      "description": "Kênh bạn muốn chọn"
-    },
-    "maxWordsOption": {
-      "description": "Số từ tối đa, không ít hơn 200 từ! Mặc định là 1500 từ."
-    }
-  },
   "start": "Trò chơi bắt đầu! Vui lòng nhập 1 từ bất kỳ!",
   "confirmation": "Đã chọn phòng chơi: {channel}",
   "notConfigured": "Chưa chọn phòng chơi!",

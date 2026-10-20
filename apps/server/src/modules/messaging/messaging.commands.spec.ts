@@ -93,54 +93,6 @@ const discordRefusal = (reason: string) =>
   new ServiceError(ErrorCode.DISCORD_MISSING_PERMISSIONS, { permission: 'send', reason });
 
 describe('/bot-message send', () => {
-  it('opens a dialog as the first and only response when the text is missing', async () => {
-    const { commands, messaging, resolver, interaction } = build();
-    const target = interaction();
-    await commands.onSend([target] as never, {});
-
-    expect(target.showModal).toHaveBeenCalledOnce();
-    expect(target.deferReply).not.toHaveBeenCalled();
-    expect(target.reply).not.toHaveBeenCalled();
-    expect(resolver.fetch).not.toHaveBeenCalled();
-    expect(messaging.sendMessage).not.toHaveBeenCalled();
-    const modal = modalOf(target);
-    expect(modal.custom_id).toBe(`bm-send/${CHANNEL}/-`);
-    expect(modal.title).toBe(MESSAGES.vi.messaging.modal.send.title);
-    expect(inputOf(modal)).toMatchObject({ style: TextInputStyle.Paragraph, required: true });
-  });
-
-  it('carries the chosen channel in the dialog id', async () => {
-    const { commands, interaction } = build();
-    const target = interaction();
-    await commands.onSend([target] as never, { destination: { id: OTHER_CHANNEL } });
-    expect(modalOf(target).custom_id).toBe(`bm-send/${OTHER_CHANNEL}/-`);
-  });
-
-  it('turns a reply link into a reply dialog in the replied-to message’s own channel', async () => {
-    const { commands, interaction } = build();
-    const target = interaction();
-    await commands.onSend([target] as never, {
-      destination: { id: CHANNEL },
-      replyMessage: linkTo(OTHER_CHANNEL, REPLY),
-    });
-    const modal = modalOf(target);
-    expect(modal.custom_id).toBe(`bm-send/${OTHER_CHANNEL}/${REPLY}`);
-    expect(modal.custom_id.length).toBeLessThanOrEqual(100);
-    expect(modal.title).toBe(MESSAGES.vi.messaging.modal.reply.title);
-  });
-
-  it('says what is wrong with a reply link instead of opening a dialog', async () => {
-    const { commands, interaction } = build();
-    const target = interaction();
-    await commands.onSend([target] as never, { replyMessage: 'not a link' });
-
-    expect(target.showModal).not.toHaveBeenCalled();
-    expect(textOf(target.reply)).toBe(MESSAGES.en.errors.invalidLink.MALFORMED);
-    expect((target.reply.mock.calls[0]?.[0] as { flags: unknown }).flags).toBe(
-      MessageFlags.Ephemeral,
-    );
-  });
-
   it('defers privately, sends to the channel it ran in and answers "Sent!"', async () => {
     const { commands, messaging, interaction } = build();
     const target = interaction();

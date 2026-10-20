@@ -69,7 +69,7 @@ describe('GuildSettingsSchema', () => {
   };
 
   it('fills wordMaxWords with the stored default when the row predates the column value', () => {
-    expect(GuildSettingsSchema.parse(settings).wordMaxWords).toBe(1500);
+    expect(GuildSettingsSchema.parse(settings).wordMaxWords).toBe(3000);
   });
 
   it('drops columns that are not settings, such as the internal keys', () => {

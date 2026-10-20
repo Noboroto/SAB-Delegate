@@ -122,7 +122,7 @@ export class GameChannelService {
     try {
       const result = await this.prisma.$transaction(async (tx): Promise<SetChannelResult> => {
         const guild = await this.guilds.ensureGuild(id, undefined, tx);
-        // Held until commit: a concurrent `/word set` or chatbot channel on the
+        // Held until commit: a concurrent word-chain `/game set` or chatbot channel on the
         // same channel waits here, then reads this write instead of racing it.
         await this.guilds.lockChannelClaim(channel.data, tx);
         const word = await tx.guildConfig.findFirst({

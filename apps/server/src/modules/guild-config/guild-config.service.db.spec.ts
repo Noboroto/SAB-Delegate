@@ -45,7 +45,7 @@ describe('GuildConfigService against Postgres', () => {
     });
     expect(guild.name).toBe('First name');
     expect(guild.locale).toBe('vi');
-    expect(guild.config).toMatchObject({ wordMaxWords: 1500, logChannelId: null });
+    expect(guild.config).toMatchObject({ wordMaxWords: 3000, logChannelId: null });
   });
 
   it('survives the same server being announced concurrently', async () => {
