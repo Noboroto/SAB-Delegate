@@ -23,9 +23,6 @@
   "set": {
     "description": "Set configurations for this server"
   },
-  "word": {
-    "description": "Word-chain game"
-  },
   "note": {
     "description": "Manage notes by role"
   },
@@ -61,5 +58,20 @@
   },
   "chat": {
     "description": "Your chatbot usage, memory and history in this server"
+  },
+  "verify": {
+    "description": "Verify your email address to get access to this server"
+  },
+  "email-verify": {
+    "description": "Set up email verification: button, members, roles, export"
+  },
+  "email-rule": {
+    "description": "Manage access rules: conditions on email or invite that grant roles"
+  },
+  "email-block": {
+    "description": "Block email address patterns from verifying"
+  },
+  "email-list": {
+    "description": "Manage email lists that access rules can refer to"
   }
 }

@@ -23,11 +23,16 @@ const SPECS = {
   scheduler: { permissions: PermissionFlagsBits.ManageMessages },
   birthday: { permissions: PermissionFlagsBits.Administrator },
   set: { permissions: PermissionFlagsBits.Administrator },
-  word: { permissions: PermissionFlagsBits.ManageMessages },
   game: { permissions: PermissionFlagsBits.ManageMessages },
   // `chatbot` is for the managers of a server; `chat` is every member's own view.
   chatbot: { permissions: PermissionFlagsBits.ManageGuild },
   chat: {},
+  // Email verification: `verify` is every member's own command, the rest are for managers.
+  verify: { guildOnly: true },
+  'email-verify': { permissions: PermissionFlagsBits.ManageGuild },
+  'email-rule': { permissions: PermissionFlagsBits.ManageGuild },
+  'email-block': { permissions: PermissionFlagsBits.ManageGuild },
+  'email-list': { permissions: PermissionFlagsBits.ManageGuild },
   note: {},
   get: {},
   mention: { permissions: PermissionFlagsBits.UseApplicationCommands },
@@ -55,10 +60,14 @@ const GROUP_NAMES = [
   'scheduler',
   'birthday',
   'set',
-  'word',
   'game',
   'chatbot',
   'chat',
+  'verify',
+  'email-verify',
+  'email-rule',
+  'email-block',
+  'email-list',
   'note',
   'get',
   'mention',
@@ -101,9 +110,14 @@ export const CommandGroup: GroupDecorators = Object.fromEntries(
 
 // Decorator syntax takes a plain name, not an indexed access, and these groups
 // have a dash in theirs. `BotMessageGroup` and `ThreadGroup` are the groups
-// that several feature modules contribute to; the declaration is the same
+// that several feature modules contribute to; the email groups are split over
+// several classes the same way; the declaration is the same
 // object for all of them, so they cannot drift apart.
 export const BotMessageGroup = CommandGroup['bot-message'];
 export const BulkAssignGroup = CommandGroup['bulk-assign'];
+export const EmailVerifyGroup = CommandGroup['email-verify'];
+export const EmailRuleGroup = CommandGroup['email-rule'];
+export const EmailBlockGroup = CommandGroup['email-block'];
+export const EmailListGroup = CommandGroup['email-list'];
 export const PrivateThreadGroup = CommandGroup['private-thread'];
 export const ThreadGroup = CommandGroup.thread;

@@ -15,6 +15,7 @@ import { toolInputSchema } from './write-guard.js';
 const CHANNEL = '555555555555555551';
 const MESSAGE = '555555555555555552';
 const USER = '555555555555555553';
+const LIST = '0190a000-0000-7000-8000-000000000001';
 
 /** Valid arguments of every tool that writes; a new write tool fails the coverage test until it has a line here. */
 const DRY_RUN_ARGS: Readonly<Record<string, Record<string, unknown>>> = {
@@ -42,6 +43,25 @@ const DRY_RUN_ARGS: Readonly<Record<string, Record<string, unknown>>> = {
   chatbot_quota_reset: { userId: USER },
   chatbot_memory_clear: { scope: 'all' },
   chatbot_turn_delete: { scope: 'all' },
+  email_verify_config_set: { enabled: true },
+  email_verify_rules_set: {
+    rules: [
+      {
+        condition: {
+          combinator: 'and',
+          rules: [{ field: 'domain', operator: '=', value: 'example.edu' }],
+        },
+        roleIds: [CHANNEL],
+      },
+    ],
+  },
+  email_verify_blocklist_set: { patterns: ['*@mailinator.com'] },
+  email_list_create: { name: 'k21' },
+  email_list_delete: { listId: LIST },
+  email_list_entries_add: { listId: LIST, emails: ['an@example.edu'] },
+  email_list_entries_remove: { listId: LIST, emails: ['an@example.edu'] },
+  email_verify_member_verify: { userId: USER, email: 'an@example.edu' },
+  email_verify_member_revoke: { userId: USER },
 };
 
 type Call = { target: string; args: unknown[] };

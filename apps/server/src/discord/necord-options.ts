@@ -6,7 +6,8 @@ import { makeRetryingRequest } from './helpers/rest-retry.js';
 /**
  * Only what the bot reads. GuildMembers and MessageContent are privileged
  * intents and must be enabled in the Discord developer portal; presences,
- * typing and moderation events are deliberately not requested.
+ * typing and moderation events are deliberately not requested. GuildInvites
+ * (not privileged) lets email verification tell which invite a new member used.
  */
 export const DISCORD_INTENTS = [
   GatewayIntentBits.Guilds,
@@ -16,6 +17,7 @@ export const DISCORD_INTENTS = [
   GatewayIntentBits.MessageContent,
   GatewayIntentBits.GuildMessageReactions,
   GatewayIntentBits.GuildExpressions,
+  GatewayIntentBits.GuildInvites,
 ];
 
 /**

@@ -23,9 +23,6 @@
   "set": {
     "description": "Cài đặt cấu hình cho máy chủ này"
   },
-  "word": {
-    "description": "Trò chơi nối chữ"
-  },
   "note": {
     "description": "Quản lý ghi chú theo vai trò"
   },
@@ -61,5 +58,20 @@
   },
   "chat": {
     "description": "Mức dùng, trí nhớ và lịch sử chatbot của bạn trong server này"
+  },
+  "verify": {
+    "description": "Xác thực địa chỉ email để vào server này"
+  },
+  "email-verify": {
+    "description": "Cài xác thực email: nút, thành viên, role, xuất file"
+  },
+  "email-rule": {
+    "description": "Quản lý quy tắc truy cập: điều kiện theo email hoặc lời mời để cấp role"
+  },
+  "email-block": {
+    "description": "Chặn các mẫu địa chỉ email không được xác thực"
+  },
+  "email-list": {
+    "description": "Quản lý danh sách email mà quy tắc truy cập có thể dùng"
   }
 }

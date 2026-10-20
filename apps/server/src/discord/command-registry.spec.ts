@@ -20,7 +20,6 @@ const LEGACY_PERMISSIONS: Record<string, bigint | undefined> = {
   scheduler: PermissionFlagsBits.ManageMessages,
   birthday: PermissionFlagsBits.Administrator,
   set: PermissionFlagsBits.Administrator,
-  word: PermissionFlagsBits.ManageMessages,
   note: undefined,
   get: undefined,
   mention: PermissionFlagsBits.UseApplicationCommands,
@@ -38,13 +37,19 @@ const LEGACY_PERMISSIONS: Record<string, bigint | undefined> = {
   help: undefined,
   chatbot: PermissionFlagsBits.ManageGuild,
   chat: undefined,
+  // Email verification: members' own command, and four for the managers of a server.
+  verify: undefined,
+  'email-verify': PermissionFlagsBits.ManageGuild,
+  'email-rule': PermissionFlagsBits.ManageGuild,
+  'email-block': PermissionFlagsBits.ManageGuild,
+  'email-list': PermissionFlagsBits.ManageGuild,
 };
-const LEGACY_GUILD_ONLY = ['add-poll', 'attendance-by-role', 'create-activity'];
+const LEGACY_GUILD_ONLY = ['add-poll', 'attendance-by-role', 'create-activity', 'verify'];
 
-describe('the 21 top-level commands', () => {
+describe('the 25 top-level commands', () => {
   it('are exactly the commands in the shared catalog', () => {
     expect([...ROOT_COMMAND_NAMES].sort()).toEqual(Object.keys(MESSAGES.en.commands).sort());
-    expect(ROOT_COMMAND_NAMES).toHaveLength(21);
+    expect(ROOT_COMMAND_NAMES).toHaveLength(25);
   });
 
   it('pass the Discord metadata limits', () => {
@@ -82,9 +87,9 @@ describe('the 21 top-level commands', () => {
 });
 
 describe('command group decorators', () => {
-  it('declare each of the 15 groups once, with the registered metadata', () => {
+  it('declare each of the 19 groups once, with the registered metadata', () => {
     const groups = Object.keys(CommandGroup);
-    expect(groups).toHaveLength(15);
+    expect(groups).toHaveLength(19);
     const reflector = new Reflector();
     for (const name of groups) {
       @(CommandGroup[name as keyof typeof CommandGroup]())

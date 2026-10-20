@@ -63,10 +63,15 @@ describe('translatorFor', () => {
 
   it('has a message for every ErrorCode in both languages, formatted without a warning', () => {
     const warn = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
-    // The ICU select needs its argument, as every throw site supplies it.
+    // Each ICU argument is needed, as every throw site supplies it.
     const params: Partial<
-      Record<(typeof ErrorCodeSchema.options)[number], { permission: string }>
-    > = { DISCORD_MISSING_PERMISSIONS: { permission: 'other' } };
+      Record<(typeof ErrorCodeSchema.options)[number], Record<string, string | number>>
+    > = {
+      DISCORD_MISSING_PERMISSIONS: { permission: 'other' },
+      EMAIL_RESEND_COOLDOWN: { seconds: 30 },
+      EMAIL_RULE_INVALID: { rule: 1, term: 'domain', reason: 'TOO_DEEP' },
+      EMAIL_EXPORT_TOO_LARGE: { max: 5000 },
+    };
     for (const locale of ['vi', 'en']) {
       const t = translatorFor(locale);
       for (const code of ErrorCodeSchema.options) {

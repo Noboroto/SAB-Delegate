@@ -423,6 +423,7 @@ describe('buildNecordOptions', () => {
         GatewayIntentBits.MessageContent,
         GatewayIntentBits.GuildMessageReactions,
         GatewayIntentBits.GuildExpressions,
+        GatewayIntentBits.GuildInvites,
       ].sort(),
     );
     expect(DISCORD_INTENTS).not.toContain(GatewayIntentBits.GuildPresences);

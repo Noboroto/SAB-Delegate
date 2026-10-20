@@ -33,6 +33,7 @@ import { WORDGAME_TOOLS } from './tools/wordgame.tools.js';
 import { SCHEDULE_TOOLS } from './tools/schedule.tools.js';
 import { MESSAGE_TOOLS } from './tools/message.tools.js';
 import { CHATBOT_TOOLS } from './tools/chatbot.tools.js';
+import { EMAIL_VERIFY_TOOLS } from './tools/email-verify.tools.js';
 
 /**
  * Every domain's rows. Registration iterates the concatenation and nothing
@@ -51,6 +52,7 @@ export const DOMAIN_TOOL_TABLES: readonly (readonly AnyToolRow[])[] = [
   SCHEDULE_TOOLS,
   MESSAGE_TOOLS,
   CHATBOT_TOOLS,
+  EMAIL_VERIFY_TOOLS,
 ];
 
 export const TOOL_REGISTRY: readonly AnyToolRow[] = DOMAIN_TOOL_TABLES.flat();

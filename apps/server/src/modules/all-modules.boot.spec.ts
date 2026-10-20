@@ -61,11 +61,21 @@ const LEGACY_ROOT_COMMANDS = [
   'scheduler',
   'set',
   'thread',
-  'word',
 ];
 
-/** Root commands added after the previous bot: the channel games, scores, help and the chatbot. */
-const ADDED_ROOT_COMMANDS = ['chat', 'chatbot', 'game', 'help', 'leaderboard'];
+/** Root commands added after the previous bot: the channel games, scores, help, the chatbot and email verification. */
+const ADDED_ROOT_COMMANDS = [
+  'chat',
+  'chatbot',
+  'email-block',
+  'email-list',
+  'email-rule',
+  'email-verify',
+  'game',
+  'help',
+  'leaderboard',
+  'verify',
+];
 
 /** The four message context menus; Discord allows five, one slot stays free. */
 const MESSAGE_CONTEXT_MENUS = [
@@ -296,9 +306,6 @@ describe('all feature modules in one application', () => {
       expect(replyTo?.matcher(`bm-send/${CHANNEL}/${REPLY_MESSAGE}`)).toMatchObject({
         params: { channelId: CHANNEL, replyMessageId: REPLY_MESSAGE },
       });
-      expect(replyTo?.matcher(`bm-send/${CHANNEL}/-`)).toMatchObject({
-        params: { channelId: CHANNEL, replyMessageId: '-' },
-      });
       expect(modals().get(`bm-edit/${CHANNEL}/${REPLY_MESSAGE}`)).toBeDefined();
       expect(modals().get(`bm-send/${CHANNEL}`)).toBeUndefined();
     });
@@ -322,16 +329,17 @@ describe('all feature modules in one application', () => {
       );
     });
 
-    it('treats "-" as no reply target', async () => {
+    it('routes each reply message id to its own reply target', async () => {
       sendMessage.mockClear();
-      const { interaction } = submit(`bm-send/${CHANNEL}/-`, 'Plain');
+      const other = '444444444444444449';
+      const { interaction } = submit(`bm-send/${CHANNEL}/${other}`, 'Plain');
       await modals()
         .get(interaction.customId)
         ?.execute(interaction as never);
 
       expect(sendMessage).toHaveBeenCalledWith(
         GUILD,
-        { channelId: CHANNEL, content: 'Plain' },
+        { channelId: CHANNEL, content: 'Plain', replyTo: { channelId: CHANNEL, messageId: other } },
         { source: 'DISCORD', userId: MEMBER },
       );
     });
