@@ -64,6 +64,22 @@ const PARAM_KEYS: ReadonlySet<string> = new Set([
   'period',
   'scope',
   'source',
+  // Email verification: never an address, a code or a password; only its domain and counts.
+  'emailDomain',
+  'listName',
+  'termCount',
+  'ruleCount',
+  'patternCount',
+  'method',
+  'inviteCode',
+  'defaultRoleIds',
+  'unverifiedRoleId',
+  'autoVerifyOnJoin',
+  'autoUnverifiedOnJoin',
+  'changed',
+  'port',
+  'secure',
+  'passwordChanged',
 ]);
 
 const MAX_PARAM_DEPTH = 4;

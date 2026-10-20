@@ -60,3 +60,10 @@ enum ChatbotTurnStatus {
   PENDING
   EXPIRED
 }
+
+/// How an address was confirmed: the member typed the code from the mail (CODE), or a
+/// manager confirmed it by hand (MANUAL).
+enum EmailVerifyMethod {
+  CODE
+  MANUAL
+}

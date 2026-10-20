@@ -61,6 +61,22 @@
     "activityCreate": "Tạo hoạt động",
     "inviteCreate": "Tạo lời mời",
     "apiKeyMint": "Tạo khoá API",
-    "apiKeyRevoke": "Thu hồi khoá API"
+    "apiKeyRevoke": "Thu hồi khoá API",
+    "emailVerifyConfigure": "Cài đặt xác thực email",
+    "emailVerifyRulesSet": "Đặt quy tắc truy cập",
+    "emailVerifyBlocklistSet": "Đặt danh sách chặn email",
+    "emailListCreate": "Tạo danh sách email",
+    "emailListDelete": "Xoá danh sách email",
+    "emailListEntriesAdd": "Thêm vào danh sách email",
+    "emailListEntriesRemove": "Bỏ khỏi danh sách email",
+    "emailListClear": "Làm trống danh sách email",
+    "emailVerifyManual": "Xác thực thành viên thủ công",
+    "emailVerifyRevoke": "Gỡ xác thực của thành viên",
+    "emailVerifyButtonPost": "Đăng nút xác thực",
+    "emailVerifySmtpSet": "Đặt tài khoản SMTP",
+    "emailVerifySmtpTest": "Thử tài khoản SMTP",
+    "emailVerifyTestMail": "Gửi email thử",
+    "emailVerifyMemberVerified": "Thành viên xác thực qua email",
+    "emailVerifyExport": "Xuất danh sách thành viên đã xác thực"
   }
 }

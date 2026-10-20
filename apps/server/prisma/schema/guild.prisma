@@ -30,4 +30,14 @@ model Guild {
   chatbotQuotas          ChatbotUserQuota[]
   chatbotUsages          ChatbotUsage[]
   chatbotTurns           ChatbotTurn[]
+
+  emailVerify         EmailVerifyConfig?
+  accessRules         AccessRule[]
+  memberJoinInvites   MemberJoinInvite[]
+  emailBlockPatterns  EmailBlockPattern[]
+  emailLists          EmailList[]
+  emailVerifications  EmailVerification[]
+  emailVerifyPendings EmailVerifyPending[]
+  emailSendDays       EmailSendDay[]
+  emailSendThrottles  EmailSendThrottle[]
 }

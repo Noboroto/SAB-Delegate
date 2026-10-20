@@ -35,6 +35,8 @@ import enWebSchedule from './en/web-schedule.json';
 import enWebTools from './en/web-tools.json';
 import enWebCommands from './en/web-commands.json';
 import enWebAuditLog from './en/web-audit-log.json';
+import enEmailVerify from './en/email-verify.json';
+import enWebEmailVerify from './en/web-email-verify.json';
 import viActivity from './vi/activity.json';
 import viAttendance from './vi/attendance.json';
 import viBirthday from './vi/birthday.json';
@@ -70,6 +72,8 @@ import viWebSchedule from './vi/web-schedule.json';
 import viWebTools from './vi/web-tools.json';
 import viWebCommands from './vi/web-commands.json';
 import viWebAuditLog from './vi/web-audit-log.json';
+import viEmailVerify from './vi/email-verify.json';
+import viWebEmailVerify from './vi/web-email-verify.json';
 
 /** Discord rejects a command or option description longer than this. */
 export const COMMAND_DESCRIPTION_MAX_LENGTH = 100;
@@ -111,6 +115,8 @@ export const MessageNamespaceSchema = z.enum([
   'web-audit-log',
   'web-api-keys',
   'web-chatbot',
+  'email-verify',
+  'web-email-verify',
 ]);
 
 export type MessageNamespace = z.infer<typeof MessageNamespaceSchema>;
@@ -156,6 +162,8 @@ export const MESSAGES = {
     'web-audit-log': viWebAuditLog,
     'web-api-keys': viWebApiKeys,
     'web-chatbot': viWebChatbot,
+    'email-verify': viEmailVerify,
+    'web-email-verify': viWebEmailVerify,
   },
   en: {
     common: enCommon,
@@ -193,5 +201,7 @@ export const MESSAGES = {
     'web-audit-log': enWebAuditLog,
     'web-api-keys': enWebApiKeys,
     'web-chatbot': enWebChatbot,
+    'email-verify': enEmailVerify,
+    'web-email-verify': enWebEmailVerify,
   },
 } satisfies Record<Locale, Record<MessageNamespace, object>>;

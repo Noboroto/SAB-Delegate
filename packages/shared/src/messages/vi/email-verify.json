@@ -1,0 +1,336 @@
+{
+  "commands": {
+    "verify": {
+      "start": {
+        "description": "Xác thực địa chỉ email để vào server này"
+      },
+      "deleteData": {
+        "description": "Xoá email đã xác thực và dữ liệu xác thực của bạn trong server này"
+      }
+    },
+    "emailVerify": {
+      "status": {
+        "description": "Xem cách xác thực email được cài và dùng ở đây"
+      },
+      "button": {
+        "description": "Đăng nút xác thực vào một kênh"
+      },
+      "manual": {
+        "description": "Xác thực thành viên thủ công, không gửi mã"
+      },
+      "unverify": {
+        "description": "Gỡ xác thực của thành viên và các role đã cấp"
+      },
+      "testMail": {
+        "description": "Gửi email thử để kiểm tra cấu hình thư"
+      },
+      "config": {
+        "description": "Bật hoặc tắt xác thực và đổi cài đặt"
+      },
+      "roleAdd": {
+        "description": "Thêm role mà mọi thành viên đã xác thực đều nhận"
+      },
+      "roleRemove": {
+        "description": "Bỏ một role khỏi các role mọi thành viên đã xác thực nhận"
+      },
+      "export": {
+        "description": "Nhận danh sách thành viên đã xác thực, kèm email và role, dạng file Excel"
+      }
+    },
+    "emailRule": {
+      "add": {
+        "description": "Thêm quy tắc truy cập: một điều kiện và các role nó cấp"
+      },
+      "edit": {
+        "description": "Đổi điều kiện của một quy tắc truy cập"
+      },
+      "remove": {
+        "description": "Xoá một quy tắc truy cập"
+      },
+      "roleAdd": {
+        "description": "Thêm một role vào quy tắc truy cập"
+      },
+      "roleRemove": {
+        "description": "Bỏ một role khỏi quy tắc truy cập"
+      },
+      "list": {
+        "description": "Xem các quy tắc truy cập"
+      },
+      "clear": {
+        "description": "Xoá mọi quy tắc truy cập"
+      }
+    },
+    "emailBlock": {
+      "add": {
+        "description": "Chặn mẫu địa chỉ như *@mailinator.com"
+      },
+      "remove": {
+        "description": "Bỏ chặn một mẫu địa chỉ"
+      },
+      "list": {
+        "description": "Xem các mẫu địa chỉ bị chặn"
+      },
+      "clear": {
+        "description": "Xoá mọi mẫu địa chỉ bị chặn"
+      }
+    },
+    "emailList": {
+      "create": {
+        "description": "Tạo một danh sách email trống"
+      },
+      "delete": {
+        "description": "Xoá một danh sách email"
+      },
+      "add": {
+        "description": "Thêm địa chỉ vào danh sách email"
+      },
+      "remove": {
+        "description": "Bỏ địa chỉ khỏi danh sách email"
+      },
+      "upload": {
+        "description": "Thêm các địa chỉ trong file CSV hoặc TXT vào danh sách email"
+      },
+      "clear": {
+        "description": "Bỏ mọi địa chỉ khỏi danh sách email"
+      },
+      "show": {
+        "description": "Xem các danh sách email và số địa chỉ của từng danh sách"
+      }
+    },
+    "options": {
+      "user": {
+        "description": "Thành viên"
+      },
+      "email": {
+        "description": "Địa chỉ email"
+      },
+      "channel": {
+        "description": "Kênh"
+      },
+      "role": {
+        "description": "Role"
+      },
+      "role2": {
+        "description": "Role thứ hai"
+      },
+      "role3": {
+        "description": "Role thứ ba"
+      },
+      "expression": {
+        "description": "Điều kiện, vd domain:*.edu AND (list:k21 OR invite:abc12)"
+      },
+      "index": {
+        "description": "Số thứ tự quy tắc, như /email-rule list hiển thị"
+      },
+      "patterns": {
+        "description": "Các mẫu địa chỉ cách nhau bằng dấu phẩy, * thay cho văn bản bất kỳ"
+      },
+      "name": {
+        "description": "Tên danh sách: chữ, số, _ hoặc -, tối đa 32"
+      },
+      "emails": {
+        "description": "Các địa chỉ cách nhau bởi dấu cách, dấu phẩy hoặc xuống dòng"
+      },
+      "mode": {
+        "description": "Thêm các địa chỉ trong file hoặc bỏ chúng"
+      },
+      "file": {
+        "description": "File CSV hoặc TXT, mỗi dòng một địa chỉ"
+      },
+      "title": {
+        "description": "Tiêu đề của tin nhắn có nút"
+      },
+      "message": {
+        "description": "Nội dung của tin nhắn có nút"
+      },
+      "buttonText": {
+        "description": "Chữ trên nút"
+      },
+      "enabled": {
+        "description": "Bật hoặc tắt xác thực email"
+      },
+      "logChannel": {
+        "description": "Kênh nhận một dòng cho mỗi lần xác thực"
+      },
+      "unverifiedRole": {
+        "description": "Role của thành viên chưa xác thực"
+      },
+      "verifyMessage": {
+        "description": "Nội dung hiển thị cùng nút xác thực"
+      },
+      "autoVerify": {
+        "description": "Gửi nút xác thực cho thành viên mới qua tin nhắn riêng"
+      },
+      "autoUnverified": {
+        "description": "Cấp role chưa xác thực cho thành viên mới"
+      },
+      "removeRoles": {
+        "description": "Thu hồi luôn các role mà lần xác thực đã cấp"
+      }
+    }
+  },
+  "verify": {
+    "panel": {
+      "title": "Xác thực email của bạn",
+      "message": "Nhấn nút rồi nhập địa chỉ email của bạn. Chúng tôi sẽ gửi một mã để xác nhận.",
+      "button": "Xác thực email",
+      "dm": "Chào mừng bạn đến với {server}! Hãy xác thực email để vào server."
+    },
+    "modal": {
+      "emailTitle": "Xác thực email của bạn",
+      "emailLabel": "Địa chỉ email",
+      "emailPlaceholder": "ten@example.com",
+      "codeTitle": "Nhập mã của bạn",
+      "codeLabel": "Mã trong email",
+      "codePlaceholder": "123456"
+    },
+    "button": {
+      "enterCode": "Nhập mã",
+      "resend": "Gửi mã mới"
+    },
+    "codeSent": "Đã gửi một mã đến **{email}**. Mã hết hạn sau {minutes} phút.",
+    "resent": "Đã gửi mã mới đến **{email}**.",
+    "verified": "Bạn đã được xác thực.",
+    "verifiedRoles": "Bạn đã được xác thực và nhận: {roles}",
+    "roleFailed": "Bạn đã được xác thực, nhưng không cấp được role: {reason}",
+    "alreadyVerified": "Bạn đã được xác thực trong server này.",
+    "notStarted": "Chưa có lần xác thực nào đang diễn ra. Nhấn nút xác thực để bắt đầu.",
+    "deleted": "Đã xoá email đã xác thực và dữ liệu xác thực của bạn.",
+    "nothingToDelete": "Bạn không có dữ liệu xác thực nào để xoá.",
+    "buttonPosted": "Đã đăng nút xác thực vào {channel}.",
+    "manualDone": "{user} đã được xác thực.",
+    "unverified": "{user} không còn được xác thực.",
+    "notVerified": "{user} chưa được xác thực.",
+    "testMailSent": "Đã gửi email thử đến **{email}**."
+  },
+  "status": {
+    "title": "Xác thực email",
+    "enabled": "Trạng thái",
+    "on": "Bật",
+    "off": "Tắt",
+    "smtp": "Gửi thư",
+    "smtpReady": "Sẵn sàng",
+    "smtpNotReady": "Chưa cài",
+    "verified": "Thành viên đã xác thực",
+    "pending": "Đang chờ nhập mã",
+    "rules": "Quy tắc truy cập",
+    "lists": "Danh sách email",
+    "sentToday": "Email đã gửi hôm nay",
+    "sentTodayValue": "{count} / {cap}",
+    "defaultRoles": "Role cho mọi người đã xác thực",
+    "none": "Không có"
+  },
+  "config": {
+    "saved": "Đã lưu cài đặt xác thực email.",
+    "nothing": "Không có gì để đổi: hãy chọn ít nhất một tuỳ chọn.",
+    "roleAdded": "{role} giờ được cấp cho mọi thành viên đã xác thực.",
+    "roleRemoved": "{role} không còn được cấp cho mọi thành viên đã xác thực.",
+    "roleFull": "Đã có {max} role mặc định. Hãy bỏ bớt một role trước."
+  },
+  "rule": {
+    "added": "Đã thêm quy tắc {index}.",
+    "edited": "Đã đổi quy tắc {index}.",
+    "removed": "Đã xoá quy tắc {index}.",
+    "cleared": "Đã xoá mọi quy tắc truy cập.",
+    "roleAdded": "Đã thêm {role} vào quy tắc {index}.",
+    "roleRemoved": "Đã bỏ {role} khỏi quy tắc {index}.",
+    "roleFull": "Quy tắc {index} đã có {max} role.",
+    "notFound": "Không có quy tắc {index}. Xem /email-rule list.",
+    "limit": "Đã có {max} quy tắc. Hãy xoá bớt một quy tắc trước.",
+    "invalid": "Không dùng được điều kiện này: {reason} (ở vị trí {position}).",
+    "listTitle": "Quy tắc truy cập",
+    "listEmpty": "Chưa có quy tắc truy cập: mọi địa chỉ hợp lệ đều được chấp nhận.",
+    "listItem": "**{index}.** `{text}` cấp {roles}",
+    "noRoles": "không có role bổ sung",
+    "missingLists": "Danh sách không tồn tại: {names}",
+    "errors": {
+      "EMPTY": "điều kiện trống",
+      "TOO_LONG": "điều kiện quá dài",
+      "UNEXPECTED_TOKEN": "có từ hoặc ký hiệu không mong đợi",
+      "EXPECTED_CONDITION": "thiếu một điều kiện như domain:*.edu",
+      "UNKNOWN_FIELD": "trường không rõ, hãy dùng domain, email, list hoặc invite",
+      "INVALID_VALUE": "giá trị không hợp lệ cho trường này",
+      "UNBALANCED_PARENTHESIS": "dấu ngoặc không khớp",
+      "TOO_DEEP": "các nhóm lồng nhau quá sâu",
+      "TOO_MANY_TERMS": "quá nhiều điều kiện trong một quy tắc"
+    }
+  },
+  "block": {
+    "added": "Đã thêm {count} mẫu vào danh sách chặn.",
+    "removed": "Đã bỏ mẫu khỏi danh sách chặn.",
+    "notFound": "Mẫu này không có trong danh sách chặn.",
+    "cleared": "Danh sách chặn đã trống.",
+    "listTitle": "Mẫu địa chỉ bị chặn",
+    "listEmpty": "Chưa chặn mẫu nào.",
+    "invalid": "Mẫu địa chỉ không hợp lệ.",
+    "limit": "Danh sách chặn đã đầy ({max} mẫu)."
+  },
+  "list": {
+    "created": "Đã tạo danh sách **{name}**.",
+    "deleted": "Đã xoá danh sách **{name}**.",
+    "cleared": "Danh sách **{name}** đã trống.",
+    "added": "Danh sách **{name}**: thêm {added}, đã có {skipped}, không hợp lệ {invalid}.",
+    "removedEntries": "Danh sách **{name}**: bỏ {removed}, không có {skipped}, không hợp lệ {invalid}.",
+    "limit": "Đã có {max} danh sách. Hãy xoá bớt một danh sách trước.",
+    "full": "Một danh sách chứa tối đa {max} địa chỉ.",
+    "showTitle": "Danh sách email",
+    "showEmpty": "Chưa có danh sách email nào.",
+    "showItem": "**{name}**: {count} địa chỉ",
+    "fileTooBig": "File quá lớn. Hãy gửi file CSV hoặc TXT dưới {size} KB.",
+    "fileType": "Hãy gửi file CSV hoặc TXT.",
+    "fileUnreadable": "Không tải được file. Hãy thử lại.",
+    "fileEmpty": "File không có địa chỉ nào."
+  },
+  "export": {
+    "sent": "File Excel có {count} thành viên đã xác thực. File chứa dữ liệu cá nhân: hãy giữ cẩn thận.",
+    "empty": "Chưa có thành viên nào được xác thực.",
+    "unresolved": "{count} thành viên không tra được trên Discord (đã rời server hoặc Discord không trả lời), nên ô tên và role của họ để trống.",
+    "fileName": "thanh-vien-da-xac-thuc",
+    "sheet": "Đã xác thực",
+    "columns": {
+      "email": "Email",
+      "username": "Tên người dùng",
+      "displayName": "Tên hiển thị",
+      "userId": "ID người dùng",
+      "roles": "Role",
+      "domain": "Tên miền",
+      "method": "Cách xác thực",
+      "verifiedAt": "Thời gian xác thực"
+    },
+    "methods": {
+      "CODE": "Mã qua email",
+      "MANUAL": "Do quản lý xác thực"
+    }
+  },
+  "confirm": {
+    "confirm": "Xác nhận",
+    "cancel": "Huỷ",
+    "working": "Đang xử lý...",
+    "cancelled": "Đã huỷ. Không có gì thay đổi.",
+    "expired": "Không có phản hồi kịp lúc. Không có gì thay đổi.",
+    "listDelete": "Xoá danh sách **{name}** với {count, plural, other {# địa chỉ}}? Các quy tắc nhắc đến nó sẽ không còn khớp.",
+    "listClear": "Bỏ {count, plural, other {# địa chỉ}} khỏi danh sách **{name}**?",
+    "ruleClear": "Xoá {count, plural, other {# quy tắc truy cập}}? Khi đó mọi địa chỉ hợp lệ đều được chấp nhận.",
+    "blockClear": "Bỏ {count, plural, other {# mẫu bị chặn}} khỏi danh sách chặn?",
+    "unverify": "Gỡ xác thực của {user}?",
+    "unverifyRoles": "Gỡ xác thực của {user} và thu hồi các role nó đã cấp?"
+  },
+  "mail": {
+    "subject": "{server}: mã xác thực của bạn",
+    "heading": "Xác thực email của bạn",
+    "intro": "Dùng mã này để xác thực email của bạn trong {server}:",
+    "expires": "Mã hết hạn sau {minutes} phút.",
+    "ignore": "Nếu bạn không yêu cầu mã này, hãy bỏ qua email này.",
+    "text": "Mã xác thực của bạn cho {server} là {code}. Mã hết hạn sau {minutes} phút. Nếu bạn không yêu cầu, hãy bỏ qua email này.",
+    "testSubject": "{server}: email thử",
+    "testText": "Đây là email thử từ phần cài đặt xác thực của {server}."
+  },
+  "log": {
+    "verified": "{user} đã xác thực một địa chỉ ở **{domain}**. Role: {roles}",
+    "manual": "{user} được {actor} xác thực (**{domain}**). Role: {roles}",
+    "revoked": "{actor} đã gỡ xác thực của {user}.",
+    "regranted": "{user} đã xác thực từ trước (**{domain}**); role được cấp lại: {roles}",
+    "inviteGranted": "{user} vào bằng lời mời `{code}` và nhận: {roles}",
+    "roleFailed": "Không cấp được role cho {user}: {reason}"
+  }
+}

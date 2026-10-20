@@ -1,0 +1,199 @@
+/// A server's email verification: whether members may verify, which roles every
+/// verified member gets, and the optional unverified role and log channel.
+/// CHECK (migration `_email_verify`): `unverifiedRoleId` and `logChannelId` are
+/// snowflakes when set; `verifyMessage` has 1 to 1000 characters when set. The
+/// elements of `defaultRoleIds` are snowflakes, checked by Zod only (a CHECK
+/// cannot look into each element of an array).
+model EmailVerifyConfig {
+  id                   String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  guildId              String   @unique @db.Uuid
+  enabled              Boolean  @default(false)
+  defaultRoleIds       String[] @default([])
+  unverifiedRoleId     String?
+  logChannelId         String?
+  verifyMessage        String?
+  /// Send the verify button to a new member by direct message.
+  autoVerifyOnJoin     Boolean  @default(false)
+  /// Give a new member the unverified role on joining.
+  autoUnverifiedOnJoin Boolean  @default(false)
+  updatedAt            DateTime @updatedAt @db.Timestamptz(3)
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+}
+
+/// One access rule of a server: when its `condition` holds for a member, the member
+/// gets `roleIds` on top of the default roles. `condition` is a group of conditions
+/// joined by AND or OR, nested up to four levels, a subset of the react-querybuilder
+/// RuleGroup shape; it is parsed with its Zod schema at the service boundary, never
+/// cast. A condition on a list names the list, so deleting a list leaves such a
+/// condition false. `position` orders the rules; the number of rules per server is
+/// capped by the service. CHECK (migration `_email_verify`): `position` >= 0 and
+/// `condition` is a JSON object. The elements of `roleIds` are snowflakes, checked by
+/// Zod only (a CHECK cannot look into each element of an array).
+model AccessRule {
+  id        String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  guildId   String   @db.Uuid
+  position  Int
+  roleIds   String[] @default([])
+  condition Json
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@unique([guildId, position])
+}
+
+/// The invite a member joined a server with, as the bot saw it; the latest join
+/// wins. CHECK (migration `_email_verify`): `userId` is a snowflake, `inviteCode`
+/// matches `^[A-Za-z0-9-]{2,32}$`.
+model MemberJoinInvite {
+  id         String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  guildId    String   @db.Uuid
+  userId     String
+  inviteCode String
+  joinedAt   DateTime @default(now()) @db.Timestamptz(3)
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@unique([guildId, userId])
+}
+
+/// An address pattern a server refuses, matched against the whole address.
+/// CHECK (migration `_email_verify`): `pattern` is lower-case with 1 to 254
+/// characters.
+model EmailBlockPattern {
+  id      String @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  guildId String @db.Uuid
+  pattern String
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@unique([guildId, pattern])
+}
+
+/// A named list of addresses a server's rules can refer to. CHECK (migration
+/// `_email_verify`): `name` matches `^[a-z0-9_-]{1,32}$`.
+model EmailList {
+  id        String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  guildId   String   @db.Uuid
+  name      String
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  guild   Guild            @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  entries EmailListEntry[]
+
+  @@unique([guildId, name])
+}
+
+/// One address of a list, kept only as a keyed hash (HMAC-SHA256, hex), never as
+/// text. CHECK (migration `_email_verify`): `emailHash` is 64 hex characters.
+model EmailListEntry {
+  id        String @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  listId    String @db.Uuid
+  emailHash String
+
+  list EmailList @relation(fields: [listId], references: [id], onDelete: Cascade)
+
+  @@unique([listId, emailHash])
+}
+
+/// A member whose address is confirmed. The address is kept encrypted (`emailEnc`,
+/// AES-256-GCM, key from env LLM_KEY_SECRET) so a manager can export it, and as a
+/// keyed hash (`emailHash`) for uniqueness and lookups; `domain` is the part after
+/// the `@`. One member has one address and one address belongs to one member per
+/// server. CHECK (migration `_email_verify`): `userId` is a snowflake, `emailHash`
+/// is 64 hex characters, `emailEnc` and `domain` are non-empty.
+model EmailVerification {
+  id         String            @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  guildId    String            @db.Uuid
+  userId     String
+  emailEnc   String
+  emailHash  String
+  domain     String
+  method     EmailVerifyMethod
+  verifiedAt DateTime          @default(now()) @db.Timestamptz(3)
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@unique([guildId, userId])
+  @@unique([guildId, emailHash])
+  @@index([guildId, verifiedAt])
+}
+
+/// A code that was mailed and not yet entered. The address is encrypted
+/// (AES-256-GCM, key from env LLM_KEY_SECRET) so the code can be re-sent, the
+/// code only as a keyed hash. Rows past `expiresAt` are purged daily. CHECK
+/// (migration `_email_verify`): `userId` is a snowflake; `emailHash` is 64 hex
+/// characters; `emailEnc` and `codeHash` are non-empty; `attempts` >= 0;
+/// `sendCount` >= 1.
+model EmailVerifyPending {
+  id         String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  guildId    String   @db.Uuid
+  userId     String
+  emailEnc   String
+  emailHash  String
+  codeHash   String
+  attempts   Int      @default(0)
+  sendCount  Int      @default(1)
+  expiresAt  DateTime @db.Timestamptz(3)
+  lastSentAt DateTime @db.Timestamptz(3)
+  createdAt  DateTime @default(now()) @db.Timestamptz(3)
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@unique([guildId, userId])
+  @@index([expiresAt])
+}
+
+/// Mails a server sent on one day, for its daily cap. Old days are purged.
+/// CHECK (migration `_email_verify`): `count` >= 0.
+model EmailSendDay {
+  id      String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  guildId String   @db.Uuid
+  day     DateTime @db.Date
+  count   Int      @default(0)
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@unique([guildId, day])
+  @@index([day])
+}
+
+/// Mails one member asked for in one server: how many on `day`, and when the last
+/// one went out. A pending verification is deleted when it is closed or its data is
+/// erased, so the limits that must outlive it (the wait between mails and the
+/// per-member daily cap) live here, one row per member. Old days are purged.
+/// CHECK (migration `_email_verify`): `userId` is a snowflake; `count` >= 0.
+model EmailSendThrottle {
+  id         String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  guildId    String   @db.Uuid
+  userId     String
+  day        DateTime @db.Date
+  count      Int      @default(0)
+  lastSentAt DateTime @db.Timestamptz(3)
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@unique([guildId, userId])
+  @@index([day])
+}
+
+/// The one SMTP account the bot sends verification mail through, for every
+/// server. `singleton` keeps it to one row. The password is stored encrypted
+/// (AES-256-GCM, key from env LLM_KEY_SECRET) and never shown. CHECK (migration
+/// `_email_verify`): `singleton` is true; `port` is 1 to 65535; `host`,
+/// `username` and `passwordEnc` are non-empty; `fromAddress` contains an `@`.
+model SmtpConfig {
+  id          String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  singleton   Boolean  @unique @default(true)
+  host        String
+  port        Int
+  secure      Boolean  @default(true)
+  username    String
+  passwordEnc String
+  fromAddress String
+  fromName    String?
+  enabled     Boolean  @default(false)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+}

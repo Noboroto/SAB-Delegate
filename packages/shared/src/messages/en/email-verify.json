@@ -1,0 +1,336 @@
+{
+  "commands": {
+    "verify": {
+      "start": {
+        "description": "Verify your email address to get access to this server"
+      },
+      "deleteData": {
+        "description": "Delete your verified email and verification data in this server"
+      }
+    },
+    "emailVerify": {
+      "status": {
+        "description": "Show how email verification is set up and used here"
+      },
+      "button": {
+        "description": "Post the verify button in a channel"
+      },
+      "manual": {
+        "description": "Verify a member by hand, without sending a code"
+      },
+      "unverify": {
+        "description": "Remove a member's verification and the roles it gave"
+      },
+      "testMail": {
+        "description": "Send a test email to check the mail setup"
+      },
+      "config": {
+        "description": "Turn verification on or off and change its settings"
+      },
+      "roleAdd": {
+        "description": "Add a role every verified member gets"
+      },
+      "roleRemove": {
+        "description": "Remove a role from the ones every verified member gets"
+      },
+      "export": {
+        "description": "Get the verified members, with emails and roles, as an Excel file"
+      }
+    },
+    "emailRule": {
+      "add": {
+        "description": "Add an access rule: a condition and the roles it grants"
+      },
+      "edit": {
+        "description": "Change the condition of an access rule"
+      },
+      "remove": {
+        "description": "Remove an access rule"
+      },
+      "roleAdd": {
+        "description": "Add a role to an access rule"
+      },
+      "roleRemove": {
+        "description": "Remove a role from an access rule"
+      },
+      "list": {
+        "description": "Show the access rules"
+      },
+      "clear": {
+        "description": "Remove all access rules"
+      }
+    },
+    "emailBlock": {
+      "add": {
+        "description": "Block address patterns such as *@mailinator.com"
+      },
+      "remove": {
+        "description": "Unblock an address pattern"
+      },
+      "list": {
+        "description": "Show the blocked address patterns"
+      },
+      "clear": {
+        "description": "Remove every blocked pattern"
+      }
+    },
+    "emailList": {
+      "create": {
+        "description": "Create an empty email list"
+      },
+      "delete": {
+        "description": "Delete an email list"
+      },
+      "add": {
+        "description": "Add addresses to an email list"
+      },
+      "remove": {
+        "description": "Remove addresses from an email list"
+      },
+      "upload": {
+        "description": "Add the addresses in a CSV or TXT file to an email list"
+      },
+      "clear": {
+        "description": "Remove every address from an email list"
+      },
+      "show": {
+        "description": "Show the email lists and how many addresses each holds"
+      }
+    },
+    "options": {
+      "user": {
+        "description": "The member"
+      },
+      "email": {
+        "description": "The email address"
+      },
+      "channel": {
+        "description": "The channel"
+      },
+      "role": {
+        "description": "The role"
+      },
+      "role2": {
+        "description": "A second role"
+      },
+      "role3": {
+        "description": "A third role"
+      },
+      "expression": {
+        "description": "Condition, e.g. domain:*.edu AND (list:k21 OR invite:abc12)"
+      },
+      "index": {
+        "description": "The rule number, as /email-rule list shows it"
+      },
+      "patterns": {
+        "description": "Address patterns separated by commas, * stands for any text"
+      },
+      "name": {
+        "description": "The list name: letters, digits, _ or -, up to 32"
+      },
+      "emails": {
+        "description": "Addresses separated by spaces, commas or new lines"
+      },
+      "mode": {
+        "description": "Add the addresses in the file or remove them"
+      },
+      "file": {
+        "description": "A CSV or TXT file with one address per line"
+      },
+      "title": {
+        "description": "Title of the message with the button"
+      },
+      "message": {
+        "description": "Text of the message with the button"
+      },
+      "buttonText": {
+        "description": "Text on the button"
+      },
+      "enabled": {
+        "description": "Turn email verification on or off"
+      },
+      "logChannel": {
+        "description": "Channel that gets a line for every verification"
+      },
+      "unverifiedRole": {
+        "description": "Role of members who are not verified yet"
+      },
+      "verifyMessage": {
+        "description": "Text shown with the verify button"
+      },
+      "autoVerify": {
+        "description": "Send the verify button to new members by direct message"
+      },
+      "autoUnverified": {
+        "description": "Give new members the unverified role"
+      },
+      "removeRoles": {
+        "description": "Also take back the roles the verification gave"
+      }
+    }
+  },
+  "verify": {
+    "panel": {
+      "title": "Verify your email",
+      "message": "Press the button and enter your email address. We will send you a code to confirm it.",
+      "button": "Verify email",
+      "dm": "Welcome to {server}! Verify your email to get access."
+    },
+    "modal": {
+      "emailTitle": "Verify your email",
+      "emailLabel": "Email address",
+      "emailPlaceholder": "name@example.com",
+      "codeTitle": "Enter your code",
+      "codeLabel": "Code from the email",
+      "codePlaceholder": "123456"
+    },
+    "button": {
+      "enterCode": "Enter code",
+      "resend": "Send a new code"
+    },
+    "codeSent": "A code was sent to **{email}**. It expires in {minutes} minutes.",
+    "resent": "A new code was sent to **{email}**.",
+    "verified": "You are verified.",
+    "verifiedRoles": "You are verified and got: {roles}",
+    "roleFailed": "You are verified, but the roles could not be given: {reason}",
+    "alreadyVerified": "You are already verified in this server.",
+    "notStarted": "There is no verification in progress. Press the verify button to start.",
+    "deleted": "Your verified email and verification data were deleted.",
+    "nothingToDelete": "There is no verification data of yours to delete.",
+    "buttonPosted": "The verify button was posted in {channel}.",
+    "manualDone": "{user} was verified.",
+    "unverified": "{user} is no longer verified.",
+    "notVerified": "{user} is not verified.",
+    "testMailSent": "A test email was sent to **{email}**."
+  },
+  "status": {
+    "title": "Email verification",
+    "enabled": "Status",
+    "on": "On",
+    "off": "Off",
+    "smtp": "Mail sending",
+    "smtpReady": "Ready",
+    "smtpNotReady": "Not set up",
+    "verified": "Verified members",
+    "pending": "Waiting for a code",
+    "rules": "Access rules",
+    "lists": "Email lists",
+    "sentToday": "Emails sent today",
+    "sentTodayValue": "{count} / {cap}",
+    "defaultRoles": "Roles for everyone verified",
+    "none": "None"
+  },
+  "config": {
+    "saved": "Email verification settings are saved.",
+    "nothing": "Nothing to change: give at least one option.",
+    "roleAdded": "{role} is now given to every verified member.",
+    "roleRemoved": "{role} is no longer given to every verified member.",
+    "roleFull": "There are already {max} default roles. Remove one first."
+  },
+  "rule": {
+    "added": "Rule {index} was added.",
+    "edited": "Rule {index} was changed.",
+    "removed": "Rule {index} was removed.",
+    "cleared": "All access rules were removed.",
+    "roleAdded": "{role} was added to rule {index}.",
+    "roleRemoved": "{role} was removed from rule {index}.",
+    "roleFull": "Rule {index} already has {max} roles.",
+    "notFound": "There is no rule {index}. See /email-rule list.",
+    "limit": "There are already {max} rules. Remove one first.",
+    "invalid": "The condition cannot be used: {reason} (at position {position}).",
+    "listTitle": "Access rules",
+    "listEmpty": "No access rules: any valid address is accepted.",
+    "listItem": "**{index}.** `{text}` gives {roles}",
+    "noRoles": "no extra roles",
+    "missingLists": "Lists that do not exist: {names}",
+    "errors": {
+      "EMPTY": "the condition is empty",
+      "TOO_LONG": "the condition is too long",
+      "UNEXPECTED_TOKEN": "unexpected word or symbol",
+      "EXPECTED_CONDITION": "a condition such as domain:*.edu is missing",
+      "UNKNOWN_FIELD": "unknown field, use domain, email, list or invite",
+      "INVALID_VALUE": "the value is not valid for its field",
+      "UNBALANCED_PARENTHESIS": "parentheses do not match",
+      "TOO_DEEP": "groups are nested too deeply",
+      "TOO_MANY_TERMS": "too many conditions in one rule"
+    }
+  },
+  "block": {
+    "added": "{count} pattern(s) were added to the blocklist.",
+    "removed": "The pattern was removed from the blocklist.",
+    "notFound": "That pattern is not in the blocklist.",
+    "cleared": "The blocklist is empty now.",
+    "listTitle": "Blocked address patterns",
+    "listEmpty": "Nothing is blocked.",
+    "invalid": "That is not a valid address pattern.",
+    "limit": "The blocklist is full ({max} patterns)."
+  },
+  "list": {
+    "created": "The list **{name}** was created.",
+    "deleted": "The list **{name}** was deleted.",
+    "cleared": "The list **{name}** is empty now.",
+    "added": "List **{name}**: {added} added, {skipped} already there, {invalid} not valid.",
+    "removedEntries": "List **{name}**: {removed} removed, {skipped} were not there, {invalid} not valid.",
+    "limit": "There are already {max} lists. Delete one first.",
+    "full": "A list holds at most {max} addresses.",
+    "showTitle": "Email lists",
+    "showEmpty": "There are no email lists.",
+    "showItem": "**{name}**: {count} addresses",
+    "fileTooBig": "The file is too large. Send a CSV or TXT file under {size} KB.",
+    "fileType": "Send a CSV or TXT file.",
+    "fileUnreadable": "The file could not be downloaded. Try again.",
+    "fileEmpty": "The file holds no addresses."
+  },
+  "export": {
+    "sent": "The Excel file holds {count} verified members. It contains personal data: keep it safe.",
+    "empty": "No member is verified yet.",
+    "unresolved": "{count} members could not be looked up in Discord (they left the server or Discord did not answer), so their name and role cells are empty.",
+    "fileName": "verified-members",
+    "sheet": "Verified members",
+    "columns": {
+      "email": "Email",
+      "username": "Username",
+      "displayName": "Display name",
+      "userId": "User ID",
+      "roles": "Roles",
+      "domain": "Domain",
+      "method": "Method",
+      "verifiedAt": "Verified at"
+    },
+    "methods": {
+      "CODE": "Email code",
+      "MANUAL": "By a manager"
+    }
+  },
+  "confirm": {
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "working": "Working...",
+    "cancelled": "Cancelled. Nothing was changed.",
+    "expired": "No answer in time. Nothing was changed.",
+    "listDelete": "Delete the list **{name}** with {count, plural, one {# address} other {# addresses}}? Rules that name it will stop matching.",
+    "listClear": "Remove {count, plural, one {# address} other {# addresses}} from the list **{name}**?",
+    "ruleClear": "Remove {count, plural, one {# access rule} other {# access rules}}? Any valid address will then be accepted.",
+    "blockClear": "Remove {count, plural, one {# blocked pattern} other {# blocked patterns}} from the blocklist?",
+    "unverify": "Remove the verification of {user}?",
+    "unverifyRoles": "Remove the verification of {user} and take back the roles it gave?"
+  },
+  "mail": {
+    "subject": "{server}: your verification code",
+    "heading": "Verify your email",
+    "intro": "Use this code to verify your email in {server}:",
+    "expires": "The code expires in {minutes} minutes.",
+    "ignore": "If you did not ask for this code, you can ignore this email.",
+    "text": "Your verification code for {server} is {code}. It expires in {minutes} minutes. If you did not ask for it, ignore this email.",
+    "testSubject": "{server}: test email",
+    "testText": "This is a test email from the verification setup of {server}."
+  },
+  "log": {
+    "verified": "{user} verified an address at **{domain}**. Roles: {roles}",
+    "manual": "{user} was verified by {actor} (**{domain}**). Roles: {roles}",
+    "revoked": "{actor} removed the verification of {user}.",
+    "regranted": "{user} is already verified (**{domain}**); roles restored: {roles}",
+    "inviteGranted": "{user} joined with invite `{code}` and got: {roles}",
+    "roleFailed": "Could not give roles to {user}: {reason}"
+  }
+}

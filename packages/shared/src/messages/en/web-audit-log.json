@@ -61,6 +61,22 @@
     "activityCreate": "Activity created",
     "inviteCreate": "Invite created",
     "apiKeyMint": "API key created",
-    "apiKeyRevoke": "API key revoked"
+    "apiKeyRevoke": "API key revoked",
+    "emailVerifyConfigure": "Email verification settings",
+    "emailVerifyRulesSet": "Set access rules",
+    "emailVerifyBlocklistSet": "Set email blocklist",
+    "emailListCreate": "Create email list",
+    "emailListDelete": "Delete email list",
+    "emailListEntriesAdd": "Add to email list",
+    "emailListEntriesRemove": "Remove from email list",
+    "emailListClear": "Clear email list",
+    "emailVerifyManual": "Verify a member by hand",
+    "emailVerifyRevoke": "Remove a member's verification",
+    "emailVerifyButtonPost": "Post the verify button",
+    "emailVerifySmtpSet": "Set SMTP account",
+    "emailVerifySmtpTest": "Test SMTP account",
+    "emailVerifyTestMail": "Send a test email",
+    "emailVerifyMemberVerified": "Member verified by email",
+    "emailVerifyExport": "Export verified members"
   }
 }

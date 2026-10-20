@@ -13,7 +13,28 @@ import { describe, expect, it } from 'vitest';
 // the second must be listed in ALLOWED as `<repo-relative path>:<TypeName>`
 // with the reason, so an exception is a visible, reviewed decision.
 const REPO_ROOT = join(__dirname, '..', '..', '..', '..');
-const ALLOWED = new Map<string, string>();
+const ALLOWED = new Map<string, string>([
+  [
+    'packages/shared/src/email-verify/condition.ts:AccessGroup',
+    'recursive type z.infer cannot express: members transform their input inside the recursion',
+  ],
+  [
+    'packages/shared/src/email-verify/condition.ts:AccessGroupInput',
+    'the input side of the same recursion; the schema is annotated with both',
+  ],
+  [
+    'apps/server/src/modules/email-verify/email-verify-invites.ts:InviteLike',
+    'structural slice of a discord.js Invite so tests can fake it; no schema equivalent',
+  ],
+  [
+    'apps/server/src/modules/email-verify/email-verify-invites.ts:InviteGuild',
+    'structural slice of a discord.js Guild with a method member; no schema equivalent',
+  ],
+  [
+    'apps/server/src/modules/email-verify/email-verify-discord.service.ts:GrantResult',
+    'result of Discord role calls shared by two services; built in code, never parsed from input',
+  ],
+]);
 
 const SOURCE_EXTENSIONS = new Set(['.ts', '.tsx', '.mts']);
 const SKIPPED_SEGMENTS = new Set(['node_modules', 'dist', '.next', 'generated']);
