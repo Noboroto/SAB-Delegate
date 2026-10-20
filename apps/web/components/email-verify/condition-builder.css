@@ -1,0 +1,38 @@
+/* Re-skins react-querybuilder's stock stylesheet with the app's tokens so it follows the light and dark themes. */
+.ev-builder .queryBuilder .ruleGroup {
+  background: var(--surface-secondary);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  padding: var(--space-2);
+}
+
+.ev-builder .queryBuilder .ruleGroup .ruleGroup-header,
+.ev-builder .queryBuilder .ruleGroup .rule {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ev-builder .queryBuilder .ruleGroup .ruleGroup-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.ev-builder .queryBuilder .rule .rule-fields {
+  flex: 0 1 160px;
+  min-width: 0;
+}
+
+.ev-builder .queryBuilder .rule .rule-value {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.ev-builder .queryBuilder .rule .rule-value .ant-input,
+.ev-builder .queryBuilder .rule .rule-value .ant-select,
+.ev-builder .queryBuilder .rule .rule-fields .ant-select {
+  width: 100%;
+}
