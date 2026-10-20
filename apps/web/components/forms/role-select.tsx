@@ -10,11 +10,14 @@ import { selectValueProps, type PickerProps } from './picker-value';
 type RoleSelectProps = PickerProps & {
   /** Hides roles an integration owns (bot roles, boosters); people cannot be given those. */
   hideManaged?: boolean;
+  /** With several roles: the most that can be picked (Discord-side limits). */
+  maxCount?: number;
 };
 
 /** A searchable list of the server's roles, highest first. */
 export function RoleSelect({
   hideManaged = false,
+  maxCount,
   guildId,
   placeholder,
   ...rest
@@ -37,6 +40,7 @@ export function RoleSelect({
       disabled={rest.disabled}
       allowClear={rest.allowClear}
       mode={value.mode}
+      maxCount={maxCount}
       value={value.value}
       onChange={value.onChange}
       options={options}

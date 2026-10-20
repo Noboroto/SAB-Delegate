@@ -14,6 +14,7 @@ export type GuildNavChildKey =
   | 'wordGame'
   | 'games'
   | 'chatbot'
+  | 'emailVerify'
   | 'schedule'
   | 'messaging'
   | 'mention'
@@ -46,6 +47,7 @@ export const MODULE_PAGES = [
   { key: 'wordGame', path: 'modules/word-game' },
   { key: 'games', path: 'modules/games' },
   { key: 'chatbot', path: 'modules/chatbot' },
+  { key: 'emailVerify', path: 'modules/email-verify' },
   { key: 'schedule', path: 'modules/schedule' },
   { key: 'messaging', path: 'modules/messaging' },
 ] as const satisfies readonly GuildNavChild[];

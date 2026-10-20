@@ -26,6 +26,11 @@ export function setUnauthorizedHandler(handler: () => void): () => void {
   };
 }
 
+/** The 401 reaction, for browser calls that cannot go through `apiFetch` (file downloads). */
+export function reactToUnauthorized(): void {
+  onUnauthorized();
+}
+
 interface ApiFetchOptions<T> {
   parser: ResponseParser<T>;
   method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';

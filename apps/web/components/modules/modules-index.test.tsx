@@ -20,7 +20,16 @@ const TEXT = {
   },
   en: {
     title: 'Modules',
-    names: ['Birthdays', 'Notes', 'Word game', 'Games', 'Chatbot', 'Schedule', 'Messaging'],
+    names: [
+      'Birthdays',
+      'Notes',
+      'Word game',
+      'Games',
+      'Chatbot',
+      'Email verification',
+      'Schedule',
+      'Messaging',
+    ],
   },
 } as const;
 
@@ -30,9 +39,16 @@ describe.each(SUPPORTED_LOCALES)('ModulesIndex (%s)', (locale) => {
     expect(screen.getByRole('heading', { level: 1, name: TEXT[locale].title })).toBeInTheDocument();
     const hrefs = [...container.querySelectorAll('a')].map((a) => a.getAttribute('href'));
     expect(hrefs).toEqual(
-      ['birthday', 'note', 'word-game', 'games', 'chatbot', 'schedule', 'messaging'].map(
-        (slug) => `/servers/${GUILD}/modules/${slug}`,
-      ),
+      [
+        'birthday',
+        'note',
+        'word-game',
+        'games',
+        'chatbot',
+        'email-verify',
+        'schedule',
+        'messaging',
+      ].map((slug) => `/servers/${GUILD}/modules/${slug}`),
     );
     for (const name of TEXT[locale].names) expect(screen.getByText(name)).toBeInTheDocument();
     expect(screen.queryByRole('switch')).toBeNull();

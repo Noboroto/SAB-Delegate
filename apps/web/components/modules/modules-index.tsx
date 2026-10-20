@@ -17,6 +17,7 @@ export function ModulesIndex({ guildId }: { guildId: string }) {
     wordGame: [t('wordGame'), t('moduleDesc.wordGame')],
     games: [t('games'), t('moduleDesc.games')],
     chatbot: [t('chatbot'), t('moduleDesc.chatbot')],
+    emailVerify: [t('emailVerify'), t('moduleDesc.emailVerify')],
     schedule: [t('schedule'), t('moduleDesc.schedule')],
     messaging: [t('messaging'), t('moduleDesc.messaging')],
   };

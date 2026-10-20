@@ -23,6 +23,7 @@ describe('GUILD_NAV', () => {
       'modules/word-game',
       'modules/games',
       'modules/chatbot',
+      'modules/email-verify',
       'modules/schedule',
       'modules/messaging',
     ]);

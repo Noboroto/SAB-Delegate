@@ -27,6 +27,7 @@ export const WEB_NAMESPACES = [
   'web-commands',
   'web-audit-log',
   'web-api-keys',
+  'web-email-verify',
 ] as const;
 
 export function webMessages(locale: SupportedLocale) {
