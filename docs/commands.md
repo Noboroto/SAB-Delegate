@@ -40,7 +40,7 @@ Ai dùng: Quản trị viên. Mọi subcommand trả riêng.
 
 | Subcommand                                                     | Làm gì                                                                                                  | Ping / Được phép                                                                                    | Khác bản cũ                                                                                                                                                                                                                                                                                                                  |
 | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `send` `[content]` `[destination]` `[reply-message]`           | Bot gửi tin vào kênh/thread (mặc định kênh hiện tại), hoặc trả lời một tin                              | Ping theo nội dung (user, role, everyone). Gửi được vào kênh của guild khác, trả lời tin guild khác | Khác đã duyệt: `content` đổi thành tuỳ chọn, thiếu thì mở hộp thoại nhập (bản cũ bắt buộc)                                                                                                                                                                                                                                   |
+| `send` `content` `[destination]` `[reply-message]`             | Bot gửi tin vào kênh/thread (mặc định kênh hiện tại), hoặc trả lời một tin                              | Ping theo nội dung (user, role, everyone). Gửi được vào kênh của guild khác, trả lời tin guild khác | —                                                                                                                                                                                                                                                                                                                            |
 | `copy-paste` `message-link` `[destination]`                    | Sao chép tin (chữ, file) sang kênh khác                                                                 | Ping theo nội dung tin gốc. Nguồn từ guild khác được                                                | —                                                                                                                                                                                                                                                                                                                            |
 | `edit-copy` `new-message-link` `old-bot-message-link`          | Sửa tin cũ của bot bằng nội dung của một tin khác                                                       | Ping theo nội dung mới                                                                              | —                                                                                                                                                                                                                                                                                                                            |
 | `edit-send` `old-bot-message-link` `[new-content]`             | Sửa tin cũ của bot bằng chữ gõ tay                                                                      | Ping theo nội dung mới                                                                              | Khác đã duyệt (hộp thoại cho nội dung dài): `new-content` đổi thành tuỳ chọn, thiếu thì mở hộp thoại (bản cũ bắt buộc)                                                                                                                                                                                                       |
@@ -80,14 +80,17 @@ Ai dùng: Quản trị viên. Bot từ chối (riêng) nếu nó không đủ qu
 | `log-channel` `channel`      | Kênh log của guild                      |
 | `birthday-channel` `channel` | Kênh chúc sinh nhật                     |
 
-## 5. `/word` — trò chơi nối từ
+## 5. `/game` — trò chơi trong kênh
 
-Ai dùng: Quản lý tin nhắn. Trả lời công khai; cả hai lệnh đăng "Trò chơi bắt đầu" vào kênh chơi. Không ping.
+Ai dùng: Quản lý tin nhắn. Trả lời riêng; vòng chơi mở đầu được đăng vào kênh chơi, đó là thứ cả phòng thấy. Không ping. Trò: nối từ, đếm số, xếp chữ, Wordle.
 
-| Subcommand                    | Làm gì                                                                       |
-| ----------------------------- | ---------------------------------------------------------------------------- |
-| `set` `channel` `[max-words]` | Chọn kênh chơi và đặt lại trò chơi; `max-words` tối thiểu 200, mặc định 1500 |
-| `reset`                       | Chơi lại ở kênh đã chọn; chưa chọn kênh thì báo riêng                        |
+| Subcommand                           | Làm gì                                                                                                                         |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| `set` `game` `channel` `[max-words]` | Chọn kênh chơi của một trò và bắt đầu ván mới; `max-words` chỉ dùng cho nối từ (tối thiểu 200, mặc định 3000), trò khác bỏ qua |
+| `reset` `game`                       | Chơi lại ở kênh đã chọn (nối từ: đăng lại "Trò chơi bắt đầu"); chưa chọn kênh thì báo                                          |
+| `skip` `game`                        | Chỉ xếp chữ và Wordle: lộ đáp án và ra câu mới                                                                                 |
+
+`/leaderboard game` (công khai) và `/help game` (riêng) dành cho mọi người.
 
 ## 6. `/note` — ghi chú theo vai trò
 
@@ -188,18 +191,18 @@ Ai dùng: Quản lý kênh. Trả lời công khai, không ping. `1-emoji` `2-na
 
 Ai dùng: Quản lý máy chủ (`ManageGuild`, cùng quy tắc với dashboard). Mọi subcommand trả riêng, không ping gì (`allowedMentions` rỗng), không kiểm quyền người gọi; lệnh phá huỷ áp dụng ngay, không hỏi xác nhận. Trong DM báo lỗi không có máy chủ. Khoá và địa chỉ mô hình ngôn ngữ của máy chủ CHỈ đặt trên dashboard: option slash để lại khoá trong log kênh.
 
-| Subcommand                                | Làm gì                                                                                                                                                   |
-| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `status`                                  | Bật hay tắt, các kênh, hạn mức mặc định, mô hình đang dùng (của máy chủ hay dùng chung, tên model, 4 ký tự cuối khoá); đang tạm dừng vì hết credit thì ghi đến lúc nào |
-| `enable` / `disable`                      | Bật / tắt chatbot (mặc định tắt)                                                                                                                         |
-| `channel-add` `channel`                   | Cho chatbot trả lời khi được nhắc ở kênh này (kênh chữ, announcement, thread). Từ chối nếu kênh thuộc trò chơi / nối từ hoặc đã đủ số kênh tối đa        |
-| `channel-remove` `channel`                | Thôi trả lời ở kênh; đồng thời xoá bộ nhớ của kênh                                                                                                       |
-| `limit` `amount`                          | Hạn mức token hằng tháng mặc định cho mỗi thành viên (0 đến 1 tỷ)                                                                                       |
-| `quota-set` `user` `[limit]` `[clear]`    | Hạn mức riêng của một thành viên; đúng MỘT trong `limit` hoặc `clear` (bỏ hạn mức riêng, về mặc định), cả hai hay không có đều bị từ chối                  |
-| `quota-grant` `user` `tokens`             | Cộng token thưởng cho tháng này; số âm thu hồi lần thưởng trước, thưởng không xuống dưới 0                                                               |
-| `quota-reset` `user`                      | Đặt lại phần đã dùng của tháng này về 0, giữ thưởng; không hoàn tác                                                                                      |
-| `usage` `[user]`                          | Một thành viên: đã dùng, còn lại, tổng. Bỏ trống: 10 người dùng nhiều nhất tháng này                                                                     |
-| `memory-clear` `scope` `[user]` `[channel]` | Xoá bộ nhớ chatbot trong máy chủ này; `scope` = `user` (cần `user`) / `channel` (cần `channel`) / `all`. Id không thuộc `scope` bị service từ chối       |
+| Subcommand                                  | Làm gì                                                                                                                                                                 |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `status`                                    | Bật hay tắt, các kênh, hạn mức mặc định, mô hình đang dùng (của máy chủ hay dùng chung, tên model, 4 ký tự cuối khoá); đang tạm dừng vì hết credit thì ghi đến lúc nào |
+| `enable` / `disable`                        | Bật / tắt chatbot (mặc định tắt)                                                                                                                                       |
+| `channel-add` `channel`                     | Cho chatbot trả lời khi được nhắc ở kênh này (kênh chữ, announcement, thread). Từ chối nếu kênh thuộc trò chơi / nối từ hoặc đã đủ số kênh tối đa                      |
+| `channel-remove` `channel`                  | Thôi trả lời ở kênh; đồng thời xoá bộ nhớ của kênh                                                                                                                     |
+| `limit` `amount`                            | Hạn mức token hằng tháng mặc định cho mỗi thành viên (0 đến 1 tỷ)                                                                                                      |
+| `quota-set` `user` `[limit]` `[clear]`      | Hạn mức riêng của một thành viên; đúng MỘT trong `limit` hoặc `clear` (bỏ hạn mức riêng, về mặc định), cả hai hay không có đều bị từ chối                              |
+| `quota-grant` `user` `tokens`               | Cộng token thưởng cho tháng này; số âm thu hồi lần thưởng trước, thưởng không xuống dưới 0                                                                             |
+| `quota-reset` `user`                        | Đặt lại phần đã dùng của tháng này về 0, giữ thưởng; không hoàn tác                                                                                                    |
+| `usage` `[user]`                            | Một thành viên: đã dùng, còn lại, tổng. Bỏ trống: 10 người dùng nhiều nhất tháng này                                                                                   |
+| `memory-clear` `scope` `[user]` `[channel]` | Xoá bộ nhớ chatbot trong máy chủ này; `scope` = `user` (cần `user`) / `channel` (cần `channel`) / `all`. Id không thuộc `scope` bị service từ chối                     |
 
 Số lượng kênh tối đa, hạn mức mặc định và các trần nằm ở `packages/shared/src/constants/chatbot.ts`. Cách bot trả lời, hạn mức và bộ nhớ: `docs/architecture.md` mục chatbot.
 
@@ -207,13 +210,80 @@ Số lượng kênh tối đa, hạn mức mặc định và các trần nằm �
 
 Ai dùng: mọi người (không đặt quyền mặc định). Trả riêng. Mọi lệnh khoá theo id người gọi VÀ máy chủ hiện tại: chỉ thấy dòng của chính mình, không bao giờ thấy chữ của người khác hay ngữ cảnh đã gửi cho mô hình.
 
-| Subcommand      | Làm gì                                                                                                       |
-| --------------- | ------------------------------------------------------------------------------------------------------------ |
-| `memory`        | Xem bản tóm tắt chatbot nhớ về mình trong máy chủ này                                                         |
-| `memory-clear`  | Xoá bản tóm tắt đó                                                                                           |
-| `usage`         | Đã dùng, còn lại, tổng của tháng này (cùng số với dòng cuối câu trả lời)                                     |
-| `history`       | 5 lượt hỏi đáp gần nhất của mình (câu hỏi và trả lời được rút gọn)                                           |
-| `history-clear` | Xoá lịch sử hỏi đáp của mình trong máy chủ này, báo số lượt đã xoá                                           |
+| Subcommand      | Làm gì                                                                   |
+| --------------- | ------------------------------------------------------------------------ |
+| `memory`        | Xem bản tóm tắt chatbot nhớ về mình trong máy chủ này                    |
+| `memory-clear`  | Xoá bản tóm tắt đó                                                       |
+| `usage`         | Đã dùng, còn lại, tổng của tháng này (cùng số với dòng cuối câu trả lời) |
+| `history`       | 5 lượt hỏi đáp gần nhất của mình (câu hỏi và trả lời được rút gọn)       |
+| `history-clear` | Xoá lịch sử hỏi đáp của mình trong máy chủ này, báo số lượt đã xoá       |
+
+## 19. `/verify` — xác thực email của chính mình
+
+Ai dùng: mọi người (không đặt quyền mặc định), chỉ trong máy chủ. Mọi câu trả lời là riêng và không hiện địa chỉ đầy đủ.
+
+| Subcommand    | Làm gì                                                                                                                                                            |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `start`       | Mở form nhập email (dòng mô tả dưới ô lấy từ `verify-message` của máy chủ, cắt còn 100 ký tự). Gửi mã qua thư, rồi trả lời riêng kèm nút `Nhập mã` / `Gửi mã mới` |
+| `delete-data` | Xoá email đã xác thực và bản chờ mã của chính mình trong máy chủ này. Role đã nhận được giữ nguyên                                                                |
+
+Mỗi thành viên thử tối đa 10 địa chỉ mỗi 10 phút, 60 giây giữa hai thư và 10 thư mỗi ngày; nhập sai mã 5 lần thì phải đợi bản chờ hết hạn (15 phút). Bấm nút khi đã xác thực rồi thì role bị mất được cấp lại.
+
+Cùng luồng với nút do `/email-verify button` đăng (`ev/start/<guildId>`): nút, form và nút gửi lại dùng được cả trong DM (nút chào thành viên mới), máy chủ lấy từ custom id.
+
+## 20. `/email-verify` — cài đặt xác thực email
+
+Ai dùng: Quản lý máy chủ (`ManageGuild`). Trả riêng, không ping. Không kiểm quyền người gọi.
+
+| Subcommand                                                                                                      | Làm gì                                                                                                                                                                 |
+| --------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `status`                                                                                                        | Bật/tắt, gửi thư sẵn sàng chưa, số đã xác thực / đang chờ mã / luật / danh sách, thư đã gửi hôm nay, role mặc định                                                     |
+| `button` `channel` `[title]` `[message]` `[button-text]`                                                        | Đăng tin có nút xác thực vào kênh chữ hoặc announcement                                                                                                                |
+| `manual` `user` `email`                                                                                         | Xác thực thủ công, không gửi mã; không áp blocklist và luật; một địa chỉ vẫn chỉ thuộc một thành viên                                                                  |
+| `unverify` `user` `[remove-roles]`                                                                              | Gỡ xác thực; có `remove-roles` thì thu hồi role đã cấp và cấp lại role chưa xác thực. Hỏi xác nhận bằng hai nút trước khi làm                                          |
+| `test-mail` `email`                                                                                             | Gửi thư thử (tính vào hạn mức thư hằng ngày, tối đa 5 mỗi 10 phút mỗi người, có audit; gửi lỗi thì hoàn hạn mức); câu trả lời chỉ hiện địa chỉ đã che                  |
+| `config` `[enabled]` `[unverified-role]` `[log-channel]` `[auto-verify]` `[auto-unverified]` `[verify-message]` | Đổi đúng các tuỳ chọn đã nhập; không có tuỳ chọn nào thì báo "không có gì để đổi". Bật cần có tài khoản SMTP; `auto-verify` DM nút cho thành viên mới                  |
+| `role-add` / `role-remove` `role`                                                                               | Role mọi thành viên đã xác thực đều nhận (tối đa 25)                                                                                                                   |
+| `export`                                                                                                        | File Excel các thành viên đã xác thực (email, tên, role…) gửi riêng, tối đa 20.000 dòng; kèm dòng nhắc nếu có thành viên không tra được tên/role; chứa dữ liệu cá nhân |
+
+## 21. `/email-rule` — luật truy cập
+
+Ai dùng: Quản lý máy chủ. Trả riêng, role chỉ hiển thị, không ping. Luật đánh số như `list` hiển thị (từ 1, tối đa 25 luật, 25 role mỗi luật).
+
+| Subcommand                                    | Làm gì                                                                                                                                                     |
+| --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `add` `expression` `role` `[role2]` `[role3]` | Thêm luật: điều kiện dạng chữ, ví dụ `domain:*.edu AND (list:k21 OR invite:abc12)` (trường `domain`, `email`, `list`, `invite`; AND chặt hơn OR; có ngoặc) |
+| `edit` `index` `expression`                   | Đổi điều kiện của luật, giữ role                                                                                                                           |
+| `remove` `index`                              | Xoá luật                                                                                                                                                   |
+| `role-add` / `role-remove` `index` `role`     | Thêm / bỏ role của luật                                                                                                                                    |
+| `list`                                        | Từng luật dạng chữ kèm role; cảnh báo danh sách mà luật nhắc tới nhưng không tồn tại; chia khối ≤ 2000 ký tự                                               |
+| `clear`                                       | Xoá mọi luật, hỏi xác nhận bằng hai nút trước                                                                                                              |
+
+Điều kiện sai thì trả lý do và vị trí (tính từ 1) và không đổi gì. Không luật nào có điều kiện địa chỉ thì mọi địa chỉ hợp lệ được nhận.
+
+## 22. `/email-block` — chặn mẫu địa chỉ
+
+Ai dùng: Quản lý máy chủ. Trả riêng.
+
+| Subcommand          | Làm gì                                                                                                                     |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `add` `patterns`    | Thêm các mẫu cách nhau bằng dấu phẩy hoặc dấu cách, ví dụ `*@mailinator.com`; `*` thay cho văn bản bất kỳ (tối đa 100 mẫu) |
+| `remove` `patterns` | Bỏ mẫu khỏi danh sách chặn                                                                                                 |
+| `list`              | Xem các mẫu                                                                                                                |
+| `clear`             | Bỏ hết, hỏi xác nhận bằng hai nút trước                                                                                    |
+
+## 23. `/email-list` — danh sách email cho luật
+
+Ai dùng: Quản lý máy chủ. Trả riêng. Địa chỉ chỉ lưu dạng băm nên không lệnh nào hiện lại được địa chỉ. Tối đa 25 danh sách, 20.000 địa chỉ mỗi danh sách.
+
+| Subcommand                       | Làm gì                                                                                                                                                                          |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `create` `name`                  | Tạo danh sách trống (`a-z0-9_-`, tối đa 32 ký tự)                                                                                                                               |
+| `delete` `name`                  | Xoá danh sách; cho biết số địa chỉ sẽ mất và hỏi xác nhận. Luật nhắc tới nó còn đó nhưng không khớp nữa                                                                         |
+| `add` / `remove` `name` `emails` | Thêm / bỏ địa chỉ cách nhau bằng dấu cách, dấu phẩy hoặc xuống dòng; báo số thêm, số đã có, số không hợp lệ                                                                     |
+| `upload` `name` `file` `[mode]`  | Thêm (mặc định) hoặc bỏ các địa chỉ trong file CSV/TXT ≤ 1 MB. File chỉ tải từ `cdn.discordapp.com` / `media.discordapp.net`, có giới hạn thời gian; xử lý từng lô 5000 địa chỉ |
+| `clear` `name`                   | Bỏ hết địa chỉ, giữ danh sách; hỏi xác nhận                                                                                                                                     |
+| `show`                           | Các danh sách và số địa chỉ của từng danh sách                                                                                                                                  |
 
 ---
 
@@ -232,14 +302,15 @@ Bản cũ không có. Không đặt guild-only. Mọi menu mở hộp thoại ho
 
 ## Hành vi tự động (không phải lệnh)
 
-| Việc           | Hành vi                                                                                                                                                                                                                                                                                                                                                                                         |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Chúc sinh nhật | 00:00 giờ Việt Nam mỗi ngày, vào kênh sinh nhật của guild; một tin cho mỗi người, ping người đó. Bot tắt lúc 00:00 thì chúc bù khi khởi động. Sinh nhật 29/2 được chúc vào 28/2 ở năm không nhuận                                                                                                                                                                                               |
-| Nối từ         | Trong kênh đặt bởi `/word set`: bot thả phản ứng và trả lời theo luật nối từ; tin chat thường trong kênh được bỏ qua, trò đã đạt `max-words` thì im lặng đến khi `/word reset`                                                                                                                                                                                                                  |
-| Nghĩa của từ   | Từ được chấp nhận: sau ✅ bot trả lời (không ping, không xem trước link) từ loại, nghĩa Anh-Anh + ví dụ (en.wiktionary, dự phòng Datamuse), nghĩa tiếng Việt (vi.wiktionary, dự phòng dịch máy MyMemory, có ghi "dịch máy") và link Anh-Anh / Anh-Việt / Oxford. Tra trực tiếp, chỉ nhớ tạm trong RAM (5000 từ, 24 giờ); mọi nguồn lỗi thì chỉ có ✅. Việc chấm từ không phụ thuộc vào phần này |
-| Auto-react     | Tin chứa cụm trong từ điển phản ứng, hoặc có `react <emoji>`, được bot thả emoji tương ứng; áp dụng cả khi sửa tin. Emoji lỗi (thiếu quyền, server không có) bị bỏ qua, không báo người dùng                                                                                                                                                                                                    |
+| Việc           | Hành vi                                                                                                                                                                                                                                                                                                                                                                                                    |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Chúc sinh nhật | 00:00 giờ Việt Nam mỗi ngày, vào kênh sinh nhật của guild; một tin cho mỗi người, ping người đó. Bot tắt lúc 00:00 thì chúc bù khi khởi động. Sinh nhật 29/2 được chúc vào 28/2 ở năm không nhuận                                                                                                                                                                                                          |
+| Nối từ         | Trong kênh đặt bởi `/game set game:Nối từ`: bot thả phản ứng và trả lời theo luật nối từ; tin chat thường trong kênh được bỏ qua, trò đã đạt `max-words` thì im lặng đến khi `/game reset game:Nối từ`                                                                                                                                                                                                     |
+| Nghĩa của từ   | Từ được chấp nhận: sau ✅ bot trả lời (không ping, không xem trước link) từ loại, nghĩa Anh-Anh + ví dụ (en.wiktionary, dự phòng Datamuse), nghĩa tiếng Việt (vi.wiktionary, dự phòng dịch máy MyMemory, có ghi "dịch máy") và link Anh-Anh / Anh-Việt / Oxford. Tra trực tiếp, chỉ nhớ tạm trong RAM (5000 từ, 24 giờ); mọi nguồn lỗi thì chỉ có ✅. Việc chấm từ không phụ thuộc vào phần này            |
+| Auto-react     | Tin chứa cụm trong từ điển phản ứng, hoặc có `react <emoji>`, được bot thả emoji tương ứng; áp dụng cả khi sửa tin. Emoji lỗi (thiếu quyền, server không có) bị bỏ qua, không báo người dùng                                                                                                                                                                                                               |
 | Chatbot        | Máy chủ phải bật (`/chatbot enable`) và có kênh (`/chatbot channel-add`). Trong kênh đó, nhắc thẳng bot hoặc trả lời một tin của bot thì bot trả lời bằng tin trả lời (ping người hỏi, không ping ai khác), kèm dòng cuối `-# còn lại x / tổng`. `@everyone`/`@role` không phải câu hỏi. Người đang chờ câu trả lời mà gửi thêm thì tin mới được thả ⏳ và bỏ qua. Thiết kế đầy đủ: `docs/architecture.md` |
-| Báo lỗi        | Lỗi bất ngờ khi chạy lệnh được gửi vào kênh `bot-log` của guild quản trị (không ping); người gọi chỉ thấy câu thông báo chung, không thấy chi tiết                                                                                                                                                                                                                                              |
+| Xác thực email | Thành viên mới vào máy chủ đang bật xác thực: bot đối chiếu invite đã dùng (cần quyền Manage Server và intent Guild Invites), cấp role của các luật có `invite:<mã>`, role chưa xác thực nếu `auto-unverified`, và DM nút xác thực nếu `auto-verify` (đóng DM thì bỏ qua). Mỗi ngày 03:30 giờ nghiệp vụ xoá bản chờ mã hết hạn và bộ đếm thư cũ                                                            |
+| Báo lỗi        | Lỗi bất ngờ khi chạy lệnh được gửi vào kênh `bot-log` của guild quản trị (không ping); người gọi chỉ thấy câu thông báo chung, không thấy chi tiết                                                                                                                                                                                                                                                         |
 
 ## Lệnh đã bỏ
 
