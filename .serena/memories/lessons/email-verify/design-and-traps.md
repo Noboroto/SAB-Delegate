@@ -1,0 +1,21 @@
+# Email verification module (shipped 2026-10-21, commits 1aed830..eabe3ed)
+
+- **Owner decisions**:
+  - Copy of the EmailVerify bot (getemailverified.com), without its premium, vote and quota features.
+  - Access rules: each rule is an AND/OR condition tree (domain/email/list/invite, react-querybuilder RuleGroup subset, stored as a Json column and parsed with `AccessConditionSchema`) that grants roles.
+  - Invite rules apply even when email verification is disabled.
+  - Verified addresses are stored encrypted (`emailEnc`) so managers can export them as Excel (write-excel-file).
+  - SMTP lives only in the DB (`mem:lessons/dashboard/settings-in-postgres`).
+  - Plus-addresses are NOT canonicalised (a+1@x ≠ a@x); this is an open owner question.
+- **Keys**: `LLM_KEY_SECRET` derives the email HMAC and encrypts the SMTP password and the addresses. It must NEVER be rotated: hashes would stop matching, uniqueness would break, and stored addresses would become unreadable.
+- **Anti-abuse (from reviews)**:
+  - The per-member throttle (`EmailSendThrottle`: 60 s cooldown, 10 mails/day) must not live on the pending row. Deleting the pending row (wrong codes, `/verify delete-data`, expiry) used to reset it, which allowed mail-bombing.
+  - Address checks are rate-limited (10 / 10 min).
+  - test-mail is rate-limited and audited.
+- **discord.js**: `member.roles.add([...])` / `.remove([...])` with an array PATCHes the full list computed from the stale cache, so add followed by remove can drop the added roles. Use one call per role id (atomic PUT/DELETE). Docs: "PUT route for singular roles, otherwise PATCHes".
+- **Necord option order (measured 2026-10-21)**: an option class that `extends` another registers the subclass's own options BEFORE the inherited ones. `GameSetOptions extends ChannelGameOption` put the required `game` after the optional `max-words`, and Discord rejects that order. Only `all-modules.boot.spec` (validateCommandMetadata) caught it. Declare option classes flat, in order.
+- **Recursive Zod with transforming members**: inference collapses nested groups. Use an explicit recursive type plus `z.ZodType<Out, In>`. The input type must be exported (TS4023) and re-exported from shared `index.ts` (knip). Bound the depth by building N explicit levels instead of `z.lazy`, so a 200k-deep body fails fast with no stack overflow. `z.custom` breaks the MCP JSON Schema listing.
+- **knip vs eslint trap**: removing `export` from a Zod schema that is used only for `z.infer` makes eslint fail with "assigned a value but only used as a type". Re-export such schemas from shared `index.ts` instead.
+- **Stale shared dist**: `@sab/shared` is consumed from `dist`, and a direct `pnpm vitest run` does not rebuild it. After editing shared, run `pnpm --filter @sab/shared build` (the hook and `pnpm test` do it through generate:deps).
+- **DB specs are not in the commit hook**: `chatbot.service.db.spec` had been failing since b8bf2a4 (reset-time footer). Run `pnpm test-db:start && TEST_REQUIRE_DB=1 pnpm test:db` before pushing anything that touches migrations or DB services.
+- **`@react-querybuilder/antd` rejected**: its ESM build imports antd/es date-picker internals and dayjs, which crashed vitest and is an SSR risk. Three small AntD controls wrap `react-querybuilder` core instead.
