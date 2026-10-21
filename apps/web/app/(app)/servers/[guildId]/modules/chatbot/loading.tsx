@@ -1,5 +1,5 @@
 import { PageLoading } from '@/components/ui/page-loading';
 
 export default function ChatbotLoading() {
-  return <PageLoading />;
+  return <PageLoading variant="form" />;
 }

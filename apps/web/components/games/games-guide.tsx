@@ -5,6 +5,7 @@ import { Card, Col, Row, Typography } from 'antd';
 import { useTranslations } from 'next-intl';
 import { Fragment } from 'react';
 import { Heading } from '@/components/ui/heading';
+import { SectionTitle } from '@/components/ui/section-title';
 
 /**
  * The help texts mark commands with backticks, as Discord renders them; here
@@ -36,16 +37,15 @@ export function GamesGuide() {
       <Row gutter={[16, 16]}>
         {games.map((game) => (
           <Col key={game} xs={24} lg={12}>
-            <Card title={t(`names.${game}`)} style={{ height: '100%' }}>
-              <Typography.Title level={2} style={{ fontSize: 14, marginTop: 0 }}>
-                {t('rulesTitle')}
-              </Typography.Title>
+            <Card
+              title={<SectionTitle flush>{t(`names.${game}`)}</SectionTitle>}
+              style={{ height: '100%' }}
+            >
+              <SectionTitle level={3}>{t('rulesTitle')}</SectionTitle>
               <Typography.Paragraph>
                 <WithCode text={t(`help.${game}.rules`)} />
               </Typography.Paragraph>
-              <Typography.Title level={2} style={{ fontSize: 14 }}>
-                {t('setupTitle')}
-              </Typography.Title>
+              <SectionTitle level={3}>{t('setupTitle')}</SectionTitle>
               <Typography.Paragraph style={{ marginBottom: 0 }}>
                 <WithCode text={t(`help.${game}.setup`)} />
               </Typography.Paragraph>
@@ -53,7 +53,7 @@ export function GamesGuide() {
           </Col>
         ))}
       </Row>
-      <Typography.Paragraph type="secondary" style={{ marginTop: 16 }}>
+      <Typography.Paragraph type="secondary" style={{ marginTop: 'var(--space-4)' }}>
         <WithCode text={t('leaderboardHint')} />
       </Typography.Paragraph>
     </>

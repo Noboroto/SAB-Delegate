@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { Button, Card, Input, Select, Table, Tag, Typography } from 'antd';
+import { Button, Card, Grid, Input, Select, Table, Tag, Typography } from 'antd';
 import type { TableProps } from 'antd';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -58,6 +58,7 @@ export function ChatbotHistoryTable({
 }) {
   const t = useTranslations('web-chatbot');
   const tLlm = useTranslations('web-settings');
+  const screens = Grid.useBreakpoint();
   const locale = useUiLocale();
   const router = useRouter();
   const pathname = usePathname();
@@ -103,13 +104,14 @@ export function ChatbotHistoryTable({
       title: t('history.columns.time'),
       sorter: true,
       sortOrder: query.order === 'asc' ? 'ascend' : 'descend',
-      fixed: 'left',
+      // A pinned column on a phone leaves no room for the rest of the row.
+      fixed: screens.md ? 'left' : undefined,
       render: (_: unknown, row) => <DiscordTimestamp value={row.createdAt} />,
     },
     {
       key: 'member',
       title: t('history.columns.member'),
-      width: 180,
+      width: 'var(--w-xs)',
       render: (_: unknown, row) => (
         <div style={{ overflowWrap: 'anywhere' }}>
           <div>{row.displayName ?? row.userId}</div>
@@ -141,7 +143,7 @@ export function ChatbotHistoryTable({
     {
       key: 'question',
       title: t('history.columns.question'),
-      width: 320,
+      width: 'var(--w-md)',
       render: (_: unknown, row) => <div style={CLAMP}>{row.question}</div>,
     },
     {
@@ -171,7 +173,7 @@ export function ChatbotHistoryTable({
         {t('history.description', { days: CHATBOT_HISTORY_RETENTION_DAYS })}
       </Typography.Paragraph>
       <ActionRow style={{ marginBottom: 'var(--space-4)' }}>
-        <div style={{ flex: '1 1 200px', minWidth: 0 }}>
+        <div style={{ flex: '1 1 var(--w-sm)', minWidth: 0 }}>
           <MemberSelect
             guildId={guildId}
             aria-label={t('history.filters.member')}
@@ -182,7 +184,7 @@ export function ChatbotHistoryTable({
             onChange={(userId) => filter({ userId })}
           />
         </div>
-        <div style={{ flex: '1 1 200px', minWidth: 0 }}>
+        <div style={{ flex: '1 1 var(--w-sm)', minWidth: 0 }}>
           <ChannelSelect
             guildId={guildId}
             types={TEXT_CHANNEL_TYPES}
@@ -200,7 +202,7 @@ export function ChatbotHistoryTable({
           allowClear
           disabled={navigating}
           value={query.status}
-          style={{ flex: '1 1 160px', minWidth: 0 }}
+          style={{ flex: '1 1 var(--w-xs)', minWidth: 0 }}
           options={STATUSES.map((value) => ({ value, label: statusLabels[value] }))}
           onChange={(status) => filter({ status })}
         />
@@ -213,7 +215,7 @@ export function ChatbotHistoryTable({
           value={dayOf(query.from)}
           max={dayOf(query.to) === '' ? undefined : dayOf(query.to)}
           onChange={(event) => filter({ from: dayStartIso(event.target.value) })}
-          style={{ flex: '1 1 160px', minWidth: 0, width: 'auto' }}
+          style={{ flex: '1 1 var(--w-xs)', minWidth: 0, width: 'auto' }}
         />
         <Input
           type="date"
@@ -222,7 +224,7 @@ export function ChatbotHistoryTable({
           value={dayOf(query.to)}
           min={dayOf(query.from) === '' ? undefined : dayOf(query.from)}
           onChange={(event) => filter({ to: dayEndIso(event.target.value) })}
-          style={{ flex: '1 1 160px', minWidth: 0, width: 'auto' }}
+          style={{ flex: '1 1 var(--w-xs)', minWidth: 0, width: 'auto' }}
         />
         {hasTurnFilter(query) ? (
           <Button

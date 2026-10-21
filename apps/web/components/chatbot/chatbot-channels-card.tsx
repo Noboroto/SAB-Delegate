@@ -104,7 +104,7 @@ export function ChatbotChannelsCard({
           <Typography.Paragraph type="secondary">{t('channels.full')}</Typography.Paragraph>
         ) : (
           <ActionRow>
-            <div style={{ flex: '1 1 220px', minWidth: 0 }}>
+            <div style={{ flex: '1 1 var(--w-sm)', minWidth: 0 }}>
               <ChannelSelect
                 guildId={guildId}
                 types={TEXT_CHANNEL_TYPES}

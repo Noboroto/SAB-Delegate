@@ -11,6 +11,8 @@ import type {
   ChatbotTurnListQuery,
   ChatbotTurnPage,
 } from '@sab/shared';
+import { useConfirmLeave } from '@/components/forms/unsaved-guard';
+import { FormColumn } from '@/components/ui/form-column';
 import { Heading } from '@/components/ui/heading';
 import { CHATBOT_TABS, type ChatbotTab } from '@/lib/chatbot/tabs';
 import { useUiLocale } from '@/lib/chatbot/use-ui-locale';
@@ -41,6 +43,7 @@ export function ChatbotView(props: ChatbotViewProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [switching, startSwitch] = useTransition();
+  const confirmLeave = useConfirmLeave();
   const { llm } = config;
 
   const panel: ReactNode =
@@ -51,20 +54,22 @@ export function ChatbotView(props: ChatbotViewProps) {
     ) : (
       <Row gutter={[16, 16]}>
         <Col xs={24} xl={12}>
-          <div style={{ display: 'grid', gap: 'var(--space-4)' }}>
+          <FormColumn>
             <ChatbotSettingsCard guildId={guildId} config={config} />
             <ChatbotChannelsCard guildId={guildId} channels={config.channels} />
             <ChatbotMemoryCard guildId={guildId} />
-          </div>
+          </FormColumn>
         </Col>
         <Col xs={24} xl={12}>
           {/* Remounted when the stored values change, so the form starts from what the server now holds. */}
-          <ChatbotLlmCard
-            key={`${llm.source}:${llm.baseUrl ?? ''}:${llm.model ?? ''}:${llm.keyLast4 ?? ''}`}
-            guildId={guildId}
-            llm={llm}
-            adminServer={props.adminServer}
-          />
+          <FormColumn>
+            <ChatbotLlmCard
+              key={`${llm.source}:${llm.baseUrl ?? ''}:${llm.model ?? ''}:${llm.keyLast4 ?? ''}`}
+              guildId={guildId}
+              llm={llm}
+              adminServer={props.adminServer}
+            />
+          </FormColumn>
         </Col>
       </Row>
     );
@@ -72,7 +77,8 @@ export function ChatbotView(props: ChatbotViewProps) {
   const open = (key: string) => {
     const next = CHATBOT_TABS.find((tab): tab is ChatbotTab => tab === key);
     if (next === undefined || next === props.tab) return;
-    startSwitch(() => router.push(`${pathname}?tab=${next}`));
+    // The LLM form is on the settings tab: leaving it with typed values asks first.
+    confirmLeave(() => startSwitch(() => router.push(`${pathname}?tab=${next}`)));
   };
 
   return (

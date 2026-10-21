@@ -1,5 +1,5 @@
 import { PageLoading } from '@/components/ui/page-loading';
 
 export default function GamesLoading() {
-  return <PageLoading />;
+  return <PageLoading variant="cards" />;
 }

@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { POLL_CHOICES_MAX, type CreateReactionPollResult } from '@sab/shared';
 import { ChannelSelect } from '@/components/forms/channel-select';
 import { ConfirmAction } from '@/components/forms/confirm-action';
+import { useUnsavedChanges } from '@/components/forms/unsaved-guard';
 import { TEXT_CHANNEL_TYPES } from '@/lib/discord/use-channels';
 import { createReactionPoll } from '@/lib/messaging/messaging-api';
 import { useFormValues } from '@/lib/messaging/use-form-values';
@@ -27,6 +28,8 @@ export function PollForm({ guildId }: { guildId: string }) {
   const router = useRouter();
   const [form] = Form.useForm<Values>();
   const values: Values = { mode: 'new', ...useFormValues(form) };
+  // Only what the person chose counts: the default mode and choice count are not unsaved work.
+  useUnsavedChanges((values.message ?? '').trim() !== '' || (values.channelId ?? '') !== '');
   const request = buildPoll(values);
 
   return (
@@ -83,7 +86,9 @@ export function PollForm({ guildId }: { guildId: string }) {
               <Typography.Text>
                 {t('poll.planEmojis', { count: plan.emojis.length })}
               </Typography.Text>
-              <div style={{ fontSize: 24, overflowWrap: 'anywhere' }}>{plan.emojis.join(' ')}</div>
+              <div style={{ fontSize: '1.5em', overflowWrap: 'anywhere' }}>
+                {plan.emojis.join(' ')}
+              </div>
             </>
           )}
           onDone={() => {

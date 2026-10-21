@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { MESSAGE_MAX_LENGTH, type EditBotMessageResult } from '@sab/shared';
 import { ConfirmAction } from '@/components/forms/confirm-action';
+import { useUnsavedChanges } from '@/components/forms/unsaved-guard';
 import { editBotMessage } from '@/lib/messaging/messaging-api';
 import { useFormValues } from '@/lib/messaging/use-form-values';
 import { buildEdit, refProblem, requireBuilt } from '@/lib/messaging/requests';
@@ -23,6 +24,7 @@ export function EditMessageForm({ guildId }: { guildId: string }) {
   const router = useRouter();
   const [form] = Form.useForm<Values>();
   const values = useFormValues(form);
+  useUnsavedChanges((values.content ?? '').trim() !== '');
   const request = buildEdit(values);
 
   return (

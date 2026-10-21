@@ -22,7 +22,7 @@ const PLAIN: CSSProperties = {
   margin: 0,
 };
 
-const SCROLL: CSSProperties = { ...PLAIN, maxHeight: 280, overflow: 'auto' };
+const SCROLL: CSSProperties = { ...PLAIN, maxHeight: '30vh', overflow: 'auto' };
 
 /**
  * Members' words and the model's, as text nodes: React escapes them, and they
@@ -52,7 +52,9 @@ function ContextSections({ context }: { context: ChatbotTurnContext }) {
         context.channelMessages.length === 0 ? (
           <Typography.Text type="secondary">{t('history.detail.none')}</Typography.Text>
         ) : (
-          <div style={{ display: 'grid', gap: 'var(--space-3)', maxHeight: 360, overflow: 'auto' }}>
+          <div
+            style={{ display: 'grid', gap: 'var(--space-3)', maxHeight: '40vh', overflow: 'auto' }}
+          >
             {context.channelMessages.map((line, index) => (
               <div key={`${line.at}:${index}`}>
                 <Typography.Text strong style={{ overflowWrap: 'anywhere' }}>
@@ -182,13 +184,13 @@ function Detail({
         ]}
       />
       <section>
-        <Typography.Title level={3} style={{ fontSize: token.fontSizeHeading5 }}>
+        <Typography.Title level={2} style={{ fontSize: token.fontSizeHeading5 }}>
           {t('history.detail.question')}
         </Typography.Title>
         <PlainText text={turn.question} />
       </section>
       <section>
-        <Typography.Title level={3} style={{ fontSize: token.fontSizeHeading5 }}>
+        <Typography.Title level={2} style={{ fontSize: token.fontSizeHeading5 }}>
           {t('history.detail.answer')}
         </Typography.Title>
         {turn.answer === null ? (
@@ -198,7 +200,7 @@ function Detail({
         )}
       </section>
       <section>
-        <Typography.Title level={3} style={{ fontSize: token.fontSizeHeading5 }}>
+        <Typography.Title level={2} style={{ fontSize: token.fontSizeHeading5 }}>
           {t('history.detail.context')}
         </Typography.Title>
         {turn.context === null ? (
@@ -242,7 +244,7 @@ export function ChatbotTurnDrawer({
       open={turnId !== undefined}
       onClose={onClose}
       title={t('history.detail.title')}
-      size="min(736px, 100vw)"
+      size="min(var(--form-w), 100vw)"
       destroyOnHidden
     >
       {detail.data !== undefined && detail.data.id === turnId ? (

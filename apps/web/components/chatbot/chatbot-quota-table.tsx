@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { App, Button, Card, Table, Tag, Typography } from 'antd';
+import { App, Button, Card, Grid, Table, Tag, Typography } from 'antd';
 import type { TableProps } from 'antd';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -42,6 +42,7 @@ export function ChatbotQuotaTable({
   query: ChatbotQuotaListQuery;
 }) {
   const t = useTranslations('web-chatbot');
+  const screens = Grid.useBreakpoint();
   const { message } = App.useApp();
   const locale = useUiLocale();
   const router = useRouter();
@@ -85,8 +86,9 @@ export function ChatbotQuotaTable({
     {
       key: 'member',
       title: t('usage.columns.member'),
-      fixed: 'left',
-      width: 200,
+      // A pinned column on a phone leaves no room for the rest of the row.
+      fixed: screens.md ? 'left' : undefined,
+      width: 'var(--w-sm)',
       render: (_: unknown, row) => (
         <div style={{ overflowWrap: 'anywhere' }}>
           <div>{row.displayName ?? row.userId}</div>
@@ -184,7 +186,7 @@ export function ChatbotQuotaTable({
         {t('usage.description', { limit: count(page.defaultLimit) })}
       </Typography.Paragraph>
       <ActionRow style={{ marginBottom: 'var(--space-4)' }}>
-        <div style={{ flex: '1 1 220px', minWidth: 0 }}>
+        <div style={{ flex: '1 1 var(--w-sm)', minWidth: 0 }}>
           <MemberSelect
             guildId={guildId}
             aria-label={t('usage.pickMember')}

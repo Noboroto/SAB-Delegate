@@ -13,7 +13,14 @@ vi.mock('next-intl/server', async () => {
   const translate = serverTranslations();
   return { getTranslations: (namespace: string) => translate(namespace) };
 });
+const redirect = vi.hoisted(() =>
+  vi.fn((url: string) => {
+    throw new Error(`redirect:${url}`);
+  }),
+);
 vi.mock('next/navigation', () => ({
+  useSearchParams: () => new URLSearchParams(),
+  redirect,
   useRouter: () => ({ refresh: vi.fn(), push: vi.fn(), replace: vi.fn() }),
   usePathname: () => `/servers/${GUILD}/modules`,
 }));
@@ -59,6 +66,30 @@ describe('word game page', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Trò nối từ' })).toBeInTheDocument();
     expect(screen.getByText('Các từ đã dùng (21)')).toBeInTheDocument();
     expect(await wordGameMetadata()).toEqual({ title: 'Trò nối từ' });
+  });
+
+  it('sends a link past the last page of words to the last page that exists', async () => {
+    server.fetch.mockImplementation((path: string) =>
+      Promise.resolve(
+        path.includes('/words?')
+          ? { items: [], pagination: { page: 9, pageSize: 20, total: 21 } }
+          : {
+              started: true,
+              lastWord: 'chào',
+              lastUserId: '5'.repeat(18),
+              channelId: GENERAL,
+              maxWords: 400,
+              count: 21,
+              finished: false,
+            },
+      ),
+    );
+    await expect(
+      WordGamePage({ params, searchParams: Promise.resolve({ page: '9' }) }),
+    ).rejects.toThrow('redirect:');
+    expect(redirect).toHaveBeenCalledWith(
+      `/servers/${GUILD}/modules/word-game?page=2&pageSize=20&sort=played&order=asc`,
+    );
   });
 });
 

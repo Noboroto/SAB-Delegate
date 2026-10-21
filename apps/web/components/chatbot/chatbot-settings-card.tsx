@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { CHATBOT_LIMIT_MAX, type ChatbotConfig } from '@sab/shared';
 import { ErrorAlert } from '@/components/data/error-alert';
+import { useUnsavedChanges } from '@/components/forms/unsaved-guard';
 import { ActionRow } from '@/components/ui/action-row';
 import { useApiMutation } from '@/lib/api/mutations';
 import { configureChatbot } from '@/lib/chatbot/chatbot-api';
@@ -39,6 +40,8 @@ export function ChatbotSettingsCard({
   const limitInvalid =
     limit === null || !Number.isInteger(limit) || limit < 0 || limit > CHATBOT_LIMIT_MAX;
   const limitChanged = limit !== config.defaultMonthlyLimit;
+  // The switch saves at once; only the typed limit can be lost.
+  useUnsavedChanges(limitChanged);
 
   const toggle = async (enabled: boolean) => {
     const outcome = await save.run({ enabled });

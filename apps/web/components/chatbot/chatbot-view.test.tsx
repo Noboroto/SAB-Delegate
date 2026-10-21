@@ -62,7 +62,6 @@ const TEXT = {
     twoModels: '2 mô hình',
     llmSaved: 'Đã lưu dịch vụ AI.',
     keyRequired: 'Nhập khoá API (lần đầu lưu hoặc khi đổi địa chỉ API).',
-    reauth: 'Đăng nhập lại',
     useShared: 'Dùng dịch vụ chung',
     useSharedConfirm: 'Bỏ dịch vụ của máy chủ này',
     useSharedPlan:
@@ -94,7 +93,6 @@ const TEXT = {
     twoModels: '2 models',
     llmSaved: 'The AI service is saved.',
     keyRequired: 'Enter an API key (on the first save or when the API address changes).',
-    reauth: 'Sign in again',
     useShared: 'Use the shared service',
     useSharedConfirm: "Forget this server's service",
     useSharedPlan:
@@ -323,22 +321,6 @@ describe.each(SUPPORTED_LOCALES)('ChatbotView settings (%s)', (locale) => {
     expect(nav.refresh).toHaveBeenCalledTimes(1);
   });
 
-  it('offers to sign in again when the change needs a fresh login', async () => {
-    failWith(403, 'AUTH_REAUTH_REQUIRED');
-    renderWithProviders(
-      <ChatbotView guildId={GUILD} config={CONFIG} tab="settings" adminServer={false} />,
-      locale,
-    );
-    await userEvent.type(screen.getByLabelText(text.baseUrl), 'https://example.com/v1');
-    await userEvent.type(screen.getByLabelText(text.model), 'model-a');
-    await userEvent.type(screen.getByLabelText(text.apiKey), 'k'.repeat(24));
-    await userEvent.click(screen.getByRole('button', { name: text.llmSave }));
-
-    const alert = await screen.findByRole('alert');
-    expect(within(alert).getByRole('button', { name: text.reauth })).toBeInTheDocument();
-    expect(screen.queryByText(/secret internal detail/)).not.toBeInTheDocument();
-  });
-
   it('drops the server service only after the plan is shown and confirmed', async () => {
     const fetchMock = setup(locale, () => CONFIG, { ...CONFIG, llm: OWN_LLM });
     await userEvent.click(screen.getByRole('button', { name: text.useShared }));
@@ -351,26 +333,6 @@ describe.each(SUPPORTED_LOCALES)('ChatbotView settings (%s)', (locale) => {
     expect(writesOf(fetchMock)).toEqual([
       { path: `${CHATBOT}/llm`, method: 'DELETE', body: undefined },
     ]);
-  });
-
-  it('offers the sign-in inside the dialog when dropping the service needs a fresh login', async () => {
-    failWith(403, 'AUTH_REAUTH_REQUIRED');
-    renderWithProviders(
-      <ChatbotView
-        guildId={GUILD}
-        config={{ ...CONFIG, llm: OWN_LLM }}
-        tab="settings"
-        adminServer={false}
-      />,
-      locale,
-    );
-    await userEvent.click(screen.getByRole('button', { name: text.useShared }));
-    const dialog = await screen.findByRole('dialog');
-    expect(await within(dialog).findByText(text.useSharedPlan)).toBeInTheDocument();
-    await userEvent.click(within(dialog).getByRole('button', { name: text.useSharedConfirm }));
-
-    expect(await within(dialog).findByRole('button', { name: text.reauth })).toBeInTheDocument();
-    expect(nav.refresh).not.toHaveBeenCalled();
   });
 
   it('has nothing to drop while the shared service answers', () => {

@@ -1,18 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  Alert,
-  App,
-  Button,
-  Card,
-  Descriptions,
-  Form,
-  Input,
-  Select,
-  Typography,
-  theme,
-} from 'antd';
+import { Alert, App, Button, Card, Descriptions, Form, Input, Select, Typography } from 'antd';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import {
@@ -22,12 +11,12 @@ import {
   type LlmTestResult,
 } from '@sab/shared';
 import { ErrorAlert } from '@/components/data/error-alert';
-import { ReauthAlert } from '@/components/auth/reauth-alert';
 import { ConfirmAction } from '@/components/forms/confirm-action';
+import { useUnsavedChanges } from '@/components/forms/unsaved-guard';
 import { LlmModelField } from '@/components/llm/llm-model-field';
 import { ActionRow } from '@/components/ui/action-row';
 import { LinkButton } from '@/components/ui/link-button';
-import type { ApiRequestError } from '@/lib/api/api-response';
+import { SectionTitle } from '@/components/ui/section-title';
 import { useApiMutation } from '@/lib/api/mutations';
 import {
   clearChatbotLlm,
@@ -67,12 +56,19 @@ export function ChatbotLlmCard({
   const t = useTranslations('web-chatbot');
   const tLlm = useTranslations('web-settings');
   const { message } = App.useApp();
-  const { token } = theme.useToken();
   const router = useRouter();
   const [form] = Form.useForm<LlmFormValues>();
   const [testResult, setTestResult] = useState<LlmTestResult | undefined>(undefined);
   const baseUrl = Form.useWatch('baseUrl', form) as string | undefined;
   const own = llm.source === 'guild';
+  const values = Form.useWatch([], form) as LlmFormValues | undefined;
+  // The card remounts when the stored values change, so "differs from the stored model" is what is unsaved.
+  const dirty =
+    values !== undefined &&
+    ((values.baseUrl ?? '').trim() !== (own ? (llm.baseUrl ?? '') : '') ||
+      (values.model ?? '').trim() !== (own ? (llm.model ?? '') : '') ||
+      (values.apiKey ?? '') !== '');
+  useUnsavedChanges(dirty);
 
   const save = useApiMutation((input: ChatbotLlmOverrideInput) => saveChatbotLlm(guildId, input));
   const test = useApiMutation((input: ChatbotLlmOverrideInput) => testChatbotLlm(guildId, input));
@@ -116,24 +112,6 @@ export function ChatbotLlmCard({
   };
 
   const failure = save.error ?? test.error;
-  const returnPath = `/servers/${guildId}/modules/chatbot`;
-  // Changing the model's key or address needs a recent login; the sign-in is offered wherever that is refused.
-  const reauthAlert = (
-    <ReauthAlert
-      returnPath={returnPath}
-      texts={{
-        title: t('reauth.title'),
-        body: t('reauth.body'),
-        action: t('reauth.action'),
-        failed: t('reauth.failed'),
-      }}
-    />
-  );
-  const reauthOnly = (error: ApiRequestError) =>
-    error.code === 'AUTH_REAUTH_REQUIRED' ? reauthAlert : undefined;
-  const failureAlert = (error: ApiRequestError) =>
-    reauthOnly(error) ?? <ErrorAlert error={error} />;
-
   return (
     <Card title={t('llm.title')}>
       <Descriptions
@@ -165,12 +143,9 @@ export function ChatbotLlmCard({
           <LinkButton href={`/servers/${guildId}/settings/llm`}>{t('llm.openGlobal')}</LinkButton>
         </div>
       ) : null}
-      <Typography.Title
-        level={3}
-        style={{ fontSize: token.fontSizeHeading5, marginTop: 'var(--space-6)' }}
-      >
-        {t('llm.ownTitle')}
-      </Typography.Title>
+      <div style={{ marginTop: 'var(--space-6)' }}>
+        <SectionTitle>{t('llm.ownTitle')}</SectionTitle>
+      </div>
       <Typography.Paragraph type="secondary">{t('llm.ownHelp')}</Typography.Paragraph>
       <Form<LlmFormValues>
         form={form}
@@ -251,7 +226,11 @@ export function ChatbotLlmCard({
             />
           </Form.Item>
         )}
-        {failure === undefined ? null : <Form.Item>{failureAlert(failure)}</Form.Item>}
+        {failure === undefined ? null : (
+          <Form.Item>
+            <ErrorAlert error={failure} />
+          </Form.Item>
+        )}
         <Form.Item style={{ marginBottom: 0 }}>
           <ActionRow>
             <Button onClick={() => void onTest()} loading={test.pending} disabled={save.pending}>
@@ -266,7 +245,6 @@ export function ChatbotLlmCard({
                 modalTitle={t('llm.useSharedTitle')}
                 confirmLabel={t('llm.useSharedConfirm')}
                 disabled={busy}
-                renderError={reauthOnly}
                 preview={() => Promise.resolve(llm.globalAvailable)}
                 execute={() => clearChatbotLlm(guildId)}
                 renderPlan={(sharedAvailable) => (

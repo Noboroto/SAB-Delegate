@@ -25,6 +25,11 @@ function isField(key: unknown): key is FieldName {
   return typeof key === 'string' && (FIELDS as readonly string[]).includes(key);
 }
 
+const FORM_NAME = 'birthday-add';
+
+/** The id AntD gives the first field, so an empty-state button can send the person straight to it. */
+export const BIRTHDAY_ADD_FIRST_FIELD_ID = `${FORM_NAME}_studentId`;
+
 /** One person for the list. The shared schema decides what is valid; the form only places its answers on the fields. */
 export function BirthdayAddForm({ guildId }: { guildId: string }) {
   const t = useTranslations('web-birthday');
@@ -63,6 +68,7 @@ export function BirthdayAddForm({ guildId }: { guildId: string }) {
     <Card title={t('add.title')}>
       <Form<FormValues>
         form={form}
+        name={FORM_NAME}
         layout="vertical"
         onFinish={(values) => void submit(values)}
         disabled={add.pending}

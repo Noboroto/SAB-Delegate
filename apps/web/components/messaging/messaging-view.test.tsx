@@ -13,12 +13,18 @@ import {
 } from '@/lib/messaging/api-stub';
 import { renderWithProviders } from '@/lib/test/render-with-providers';
 
-const nav = vi.hoisted(() => ({ refresh: vi.fn(), replace: vi.fn() }));
+const nav = vi.hoisted(() => ({
+  refresh: vi.fn(),
+  replace: vi.fn(),
+  search: new URLSearchParams(),
+}));
 vi.mock('next/navigation', () => ({
+  useSearchParams: () => nav.search,
   useRouter: () => nav,
   usePathname: () => '/servers/1/modules/messaging',
 }));
 
+import { UnsavedGuardProvider } from '@/components/forms/unsaved-guard';
 import { MessagingView } from './messaging-view';
 
 const MESSAGE = '7'.repeat(18);
@@ -50,6 +56,7 @@ const TEXT = {
 beforeEach(() => {
   nav.refresh.mockReset();
   nav.replace.mockReset();
+  nav.search = new URLSearchParams();
 });
 
 const sendPlan = (dryRun: boolean) => ({
@@ -117,6 +124,28 @@ describe.each(SUPPORTED_LOCALES)('MessagingView (%s)', (locale) => {
     await userEvent.type(screen.getByLabelText(text.reply), 'not a link');
     expect(await screen.findByText(text.badLink)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: text.sendAction })).toBeDisabled();
+  });
+});
+
+describe('the tab in the address (vi)', () => {
+  it('shows the tab the URL names, whatever the page was rendered with', () => {
+    stubApi(() => ({}));
+    nav.search = new URLSearchParams('tab=poll');
+    renderWithProviders(<MessagingView guildId={GUILD} initialTab="send" />);
+    expect(screen.getByRole('tab', { name: 'Bình chọn', selected: true })).toBeInTheDocument();
+  });
+
+  it('asks before leaving a tab that holds typed text', async () => {
+    stubApi(() => ({}));
+    renderWithProviders(
+      <UnsavedGuardProvider>
+        <MessagingView guildId={GUILD} initialTab="send" />
+      </UnsavedGuardProvider>,
+    );
+    await userEvent.type(screen.getByLabelText('Nội dung'), 'dở dang');
+    await userEvent.click(screen.getByRole('tab', { name: 'Bình chọn' }));
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    expect(nav.replace).not.toHaveBeenCalled();
   });
 });
 

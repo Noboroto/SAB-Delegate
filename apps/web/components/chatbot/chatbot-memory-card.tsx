@@ -59,7 +59,7 @@ export function ChatbotMemoryCard({ guildId }: { guildId: string }) {
       <div style={{ display: 'grid', gap: 'var(--space-4)' }}>
         <ActionRow>{clearer({ scope: 'all' }, t('memory.clearAll'))}</ActionRow>
         <ActionRow>
-          <div style={{ flex: '1 1 220px', minWidth: 0 }}>
+          <div style={{ flex: '1 1 var(--w-sm)', minWidth: 0 }}>
             <ChannelSelect
               guildId={guildId}
               types={TEXT_CHANNEL_TYPES}
@@ -76,7 +76,7 @@ export function ChatbotMemoryCard({ guildId }: { guildId: string }) {
           )}
         </ActionRow>
         <ActionRow>
-          <div style={{ flex: '1 1 220px', minWidth: 0 }}>
+          <div style={{ flex: '1 1 var(--w-sm)', minWidth: 0 }}>
             <MemberSelect
               guildId={guildId}
               aria-label={t('memory.pickMember')}

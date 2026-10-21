@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState, type ChangeEvent } from 'react';
-import { Alert, App, Button, Card, Space, Table, Typography } from 'antd';
+import { Alert, App, Button, Card, Table, Typography, theme } from 'antd';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { BIRTHDAY_CSV_HEADER, BIRTHDAY_CSV_TEMPLATE, type BirthdayImportReport } from '@sab/shared';
@@ -83,7 +83,7 @@ export function BirthdayImport({ guildId }: { guildId: string }) {
 
   return (
     <Card title={t('import.title')}>
-      <Space orientation="vertical" size={12} style={{ width: '100%' }}>
+      <div style={{ display: 'grid', gap: 'var(--space-3)' }}>
         <Typography.Paragraph style={{ marginBottom: 0 }}>
           {t('import.help', { columns: BIRTHDAY_CSV_HEADER.join(', ') })}
         </Typography.Paragraph>
@@ -93,7 +93,7 @@ export function BirthdayImport({ guildId }: { guildId: string }) {
             type="file"
             accept=".csv,text/csv"
             aria-label={t('import.fileInput')}
-            style={{ display: 'none' }}
+            hidden
             onChange={(event) => void choose(event)}
           />
           <Button onClick={() => input.current?.click()} disabled={send.pending}>
@@ -137,7 +137,7 @@ export function BirthdayImport({ guildId }: { guildId: string }) {
         {report === undefined ? null : (
           <ImportReport report={report} pending={send.pending} onConfirm={() => void confirm()} />
         )}
-      </Space>
+      </div>
     </Card>
   );
 }
@@ -152,13 +152,14 @@ function ImportReport({
   onConfirm: () => void;
 }) {
   const t = useTranslations('web-birthday');
+  const { token } = theme.useToken();
   const listed = report.duplicates.slice(0, LISTED_IDS);
   const hidden = report.duplicates.length - listed.length;
 
   return (
     <section aria-label={t('import.report.title')}>
-      <Space orientation="vertical" size={12} style={{ width: '100%' }}>
-        <Typography.Title level={3} style={{ fontSize: 16, margin: 0 }}>
+      <div style={{ display: 'grid', gap: 'var(--space-3)' }}>
+        <Typography.Title level={3} style={{ fontSize: token.fontSizeHeading5, margin: 0 }}>
           {t('import.report.title')}
         </Typography.Title>
         <ul style={{ margin: 0 }}>
@@ -183,7 +184,6 @@ function ImportReport({
         )}
         {report.problems.length === 0 ? null : (
           <Table<ImportProblem>
-            size="small"
             rowKey={(problem) => `${problem.row}-${problem.kind}`}
             dataSource={report.problems}
             pagination={{ pageSize: 10, hideOnSinglePage: true, showSizeChanger: false }}
@@ -210,7 +210,7 @@ function ImportReport({
             {t('import.confirm', { count: report.added })}
           </Button>
         )}
-      </Space>
+      </div>
     </section>
   );
 }

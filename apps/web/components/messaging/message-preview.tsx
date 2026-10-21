@@ -19,7 +19,7 @@ export function MessagePreview({ content }: { content: string }) {
         border: `1px solid ${token.colorBorderSecondary}`,
         borderRadius: token.borderRadius,
         background: token.colorFillQuaternary,
-        maxHeight: 240,
+        maxHeight: 'calc(var(--space-6) * 10)',
         overflowY: 'auto',
       }}
     >
