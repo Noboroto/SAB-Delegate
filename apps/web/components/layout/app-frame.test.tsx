@@ -11,7 +11,7 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }),
   usePathname: () => '/servers',
 }));
-vi.mock('@/lib/auth/auth-client', () => ({ signOut: vi.fn() }));
+vi.mock('@/lib/auth/auth-client', () => ({ signOut: vi.fn(), touchSession: vi.fn() }));
 
 import { ThemeProvider } from '../ui/theme-provider';
 import { AppFrame } from './app-frame';

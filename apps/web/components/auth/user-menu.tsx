@@ -48,7 +48,7 @@ export function UserMenu({
             type: 'group',
             key: 'account',
             label: (
-              <span style={{ display: 'flex', flexDirection: 'column', maxWidth: 240 }}>
+              <span style={{ display: 'flex', flexDirection: 'column', maxWidth: 'var(--w-sm)' }}>
                 <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{t('account')}</span>
                 {displayName !== null && (
                   <span

@@ -34,7 +34,7 @@ export default async function LoginPage({
     <main
       id="main"
       className="page-main"
-      style={{ display: 'grid', placeItems: 'center', minHeight: '100dvh' }}
+      style={{ display: 'grid', placeItems: 'center', flex: 1 }}
     >
       <LoginCard next={next} />
     </main>

@@ -2,6 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ApiKeyView } from '@sab/shared';
+import { UnsavedGuardProvider } from '@/components/forms/unsaved-guard';
 import { ApiRequestError } from '@/lib/api/api-response';
 import { SUPPORTED_LOCALES } from '@/lib/locale';
 import { renderWithProviders } from '@/lib/test/render-with-providers';
@@ -9,10 +10,8 @@ import { renderWithProviders } from '@/lib/test/render-with-providers';
 const refresh = vi.hoisted(() => vi.fn());
 const mintApiKey = vi.hoisted(() => vi.fn());
 const revokeApiKey = vi.hoisted(() => vi.fn());
-const signInWithDiscord = vi.hoisted(() => vi.fn());
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh }) }));
 vi.mock('@/lib/api-keys/api-keys-api', () => ({ mintApiKey, revokeApiKey }));
-vi.mock('@/lib/auth/auth-client', () => ({ signInWithDiscord }));
 
 import { ApiKeysPage } from './api-keys-page';
 
@@ -44,7 +43,6 @@ beforeEach(() => {
   refresh.mockReset();
   mintApiKey.mockReset();
   revokeApiKey.mockReset();
-  signInWithDiscord.mockReset();
 });
 
 // Written out per language on purpose: the expectation must not come from the catalog it checks.
@@ -66,6 +64,9 @@ const TEXT = {
     connect: 'How to connect',
   },
 } as const;
+
+const leaveTitle = (locale: string) =>
+  locale === 'en' ? 'Leave without saving?' : 'Rời đi mà chưa lưu?';
 
 describe.each(SUPPORTED_LOCALES)('ApiKeysPage (%s)', (locale) => {
   const text = TEXT[locale];
@@ -128,6 +129,40 @@ describe.each(SUPPORTED_LOCALES)('ApiKeysPage (%s)', (locale) => {
     expect(document.body.textContent).not.toContain(SECRET);
   });
 
+  it('closes at once, without a question, when nothing was typed', async () => {
+    renderWithProviders(
+      <UnsavedGuardProvider>
+        <ApiKeysPage keys={[]} />
+      </UnsavedGuardProvider>,
+      locale,
+    );
+    await userEvent.click(screen.getByRole('button', { name: createName }));
+    const dialog = await screen.findByRole('dialog');
+    await userEvent.click(
+      within(dialog).getByRole('button', { name: locale === 'en' ? 'Cancel' : 'Huỷ' }),
+    );
+    // The exit animation never ends in the test DOM, so the dialog starting to leave is the signal.
+    await waitFor(() => expect(dialog).toHaveClass('ant-zoom-leave'));
+    expect(screen.queryByText(leaveTitle(locale))).not.toBeInTheDocument();
+  });
+
+  it('asks before a typed name is thrown away', async () => {
+    renderWithProviders(
+      <UnsavedGuardProvider>
+        <ApiKeysPage keys={[]} />
+      </UnsavedGuardProvider>,
+      locale,
+    );
+    await userEvent.click(screen.getByRole('button', { name: createName }));
+    const dialog = await screen.findByRole('dialog');
+    await userEvent.type(within(dialog).getByRole('textbox'), 'Draft');
+    await userEvent.click(
+      within(dialog).getByRole('button', { name: locale === 'en' ? 'Cancel' : 'Huỷ' }),
+    );
+    expect((await screen.findAllByText(leaveTitle(locale))).length).toBeGreaterThan(0);
+    expect(mintApiKey).not.toHaveBeenCalled();
+  });
+
   it('sends one request when the form is submitted twice', async () => {
     let finish: (value: typeof MINTED) => void = () => undefined;
     mintApiKey.mockReturnValue(new Promise((resolve) => (finish = resolve)));
@@ -153,31 +188,6 @@ describe.each(SUPPORTED_LOCALES)('ApiKeysPage (%s)', (locale) => {
       ),
     ).toBeInTheDocument();
     expect(mintApiKey).not.toHaveBeenCalled();
-  });
-
-  it('offers a new sign-in when a write key needs a recent login', async () => {
-    mintApiKey.mockRejectedValue(new ApiRequestError(403, 'AUTH_REAUTH_REQUIRED'));
-    signInWithDiscord.mockResolvedValue(undefined);
-    renderWithProviders(<ApiKeysPage keys={[]} />, locale);
-    await userEvent.click(screen.getByRole('button', { name: createName }));
-    const dialog = await screen.findByRole('dialog');
-    await userEvent.type(within(dialog).getByRole('textbox'), 'Writer');
-    await userEvent.click(
-      within(dialog).getByRole('radio', {
-        name: locale === 'en' ? 'Read and change' : 'Đọc và thay đổi',
-      }),
-    );
-    expect(
-      within(dialog).getByText(locale === 'en' ? /lasts at most 30 days/i : /sống tối đa 30 ngày/i),
-    ).toBeInTheDocument();
-    await userEvent.click(within(dialog).getByRole('button', { name: createName }));
-
-    expect(mintApiKey).toHaveBeenCalledWith({ name: 'Writer', mode: 'WRITE', expiresInDays: 30 });
-    const again = await within(dialog).findByRole('button', {
-      name: locale === 'en' ? 'Sign in again' : 'Đăng nhập lại',
-    });
-    await userEvent.click(again);
-    expect(signInWithDiscord).toHaveBeenCalledWith('/account/api-keys');
   });
 
   it('shows a translated message for a server refusal, not its text', async () => {

@@ -12,10 +12,11 @@ import {
   ApiKeyMintSchema,
   type ApiKeyMintResult,
 } from '@sab/shared';
+import { ActionRow } from '@/components/ui/action-row';
 import { ErrorAlert } from '@/components/data/error-alert';
 import { useApiMutation } from '@/lib/api/mutations';
 import { mintApiKey } from '@/lib/api-keys/api-keys-api';
-import { ReauthAlert } from '@/components/auth/reauth-alert';
+import { useConfirmLeave, useUnsavedChanges } from '@/components/forms/unsaved-guard';
 
 type Mode = 'READ' | 'WRITE';
 
@@ -34,16 +35,13 @@ const MAX_DAYS: Record<Mode, number> = {
   WRITE: API_KEY_WRITE_MAX_DAYS,
 };
 
-/** Where the person lands after signing in again for a key that can change things. */
-const RETURN_PATH = '/account/api-keys';
-
 interface CreateKeyModalProps {
   open: boolean;
   onClose: () => void;
   onMinted: (key: ApiKeyMintResult) => void;
 }
 
-/** The form that mints a key. A write key needs a recent login; when the server says so, the way to sign in again is offered here. */
+/** The form that mints a key. */
 export function CreateKeyModal({ open, onClose, onMinted }: CreateKeyModalProps) {
   const t = useTranslations('web-api-keys');
   const { message } = App.useApp();
@@ -51,6 +49,9 @@ export function CreateKeyModal({ open, onClose, onMinted }: CreateKeyModalProps)
   // Tracked from the change event: `Form.useWatch` warns while the modal (and so the form) is unmounted.
   const [mode, setMode] = useState<Mode>('READ');
   const mint = useApiMutation(mintApiKey);
+  const [dirty, setDirty] = useState(false);
+  const confirmLeave = useConfirmLeave();
+  useUnsavedChanges(open && dirty);
 
   const submit = async (values: FormValues) => {
     const parsed = ApiKeyMintSchema.safeParse(values);
@@ -62,33 +63,41 @@ export function CreateKeyModal({ open, onClose, onMinted }: CreateKeyModalProps)
     if (outcome?.ok !== true) return;
     form.resetFields();
     setMode('READ');
+    setDirty(false);
     onMinted(outcome.data);
   };
 
-  const close = () => {
-    if (mint.pending) return;
+  const discard = () => {
     mint.reset();
     form.resetFields();
     setMode('READ');
+    setDirty(false);
     onClose();
   };
 
-  const needsReauth = mint.code === 'AUTH_REAUTH_REQUIRED';
+  // A typed name is lost on close, and a click beside the dialog is easy to make: ask first.
+  const close = () => {
+    if (mint.pending) return;
+    confirmLeave(discard);
+  };
 
   return (
     <Modal
       open={open}
       title={t('form.title')}
       onCancel={close}
+      mask={{ closable: false }}
       destroyOnHidden
-      footer={[
-        <Button key="cancel" onClick={close} disabled={mint.pending}>
-          {t('form.cancel')}
-        </Button>,
-        <Button key="submit" type="primary" loading={mint.pending} onClick={() => form.submit()}>
-          {t('form.submit')}
-        </Button>,
-      ]}
+      footer={
+        <ActionRow align="end">
+          <Button onClick={close} disabled={mint.pending}>
+            {t('form.cancel')}
+          </Button>
+          <Button type="primary" loading={mint.pending} onClick={() => form.submit()}>
+            {t('form.submit')}
+          </Button>
+        </ActionRow>
+      }
     >
       <Form<FormValues>
         form={form}
@@ -96,6 +105,7 @@ export function CreateKeyModal({ open, onClose, onMinted }: CreateKeyModalProps)
         requiredMark={false}
         initialValues={{ mode: 'READ', expiresInDays: DEFAULT_DAYS.READ }}
         onValuesChange={(changed: Partial<FormValues>) => {
+          setDirty(true);
           if (changed.mode !== undefined) {
             setMode(changed.mode);
             form.setFieldValue('expiresInDays', DEFAULT_DAYS[changed.mode]);
@@ -149,19 +159,7 @@ export function CreateKeyModal({ open, onClose, onMinted }: CreateKeyModalProps)
           <InputNumber min={1} max={MAX_DAYS[mode]} precision={0} style={{ width: '100%' }} />
         </Form.Item>
       </Form>
-      {needsReauth ? (
-        <ReauthAlert
-          returnPath={RETURN_PATH}
-          texts={{
-            title: t('reauth.title'),
-            body: t('reauth.body'),
-            action: t('reauth.action'),
-            failed: t('reauth.failed'),
-          }}
-        />
-      ) : mint.error === undefined ? null : (
-        <ErrorAlert error={mint.error} />
-      )}
+      {mint.error === undefined ? null : <ErrorAlert error={mint.error} />}
     </Modal>
   );
 }

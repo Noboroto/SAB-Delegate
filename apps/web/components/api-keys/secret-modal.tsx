@@ -35,7 +35,7 @@ export function SecretModal({ secret, onClose }: SecretModalProps) {
         </Button>
       }
     >
-      <Space orientation="vertical" size={12} style={{ width: '100%' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
         <Alert type="warning" showIcon title={t('warning')} />
         <Space.Compact style={{ width: '100%' }}>
           <Input
@@ -51,7 +51,7 @@ export function SecretModal({ secret, onClose }: SecretModalProps) {
             onClick={() => void copy(secret, { done: t('copied'), failed: t('copyFailed') })}
           />
         </Space.Compact>
-      </Space>
+      </div>
     </Modal>
   );
 }

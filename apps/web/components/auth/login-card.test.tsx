@@ -18,7 +18,8 @@ describe('LoginCard', () => {
     renderWithProviders(<LoginCard next="/servers/5" />);
 
     await userEvent.click(screen.getByRole('button', { name: 'Đăng nhập bằng Discord' }));
-    const button = await screen.findByRole('button', { name: /Đang chuyển đến Discord/ });
+    // The label stays put while the redirect starts, so the button does not jump.
+    const button = screen.getByRole('button', { name: /Đăng nhập bằng Discord/ });
     await userEvent.click(button);
 
     expect(signIn).toHaveBeenCalledOnce();

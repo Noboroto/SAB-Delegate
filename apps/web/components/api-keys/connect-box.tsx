@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from 'react';
 import { CopyOutlined } from '@ant-design/icons';
-import { Button, Card, Space, Typography } from 'antd';
+import { Button, Card, Typography, theme } from 'antd';
 import { useTranslations } from 'next-intl';
 import { ActionRow } from '@/components/ui/action-row';
 import { mcpConfigSnippet, mcpUrl } from '@/lib/api-keys/mcp-config';
@@ -17,13 +17,14 @@ const serverOrigin = () => 'https://your-domain';
 export function ConnectBox() {
   const t = useTranslations('web-api-keys.connect');
   const origin = useSyncExternalStore(subscribeNothing, browserOrigin, serverOrigin);
+  const { token } = theme.useToken();
   const copy = useCopyToClipboard();
   const url = mcpUrl(origin);
   const snippet = mcpConfigSnippet(origin);
 
   return (
-    <Card title={t('title')} size="small">
-      <Space orientation="vertical" size={12} style={{ width: '100%' }}>
+    <Card title={t('title')}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
         <Typography.Paragraph style={{ marginBottom: 0 }}>{t('intro')}</Typography.Paragraph>
         <div>
           <Typography.Text strong>{t('urlLabel')}</Typography.Text>
@@ -42,11 +43,11 @@ export function ConnectBox() {
           <Typography.Text strong>{t('fileLabel')}</Typography.Text>
           <pre
             style={{
-              margin: '4px 0 8px',
-              padding: 12,
+              margin: 'var(--space-1) 0 var(--space-2)',
+              padding: 'var(--space-3)',
               overflowX: 'auto',
               border: '1px solid var(--border)',
-              borderRadius: 6,
+              borderRadius: token.borderRadius,
             }}
           >
             <code>{snippet}</code>
@@ -58,7 +59,7 @@ export function ConnectBox() {
             {t('copySnippet')}
           </Button>
         </div>
-      </Space>
+      </div>
     </Card>
   );
 }

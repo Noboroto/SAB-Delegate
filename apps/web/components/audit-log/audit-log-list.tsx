@@ -1,6 +1,6 @@
 'use client';
 
-import { Select, Table, Tag, Typography } from 'antd';
+import { Button, Empty, Select, Table, Tag, Typography } from 'antd';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useTransition } from 'react';
@@ -24,6 +24,12 @@ interface AuditLogListProps {
 }
 
 type Row = WebAuditLogPage['items'][number];
+
+/** Both filters share one width so the toolbar reads as one row of equal controls. */
+const FILTER_STYLE = { width: 'var(--w-sm)', maxWidth: '100%' } as const;
+
+/** Long parameter and error text wraps inside the reading measure, so all of it can be read without hovering. */
+const CELL_STYLE = { maxWidth: 'var(--measure)' } as const;
 
 /** Plain text of a row's saved parameters; the server already keeps only allowlisted keys. */
 function paramsText(params: unknown): string {
@@ -72,7 +78,7 @@ export function AuditLogList({ guildId, page, filter }: AuditLogListProps) {
           showSearch={{ optionFilterProp: 'label' }}
           value={filter.action}
           disabled={pending}
-          style={{ minWidth: 240, maxWidth: '100%' }}
+          style={FILTER_STYLE}
           options={Object.values(AUDIT_ACTIONS).map((value) => ({
             value,
             label: actionLabel(value),
@@ -85,7 +91,7 @@ export function AuditLogList({ guildId, page, filter }: AuditLogListProps) {
           allowClear
           value={filter.source}
           disabled={pending}
-          style={{ minWidth: 180, maxWidth: '100%' }}
+          style={FILTER_STYLE}
           options={(Object.keys(sources) as ActorSource[]).map((value) => ({
             value,
             label: sources[value],
@@ -99,7 +105,15 @@ export function AuditLogList({ guildId, page, filter }: AuditLogListProps) {
         pagination={false}
         scroll={{ x: 'max-content' }}
         dataSource={page.items}
-        locale={{ emptyText: filtered ? t('emptyFiltered') : t('empty') }}
+        locale={{
+          emptyText: filtered ? (
+            <Empty description={t('emptyFiltered')}>
+              <Button onClick={() => changeFilter({})}>{t('clearFilters')}</Button>
+            </Empty>
+          ) : (
+            t('empty')
+          ),
+        }}
         columns={[
           {
             title: t('columns.time'),
@@ -129,13 +143,12 @@ export function AuditLogList({ guildId, page, filter }: AuditLogListProps) {
               ok ? (
                 <Tag color="success">{t('result.ok')}</Tag>
               ) : (
-                <div style={{ maxWidth: 280 }}>
+                <div style={CELL_STYLE}>
                   <Tag color="error">{t('result.failed')}</Tag>
                   {row.error === null || row.error === undefined ? null : (
                     <Typography.Text
                       type="secondary"
-                      ellipsis={{ tooltip: row.error }}
-                      style={{ display: 'block' }}
+                      style={{ display: 'block', overflowWrap: 'anywhere' }}
                     >
                       {row.error}
                     </Typography.Text>
@@ -151,7 +164,10 @@ export function AuditLogList({ guildId, page, filter }: AuditLogListProps) {
               return text === '' ? (
                 '-'
               ) : (
-                <Typography.Text code style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
+                <Typography.Text
+                  code
+                  style={{ ...CELL_STYLE, display: 'block', overflowWrap: 'anywhere' }}
+                >
                   {text}
                 </Typography.Text>
               );

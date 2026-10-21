@@ -26,7 +26,7 @@ export function LoginCard({ next }: { next: string }) {
   };
 
   return (
-    <Card style={{ width: '100%', maxWidth: 420 }}>
+    <Card style={{ width: '100%', maxWidth: 'var(--w-lg)' }}>
       <Image
         src="/brand/sab-logo.png"
         alt="SAB"
@@ -34,7 +34,7 @@ export function LoginCard({ next }: { next: string }) {
         height={60}
         unoptimized
         preload
-        style={{ display: 'block', marginBottom: 16 }}
+        style={{ display: 'block', marginBottom: 'var(--space-4)' }}
       />
       <Typography.Title
         level={1}
@@ -48,15 +48,26 @@ export function LoginCard({ next }: { next: string }) {
       </Typography.Title>
       <Typography.Paragraph type="secondary">{t('subtitle')}</Typography.Paragraph>
       {failed ? (
-        <Alert type="error" showIcon title={t('startFailed')} style={{ marginBottom: 16 }} />
+        <Alert
+          type="error"
+          showIcon
+          title={t('startFailed')}
+          style={{ marginBottom: 'var(--space-4)' }}
+        />
       ) : null}
       <Button type="primary" block loading={starting} onClick={() => void start()}>
-        {starting ? t('redirecting') : t('signInWithDiscord')}
+        {t('signInWithDiscord')}
       </Button>
-      <Typography.Paragraph type="secondary" style={{ marginTop: 16, marginBottom: 0 }}>
+      <Typography.Paragraph
+        type="secondary"
+        style={{ marginTop: 'var(--space-4)', marginBottom: 0 }}
+      >
         {t('access')}
       </Typography.Paragraph>
-      <Typography.Paragraph type="secondary" style={{ marginTop: 8, marginBottom: 0 }}>
+      <Typography.Paragraph
+        type="secondary"
+        style={{ marginTop: 'var(--space-2)', marginBottom: 0 }}
+      >
         {t('privacy')}
       </Typography.Paragraph>
     </Card>

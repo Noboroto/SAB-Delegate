@@ -4,5 +4,5 @@ import { PageLoading } from '@/components/ui/page-loading';
 // "not found" and must finish before anything is sent, or the answer would be a
 // 200 with a not-found screen inside.
 export default function GuildLoading() {
-  return <PageLoading />;
+  return <PageLoading variant="cards" />;
 }

@@ -1,8 +1,10 @@
 import { screen, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { CommandCatalogEntry } from '@sab/shared';
 import { SUPPORTED_LOCALES } from '@/lib/locale';
 import { renderWithProviders } from '@/lib/test/render-with-providers';
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+
 import { CommandCatalog } from './command-catalog';
 
 const commands: CommandCatalogEntry[] = [
@@ -57,5 +59,6 @@ describe.each(SUPPORTED_LOCALES)('CommandCatalog (%s)', (locale) => {
   it('says so when there is no command', () => {
     renderWithProviders(<CommandCatalog commands={[]} />, locale);
     expect(screen.getByRole('heading', { level: 2, name: text.empty })).toBeInTheDocument();
+    expect(screen.getByRole('button')).toBeInTheDocument();
   });
 });

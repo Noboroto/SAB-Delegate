@@ -56,6 +56,7 @@ const TEXT = {
     newest: 'Về mới nhất',
     empty: 'Chưa có thao tác nào được ghi.',
     emptyFiltered: 'Không có thao tác nào khớp bộ lọc.',
+    clearFilters: 'Xoá bộ lọc',
     filter: 'Lọc theo thao tác',
     sourceFilter: 'Lọc theo nguồn',
     mcp: 'MCP',
@@ -69,6 +70,7 @@ const TEXT = {
     newest: 'Back to newest',
     empty: 'No actions have been recorded yet.',
     emptyFiltered: 'No action matches the filter.',
+    clearFilters: 'Clear filters',
     filter: 'Filter by action',
     sourceFilter: 'Filter by source',
     mcp: 'MCP',
@@ -134,6 +136,7 @@ describe.each(SUPPORTED_LOCALES)('AuditLogList (%s)', (locale) => {
       locale,
     );
     expect(screen.getByText(text.emptyFiltered)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: text.clearFilters })).toBeInTheDocument();
   });
 
   it('asks the server for the chosen action instead of filtering the rows', async () => {

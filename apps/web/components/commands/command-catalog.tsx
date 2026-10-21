@@ -1,10 +1,13 @@
 'use client';
 
+import { useId, useTransition } from 'react';
 import { Card, Col, Row, Tag, Typography } from 'antd';
+import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import type { CommandCatalogEntry } from '@sab/shared';
 import { Heading } from '@/components/ui/heading';
 import { PageState } from '@/components/ui/page-state';
+import { SectionTitle } from '@/components/ui/section-title';
 import { groupCommands } from '@/lib/commands/group-commands';
 
 function CommandCard({ command }: { command: CommandCatalogEntry }) {
@@ -17,11 +20,16 @@ function CommandCard({ command }: { command: CommandCatalogEntry }) {
       title={<span style={{ overflowWrap: 'anywhere' }}>{`/${command.name}`}</span>}
       extra={command.guildOnly ? <Tag>{t('guildOnly')}</Tag> : null}
     >
-      <Typography.Paragraph style={{ marginBottom: command.subcommands.length > 0 ? 8 : 0 }}>
+      <Typography.Paragraph
+        style={{ marginBottom: command.subcommands.length > 0 ? 'var(--space-2)' : 0 }}
+      >
         {command.description}
       </Typography.Paragraph>
       {command.subcommands.length > 0 ? (
-        <ul aria-label={t('subcommands')} style={{ margin: 0, paddingInlineStart: 20 }}>
+        <ul
+          aria-label={t('subcommands')}
+          style={{ margin: 0, paddingInlineStart: 'var(--space-6)' }}
+        >
           {command.subcommands.map((sub) => (
             <li key={sub.name} style={{ overflowWrap: 'anywhere' }}>
               <Typography.Text code>{`/${command.name} ${sub.name}`}</Typography.Text>{' '}
@@ -35,13 +43,12 @@ function CommandCard({ command }: { command: CommandCatalogEntry }) {
 }
 
 function CommandGroup({ title, commands }: { title: string; commands: CommandCatalogEntry[] }) {
+  const titleId = useId();
   if (commands.length === 0) return null;
 
   return (
-    <section aria-label={title} style={{ marginBottom: 24 }}>
-      <Typography.Title level={2} style={{ fontSize: 18 }}>
-        {title}
-      </Typography.Title>
+    <section aria-labelledby={titleId} style={{ marginBottom: 'var(--space-6)' }}>
+      <SectionTitle id={titleId}>{title}</SectionTitle>
       <Row gutter={[16, 16]}>
         {commands.map((command) => (
           <Col key={command.name} xs={24} lg={12}>
@@ -56,13 +63,25 @@ function CommandGroup({ title, commands }: { title: string; commands: CommandCat
 /** Every slash command of the bot, grouped by who may use it by default; text only, nothing to run here. */
 export function CommandCatalog({ commands }: { commands: readonly CommandCatalogEntry[] }) {
   const t = useTranslations('web-commands');
+  const router = useRouter();
+  const [reloading, startReload] = useTransition();
   const groups = groupCommands(commands);
 
   return (
     <>
       <Heading title={t('title')} subtitle={t('subtitle')} />
       {commands.length === 0 ? (
-        <PageState status="info" headingLevel={2} title={t('empty.title')} body={t('empty.body')} />
+        <PageState
+          status="info"
+          headingLevel={2}
+          title={t('empty.title')}
+          body={t('empty.body')}
+          action={{
+            label: t('empty.reload'),
+            loading: reloading,
+            onClick: () => startReload(() => router.refresh()),
+          }}
+        />
       ) : (
         <>
           <CommandGroup title={t('groupEveryone')} commands={groups.everyone} />

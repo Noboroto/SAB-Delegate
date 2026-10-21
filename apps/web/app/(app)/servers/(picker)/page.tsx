@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { ReauthState } from '@/components/auth/reauth-state';
 import { ServerList } from '@/components/servers/server-list';
-import { PageState } from '@/components/ui/page-state';
+import { ServersEmpty } from '@/components/servers/servers-empty';
 import { Heading } from '@/components/ui/heading';
 import { getGuildsOrReauth } from '@/lib/guilds';
 
@@ -21,11 +21,7 @@ export default async function ServersPage() {
   return (
     <>
       <Heading title={t('title')} subtitle={t('subtitle')} />
-      {guilds.length === 0 ? (
-        <PageState status="info" headingLevel={2} title={t('empty.title')} body={t('empty.body')} />
-      ) : (
-        <ServerList guilds={guilds} />
-      )}
+      {guilds.length === 0 ? <ServersEmpty /> : <ServerList guilds={guilds} />}
     </>
   );
 }

@@ -91,7 +91,6 @@ export function ApiKeysTable({ keys, now }: { keys: readonly ApiKeyView[]; now: 
       dataSource={[...keys]}
       scroll={{ x: 'max-content' }}
       pagination={{ pageSize: 10, hideOnSinglePage: true, showSizeChanger: false }}
-      locale={{ emptyText: t('empty') }}
     />
   );
 }
