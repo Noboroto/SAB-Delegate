@@ -26,24 +26,30 @@ describe('ActivityForm', () => {
     await userEvent.type(screen.getByLabelText('Biểu tượng cảm xúc'), 'x');
     await userEvent.type(screen.getByLabelText('Tên'), 'Chess');
     await userEvent.type(screen.getByLabelText('Tên viết tắt'), 'ch');
-    await userEvent.click(screen.getByRole('button', { name: 'Tạo hoạt động' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Xem trước và tạo hoạt động' }));
 
     expect((await screen.findAllByText('Đúng 3 ký tự.')).length).toBeGreaterThan(0);
     expect(calls).toHaveLength(0);
   });
 
-  it('creates the activity once and lists what was made', async () => {
+  it('previews the roles and channels, then creates the activity once and lists what was made', async () => {
     const { calls } = stubToolApi({ activity: () => ids });
     renderWithProviders(<ActivityForm guildId={GUILD} />);
     await userEvent.type(screen.getByLabelText('Biểu tượng cảm xúc'), 'x');
-    await userEvent.type(screen.getByLabelText('Tên'), 'Chess');
+    await userEvent.type(screen.getByLabelText('Tên'), 'Chess Club');
     await userEvent.type(screen.getByLabelText('Tên viết tắt'), 'chs');
-    await userEvent.dblClick(screen.getByRole('button', { name: 'Tạo hoạt động' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Xem trước và tạo hoạt động' }));
 
+    expect(await screen.findByText('Chess Club-Event')).toBeInTheDocument();
+    expect(screen.getByText('x┃chess-club-thread-only')).toBeInTheDocument();
+    expect(screen.getByText('x┃Chess Club voice')).toBeInTheDocument();
+    expect(calls).toHaveLength(0);
+
+    await userEvent.dblClick(screen.getByRole('button', { name: 'Tạo hoạt động' }));
     expect(await screen.findByText('Đã tạo')).toBeInTheDocument();
     expect(screen.getByText(ids.channels.voice)).toBeInTheDocument();
     expect(calls).toHaveLength(1);
-    expect(calls[0]?.body).toEqual({ emoji: 'x', name: 'Chess', shortName: 'chs' });
+    expect(calls[0]?.body).toEqual({ emoji: 'x', name: 'Chess Club', shortName: 'chs' });
     await waitFor(() => expect(refresh).toHaveBeenCalledTimes(1));
   });
 });

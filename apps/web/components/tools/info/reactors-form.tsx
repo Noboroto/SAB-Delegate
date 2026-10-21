@@ -4,6 +4,7 @@ import { Button, Form } from 'antd';
 import { useTranslations } from 'next-intl';
 import { ReactorIdsQuerySchema, ReactorIdsResultSchema } from '@sab/shared';
 import { ErrorAlert } from '@/components/data/error-alert';
+import { ResultBlock } from '@/components/ui/result-block';
 import { buildRequest, readMessageRef } from '@/lib/tools/build-request';
 import { getTool } from '@/lib/tools/tool-api';
 import { useToolRun } from '@/lib/tools/use-tool-run';
@@ -35,22 +36,33 @@ export function ReactorsForm({ guildId }: { guildId: string }) {
 
   return (
     <ToolCard title={t('info.reactors.title')} description={t('info.reactors.description')}>
-      <Form form={form} layout="vertical" onFinish={(values) => void onFinish(values)}>
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={(values) => void onFinish(values)}
+        onValuesChange={action.clear}
+      >
         <MessageRefItem name="message" label={t('info.messageLabel')} />
         <EmojiItem name="emoji" label={t('info.emojiLabel')} />
-        <Button type="primary" htmlType="submit" loading={action.pending}>
-          {t('info.reactors.submit')}
-        </Button>
+        <Form.Item style={{ marginBottom: 0 }}>
+          <Button type="primary" htmlType="submit" loading={action.pending}>
+            {t('info.reactors.submit')}
+          </Button>
+        </Form.Item>
       </Form>
       {action.error === undefined ? null : (
-        <div style={{ marginTop: 16 }}>
-          <ErrorAlert error={action.error} />
-        </div>
+        <ResultBlock>
+          <ErrorAlert
+            error={action.error}
+            onRetry={() => void action.retry()}
+            retrying={action.pending}
+          />
+        </ResultBlock>
       )}
       {action.result === undefined ? null : (
-        <div style={{ marginTop: 16 }}>
+        <ResultBlock>
           <IdList title={t('info.reactors.listTitle')} ids={action.result.userIds} />
-        </div>
+        </ResultBlock>
       )}
     </ToolCard>
   );

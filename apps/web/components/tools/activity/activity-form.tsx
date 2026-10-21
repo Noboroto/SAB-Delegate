@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, Descriptions, Form, Input, Typography } from 'antd';
+import { Descriptions, Form, Input, Typography } from 'antd';
 import { useTranslations } from 'next-intl';
 import {
   ACTIVITY_EMOJI_MAX_LENGTH,
@@ -10,18 +10,22 @@ import {
   ActivityCreateSchema,
   type ActivityCreateResult,
 } from '@sab/shared';
-import { ErrorAlert } from '@/components/data/error-alert';
 import { ChannelSelect } from '@/components/forms/channel-select';
+import { ConfirmAction } from '@/components/forms/confirm-action';
+import { ResultBlock } from '@/components/ui/result-block';
 import { CHANNEL_TYPE } from '@/lib/discord/use-channels';
 import { buildRequest } from '@/lib/tools/build-request';
 import { postTool } from '@/lib/tools/tool-api';
-import { useToolRun } from '@/lib/tools/use-tool-run';
+import { useRunOutcome } from '@/lib/tools/use-run-outcome';
+import { useWriteDone } from '@/lib/tools/use-tool-run';
 import { ToolCard } from '../shared/tool-card';
+import { ValidatedAction } from '../shared/validated-action';
+import { ActivityPlanView, planActivity } from './activity-plan';
 
 interface Values {
-  emoji: string;
-  name: string;
-  shortName: string;
+  emoji?: string;
+  name?: string;
+  shortName?: string;
   categoryId?: string;
 }
 
@@ -38,40 +42,40 @@ function CreatedIds({ result }: { result: ActivityCreateResult }) {
   ];
 
   return (
-    <div style={{ display: 'grid', gap: 8, marginTop: 16 }}>
-      <Typography.Text strong>{t('activity.result.title')}</Typography.Text>
-      <Descriptions
-        bordered
-        size="small"
-        column={1}
-        items={rows.map(([label, id]) => ({
-          key: label,
-          label,
-          children: <Typography.Text copyable>{id}</Typography.Text>,
-        }))}
-      />
-    </div>
+    <ResultBlock>
+      <div style={{ display: 'grid', gap: 'var(--space-2)' }}>
+        <Typography.Text strong>{t('activity.result.title')}</Typography.Text>
+        <Descriptions
+          bordered
+          size="small"
+          column={1}
+          items={rows.map(([label, id]) => ({
+            key: label,
+            label,
+            children: <Typography.Text copyable>{id}</Typography.Text>,
+          }))}
+        />
+      </div>
+    </ResultBlock>
   );
 }
 
 /** Sets up an activity: its three roles and its channels in the activity category. */
 export function ActivityForm({ guildId }: { guildId: string }) {
   const t = useTranslations('web-tools');
+  const done = useWriteDone();
   const [form] = Form.useForm<Values>();
-  const action = useToolRun((body: unknown) =>
-    postTool(guildId, 'activity', body, ActivityCreateResultSchema),
-  );
+  const values: Values = Form.useWatch([], form) ?? {};
   const requiredText = { required: true, whitespace: true, message: t('common.required') };
 
-  const onFinish = (values: Values) =>
-    action.submit(buildRequest(ActivityCreateSchema, values), {
-      refresh: true,
-      success: t('activity.done'),
-    });
+  const request = buildRequest(ActivityCreateSchema, values);
+  const [created, record] = useRunOutcome<ActivityCreateResult>(
+    request === undefined ? undefined : JSON.stringify(request),
+  );
 
   return (
-    <ToolCard title={t('activity.title')} description={t('activity.description')}>
-      <Form form={form} layout="vertical" onFinish={(values) => void onFinish(values)}>
+    <ToolCard>
+      <Form form={form} layout="vertical">
         <Form.Item name="emoji" label={t('activity.emojiLabel')} rules={[requiredText]}>
           <Input maxLength={ACTIVITY_EMOJI_MAX_LENGTH} />
         </Form.Item>
@@ -99,16 +103,33 @@ export function ActivityForm({ guildId }: { guildId: string }) {
         >
           <ChannelSelect guildId={guildId} types={[CHANNEL_TYPE.category]} allowClear />
         </Form.Item>
-        <Button type="primary" htmlType="submit" loading={action.pending}>
-          {t('activity.submit')}
-        </Button>
+        <Form.Item style={{ marginBottom: 0 }}>
+          <ValidatedAction form={form} valid={request !== undefined}>
+            <ConfirmAction
+              danger={false}
+              label={t('activity.previewLabel')}
+              modalTitle={t('activity.modalTitle')}
+              confirmLabel={t('activity.submit')}
+              preview={() =>
+                request === undefined
+                  ? Promise.reject(new Error('The form is not valid.'))
+                  : Promise.resolve(planActivity(request))
+              }
+              execute={() => {
+                if (request === undefined)
+                  return Promise.reject(new Error('The form is not valid.'));
+                return postTool(guildId, 'activity', request, ActivityCreateResultSchema);
+              }}
+              renderPlan={(plan) => <ActivityPlanView guildId={guildId} plan={plan} />}
+              onDone={(result) => {
+                record(result);
+                done(t('activity.done'));
+              }}
+            />
+          </ValidatedAction>
+        </Form.Item>
       </Form>
-      {action.error === undefined ? null : (
-        <div style={{ marginTop: 16 }}>
-          <ErrorAlert error={action.error} />
-        </div>
-      )}
-      {action.result === undefined ? null : <CreatedIds result={action.result} />}
+      {created === undefined ? null : <CreatedIds result={created} />}
     </ToolCard>
   );
 }

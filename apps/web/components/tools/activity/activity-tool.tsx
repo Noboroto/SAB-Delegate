@@ -1,6 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import { FormColumn } from '@/components/ui/form-column';
 import { Heading } from '@/components/ui/heading';
 import { ActivityForm } from './activity-form';
 
@@ -11,7 +12,9 @@ export function ActivityTool({ guildId }: { guildId: string }) {
   return (
     <>
       <Heading title={t('tools.activity.name')} subtitle={t('tools.activity.description')} />
-      <ActivityForm guildId={guildId} />
+      <FormColumn>
+        <ActivityForm guildId={guildId} />
+      </FormColumn>
     </>
   );
 }

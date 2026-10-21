@@ -67,9 +67,12 @@ describe('MentionReactorsForm', () => {
     expect(refresh).not.toHaveBeenCalled();
   });
 
-  it('posts the list as a reply only when asked, then refreshes the page', async () => {
+  it('previews the reply with the service plan and posts it only after confirming', async () => {
     const { calls } = stubToolApi({
-      'mention/reactors': () => ({ ...result, delivered: true, postedChunks: 1 }),
+      'mention/reactors': ({ body }) =>
+        (body as { dryRun: boolean }).dryRun
+          ? result
+          : { ...result, delivered: true, postedChunks: 1 },
     });
     renderWithProviders(<MentionReactorsForm guildId={GUILD} />);
     await userEvent.type(screen.getByLabelText('Liên kết tin nhắn'), LINK);
@@ -77,13 +80,35 @@ describe('MentionReactorsForm', () => {
     await userEvent.click(
       screen.getByRole('checkbox', { name: 'Đăng luôn danh sách dưới dạng trả lời tin nhắn này' }),
     );
-    await userEvent.click(screen.getByRole('button', { name: 'Lập danh sách' }));
+    expect(screen.queryByRole('button', { name: 'Lập danh sách' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Xem trước và đăng trả lời' }));
 
-    expect(await screen.findByText('Đã đăng 1 tin nhắn.')).toBeInTheDocument();
+    expect(await screen.findByText(`<@${USER}> and one more`)).toBeInTheDocument();
+    expect(calls).toHaveLength(1);
     expect(calls[0]?.body).toMatchObject({
+      dryRun: true,
       replyTo: { channelId: CHANNEL_TEXT, messageId: MESSAGE },
     });
+    expect(refresh).not.toHaveBeenCalled();
+
+    await userEvent.dblClick(await screen.findByRole('button', { name: 'Đăng trả lời' }));
+    expect(await screen.findByText('Đã đăng 1 tin nhắn.')).toBeInTheDocument();
+    expect(calls).toHaveLength(2);
+    expect(calls[1]?.body).toMatchObject({ dryRun: false, replyTo: { messageId: MESSAGE } });
     await waitFor(() => expect(refresh).toHaveBeenCalledTimes(1));
+  });
+
+  it('marks the missing fields instead of opening a preview that cannot be made', async () => {
+    const { calls } = stubToolApi({ 'mention/reactors': () => result });
+    renderWithProviders(<MentionReactorsForm guildId={GUILD} />);
+    await userEvent.click(
+      screen.getByRole('checkbox', { name: 'Đăng luôn danh sách dưới dạng trả lời tin nhắn này' }),
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Xem trước và đăng trả lời' }));
+
+    expect((await screen.findAllByText('Trường này là bắt buộc.')).length).toBeGreaterThan(0);
+    expect(screen.getByText('Điền các trường bắt buộc để tiếp tục.')).toBeInTheDocument();
+    expect(calls).toHaveLength(0);
   });
 
   it('shows a translated error, not the server text', async () => {
@@ -123,5 +148,18 @@ describe('MentionNonReactorsForm', () => {
       includeBots: false,
       reply: false,
     });
+  });
+
+  it('never posts from Enter in the link field while replying is ticked', async () => {
+    const { calls } = stubToolApi({ 'mention/non-reactors': () => result });
+    renderWithProviders(<MentionNonReactorsForm guildId={GUILD} />);
+    await userEvent.click(
+      screen.getByRole('checkbox', { name: 'Đăng luôn danh sách dưới dạng trả lời tin nhắn này' }),
+    );
+    await userEvent.type(screen.getByLabelText('Liên kết tin nhắn'), `${LINK}{Enter}`);
+
+    // Form validation is async: give a wrongly wired submit time to reach the API.
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(calls.filter((call) => (call.body as { dryRun: boolean }).dryRun === false)).toEqual([]);
   });
 });

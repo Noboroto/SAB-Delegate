@@ -3,11 +3,12 @@
 import { Alert, Typography } from 'antd';
 import { useTranslations } from 'next-intl';
 import type { MentionResult, MentionStatus } from '@sab/shared';
+import { ResultBlock } from '@/components/ui/result-block';
 import { IdList } from '../shared/id-list';
 import { TextBlock } from '../shared/text-block';
 
 /** What the service made of a request, as it answered; the lists are shown, never re-computed. */
-export function MentionResultView({ result }: { result: MentionResult }) {
+export function MentionResultBody({ result }: { result: MentionResult }) {
   const t = useTranslations('web-tools');
   const statusText: Record<MentionStatus, string> = {
     OK: t('mention.status.OK', { count: result.count }),
@@ -23,7 +24,7 @@ export function MentionResultView({ result }: { result: MentionResult }) {
     result.status === 'OK' ? 'success' : result.status === 'SEND_FAILED' ? 'error' : 'info';
 
   return (
-    <div style={{ display: 'grid', gap: 12, marginTop: 16 }}>
+    <div style={{ display: 'grid', gap: 'var(--space-3)' }}>
       <Alert type={alertType} showIcon title={statusText[result.status]} />
       {result.failure === undefined ? null : (
         <Typography.Text type="secondary">
@@ -41,13 +42,22 @@ export function MentionResultView({ result }: { result: MentionResult }) {
         <IdList title={t('mention.sampleTitle')} ids={result.sample} />
       )}
       {result.chunks.map((chunk, index) => (
-        <div key={index} style={{ display: 'grid', gap: 4 }}>
+        <div key={index} style={{ display: 'grid', gap: 'var(--space-1)' }}>
           <Typography.Text strong>
             {t('mention.chunkTitle', { index: index + 1, total: result.chunks.length })}
           </Typography.Text>
-          <TextBlock text={chunk} />
+          <TextBlock text={chunk} copyLabel={t('mention.copyChunk', { index: index + 1 })} />
         </div>
       ))}
     </div>
+  );
+}
+
+/** The answer under a form, set `--space-4` below its buttons. */
+export function MentionResultView({ result }: { result: MentionResult }) {
+  return (
+    <ResultBlock>
+      <MentionResultBody result={result} />
+    </ResultBlock>
   );
 }

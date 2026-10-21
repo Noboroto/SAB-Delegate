@@ -8,7 +8,11 @@ vi.mock('next-intl/server', async () => {
   const translate = serverTranslations();
   return { getTranslations: (namespace: string) => translate(namespace) };
 });
-vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+vi.mock('next/navigation', () => ({
+  useSearchParams: () => new URLSearchParams(),
+  useRouter: () => ({ refresh: vi.fn(), replace: vi.fn() }),
+  usePathname: () => '/servers/1/tools/threads',
+}));
 vi.mock('next/link', () => ({
   default: ({ href, children }: { href: string; children: React.ReactNode }) => (
     <a href={href}>{children}</a>
@@ -25,7 +29,10 @@ import RoleAssignToolPage, { generateMetadata as roleAssignMetadata } from './ro
 import ThreadsToolPage, { generateMetadata as threadsMetadata } from './threads/page';
 
 const GUILD = '1'.repeat(18);
-const params = Promise.resolve({ guildId: GUILD });
+const props = {
+  params: Promise.resolve({ guildId: GUILD }),
+  searchParams: Promise.resolve({}),
+};
 
 const PAGES = [
   ['tools index', ToolsPage, toolsMetadata, 'Công cụ'],
@@ -45,7 +52,7 @@ beforeEach(() => {
 describe.each(PAGES)('%s page', (_name, Page, metadata, title) => {
   it('is titled in the tab and renders the tool for the server in the address', async () => {
     expect(await metadata()).toEqual({ title });
-    renderWithProviders(await Page({ params }));
+    renderWithProviders(await Page(props));
     expect(screen.getByRole('heading', { level: 1, name: title })).toBeInTheDocument();
   });
 });

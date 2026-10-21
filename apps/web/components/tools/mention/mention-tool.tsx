@@ -1,6 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import { FormColumn } from '@/components/ui/form-column';
 import { Heading } from '@/components/ui/heading';
 import { MentionNonReactorsForm } from './mention-non-reactors-form';
 import { MentionReactorsForm } from './mention-reactors-form';
@@ -12,10 +13,10 @@ export function MentionTool({ guildId }: { guildId: string }) {
   return (
     <>
       <Heading title={t('tools.mention.name')} subtitle={t('tools.mention.description')} />
-      <div style={{ display: 'grid', gap: 16 }}>
+      <FormColumn>
         <MentionReactorsForm guildId={guildId} />
         <MentionNonReactorsForm guildId={guildId} />
-      </div>
+      </FormColumn>
     </>
   );
 }

@@ -6,6 +6,7 @@ import { RoleMembersQuerySchema, RoleMembersResultSchema } from '@sab/shared';
 import { ErrorAlert } from '@/components/data/error-alert';
 import { ChannelSelect } from '@/components/forms/channel-select';
 import { RoleSelect } from '@/components/forms/role-select';
+import { ResultBlock } from '@/components/ui/result-block';
 import { buildRequest } from '@/lib/tools/build-request';
 import { getTool } from '@/lib/tools/tool-api';
 import { useToolRun } from '@/lib/tools/use-tool-run';
@@ -33,6 +34,7 @@ export function RoleMembersForm({ guildId }: { guildId: string }) {
         form={form}
         layout="vertical"
         onFinish={(values) => void action.submit(buildRequest(RoleMembersQuerySchema, values))}
+        onValuesChange={action.clear}
       >
         <Form.Item name="roleId" label={t('info.roleLabel')} rules={[required]}>
           <RoleSelect guildId={guildId} />
@@ -44,22 +46,30 @@ export function RoleMembersForm({ guildId }: { guildId: string }) {
         >
           <ChannelSelect guildId={guildId} allowClear />
         </Form.Item>
-        <Button type="primary" htmlType="submit" loading={action.pending}>
-          {t('info.roleMembers.submit')}
-        </Button>
+        <Form.Item style={{ marginBottom: 0 }}>
+          <Button type="primary" htmlType="submit" loading={action.pending}>
+            {t('info.roleMembers.submit')}
+          </Button>
+        </Form.Item>
       </Form>
       {action.error === undefined ? null : (
-        <div style={{ marginTop: 16 }}>
-          <ErrorAlert error={action.error} />
-        </div>
+        <ResultBlock>
+          <ErrorAlert
+            error={action.error}
+            onRetry={() => void action.retry()}
+            retrying={action.pending}
+          />
+        </ResultBlock>
       )}
       {action.result === undefined ? null : (
-        <div style={{ display: 'grid', gap: 12, marginTop: 16 }}>
-          <Typography.Text>
-            {t('info.roleMembers.roleName', { name: action.result.roleName })}
-          </Typography.Text>
-          <IdList title={t('info.roleMembers.listTitle')} ids={action.result.userIds} />
-        </div>
+        <ResultBlock>
+          <div style={{ display: 'grid', gap: 'var(--space-3)' }}>
+            <Typography.Text>
+              {t('info.roleMembers.roleName', { name: action.result.roleName })}
+            </Typography.Text>
+            <IdList title={t('info.roleMembers.listTitle')} ids={action.result.userIds} />
+          </div>
+        </ResultBlock>
       )}
     </ToolCard>
   );

@@ -1,6 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import { FormColumn } from '@/components/ui/form-column';
 import { Heading } from '@/components/ui/heading';
 import { IntroductionForm } from './introduction-form';
 import { InviteForm } from './invite-form';
@@ -14,12 +15,12 @@ export function InfoTool({ guildId }: { guildId: string }) {
   return (
     <>
       <Heading title={t('tools.info.name')} subtitle={t('tools.info.description')} />
-      <div style={{ display: 'grid', gap: 16 }}>
+      <FormColumn>
         <IntroductionForm guildId={guildId} />
         <ReactorsForm guildId={guildId} />
         <RoleMembersForm guildId={guildId} />
         <InviteForm guildId={guildId} />
-      </div>
+      </FormColumn>
     </>
   );
 }

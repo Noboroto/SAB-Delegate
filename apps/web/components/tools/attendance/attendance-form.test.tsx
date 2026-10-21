@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '@/lib/test/render-with-providers';
@@ -47,5 +47,17 @@ describe('AttendanceForm', () => {
       method: 'GET',
       query: { roleId: ROLE_MOD, voiceChannelId: CHANNEL_VOICE },
     });
+  });
+
+  it('offers to ask again when the lookup fails, repeating the same query', async () => {
+    const { calls } = stubToolApi();
+    renderWithProviders(<AttendanceForm guildId={GUILD} />);
+    await pickOption('Vai trò', 'Moderator');
+    await pickOption('Kênh thoại', 'Voice room');
+    await userEvent.click(screen.getByRole('button', { name: 'Kiểm tra' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Thử lại' }));
+
+    await waitFor(() => expect(calls).toHaveLength(2));
+    expect(calls[1]?.query).toEqual(calls[0]?.query);
   });
 });

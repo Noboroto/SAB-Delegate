@@ -4,6 +4,7 @@ import { Button, Form, Input, Typography } from 'antd';
 import { useTranslations } from 'next-intl';
 import { INVITE_REASON_MAX_LENGTH, InviteCreateSchema, InviteResultSchema } from '@sab/shared';
 import { ErrorAlert } from '@/components/data/error-alert';
+import { ResultBlock } from '@/components/ui/result-block';
 import { ChannelSelect } from '@/components/forms/channel-select';
 import { CHANNEL_TYPE } from '@/lib/discord/use-channels';
 import { blankToUndefined, buildRequest } from '@/lib/tools/build-request';
@@ -47,7 +48,12 @@ export function InviteForm({ guildId }: { guildId: string }) {
 
   return (
     <ToolCard title={t('info.invite.title')} description={t('info.invite.description')}>
-      <Form form={form} layout="vertical" onFinish={(values) => void onFinish(values)}>
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={(values) => void onFinish(values)}
+        onValuesChange={action.clear}
+      >
         <Form.Item name="channelId" label={t('info.invite.channelLabel')} rules={[required]}>
           <ChannelSelect guildId={guildId} types={INVITE_CHANNEL_TYPES} />
         </Form.Item>
@@ -58,22 +64,26 @@ export function InviteForm({ guildId }: { guildId: string }) {
         >
           <Input maxLength={INVITE_REASON_MAX_LENGTH} />
         </Form.Item>
-        <Button type="primary" htmlType="submit" loading={action.pending}>
-          {t('info.invite.submit')}
-        </Button>
+        <Form.Item style={{ marginBottom: 0 }}>
+          <Button type="primary" htmlType="submit" loading={action.pending}>
+            {t('info.invite.submit')}
+          </Button>
+        </Form.Item>
       </Form>
       {action.error === undefined ? null : (
-        <div style={{ marginTop: 16 }}>
+        <ResultBlock>
           <ErrorAlert error={action.error} />
-        </div>
+        </ResultBlock>
       )}
       {action.result === undefined ? null : (
-        <div style={{ display: 'grid', gap: 8, marginTop: 16 }}>
-          <Typography.Text>
-            {t('info.invite.created', { channel: action.result.channelName })}
-          </Typography.Text>
-          <TextBlock text={action.result.url} />
-        </div>
+        <ResultBlock>
+          <div style={{ display: 'grid', gap: 'var(--space-2)' }}>
+            <Typography.Text>
+              {t('info.invite.created', { channel: action.result.channelName })}
+            </Typography.Text>
+            <TextBlock text={action.result.url} copyLabel={t('info.invite.copy')} />
+          </div>
+        </ResultBlock>
       )}
     </ToolCard>
   );
