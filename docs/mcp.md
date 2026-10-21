@@ -19,11 +19,11 @@ Phạm vi: endpoint MCP là gì, lấy khoá và nối client thế nào, tool n
 
 Dashboard, mục Tài khoản, Khoá API (`/account/api-keys`). Khoá chỉ hiện một lần lúc tạo; DB chỉ giữ băm SHA-256 và 8 ký tự đầu để nhận diện.
 
-|                       | READ            | WRITE                                                                                 |
-| --------------------- | --------------- | ------------------------------------------------------------------------------------- |
-| Tool thấy được        | chỉ tool đọc    | cả tool ghi                                                                           |
-| Hạn mặc định / tối đa | 90 / 365 ngày   | 30 / 30 ngày                                                                          |
-| Điều kiện tạo         | phiên đăng nhập | phiên đăng nhập trong 5 phút gần nhất (nếu cũ: `AUTH_REAUTH_REQUIRED`, đăng nhập lại) |
+|                       | READ            | WRITE           |
+| --------------------- | --------------- | --------------- |
+| Tool thấy được        | chỉ tool đọc    | cả tool ghi     |
+| Hạn mặc định / tối đa | 90 / 365 ngày   | 30 / 30 ngày    |
+| Điều kiện tạo         | phiên đăng nhập | phiên đăng nhập |
 
 - Mỗi người tối đa 5 khoá còn hiệu lực.
 - Khoá không sửa được, chỉ thu hồi. Thu hồi cũng huỷ các lịch hẹn giờ PENDING do chính khoá đó tạo.

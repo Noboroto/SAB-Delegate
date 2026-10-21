@@ -94,6 +94,15 @@ Coolify xoá rồi dựng lại cả stack mỗi deploy, và một token chỉ �
 6. `docker history --no-trunc <image> | grep -c '<TÊN_SECRET>='` bằng 0 cho cả bốn image (web thêm: các tên `NEXT_PUBLIC_*` nếu có).
 7. Giữ id deployment và tag/SHA cũ để rollback nhanh.
 
+## Phiên đăng nhập (dashboard)
+
+- Phiên nằm trong Postgres (bảng `Session`, `Account`, `User`; tài khoản Discord và token OAuth của nó, mã hoá bằng khoá dẫn xuất từ `BETTER_AUTH_SECRET`). Đổi `BETTER_AUTH_SECRET` thì token đã lưu không giải mã được: người dùng phải đăng nhập lại.
+- Phiên sống 30 ngày kể từ lần hoạt động cuối và được gia hạn tối đa mỗi ngày một lần khi người dùng còn dùng; không có bước "đăng nhập lại để xác nhận" nào theo tuổi phiên.
+- Thu hồi: xoá hàng `Session` của người đó (hoặc `Account`/`User`); cookie cũ hết hiệu lực trong tối đa 60 giây (cửa sổ cache cookie).
+- Job `auth-session-cleanup` chạy 03:45 mỗi ngày (giờ nghiệp vụ), xoá các phiên đã hết hạn. Job cũng xoá các hàng `Verification` hết hạn (hiện không có hàng nào được ghi vì trạng thái OAuth nằm trong cookie, nhưng Better Auth bắt buộc có bảng này).
+- Lần deploy đầu có bản này, MỌI người dùng đăng nhập lại đúng một lần: cookie `jwe` cũ của bản stateless bị bỏ qua, và `better-auth.account_data` cũ vô hại (không còn đọc). Migration `20261021090000_auth_sessions` chỉ thêm bảng, deploy lùi bản cũ không hỏng.
+- Kiểm sau deploy: đăng nhập thật rồi đọc lại `SELECT count(*) FROM "Session"`; sau 60 giây xoá hàng đó và xác nhận cookie bị từ chối.
+
 ## Release 2 (dashboard, REST, MCP)
 
 Một app Coolify, thêm service `sab-web`; thay đổi so với Release 1 chỉ là service mới và bốn biến của `sab-server`.

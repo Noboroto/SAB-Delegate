@@ -91,7 +91,7 @@ liệt kê thêm/bỏ qua/từ chối.
 ## 8. Chữ
 
 - Font `Be Vietnam Pro` (`theme-config.ts` `fontFamily`), cỡ cơ sở 14px; trên màn cảm ứng ô nhập 16px.
-- Một `h1` mỗi trang (`Heading`); tiêu đề card dùng `Card title`; `h2` 18px, `h3` 16px; không nhảy cấp.
+- Thang tiêu đề khai MỘT chỗ (`headingScale` trong `theme-config.ts`): `h1` 24px (`Heading`, một mỗi trang), `h2` 18px (`SectionTitle`: tiêu đề card/khu vực), `h3` 16px (`SectionTitle level={3}`: khối bên trong card). Không nhảy cấp, không `fontSize` rời.
 - Văn bản dài giới hạn `--measure` (65ch). Chữ phụ: `Typography.Text type="secondary"`.
 - Chính tả tiếng Việt thống nhất: Xoá, khoá, Huỷ, hoà, thoả, tuỳ.
 
@@ -111,6 +111,14 @@ liệt kê thêm/bỏ qua/từ chối.
 - Cảm ứng (`pointer: coarse`): `--control-h` = 44px, ô nhập 16px; mọi hàng lớn cùng lúc nhờ dùng token.
 - Dùng breakpoint của `Grid` AntD, không `px` rải rác.
 
+## 10b. Độ rộng và chữ ẩn
+
+- Độ rộng bộ lọc, cột bảng, `flex-basis` lấy từ token `--w-2xs/--w-xs/--w-sm/--w-md/--w-lg`
+  (80/160/240/360/480px), không `calc(var(--space-6) * N)` hay số px rời. Cỡ avatar/icon và viền 1-3px giữ nguyên.
+- Nút có nhãn dài (nêu phạm vi) bọc dòng bằng class `btn-wrap` (`ConfirmAction` đã gắn); không ép một dòng ở 390px.
+- Chữ chỉ dành cho trình đọc màn hình: class `.sr-only`.
+- Nút mở xác nhận có `aria-label` phải chứa nguyên nhãn đang hiện (WCAG 2.5.3): "Mở bảng điều khiển — {tên}".
+
 ## 11. Danh sách soát trước khi xong một màn hình
 
 1. Kéo thẳng một đường dọc mép trái card: mọi hàng nút/ô nhập có thẳng không?
@@ -120,3 +128,17 @@ liệt kê thêm/bỏ qua/từ chối.
 5. Có `Upload`/input tệp nằm trong `Space` không? (guard sẽ báo)
 6. Trạng thái rỗng, đang tải, lỗi, đang gửi đều thấy được không?
 7. Ảnh chụp 390/768/1440 sáng và tối đã xem chưa?
+
+## 12. Thành phần dùng chung
+
+Dùng các thành phần này thay vì tự viết lại; route mới không gõ `maxWidth: 720`, `fontSize: 18`
+hay `minHeight` rời.
+
+| Thành phần                                                              | Import                              | Khi nào dùng                                                                                                                                                                        |
+| ----------------------------------------------------------------------- | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `FormColumn`                                                            | `@/components/ui/form-column`       | Cột một form/card của trang cài đặt: rộng tối đa `--form-w` (720px), đầy chiều rộng trên điện thoại, các con cách nhau `--space-4`.                                                 |
+| `UnsavedGuardProvider`, `useUnsavedChanges(dirty)`, `useConfirmLeave()` | `@/components/forms/unsaved-guard`  | Provider đã nằm trong `AppFrame`, route chỉ gọi hook. Mỗi form gọi `useUnsavedChanges(dirty)`; trang "bẩn" khi bất kỳ form nào còn bẩn. Chuyển tab dùng `useConfirmLeave()`.        |
+| `PublicChrome`                                                          | `@/components/layout/public-chrome` | Chọn ngôn ngữ và giao diện sáng/tối góc phải trên cho trang chưa đăng nhập; `app/(public)/layout.tsx` đã gắn sẵn, trang public không tự thêm.                                       |
+| `PageLoading`                                                           | `@/components/ui/page-loading`      | `loading.tsx` ở lá route: `variant="form"`, `"table"` hoặc `"cards"` vẽ skeleton đúng hình trang; không truyền `variant` thì là vòng xoay giữa trang (trang không có hình cố định). |
+| `SectionTitle`                                                          | `@/components/ui/section-title`     | `h2` (hoặc `level={3}`) trong trang, dưới `Heading`; cỡ lấy từ thang tiêu đề của theme. `id` để `aria-labelledby`; `flush` khi là `title` của `Card`.                               |
+| `ResultBlock`                                                           | `@/components/ui/result-block`      | Bọc khối kết quả/lỗi hiện dưới form, cách phần trên `--space-4`; không `marginTop` rời.                                                                                             |
