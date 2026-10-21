@@ -9,6 +9,7 @@ import {
 } from '@sab/shared';
 import { RoleSelect } from '@/components/forms/role-select';
 import { buildRequest } from '@/lib/tools/build-request';
+import { useUnsavedText } from '@/lib/tools/use-unsaved-text';
 import { useRequiredRule } from '../shared/fields';
 import { ToolCard } from '../shared/tool-card';
 import { RoleAssignRunner } from './role-assign-runner';
@@ -28,6 +29,7 @@ export function RoleAssignMembersForm({ guildId }: { guildId: string }) {
   const values: Values = Form.useWatch([], form) ?? {};
   const remove = values.mode === 'take';
   const ids = parseSnowflakes(values.userIds ?? '');
+  const markSent = useUnsavedText(values.userIds);
 
   return (
     <ToolCard
@@ -49,6 +51,26 @@ export function RoleAssignMembersForm({ guildId }: { guildId: string }) {
         <Form.Item
           name="userIds"
           label={t('roleAssign.userIdsLabel')}
+          dependencies={['membersOfRoleId']}
+          rules={[
+            {
+              validator: () => {
+                if (ids.length > ROLE_ASSIGN_MAX_USER_IDS) {
+                  return Promise.reject(
+                    new Error(
+                      t('roleAssign.tooManyIds', {
+                        count: ids.length,
+                        max: ROLE_ASSIGN_MAX_USER_IDS,
+                      }),
+                    ),
+                  );
+                }
+                return ids.length > 0 || values.membersOfRoleId !== undefined
+                  ? Promise.resolve()
+                  : Promise.reject(new Error(t('roleAssign.membersRequired')));
+              },
+            },
+          ]}
           extra={t('roleAssign.userIdsHelp', { count: ids.length, max: ROLE_ASSIGN_MAX_USER_IDS })}
         >
           <Input.TextArea autoSize={{ minRows: 3, maxRows: 8 }} />
@@ -63,6 +85,8 @@ export function RoleAssignMembersForm({ guildId }: { guildId: string }) {
       </Form>
       <RoleAssignRunner
         guildId={guildId}
+        form={form}
+        onDone={() => markSent(values.userIds)}
         path="role-assign/members"
         remove={remove}
         build={(flags) =>

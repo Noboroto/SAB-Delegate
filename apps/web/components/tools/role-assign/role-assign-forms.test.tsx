@@ -50,15 +50,38 @@ async function fillMembers() {
 }
 
 describe('RoleAssignMembersForm', () => {
-  it('keeps the preview button off until the form is valid', async () => {
+  it('marks what is missing when clicked early, and asks nothing until the form is valid', async () => {
     const { calls } = stubToolApi({ 'role-assign/members': () => plan });
     renderWithProviders(<RoleAssignMembersForm guildId={GUILD} />);
     const button = screen.getByRole('button', { name: 'Xem trước và cho vai trò' });
-    expect(button).toBeDisabled();
+    expect(button).toBeEnabled();
+    await userEvent.click(button);
+
+    expect((await screen.findAllByText('Trường này là bắt buộc.')).length).toBeGreaterThan(0);
+    expect(screen.getByText('Dán id thành viên hoặc chọn một vai trò.')).toBeInTheDocument();
+    expect(screen.getByText('Điền các trường bắt buộc để tiếp tục.')).toBeInTheDocument();
+    expect(calls).toHaveLength(0);
 
     await fillMembers();
-    expect(button).toBeEnabled();
+    expect(screen.queryByText('Điền các trường bắt buộc để tiếp tục.')).not.toBeInTheDocument();
     expect(calls).toHaveLength(0);
+  });
+
+  it('draws giving a role as a plain action and taking it away as a destructive one', async () => {
+    stubToolApi({ 'role-assign/members': () => plan });
+    renderWithProviders(<RoleAssignMembersForm guildId={GUILD} />);
+    await fillMembers();
+    await userEvent.click(screen.getByRole('button', { name: 'Xem trước và cho vai trò' }));
+    expect(await screen.findByRole('button', { name: 'Cho vai trò' })).not.toHaveClass(
+      'ant-btn-dangerous',
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Huỷ' }));
+
+    await userEvent.click(screen.getByText('Gỡ vai trò'));
+    await userEvent.click(screen.getByRole('button', { name: 'Xem trước và gỡ vai trò' }));
+    expect(await screen.findByRole('button', { name: 'Gỡ vai trò' })).toHaveClass(
+      'ant-btn-dangerous',
+    );
   });
 
   it('shows the service plan first and only confirm makes the real call', async () => {

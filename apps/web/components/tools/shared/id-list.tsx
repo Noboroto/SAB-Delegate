@@ -14,14 +14,14 @@ export function IdList({ title, ids }: IdListProps) {
   const t = useTranslations('web-tools');
 
   return (
-    <div style={{ display: 'grid', gap: 8 }}>
+    <div style={{ display: 'grid', gap: 'var(--space-2)' }}>
       <Typography.Text strong>
         {t('common.idListTitle', { title, count: ids.length })}
       </Typography.Text>
       {ids.length === 0 ? (
         <Typography.Text type="secondary">{t('common.none')}</Typography.Text>
       ) : (
-        <TextBlock text={ids.join('\n')} />
+        <TextBlock text={ids.join('\n')} copyLabel={t('common.copyList', { title })} />
       )}
     </div>
   );

@@ -25,7 +25,7 @@ export function PurgePlanView({ plan }: { plan: PurgePlan }) {
     return <Alert type="warning" showIcon title={statusText[plan.status]} />;
   if (plan.count === 0) return <Alert type="info" showIcon title={t('purge.planEmpty')} />;
   return (
-    <div style={{ display: 'grid', gap: 12 }}>
+    <div style={{ display: 'grid', gap: 'var(--space-3)' }}>
       <Typography.Text strong>{t('purge.planCount', { count: plan.count })}</Typography.Text>
       {plan.olderCount === 0 ? null : (
         <Typography.Text type="secondary">

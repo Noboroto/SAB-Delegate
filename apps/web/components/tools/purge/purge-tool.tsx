@@ -1,6 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import { FormColumn } from '@/components/ui/form-column';
 import { Heading } from '@/components/ui/heading';
 import { PurgeForm } from './purge-form';
 
@@ -11,7 +12,9 @@ export function PurgeTool({ guildId }: { guildId: string }) {
   return (
     <>
       <Heading title={t('tools.purge.name')} subtitle={t('tools.purge.description')} />
-      <PurgeForm guildId={guildId} />
+      <FormColumn>
+        <PurgeForm guildId={guildId} />
+      </FormColumn>
     </>
   );
 }

@@ -39,14 +39,19 @@ function purgeApi(preview: unknown = plan) {
 }
 
 describe('PurgeForm', () => {
-  it('keeps the button off until a channel is chosen and names the scope', async () => {
-    purgeApi();
+  it('marks the missing channel when clicked early, and names the scope', async () => {
+    const { calls } = purgeApi();
     renderWithProviders(<PurgeForm guildId={GUILD} />);
     const trigger = await screen.findByRole('button', { name: 'Xem trước và xoá 10 tin nhắn' });
-    expect(trigger).toBeDisabled();
+    expect(trigger).toBeEnabled();
+    await userEvent.click(trigger);
+
+    expect((await screen.findAllByText('Trường này là bắt buộc.')).length).toBeGreaterThan(0);
+    expect(screen.getByText('Điền các trường bắt buộc để tiếp tục.')).toBeInTheDocument();
+    expect(calls).toHaveLength(0);
 
     await pickOption('Kênh', '# general');
-    expect(trigger).toBeEnabled();
+    expect(screen.queryByText('Điền các trường bắt buộc để tiếp tục.')).not.toBeInTheDocument();
   });
 
   it('shows the service plan, and the real call happens only after confirm, pinned to the plan', async () => {
@@ -123,11 +128,14 @@ describe('PurgeForm', () => {
     expect(
       await screen.findByText('Dán liên kết hoặc id của một tin nhắn trong kênh ở trên.'),
     ).toBeInTheDocument();
-    expect(trigger).toBeDisabled();
+    expect(screen.getByText('Điền các trường bắt buộc để tiếp tục.')).toBeInTheDocument();
 
     await userEvent.clear(field);
     await userEvent.type(field, MESSAGE);
-    await waitFor(() => expect(trigger).toBeEnabled());
+    await waitFor(() =>
+      expect(screen.queryByText('Điền các trường bắt buộc để tiếp tục.')).not.toBeInTheDocument(),
+    );
+    expect(trigger).toBeEnabled();
     expect(calls).toHaveLength(0);
   });
 });

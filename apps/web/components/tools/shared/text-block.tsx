@@ -5,7 +5,7 @@ import { CopyButton } from './copy-button';
 
 interface TextBlockProps {
   text: string;
-  /** Names the copy button when a page shows several blocks. */
+  /** Names the copy button; a page with several blocks needs a different name on each. */
   copyLabel?: string;
   /** What the button copies when that differs from what is shown (ids behind a list of names). */
   copyText?: string;
@@ -16,13 +16,13 @@ export function TextBlock({ text, copyLabel, copyText }: TextBlockProps) {
   const { token } = theme.useToken();
 
   return (
-    <div style={{ display: 'grid', gap: 8, justifyItems: 'start' }}>
+    <div style={{ display: 'grid', gap: 'var(--space-2)', justifyItems: 'start' }}>
       <div
         style={{
           width: '100%',
-          maxHeight: 240,
+          maxHeight: '15rem',
           overflow: 'auto',
-          padding: '8px 12px',
+          padding: 'var(--space-2) var(--space-3)',
           whiteSpace: 'pre-wrap',
           overflowWrap: 'anywhere',
           border: `1px solid ${token.colorBorder}`,

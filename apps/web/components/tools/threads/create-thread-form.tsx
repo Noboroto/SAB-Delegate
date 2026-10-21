@@ -11,9 +11,11 @@ import {
 } from '@sab/shared';
 import { ErrorAlert } from '@/components/data/error-alert';
 import { ChannelSelect } from '@/components/forms/channel-select';
+import { ResultBlock } from '@/components/ui/result-block';
 import { buildRequest } from '@/lib/tools/build-request';
 import { postTool } from '@/lib/tools/tool-api';
 import { useToolRun } from '@/lib/tools/use-tool-run';
+import { useUnsavedText } from '@/lib/tools/use-unsaved-text';
 import { useRequiredRule } from '../shared/fields';
 import { TextBlock } from '../shared/text-block';
 import { ToolCard } from '../shared/tool-card';
@@ -31,6 +33,8 @@ export function CreateThreadForm({ guildId }: { guildId: string }) {
   const t = useTranslations('web-tools');
   const required = useRequiredRule();
   const [form] = Form.useForm<Values>();
+  const isPrivate: boolean | undefined = Form.useWatch('isPrivate', form);
+  const markSent = useUnsavedText(Form.useWatch('message', form));
   const action = useToolRun((body: unknown) =>
     postTool(guildId, 'threads', body, ThreadCreateResultSchema),
   );
@@ -40,8 +44,8 @@ export function CreateThreadForm({ guildId }: { guildId: string }) {
     PRIVATE_NEEDS_TEXT_CHANNEL: t('threads.create.status.PRIVATE_NEEDS_TEXT_CHANNEL'),
   };
 
-  const onFinish = (values: Values) =>
-    action.submit(
+  const onFinish = async (values: Values) => {
+    const outcome = await action.submit(
       buildRequest(ThreadCreateRequestSchema, {
         channelId: values.channelId,
         name: values.name,
@@ -50,10 +54,17 @@ export function CreateThreadForm({ guildId }: { guildId: string }) {
       }),
       { refresh: true, success: t('threads.create.done') },
     );
+    if (outcome?.ok === true) markSent(values.message);
+  };
 
   return (
-    <ToolCard title={t('threads.create.title')} description={t('threads.create.description')}>
-      <Form form={form} layout="vertical" onFinish={(values) => void onFinish(values)}>
+    <ToolCard description={t('threads.create.description')}>
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={(values) => void onFinish(values)}
+        onValuesChange={action.clear}
+      >
         <Form.Item name="channelId" label={t('threads.channelLabel')} rules={[required]}>
           <ChannelSelect guildId={guildId} types={THREAD_PARENT_TYPES} />
         </Form.Item>
@@ -77,24 +88,30 @@ export function CreateThreadForm({ guildId }: { guildId: string }) {
         <Form.Item name="isPrivate" valuePropName="checked" extra={t('threads.create.privateHelp')}>
           <Checkbox>{t('threads.create.privateLabel')}</Checkbox>
         </Form.Item>
-        <Button type="primary" htmlType="submit" loading={action.pending}>
-          {t('threads.create.submit')}
-        </Button>
+        <Form.Item style={{ marginBottom: 0 }}>
+          <Button type="primary" htmlType="submit" loading={action.pending}>
+            {t(isPrivate === true ? 'threads.create.submitPrivate' : 'threads.create.submit')}
+          </Button>
+        </Form.Item>
       </Form>
       {action.error === undefined ? null : (
-        <div style={{ marginTop: 16 }}>
+        <ResultBlock>
           <ErrorAlert error={action.error} />
-        </div>
+        </ResultBlock>
       )}
       {action.result === undefined ? null : (
-        <div style={{ display: 'grid', gap: 12, marginTop: 16 }}>
-          <Alert
-            type={action.result.status === 'CREATED' ? 'success' : 'info'}
-            showIcon
-            title={statusText[action.result.status]}
-          />
-          {action.result.threadId === null ? null : <TextBlock text={action.result.threadId} />}
-        </div>
+        <ResultBlock>
+          <div style={{ display: 'grid', gap: 'var(--space-3)' }}>
+            <Alert
+              type={action.result.status === 'CREATED' ? 'success' : 'info'}
+              showIcon
+              title={statusText[action.result.status]}
+            />
+            {action.result.threadId === null ? null : (
+              <TextBlock text={action.result.threadId} copyLabel={t('common.copyThreadId')} />
+            )}
+          </div>
+        </ResultBlock>
       )}
     </ToolCard>
   );

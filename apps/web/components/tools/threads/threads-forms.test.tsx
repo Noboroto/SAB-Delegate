@@ -2,13 +2,14 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '@/lib/test/render-with-providers';
-import { CHANNEL_TEXT, GUILD, pickOption, stubToolApi } from '@/lib/tools/test-support';
+import { CHANNEL_TEXT, GUILD, MESSAGE, pickOption, stubToolApi } from '@/lib/tools/test-support';
 
 const refresh = vi.hoisted(() => vi.fn());
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh }) }));
 
 import { CreateThreadForm } from './create-thread-form';
 import { DeleteThreadsForm } from './delete-threads-form';
+import { PrivateReactorsThreadsForm } from './private-reactors-threads-form';
 import { PrivateThreadsForm } from './private-threads-form';
 import { RenameThreadsForm } from './rename-threads-form';
 
@@ -23,7 +24,7 @@ describe('CreateThreadForm', () => {
   it('sends nothing until channel, name and message are filled in', async () => {
     const { calls } = stubToolApi({ threads: () => ({ status: 'CREATED', threadId: THREAD_A }) });
     renderWithProviders(<CreateThreadForm guildId={GUILD} />);
-    await userEvent.click(screen.getByRole('button', { name: 'Mở thread' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Mở thread và đăng tin nhắn' }));
 
     expect((await screen.findAllByText('Trường này là bắt buộc.')).length).toBeGreaterThan(0);
     expect(calls).toHaveLength(0);
@@ -35,7 +36,7 @@ describe('CreateThreadForm', () => {
     await pickOption('Kênh', '# general');
     await userEvent.type(screen.getByLabelText('Tên thread'), 'Plan');
     await userEvent.type(screen.getByLabelText('Tin nhắn đầu tiên'), 'Hello');
-    await userEvent.dblClick(screen.getByRole('button', { name: 'Mở thread' }));
+    await userEvent.dblClick(screen.getByRole('button', { name: 'Mở thread và đăng tin nhắn' }));
 
     expect(await screen.findByText(THREAD_A)).toBeInTheDocument();
     expect(calls).toHaveLength(1);
@@ -50,7 +51,7 @@ describe('CreateThreadForm', () => {
 });
 
 describe('PrivateThreadsForm', () => {
-  it('needs members or a role before it sends', async () => {
+  it('needs members or a role before it opens a preview', async () => {
     const { calls } = stubToolApi({
       'threads/private': () => ({
         status: 'OK',
@@ -64,15 +65,13 @@ describe('PrivateThreadsForm', () => {
     await pickOption('Kênh', '# general');
     await userEvent.type(screen.getByLabelText('Tiền tố tên'), 'ask');
     await userEvent.type(screen.getByLabelText('Tin nhắn đầu tiên'), 'Hi');
-    await userEvent.click(screen.getByRole('button', { name: 'Mở các thread' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Xem trước và mở các thread' }));
 
-    expect(
-      await screen.findByText('Hãy kiểm tra lại biểu mẫu: có trường còn thiếu hoặc chưa hợp lệ.'),
-    ).toBeInTheDocument();
+    expect(await screen.findByText('Dán id thành viên hoặc chọn một vai trò.')).toBeInTheDocument();
     expect(calls).toHaveLength(0);
   });
 
-  it('opens threads for the ids pasted, wording the failures', async () => {
+  it('lists what will be opened first, then opens threads once and words the failures', async () => {
     const { calls } = stubToolApi({
       'threads/private': () => ({
         status: 'OK',
@@ -87,15 +86,53 @@ describe('PrivateThreadsForm', () => {
     await userEvent.type(screen.getByLabelText('Tiền tố tên'), 'ask');
     await userEvent.type(screen.getByLabelText('Tin nhắn đầu tiên'), 'Hi');
     await userEvent.type(screen.getByLabelText('Id thành viên'), USER);
-    await userEvent.click(screen.getByRole('button', { name: 'Mở các thread' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Xem trước và mở các thread' }));
 
+    expect(await screen.findByText(/mỗi thành viên trong danh sách \(1\)/)).toBeInTheDocument();
+    expect(calls).toHaveLength(0);
+
+    await userEvent.dblClick(await screen.findByRole('button', { name: 'Mở các thread' }));
     expect(await screen.findByText('Đã mở 1 trên 2 thread.')).toBeInTheDocument();
     expect(screen.getByText(`${USER}: Không phải thành viên của máy chủ này.`)).toBeInTheDocument();
+    expect(calls).toHaveLength(1);
     expect(calls[0]?.body).toMatchObject({
       channelId: CHANNEL_TEXT,
       prefix: 'ask',
       userIds: [USER],
     });
+  });
+});
+
+describe('PrivateReactorsThreadsForm', () => {
+  const LINK = `https://discord.com/channels/${GUILD}/${CHANNEL_TEXT}/${MESSAGE}`;
+
+  it('counts the reactors for the preview, and posts nothing until confirmed', async () => {
+    const { calls } = stubToolApi({
+      'info/reactors': () => ({ url: LINK, emoji: 'ok', userIds: [USER, THREAD_A] }),
+      'threads/private/reactors': () => ({
+        status: 'OK',
+        linkProblem: null,
+        total: 2,
+        created: 2,
+        failures: [],
+      }),
+    });
+    renderWithProviders(<PrivateReactorsThreadsForm guildId={GUILD} />);
+    await userEvent.type(screen.getByLabelText('Liên kết tin nhắn'), LINK);
+    await userEvent.type(screen.getByLabelText('Cảm xúc'), 'ok');
+    await pickOption('Kênh', '# general');
+    await userEvent.type(screen.getByLabelText('Tiền tố tên'), 'ask');
+    await userEvent.type(screen.getByLabelText('Tin nhắn đầu tiên'), 'Hi');
+    await userEvent.click(screen.getByRole('button', { name: 'Xem trước và mở các thread' }));
+
+    expect(await screen.findByText(/mỗi người trong 2 người đã thả ok/)).toBeInTheDocument();
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toMatchObject({ method: 'GET', path: 'info/reactors' });
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Mở các thread' }));
+    expect(await screen.findByText('Đã mở 2 trên 2 thread.')).toBeInTheDocument();
+    expect(calls).toHaveLength(2);
+    expect(calls[1]).toMatchObject({ method: 'POST', path: 'threads/private/reactors' });
   });
 });
 
@@ -119,7 +156,11 @@ describe('RenameThreadsForm', () => {
     });
     renderWithProviders(<RenameThreadsForm guildId={GUILD} />);
     const trigger = screen.getByRole('button', { name: 'Xem trước và đổi tên' });
-    expect(trigger).toBeDisabled();
+    expect(trigger).toBeEnabled();
+    await userEvent.click(trigger);
+    expect((await screen.findAllByText('Trường này là bắt buộc.')).length).toBeGreaterThan(0);
+    expect(screen.getByText('Điền các trường bắt buộc để tiếp tục.')).toBeInTheDocument();
+    expect(calls).toHaveLength(0);
 
     await pickOption('Kênh', '# general');
     await userEvent.type(screen.getByLabelText('Tiền tố hiện tại'), 'old');

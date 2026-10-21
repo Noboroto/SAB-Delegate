@@ -41,7 +41,8 @@ describe('IdList', () => {
     expect(screen.getByText('Members (2)')).toBeInTheDocument();
     // One id per line in the page; the text matcher folds the line break to a space.
     expect(screen.getByText(`${'1'.repeat(18)} ${'2'.repeat(18)}`)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Copy' })).toBeInTheDocument();
+    // Two lists on one page must not both offer a button called just "Copy".
+    expect(screen.getByRole('button', { name: 'Copy Members' })).toBeInTheDocument();
   });
 
   it('says so when there are none', () => {

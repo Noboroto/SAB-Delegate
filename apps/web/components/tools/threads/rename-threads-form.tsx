@@ -24,7 +24,7 @@ export function RenameThreadsForm({ guildId }: { guildId: string }) {
   const values: Values = Form.useWatch([], form) ?? {};
 
   return (
-    <ToolCard title={t('threads.rename.title')} description={t('threads.rename.description')}>
+    <ToolCard description={t('threads.rename.description')}>
       <Form form={form} layout="vertical">
         <Form.Item name="channelId" label={t('threads.channelLabel')} rules={[required]}>
           <ChannelSelect guildId={guildId} types={THREAD_PARENT_TYPES} />
@@ -46,6 +46,7 @@ export function RenameThreadsForm({ guildId }: { guildId: string }) {
       </Form>
       <ThreadBatchRunner
         guildId={guildId}
+        form={form}
         path="threads/rename"
         label={t('threads.rename.label')}
         modalTitle={t('threads.rename.modalTitle')}

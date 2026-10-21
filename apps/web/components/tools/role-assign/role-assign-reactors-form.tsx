@@ -46,6 +46,7 @@ export function RoleAssignReactorsForm({ guildId }: { guildId: string }) {
       </Form>
       <RoleAssignRunner
         guildId={guildId}
+        form={form}
         path="role-assign/reactors"
         remove={remove}
         build={(flags) => {

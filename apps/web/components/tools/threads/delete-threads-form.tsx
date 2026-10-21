@@ -23,7 +23,7 @@ export function DeleteThreadsForm({ guildId }: { guildId: string }) {
   const values: Values = Form.useWatch([], form) ?? {};
 
   return (
-    <ToolCard title={t('threads.delete.title')} description={t('threads.delete.description')}>
+    <ToolCard description={t('threads.delete.description')}>
       <Form form={form} layout="vertical">
         <Form.Item name="channelId" label={t('threads.channelLabel')} rules={[required]}>
           <ChannelSelect guildId={guildId} types={THREAD_PARENT_TYPES} />
@@ -38,6 +38,7 @@ export function DeleteThreadsForm({ guildId }: { guildId: string }) {
       </Form>
       <ThreadBatchRunner
         guildId={guildId}
+        form={form}
         path="threads/delete"
         label={t('threads.delete.label')}
         modalTitle={t('threads.delete.modalTitle')}

@@ -2,6 +2,7 @@
 
 import { Alert, List, Typography } from 'antd';
 import { useTranslations } from 'next-intl';
+import { ResultBlock } from '@/components/ui/result-block';
 import { THREAD_FAILURE_REASON, type ThreadBatchPlan, type ThreadBatchResult } from '@sab/shared';
 
 /** Discord's own explanation stays as it came; a code the service uses for its own reasons is worded here. */
@@ -23,7 +24,7 @@ export function ThreadBatchPlanView({ plan }: { plan: ThreadBatchPlan }) {
   }
   if (plan.count === 0) return <Alert type="info" showIcon title={t('threads.batch.noMatch')} />;
   return (
-    <div style={{ display: 'grid', gap: 12 }}>
+    <div style={{ display: 'grid', gap: 'var(--space-3)' }}>
       <Typography.Text>{t('threads.batch.planCount', { count: plan.count })}</Typography.Text>
       {plan.invalid === 0 ? null : (
         <Alert
@@ -56,29 +57,31 @@ export function ThreadBatchOutcome({ result }: { result: ThreadBatchResult }) {
   const allDone = result.failures.length === 0;
 
   return (
-    <div style={{ display: 'grid', gap: 12, marginTop: 16, width: '100%' }}>
-      <Alert
-        type={allDone ? 'success' : 'warning'}
-        showIcon
-        title={t('threads.batch.outcome', { done: result.done, count: result.count })}
-      />
-      {allDone ? null : (
-        <List
-          size="small"
-          bordered
-          header={t('threads.batch.failuresTitle', { count: result.failures.length })}
-          dataSource={result.failures}
-          renderItem={(failure) => (
-            <List.Item style={{ overflowWrap: 'anywhere' }}>
-              {t('threads.batch.failure', {
-                name: failure.name,
-                id: failure.threadId,
-                reason: reasonOf(failure.reason),
-              })}
-            </List.Item>
-          )}
+    <ResultBlock>
+      <div style={{ display: 'grid', gap: 'var(--space-3)', width: '100%' }}>
+        <Alert
+          type={allDone ? 'success' : 'warning'}
+          showIcon
+          title={t('threads.batch.outcome', { done: result.done, count: result.count })}
         />
-      )}
-    </div>
+        {allDone ? null : (
+          <List
+            size="small"
+            bordered
+            header={t('threads.batch.failuresTitle', { count: result.failures.length })}
+            dataSource={result.failures}
+            renderItem={(failure) => (
+              <List.Item style={{ overflowWrap: 'anywhere' }}>
+                {t('threads.batch.failure', {
+                  name: failure.name,
+                  id: failure.threadId,
+                  reason: reasonOf(failure.reason),
+                })}
+              </List.Item>
+            )}
+          />
+        )}
+      </div>
+    </ResultBlock>
   );
 }

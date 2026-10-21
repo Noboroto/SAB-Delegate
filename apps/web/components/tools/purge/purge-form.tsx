@@ -1,7 +1,7 @@
 'use client';
 
-import { useRef, useState } from 'react';
-import { Form, Input, InputNumber, Segmented, Typography } from 'antd';
+import { useRef } from 'react';
+import { Form, Input, InputNumber, Segmented } from 'antd';
 import { useTranslations } from 'next-intl';
 import {
   PURGE_COUNT_MAX,
@@ -10,14 +10,17 @@ import {
   PurgeResultSchema,
   type PurgeResult,
 } from '@sab/shared';
+import { ResultBlock } from '@/components/ui/result-block';
 import { ChannelSelect } from '@/components/forms/channel-select';
 import { ConfirmAction } from '@/components/forms/confirm-action';
 import { CHANNEL_TYPE } from '@/lib/discord/use-channels';
 import { blankToUndefined, buildRequest, readMessageRef } from '@/lib/tools/build-request';
 import { postTool } from '@/lib/tools/tool-api';
+import { useRunOutcome } from '@/lib/tools/use-run-outcome';
 import { useWriteDone } from '@/lib/tools/use-tool-run';
 import { useRequiredRule } from '../shared/fields';
 import { ToolCard } from '../shared/tool-card';
+import { ValidatedAction } from '../shared/validated-action';
 import { PurgeOutcome, PurgePlanView } from './purge-views';
 
 interface Values {
@@ -61,7 +64,6 @@ export function PurgeForm({ guildId }: { guildId: string }) {
   const done = useWriteDone();
   const [form] = Form.useForm<Values>();
   const values: Values = Form.useWatch([], form) ?? {};
-  const [outcome, setOutcome] = useState<PurgeResult | undefined>(undefined);
   const plannedFrom = useRef<string | null>(null);
   const range = values.mode === 'range';
 
@@ -101,10 +103,14 @@ export function PurgeForm({ guildId }: { guildId: string }) {
     if (request === undefined) throw new Error('The form is not valid.');
     return request;
   };
-  const valid = build({ dryRun: true, confirm: false }, null) !== undefined;
+  const current = build({ dryRun: true, confirm: false }, null);
+  const valid = current !== undefined;
+  const [outcome, record] = useRunOutcome<PurgeResult>(
+    current === undefined ? undefined : JSON.stringify(current),
+  );
 
   return (
-    <ToolCard title={t('purge.title')} description={t('purge.description')}>
+    <ToolCard description={t('purge.description')}>
       <Form form={form} layout="vertical" initialValues={{ mode: 'last', count: 10 }}>
         <Form.Item name="mode" label={t('purge.modeLabel')}>
           <Segmented
@@ -152,14 +158,12 @@ export function PurgeForm({ guildId }: { guildId: string }) {
           </Form.Item>
         )}
       </Form>
-      <div style={{ display: 'grid', gap: 8, justifyItems: 'start' }}>
+      <ValidatedAction form={form} valid={valid}>
         <ConfirmAction
           label={range ? t('purge.labelRange') : t('purge.labelLast', { count: values.count ?? 0 })}
           modalTitle={t('purge.modalTitle')}
           confirmLabel={t('purge.confirm')}
-          disabled={!valid}
           preview={async () => {
-            setOutcome(undefined);
             const plan = await postTool(
               guildId,
               'purge',
@@ -180,19 +184,16 @@ export function PurgeForm({ guildId }: { guildId: string }) {
           renderPlan={(plan) => <PurgePlanView plan={plan} />}
           canConfirm={(plan) => plan.status === 'OK' && plan.count > 0}
           onDone={(result) => {
-            setOutcome(result);
+            record(result);
             done(t('purge.done'));
           }}
         />
-        {valid ? null : (
-          <Typography.Text type="secondary">{t('common.fillRequired')}</Typography.Text>
-        )}
-        {outcome === undefined ? null : (
-          <div style={{ width: '100%', marginTop: 8 }}>
-            <PurgeOutcome result={outcome} />
-          </div>
-        )}
-      </div>
+      </ValidatedAction>
+      {outcome === undefined ? null : (
+        <ResultBlock>
+          <PurgeOutcome result={outcome} />
+        </ResultBlock>
+      )}
     </ToolCard>
   );
 }
