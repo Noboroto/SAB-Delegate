@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { App, Button, Card, Descriptions, Input, Tag } from 'antd';
+import { App, Button, Card, Descriptions, Grid, Input, Tag } from 'antd';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { EMAIL_ADDRESS_MAX, type EmailVerifyStatus } from '@sab/shared';
@@ -15,6 +15,8 @@ export function OverviewCard({ guildId, status }: { guildId: string; status: Ema
   const t = useTranslations('web-email-verify.overview');
   const { message } = App.useApp();
   const router = useRouter();
+  // Side-by-side labels squeeze to one word per line on a phone: stack them below md.
+  const wide = Grid.useBreakpoint().md !== false;
   const [email, setEmail] = useState('');
   const sendTest = useApiMutation((address: string) =>
     sendEmailTestMail(guildId, { email: address }),
@@ -34,6 +36,7 @@ export function OverviewCard({ guildId, status }: { guildId: string; status: Ema
         <Descriptions
           bordered
           size="small"
+          layout={wide ? 'horizontal' : 'vertical'}
           column={{ xs: 1, md: 2 }}
           items={[
             {

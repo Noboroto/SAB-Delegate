@@ -60,7 +60,11 @@ export class SmtpConfigService {
   }
 
   private row() {
-    return this.prisma.smtpConfig.findUnique({ where: { singleton: true }, select: SELECT });
+    // `findFirst`, not `findUnique`: Prisma batches findUnique calls made in the
+    // same tick, and the batched query on a Boolean unique field fails with
+    // PrismaClientValidationError (measured: the dashboard's parallel
+    // smtp + status reads returned 500).
+    return this.prisma.smtpConfig.findFirst({ where: { singleton: true }, select: SELECT });
   }
 
   /** The saved account as the given server's managers may see it; never the password. */

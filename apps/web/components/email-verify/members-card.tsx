@@ -15,6 +15,7 @@ import { ErrorAlert } from '@/components/data/error-alert';
 import { ConfirmAction } from '@/components/forms/confirm-action';
 import { MemberSelect } from '@/components/forms/member-select';
 import { ActionRow } from '@/components/ui/action-row';
+import { FormColumn } from '@/components/ui/form-column';
 import { useApiErrorMessage, useApiMutation } from '@/lib/api/mutations';
 import { useUiLocale } from '@/lib/chatbot/use-ui-locale';
 import { revokeEmailMember, verifyEmailMember } from '@/lib/email-verify/email-verify-api';
@@ -172,58 +173,63 @@ export function MembersCard({
   ];
 
   return (
-    <div style={{ display: 'grid', gap: 'var(--space-4)' }}>
-      <Card title={t('manual')}>
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            void onVerify();
-          }}
-          style={{ display: 'grid', gap: 'var(--space-3)' }}
-        >
-          <Typography.Text type="secondary">{t('manualHelp')}</Typography.Text>
-          <ActionRow>
-            <div style={{ flex: '1 1 var(--w-sm)', minWidth: 0 }}>
-              <MemberSelect
-                guildId={guildId}
-                aria-label={t('manualUser')}
-                placeholder={t('manualUser')}
-                allowClear
-                value={userId}
-                onChange={(next) => {
+    // `minmax(0, 1fr)`: a grid track otherwise grows to the table's content width and the page scrolls sideways on a phone.
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 'var(--space-4)' }}>
+      <FormColumn>
+        <Card title={t('manual')}>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              void onVerify();
+            }}
+            style={{ display: 'grid', gap: 'var(--space-3)' }}
+          >
+            <Typography.Text type="secondary">{t('manualHelp')}</Typography.Text>
+            <ActionRow>
+              <div style={{ flex: '1 1 var(--w-sm)', minWidth: 0 }}>
+                <MemberSelect
+                  guildId={guildId}
+                  aria-label={t('manualUser')}
+                  placeholder={t('manualUser')}
+                  allowClear
+                  value={userId}
+                  onChange={(next) => {
+                    verify.reset();
+                    setUserId(next);
+                  }}
+                />
+              </div>
+              <Input
+                type="email"
+                inputMode="email"
+                autoComplete="off"
+                aria-label={t('manualEmail')}
+                placeholder={t('manualEmail')}
+                maxLength={EMAIL_ADDRESS_MAX}
+                value={email}
+                onChange={(event) => {
                   verify.reset();
-                  setUserId(next);
+                  setEmail(event.target.value);
                 }}
+                style={{ flex: '1 1 var(--w-sm)', width: 'auto', minWidth: 0 }}
               />
-            </div>
-            <Input
-              type="email"
-              inputMode="email"
-              autoComplete="off"
-              aria-label={t('manualEmail')}
-              placeholder={t('manualEmail')}
-              maxLength={EMAIL_ADDRESS_MAX}
-              value={email}
-              onChange={(event) => {
-                verify.reset();
-                setEmail(event.target.value);
-              }}
-              style={{ flex: '1 1 var(--w-sm)', width: 'auto', minWidth: 0 }}
-            />
-            <Button
-              type="primary"
-              htmlType="submit"
-              loading={verify.pending}
-              disabled={userId === undefined || email.trim() === ''}
-            >
-              {t('manual')}
-            </Button>
-          </ActionRow>
-          {verify.error === undefined ? null : <ErrorAlert error={verify.error} />}
-        </form>
-      </Card>
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={verify.pending}
+                disabled={userId === undefined || email.trim() === ''}
+              >
+                {t('manual')}
+              </Button>
+            </ActionRow>
+            {verify.error === undefined ? null : <ErrorAlert error={verify.error} />}
+          </form>
+        </Card>
+      </FormColumn>
       <Card title={t('title')}>
-        <div style={{ display: 'grid', gap: 'var(--space-4)' }}>
+        <div
+          style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 'var(--space-4)' }}
+        >
           <Typography.Text type="secondary">{t('intro')}</Typography.Text>
           <ActionRow>
             <Input.Search

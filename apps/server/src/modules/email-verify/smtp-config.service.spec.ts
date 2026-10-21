@@ -35,7 +35,7 @@ function setup(options: { secret?: string | null } = {}) {
   const crypto = new EmailCryptoService(env);
   let row: Row | null = null;
   const smtpConfig = {
-    findUnique: vi.fn(() => Promise.resolve(row)),
+    findFirst: vi.fn(() => Promise.resolve(row)),
     upsert: vi.fn((args: { create: Omit<Row, never> }) => {
       row = { ...args.create };
       return Promise.resolve(row);
@@ -165,11 +165,11 @@ describe('SmtpConfigService.view and resolve', () => {
     const ctx = setup();
     await ctx.service.save({ ...input, password }, actor);
     await ctx.service.resolve(10);
-    const reads = ctx.smtpConfig.findUnique.mock.calls.length;
+    const reads = ctx.smtpConfig.findFirst.mock.calls.length;
     await ctx.service.resolve(10 + SMTP_CACHE_TTL_MS - 1);
-    expect(ctx.smtpConfig.findUnique.mock.calls.length).toBe(reads);
+    expect(ctx.smtpConfig.findFirst.mock.calls.length).toBe(reads);
     await ctx.service.resolve(10 + SMTP_CACHE_TTL_MS + 1);
-    expect(ctx.smtpConfig.findUnique.mock.calls.length).toBe(reads + 1);
+    expect(ctx.smtpConfig.findFirst.mock.calls.length).toBe(reads + 1);
   });
 
   it('shows another server nothing but that it is not the admin server', async () => {

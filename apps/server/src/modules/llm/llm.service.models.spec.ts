@@ -27,7 +27,7 @@ const SECRET = randomBytes(24).toString('hex');
 
 function build(options: { secret?: string | null; row?: StoredLlmKey | null } = {}) {
   const row = options.row ?? null;
-  const prisma = { llmConfig: { findUnique: vi.fn(() => Promise.resolve(row)) } };
+  const prisma = { llmConfig: { findFirst: vi.fn(() => Promise.resolve(row)) } };
   const secret = options.secret === null ? undefined : (options.secret ?? SECRET);
   const service = new LlmService(
     prisma as unknown as PrismaService,
@@ -140,7 +140,7 @@ describe('LlmService.listModels: which key is used', () => {
     request.mockResolvedValue(listOf('m'));
     const { service, prisma } = build({ row: stored(key) });
     await service.listGlobalModels({ baseUrl: BASE });
-    expect(prisma.llmConfig.findUnique).toHaveBeenCalledTimes(1);
+    expect(prisma.llmConfig.findFirst).toHaveBeenCalledTimes(1);
     expect(request).toHaveBeenCalledWith(
       expect.objectContaining({
         headers: expect.objectContaining({ authorization: `Bearer ${key}` }) as unknown,
@@ -155,7 +155,7 @@ describe('LlmService.listModels: which key is used', () => {
     request.mockResolvedValue(listOf('m'));
     const { service, prisma } = build();
     await service.listGlobalModels({ baseUrl: BASE, apiKey: fresh() });
-    expect(prisma.llmConfig.findUnique).not.toHaveBeenCalled();
+    expect(prisma.llmConfig.findFirst).not.toHaveBeenCalled();
   });
 });
 

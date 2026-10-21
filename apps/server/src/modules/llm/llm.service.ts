@@ -317,7 +317,8 @@ export class LlmService {
   }
 
   private row() {
-    return this.prisma.llmConfig.findUnique({
+    // `findFirst`: batched findUnique calls on a Boolean unique field fail (see SmtpConfigService.row).
+    return this.prisma.llmConfig.findFirst({
       where: { singleton: true },
       select: { baseUrl: true, model: true, apiKeyEnc: true, keyLast4: true, enabled: true },
     });

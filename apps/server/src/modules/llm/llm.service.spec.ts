@@ -32,7 +32,7 @@ function build(options: { secret?: string | null; row?: Row | null } = {}) {
   const pause = new ChatbotPauseService();
   let row: Row | null = options.row ?? null;
   const llmConfig = {
-    findUnique: vi.fn(() => Promise.resolve(row === null ? null : { ...row })),
+    findFirst: vi.fn(() => Promise.resolve(row === null ? null : { ...row })),
     upsert: vi.fn(({ create }: { create: Row }) => {
       row = { ...create };
       return Promise.resolve(row);

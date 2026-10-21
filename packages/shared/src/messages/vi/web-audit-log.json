@@ -78,6 +78,16 @@
     "emailVerifySmtpTest": "Thử tài khoản SMTP",
     "emailVerifyTestMail": "Gửi email thử",
     "emailVerifyMemberVerified": "Thành viên xác thực qua email",
-    "emailVerifyExport": "Xuất danh sách thành viên đã xác thực"
+    "emailVerifyExport": "Xuất danh sách thành viên đã xác thực",
+    "chatbotConfigure": "Cài đặt chatbot",
+    "chatbotChannelAdd": "Thêm kênh chatbot",
+    "chatbotChannelRemove": "Bỏ kênh chatbot",
+    "chatbotLlmSet": "Đặt mô hình riêng cho chatbot",
+    "chatbotLlmClear": "Bỏ mô hình riêng của chatbot",
+    "chatbotQuotaSet": "Đặt hạn mức chatbot",
+    "chatbotQuotaGrant": "Cấp token chatbot",
+    "chatbotQuotaReset": "Đặt lại lượng token chatbot đã dùng",
+    "chatbotMemoryClear": "Xoá bộ nhớ chatbot",
+    "chatbotHistoryDelete": "Xoá lịch sử chatbot"
   }
 }

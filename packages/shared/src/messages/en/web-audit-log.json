@@ -78,6 +78,16 @@
     "emailVerifySmtpTest": "Test SMTP account",
     "emailVerifyTestMail": "Send a test email",
     "emailVerifyMemberVerified": "Member verified by email",
-    "emailVerifyExport": "Export verified members"
+    "emailVerifyExport": "Export verified members",
+    "chatbotConfigure": "Chatbot settings",
+    "chatbotChannelAdd": "Add chatbot channel",
+    "chatbotChannelRemove": "Remove chatbot channel",
+    "chatbotLlmSet": "Set the chatbot's own model",
+    "chatbotLlmClear": "Remove the chatbot's own model",
+    "chatbotQuotaSet": "Set chatbot quota",
+    "chatbotQuotaGrant": "Grant chatbot tokens",
+    "chatbotQuotaReset": "Reset chatbot token usage",
+    "chatbotMemoryClear": "Clear chatbot memory",
+    "chatbotHistoryDelete": "Delete chatbot history"
   }
 }
