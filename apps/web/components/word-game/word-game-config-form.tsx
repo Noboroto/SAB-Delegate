@@ -13,6 +13,7 @@ import {
 import { ErrorAlert } from '@/components/data/error-alert';
 import { ChannelSelect } from '@/components/forms/channel-select';
 import { ConfirmAction } from '@/components/forms/confirm-action';
+import { useUnsavedChanges } from '@/components/forms/unsaved-guard';
 import { useApiMutation } from '@/lib/api/mutations';
 import { TEXT_CHANNEL_TYPES } from '@/lib/discord/use-channels';
 import { configureWordGame, type WordGameChange } from '@/lib/word-game/word-game-api';
@@ -44,6 +45,7 @@ export function WordGameConfigForm({ guildId, info }: { guildId: string; info: W
   const change = changeOf(info, channelId, maxWords);
   const hasChange = change.channelId !== undefined || change.maxWords !== undefined;
   const startsNewRound = change.channelId !== undefined;
+  useUnsavedChanges(hasChange);
   // Cleared input is `null`; a half-typed number outside the limits is the server's 400 otherwise.
   const limitInvalid =
     maxWords === null ||

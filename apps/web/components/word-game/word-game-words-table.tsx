@@ -53,13 +53,12 @@ export function WordGameWordsTable({
             label: sortLabels[key],
           }))}
           onChange={(key) => go({ ...query, ...SORTS[key], page: 1 })}
-          style={{ minWidth: 200 }}
+          style={{ minWidth: 'var(--w-xs)' }}
         />
       }
     >
       <Table<{ word: string }>
         rowKey="word"
-        size="small"
         loading={navigating}
         dataSource={words.items}
         scroll={{ x: 'max-content' }}
@@ -70,7 +69,7 @@ export function WordGameWordsTable({
                 {
                   key: 'position',
                   title: t('words.position'),
-                  width: 80,
+                  width: 'var(--w-2xs)',
                   render: (_: unknown, __: unknown, index: number) =>
                     query.order === 'asc' ? offset + index + 1 : total - offset - index,
                 },

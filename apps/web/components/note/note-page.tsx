@@ -1,11 +1,13 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Button, Modal, Typography } from 'antd';
+import { Button, Modal, Typography, theme } from 'antd';
 import { useTranslations } from 'next-intl';
+import { useConfirmLeave } from '@/components/forms/unsaved-guard';
 import { ActionRow } from '@/components/ui/action-row';
 import { Heading } from '@/components/ui/heading';
 import { PageState } from '@/components/ui/page-state';
+import { SectionTitle } from '@/components/ui/section-title';
 import { useRoles } from '@/lib/discord/use-roles';
 import { groupNotesByRole } from '@/lib/note/group-notes';
 import type { NoteView } from '@/lib/note/note-schemas';
@@ -22,6 +24,8 @@ type Editor = { note: NoteView | undefined } | undefined;
 export function NotePage({ guildId, notes }: NotePageProps) {
   const t = useTranslations('web-note');
   const roles = useRoles(guildId);
+  const { token } = theme.useToken();
+  const confirmLeave = useConfirmLeave();
   const [editor, setEditor] = useState<Editor>(undefined);
 
   const roleNames = useMemo(
@@ -63,13 +67,13 @@ export function NotePage({ guildId, notes }: NotePageProps) {
         />
       ) : (
         groups.map((group) => (
-          <section key={group.roleId} style={{ marginBottom: 24 }}>
-            <Typography.Title level={2} style={{ fontSize: 18, overflowWrap: 'anywhere' }}>
+          <section key={group.roleId} style={{ marginBottom: 'var(--space-6)' }}>
+            <SectionTitle>
               {roleLabel(group.roleId)}{' '}
-              <Typography.Text type="secondary" style={{ fontSize: 14 }}>
+              <Typography.Text type="secondary" style={{ fontSize: token.fontSize }}>
                 ({t('role.count', { count: group.notes.length })})
               </Typography.Text>
-            </Typography.Title>
+            </SectionTitle>
             {group.notes.map((note) => (
               <NoteCard
                 key={note.topic}
@@ -85,7 +89,9 @@ export function NotePage({ guildId, notes }: NotePageProps) {
         open={editor !== undefined}
         title={editor?.note === undefined ? t('form.addTitle') : t('form.editTitle')}
         footer={null}
-        onCancel={() => setEditor(undefined)}
+        // Several lines of text are one stray click from lost; only Cancel, the X or Esc close it, and those ask first.
+        mask={{ closable: false }}
+        onCancel={() => confirmLeave(() => setEditor(undefined))}
         destroyOnHidden
       >
         <NoteForm

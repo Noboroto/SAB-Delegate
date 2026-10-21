@@ -9,5 +9,7 @@ export function lastPageIfPastEnd(page: {
 }): number | undefined {
   const { page: current, pageSize, total } = page.pagination;
   if (page.items.length > 0 || current <= 1) return undefined;
-  return Math.max(1, Math.ceil(total / pageSize));
+  const last = Math.max(1, Math.ceil(total / pageSize));
+  // A page that is not past the end (an empty one the server really returned) must not redirect to itself.
+  return last < current ? last : undefined;
 }

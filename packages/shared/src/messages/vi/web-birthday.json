@@ -83,5 +83,10 @@
       }
     },
     "done": "Đã nhập {count} người."
+  },
+  "empty": {
+    "title": "Chưa có ai trong danh sách",
+    "body": "Thêm người đầu tiên hoặc nhập từ tệp CSV, bot sẽ chúc sinh nhật họ.",
+    "action": "Thêm người đầu tiên"
   }
 }

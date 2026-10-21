@@ -151,8 +151,8 @@ export function ScheduleCreateForm({ guildId }: { guildId: string }) {
         <div
           style={{
             display: 'grid',
-            gap: '0 16px',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+            gap: '0 var(--space-4)',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(var(--w-xs), 1fr))',
           }}
         >
           <Form.Item

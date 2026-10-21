@@ -1,6 +1,6 @@
 'use client';
 
-import { App, Button, Typography } from 'antd';
+import { App, Button, Typography, theme } from 'antd';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { DiscordTimestamp } from '@/components/data/discord-timestamp';
@@ -20,18 +20,19 @@ export function NoteCard({ guildId, note, onEdit }: NoteCardProps) {
   const t = useTranslations('web-note');
   const { message } = App.useApp();
   const router = useRouter();
+  const { token } = theme.useToken();
   const key = { roleId: note.roleId, topic: note.topic };
 
   return (
-    <article style={{ padding: '12px 0' }}>
-      <Typography.Title level={3} style={{ fontSize: 16, marginTop: 0, overflowWrap: 'anywhere' }}>
+    <article style={{ padding: 'var(--space-3) 0' }}>
+      <Typography.Title
+        level={3}
+        style={{ fontSize: token.fontSizeHeading5, marginTop: 0, overflowWrap: 'anywhere' }}
+      >
         {note.topic}
       </Typography.Title>
       <div style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{note.content}</div>
       <ActionRow style={{ marginTop: 'var(--space-2)' }}>
-        <Typography.Text type="secondary">
-          {t('updated')} <DiscordTimestamp value={note.updatedAt} />
-        </Typography.Text>
         <Button aria-label={t('edit.label', { topic: note.topic })} onClick={() => onEdit(note)}>
           {t('edit.button')}
         </Button>
@@ -67,6 +68,9 @@ export function NoteCard({ guildId, note, onEdit }: NoteCardProps) {
             router.refresh();
           }}
         />
+        <Typography.Text type="secondary">
+          {t('updated')} <DiscordTimestamp value={note.updatedAt} />
+        </Typography.Text>
       </ActionRow>
     </article>
   );

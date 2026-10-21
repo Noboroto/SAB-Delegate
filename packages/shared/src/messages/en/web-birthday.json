@@ -83,5 +83,10 @@
       }
     },
     "done": "Imported {count, plural, one {# person} other {# people}}."
+  },
+  "empty": {
+    "title": "Nobody is on the list yet",
+    "body": "Add the first person, or import a CSV file, and the bot will wish them a happy birthday.",
+    "action": "Add the first person"
   }
 }

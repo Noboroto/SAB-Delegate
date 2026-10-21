@@ -9,7 +9,10 @@ export function WordSample({ words }: { words: readonly string[] }) {
   if (words.length === 0) return null;
 
   return (
-    <div aria-label={t('sample')} style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+    <div
+      aria-label={t('sample')}
+      style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-1)' }}
+    >
       {words.map((word) => (
         <Tag key={word} style={{ marginInlineEnd: 0 }}>
           {word}

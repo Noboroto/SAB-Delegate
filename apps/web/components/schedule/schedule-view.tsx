@@ -2,6 +2,7 @@
 
 import { Col, Row } from 'antd';
 import { useTranslations } from 'next-intl';
+import { FormColumn } from '@/components/ui/form-column';
 import { Heading } from '@/components/ui/heading';
 import type { ScheduledRow } from '@/lib/schedule/schedule-api';
 import { ScheduleCreateForm } from './schedule-create-form';
@@ -16,7 +17,9 @@ export function ScheduleView({ guildId, rows }: { guildId: string; rows: Schedul
       <Heading title={t('title')} subtitle={t('subtitle')} />
       <Row gutter={[16, 16]}>
         <Col xs={24} xl={10}>
-          <ScheduleCreateForm guildId={guildId} />
+          <FormColumn>
+            <ScheduleCreateForm guildId={guildId} />
+          </FormColumn>
         </Col>
         <Col xs={24} xl={14}>
           <ScheduleTable guildId={guildId} rows={rows} />

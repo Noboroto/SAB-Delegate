@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { NOTE_CONTENT_MAX_LENGTH, NOTE_TOPIC_MAX_LENGTH, NoteUpsertSchema } from '@sab/shared';
 import { ErrorAlert } from '@/components/data/error-alert';
 import { RoleSelect } from '@/components/forms/role-select';
+import { useConfirmLeave, useUnsavedChanges } from '@/components/forms/unsaved-guard';
 import { ActionRow } from '@/components/ui/action-row';
 import { useApiMutation } from '@/lib/api/mutations';
 import { saveNote } from '@/lib/note/note-api';
@@ -44,6 +45,15 @@ export function NoteForm({ guildId, editing, existing, onSaved }: NoteFormProps)
   const { message } = App.useApp();
   const router = useRouter();
   const [form] = Form.useForm<FormValues>();
+  const confirmLeave = useConfirmLeave();
+  const watched = Form.useWatch([], form);
+  // Compared with what the note held when the form opened; a new note starts empty.
+  const dirty =
+    watched !== undefined &&
+    ((watched.roleId ?? '') !== (editing?.roleId ?? '') ||
+      (watched.topic ?? '') !== (editing?.topic ?? '') ||
+      (watched.content ?? '') !== (editing?.content ?? ''));
+  useUnsavedChanges(dirty);
   const save = useApiMutation((note: Parameters<typeof saveNote>[2]) =>
     saveNote(guildId, editing === undefined ? 'create' : 'update', note),
   );
@@ -120,7 +130,7 @@ export function NoteForm({ guildId, editing, existing, onSaved }: NoteFormProps)
         </Form.Item>
       )}
       <ActionRow align="end">
-        <Button onClick={onSaved} disabled={save.pending}>
+        <Button onClick={() => confirmLeave(onSaved)} disabled={save.pending}>
           {tCommon('cancel')}
         </Button>
         <Button type="primary" htmlType="submit" loading={save.pending}>

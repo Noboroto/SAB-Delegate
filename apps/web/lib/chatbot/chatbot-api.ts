@@ -61,7 +61,6 @@ export function removeChatbotChannel(guildId: string, channelId: string): Promis
   });
 }
 
-/** Needs a recent login; the server answers `AUTH_REAUTH_REQUIRED` otherwise. */
 export function saveChatbotLlm(
   guildId: string,
   input: ChatbotLlmOverrideInput,

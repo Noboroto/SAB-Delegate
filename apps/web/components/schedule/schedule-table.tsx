@@ -40,13 +40,12 @@ export function ScheduleTable({ guildId, rows }: { guildId: string; rows: Schedu
     <Card title={t('table.title', { count: rows.length })}>
       <Table<ScheduledRow>
         rowKey="id"
-        size="small"
         dataSource={rows}
         scroll={{ x: 'max-content' }}
         locale={{ emptyText: t('table.empty') }}
         pagination={{ pageSize: PAGE_SIZE, hideOnSinglePage: true, showSizeChanger: false }}
         columns={[
-          { key: 'seq', title: t('table.number'), dataIndex: 'seq', width: 72 },
+          { key: 'seq', title: t('table.number'), dataIndex: 'seq', width: 'var(--w-2xs)' },
           {
             key: 'runAt',
             title: t('table.when'),
@@ -64,7 +63,7 @@ export function ScheduleTable({ guildId, rows }: { guildId: string; rows: Schedu
             key: 'what',
             title: t('table.what'),
             render: (_, row) => (
-              <div style={{ maxWidth: 360 }}>
+              <div style={{ maxWidth: 'var(--w-md)' }}>
                 <Tag>{row.kind === 'COPY' ? t('table.kindCopy') : t('table.kindSend')}</Tag>
                 <Typography.Text ellipsis={{ tooltip: true }}>
                   {row.kind === 'COPY'

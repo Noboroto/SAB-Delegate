@@ -16,4 +16,9 @@ describe('lastPageIfPastEnd', () => {
     expect(lastPageIfPastEnd(at(4, 15, 0))).toBe(2);
     expect(lastPageIfPastEnd(at(3, 0, 0))).toBe(1);
   });
+
+  it('does not redirect to the page it is already on', () => {
+    expect(lastPageIfPastEnd(at(2, 20, 0))).toBeUndefined();
+    expect(lastPageIfPastEnd(at(2, 11, 0))).toBeUndefined();
+  });
 });

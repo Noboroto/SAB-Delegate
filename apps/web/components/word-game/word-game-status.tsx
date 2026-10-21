@@ -41,7 +41,7 @@ export function WordGameStatus({ guildId, info }: { guildId: string; info: WordG
             key: 'progress',
             label: t('status.progress'),
             children: (
-              <div style={{ maxWidth: 280 }}>
+              <div style={{ maxWidth: 'var(--w-md)' }}>
                 <Progress
                   percent={percent}
                   size="small"

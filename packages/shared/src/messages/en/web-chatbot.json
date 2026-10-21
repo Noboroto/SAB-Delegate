@@ -7,12 +7,6 @@
     "usage": "Usage",
     "history": "History"
   },
-  "reauth": {
-    "title": "Sign in again",
-    "body": "Changing the AI service's address or key needs a login from the last few minutes. Sign in again, then repeat the change.",
-    "action": "Sign in again",
-    "failed": "Could not start the sign-in. Please try again."
-  },
   "settings": {
     "title": "Chatbot",
     "intro": "The bot only replies when a member mentions it or replies to one of its messages. To answer, it reads the recent messages of the channel and sends them, with the question, to the configured AI service, so members' text is shared with that provider.",

@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { MESSAGE_MAX_LENGTH, type SendMessageResult } from '@sab/shared';
 import { ChannelSelect } from '@/components/forms/channel-select';
 import { ConfirmAction } from '@/components/forms/confirm-action';
+import { useUnsavedChanges } from '@/components/forms/unsaved-guard';
 import { TEXT_CHANNEL_TYPES } from '@/lib/discord/use-channels';
 import { sendMessage } from '@/lib/messaging/messaging-api';
 import { useFormValues } from '@/lib/messaging/use-form-values';
@@ -27,6 +28,8 @@ export function SendMessageForm({ guildId }: { guildId: string }) {
   const router = useRouter();
   const [form] = Form.useForm<Values>();
   const values = useFormValues(form);
+  // Typed text is lost on leaving the tab or the page: the guard asks first.
+  useUnsavedChanges((values.content ?? '').trim() !== '');
   const request = buildSend(values);
 
   return (
@@ -76,7 +79,7 @@ export function SendMessageForm({ guildId }: { guildId: string }) {
               <MessagePreview content={plan.content} />
               {plan.pings.length === 0 ? null : (
                 <Alert
-                  style={{ marginTop: 12 }}
+                  style={{ marginTop: 'var(--space-3)' }}
                   type="warning"
                   showIcon
                   title={t('send.pings', { list: plan.pings.join(', ') })}
