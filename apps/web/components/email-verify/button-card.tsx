@@ -1,14 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { App, Button, Card, Input, Typography } from 'antd';
+import { App, Button, Card, Input, Typography, theme } from 'antd';
 import { useTranslations } from 'next-intl';
 import type { EmailVerifyButtonInput } from '@sab/shared';
-import { ErrorAlert } from '@/components/data/error-alert';
 import { ChannelSelect } from '@/components/forms/channel-select';
+import { ConfirmAction } from '@/components/forms/confirm-action';
 import { ActionRow } from '@/components/ui/action-row';
-import { useApiMutation } from '@/lib/api/mutations';
-import { TEXT_CHANNEL_TYPES } from '@/lib/discord/use-channels';
+import { TEXT_CHANNEL_TYPES, useChannels } from '@/lib/discord/use-channels';
 import { postEmailVerifyButton } from '@/lib/email-verify/email-verify-api';
 
 /** Posts the message with the verify button in a channel; a field left empty keeps the built-in text. */
@@ -26,22 +25,20 @@ export function ButtonCard({
   const [title, setTitle] = useState('');
   const [text, setText] = useState('');
   const [buttonText, setButtonText] = useState('');
-  const post = useApiMutation((input: EmailVerifyButtonInput) =>
-    postEmailVerifyButton(guildId, input),
-  );
+  const { token } = theme.useToken();
+  const channels = useChannels(guildId);
+  const channelName =
+    channels.data?.find((channel) => channel.id === channelId)?.name ?? channelId ?? '';
 
-  const onPost = async () => {
-    if (channelId === undefined) return;
-    const input: EmailVerifyButtonInput = {
-      channelId,
-      ...(title.trim() === '' ? {} : { title: title.trim() }),
-      ...(text.trim() === '' ? {} : { message: text.trim() }),
-      ...(buttonText.trim() === '' ? {} : { buttonText: buttonText.trim() }),
-    };
-    const outcome = await post.run(input);
-    if (outcome?.ok !== true) return;
-    void message.success(t('posted'));
-  };
+  const input = (): EmailVerifyButtonInput | undefined =>
+    channelId === undefined
+      ? undefined
+      : {
+          channelId,
+          ...(title.trim() === '' ? {} : { title: title.trim() }),
+          ...(text.trim() === '' ? {} : { message: text.trim() }),
+          ...(buttonText.trim() === '' ? {} : { buttonText: buttonText.trim() }),
+        };
 
   return (
     <Card title={t('title')}>
@@ -54,10 +51,7 @@ export function ButtonCard({
             guildId={guildId}
             types={TEXT_CHANNEL_TYPES}
             value={channelId}
-            onChange={(next) => {
-              post.reset();
-              setChannelId(next);
-            }}
+            onChange={setChannelId}
           />
         </div>
         <div style={{ display: 'grid', gap: 'var(--space-1)' }}>
@@ -99,8 +93,8 @@ export function ButtonCard({
               padding: 'var(--space-3)',
               background: 'var(--surface-secondary)',
               border: '1px solid var(--border)',
-              borderLeft: '4px solid var(--primary)',
-              borderRadius: 4,
+              borderLeft: 'var(--space-1) solid var(--primary)',
+              borderRadius: token.borderRadiusSM,
               overflowWrap: 'anywhere',
             }}
           >
@@ -117,16 +111,32 @@ export function ButtonCard({
             </div>
           </div>
         </section>
-        {post.error === undefined ? null : <ErrorAlert error={post.error} />}
         <ActionRow>
-          <Button
-            type="primary"
-            loading={post.pending}
-            disabled={channelId === undefined}
-            onClick={() => void onPost()}
-          >
-            {t('post')}
-          </Button>
+          {channelId === undefined ? (
+            <Button type="primary" disabled>
+              {t('post')}
+            </Button>
+          ) : (
+            <ConfirmAction
+              danger={false}
+              label={t('postTo', { channel: channelName })}
+              modalTitle={t('confirmTitle')}
+              confirmLabel={t('post')}
+              // The post is not previewed by the service: the plan is what the form already holds.
+              preview={() => Promise.resolve({ channel: channelName })}
+              execute={() => {
+                const body = input();
+                if (body === undefined) return Promise.reject(new Error('no channel'));
+                return postEmailVerifyButton(guildId, body);
+              }}
+              renderPlan={(plan) => (
+                <Typography.Paragraph style={{ marginBottom: 0 }}>
+                  {t('confirmPlan', { channel: plan.channel })}
+                </Typography.Paragraph>
+              )}
+              onDone={() => void message.success(t('posted'))}
+            />
+          )}
           {channelId === undefined ? (
             <Typography.Text type="secondary">{t('channelRequired')}</Typography.Text>
           ) : null}

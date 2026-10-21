@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { App, Button, Card, Input, Popconfirm, Table, Typography } from 'antd';
+import { App, Button, Card, Input, Table, Typography } from 'antd';
 import type { TableProps } from 'antd';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -12,6 +12,7 @@ import {
   type EmailListSummary,
 } from '@sab/shared';
 import { ErrorAlert } from '@/components/data/error-alert';
+import { ConfirmAction } from '@/components/forms/confirm-action';
 import { ActionRow } from '@/components/ui/action-row';
 import { useApiMutation } from '@/lib/api/mutations';
 import { useUiLocale } from '@/lib/chatbot/use-ui-locale';
@@ -27,7 +28,6 @@ export function ListsCard({ guildId, lists }: { guildId: string; lists: EmailLis
   const router = useRouter();
   const [name, setName] = useState('');
   const create = useApiMutation((listName: string) => createEmailList(guildId, { name: listName }));
-  const remove = useApiMutation((listId: string) => deleteEmailList(guildId, listId));
 
   const parsedName = EmailListNameSchema.safeParse(name);
   const full = lists.length >= EMAIL_LISTS_MAX;
@@ -39,13 +39,6 @@ export function ListsCard({ guildId, lists }: { guildId: string; lists: EmailLis
     if (outcome?.ok !== true) return;
     setName('');
     void message.success(t('created'));
-    router.refresh();
-  };
-
-  const onDelete = async (listId: string) => {
-    const outcome = await remove.run(listId);
-    if (outcome?.ok !== true) return;
-    void message.success(t('deleted'));
     router.refresh();
   };
 
@@ -66,20 +59,24 @@ export function ListsCard({ guildId, lists }: { guildId: string; lists: EmailLis
       key: 'actions',
       title: t('actions'),
       render: (_: unknown, row) => (
-        <Popconfirm
-          title={t('deleteConfirm', { name: row.name })}
-          okText={t('delete')}
-          okButtonProps={{ danger: true }}
-          onConfirm={() => void onDelete(row.id)}
-        >
-          <Button
-            danger
-            aria-label={t('deleteLabel', { name: row.name })}
-            disabled={remove.pending}
-          >
-            {t('delete')}
-          </Button>
-        </Popconfirm>
+        <ConfirmAction
+          label={t('delete')}
+          ariaLabel={t('deleteLabel', { name: row.name })}
+          modalTitle={t('deleteTitle')}
+          confirmLabel={t('delete')}
+          // The service has no dry run for a list; the plan is what the row already says.
+          preview={() => Promise.resolve(row)}
+          execute={() => deleteEmailList(guildId, row.id)}
+          renderPlan={(plan) => (
+            <Typography.Paragraph style={{ marginBottom: 0 }}>
+              {t('deleteConfirm', { name: plan.name })}
+            </Typography.Paragraph>
+          )}
+          onDone={() => {
+            void message.success(t('deleted'));
+            router.refresh();
+          }}
+        />
       ),
     },
   ];
@@ -109,7 +106,7 @@ export function ListsCard({ guildId, lists }: { guildId: string; lists: EmailLis
                 create.reset();
                 setName(event.target.value);
               }}
-              style={{ flex: '1 1 220px', width: 'auto', minWidth: 0 }}
+              style={{ flex: '1 1 var(--w-sm)', width: 'auto', minWidth: 0 }}
             />
             <Button
               type="primary"
@@ -124,9 +121,7 @@ export function ListsCard({ guildId, lists }: { guildId: string; lists: EmailLis
             {full ? t('full', { max: EMAIL_LISTS_MAX }) : t('nameHelp')}
           </Typography.Text>
         </form>
-        {create.error === undefined && remove.error === undefined ? null : (
-          <ErrorAlert error={create.error ?? remove.error} />
-        )}
+        {create.error === undefined ? null : <ErrorAlert error={create.error} />}
         <Table<EmailListSummary>
           rowKey="id"
           dataSource={lists}

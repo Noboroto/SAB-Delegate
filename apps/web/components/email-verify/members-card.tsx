@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { App, Button, Card, Input, Popconfirm, Table, Tag, Typography } from 'antd';
+import { App, Button, Card, Input, Table, Tag, Typography } from 'antd';
 import type { TableProps } from 'antd';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -12,6 +12,7 @@ import {
   type EmailMemberRow,
 } from '@sab/shared';
 import { ErrorAlert } from '@/components/data/error-alert';
+import { ConfirmAction } from '@/components/forms/confirm-action';
 import { MemberSelect } from '@/components/forms/member-select';
 import { ActionRow } from '@/components/ui/action-row';
 import { useApiErrorMessage, useApiMutation } from '@/lib/api/mutations';
@@ -50,7 +51,6 @@ export function MembersCard({
   const verify = useApiMutation((input: { userId: string; email: string }) =>
     verifyEmailMember(guildId, input),
   );
-  const revoke = useApiMutation((target: string) => revokeEmailMember(guildId, target));
   const exportFile = useApiMutation(() => downloadMembersExport(guildId));
 
   const go = (next: EmailMemberListQuery) =>
@@ -63,13 +63,6 @@ export function MembersCard({
     setUserId(undefined);
     setEmail('');
     void message.success(t('manualDone'));
-    router.refresh();
-  };
-
-  const onRevoke = async (target: string) => {
-    const outcome = await revoke.run(target);
-    if (outcome?.ok !== true) return;
-    void message.success(t('revoked'));
     router.refresh();
   };
 
@@ -156,20 +149,24 @@ export function MembersCard({
       key: 'actions',
       title: t('actions'),
       render: (_: unknown, row) => (
-        <Popconfirm
-          title={t('revokeConfirm')}
-          okText={t('revoke')}
-          okButtonProps={{ danger: true }}
-          onConfirm={() => void onRevoke(row.userId)}
-        >
-          <Button
-            danger
-            disabled={revoke.pending}
-            aria-label={t('revokeLabel', { name: row.displayName ?? row.userId })}
-          >
-            {t('revoke')}
-          </Button>
-        </Popconfirm>
+        <ConfirmAction
+          label={t('revoke')}
+          ariaLabel={t('revokeLabel', { name: row.displayName ?? row.userId })}
+          modalTitle={t('revokeTitle')}
+          confirmLabel={t('revoke')}
+          // The service has no dry run for this; the plan is the member the row already shows.
+          preview={() => Promise.resolve(row)}
+          execute={() => revokeEmailMember(guildId, row.userId)}
+          renderPlan={(plan) => (
+            <Typography.Paragraph style={{ marginBottom: 0 }}>
+              {t('revokeConfirm', { name: plan.displayName ?? plan.userId })}
+            </Typography.Paragraph>
+          )}
+          onDone={() => {
+            void message.success(t('revoked'));
+            router.refresh();
+          }}
+        />
       ),
     },
   ];
@@ -186,7 +183,7 @@ export function MembersCard({
         >
           <Typography.Text type="secondary">{t('manualHelp')}</Typography.Text>
           <ActionRow>
-            <div style={{ flex: '1 1 220px', minWidth: 0 }}>
+            <div style={{ flex: '1 1 var(--w-sm)', minWidth: 0 }}>
               <MemberSelect
                 guildId={guildId}
                 aria-label={t('manualUser')}
@@ -211,7 +208,7 @@ export function MembersCard({
                 verify.reset();
                 setEmail(event.target.value);
               }}
-              style={{ flex: '1 1 220px', width: 'auto', minWidth: 0 }}
+              style={{ flex: '1 1 var(--w-sm)', width: 'auto', minWidth: 0 }}
             />
             <Button
               type="primary"
@@ -239,13 +236,12 @@ export function MembersCard({
               onSearch={(value) =>
                 go({ ...query, q: value.trim() === '' ? undefined : value.trim(), page: 1 })
               }
-              style={{ flex: '1 1 220px', width: 'auto', minWidth: 0 }}
+              style={{ flex: '1 1 var(--w-sm)', width: 'auto', minWidth: 0 }}
             />
             <Button loading={exportFile.pending} onClick={confirmExport}>
               {t('export')}
             </Button>
           </ActionRow>
-          {revoke.error === undefined ? null : <ErrorAlert error={revoke.error} />}
           <Table<EmailMemberRow>
             rowKey="userId"
             loading={navigating}

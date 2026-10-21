@@ -6,10 +6,8 @@
     "overview": "Overview",
     "settings": "Settings",
     "rules": "Access rules",
-    "blocklist": "Blocklist",
     "lists": "Email lists",
     "members": "Members",
-    "button": "Button",
     "smtp": "Mail server"
   },
   "overview": {
@@ -173,8 +171,10 @@
     "fileUnreadable": "The file could not be read.",
     "noEmails": "There is no address to send yet.",
     "entries": "Addresses of the list {name}",
-    "deleteLabel": "Delete the list {name}",
-    "tooManyEntries": "A list holds at most {max} addresses. This one has {count} and you are adding up to {adding}."
+    "deleteLabel": "Delete list — {name}",
+    "tooManyEntries": "A list holds at most {max} addresses. This one has {count} and you are adding up to {adding}.",
+    "deleteTitle": "Delete this list?",
+    "clearTitle": "Remove all addresses?"
   },
   "members": {
     "title": "Verified members",
@@ -197,17 +197,18 @@
     "manualEmail": "Email address",
     "manualDone": "The member is verified.",
     "revoke": "Remove verification",
-    "revokeConfirm": "Remove the verification of this member? The roles it gave are taken away.",
+    "revokeConfirm": "Remove the verification of {name}? The roles it gave are taken away.",
     "revoked": "The verification is removed.",
     "export": "Export Excel",
     "exportConfirm": "The file lists every verified member with email address, Discord name and roles. It contains personal data: keep it safe and do not share it.",
     "exportFailed": "The export could not be created. Please try again.",
     "actions": "Actions",
     "left": "Left the server",
-    "revokeLabel": "Remove the verification of {name}",
+    "revokeLabel": "Remove verification — {name}",
     "exportTitle": "Export members to Excel?",
     "exportOk": "Export",
-    "exporting": "Preparing the file..."
+    "exporting": "Preparing the file...",
+    "revokeTitle": "Remove this verification?"
   },
   "button": {
     "title": "Verify button",
@@ -221,7 +222,10 @@
     "defaultHelp": "Leave a field empty to use the built-in text.",
     "defaultText": "Built-in text",
     "preview": "Preview",
-    "channelRequired": "Pick the channel to post in."
+    "channelRequired": "Pick the channel to post in.",
+    "postTo": "Post the button in #{channel}",
+    "confirmTitle": "Post the verify button?",
+    "confirmPlan": "A message with the verify button will be posted in #{channel}, as in the preview."
   },
   "smtp": {
     "title": "Mail server",
@@ -233,8 +237,6 @@
     "username": "Username",
     "password": "Password",
     "passwordHelp": "Leave empty to keep the stored password.",
-    "passwordSet": "A password is stored.",
-    "passwordNotSet": "No password is stored.",
     "fromAddress": "Sender address",
     "fromName": "Sender name",
     "enabled": "Sending on",
@@ -246,22 +248,15 @@
       "unreachable": "The mail server could not be reached.",
       "auth": "The mail server refused the username or password.",
       "rejected": "The mail server refused the request.",
-      "blocked": "That mail server address is not allowed."
+      "unresolved": "The mail server name could not be found. Check the host name."
     },
     "passwordUnchanged": "unchanged",
     "fromAddressHelp": "The address the emails come from.",
-    "unavailable": "The server has no LLM_KEY_SECRET, so the mail server cannot be saved yet.",
     "saveFirst": "Save first, then test. The test uses the saved mail server.",
     "errors": {
       "required": "This field is required.",
       "invalid": "This value is not valid.",
       "passwordAgain": "Enter the password again for the new host."
     }
-  },
-  "unsaved": {
-    "title": "Leave without saving?",
-    "content": "You have changes that are not saved. If you leave now they are lost.",
-    "leave": "Leave",
-    "stay": "Stay"
   }
 }

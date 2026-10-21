@@ -14,9 +14,10 @@ import type {
   EmailVerifyStatus,
   SmtpSettings,
 } from '@sab/shared';
+import { useConfirmLeave } from '@/components/forms/unsaved-guard';
 import { Heading } from '@/components/ui/heading';
+import { FormColumn } from '@/components/ui/form-column';
 import { EMAIL_VERIFY_TABS, type EmailVerifyTab } from '@/lib/email-verify/tabs';
-import { BlocklistCard } from './blocklist-card';
 import { ButtonCard } from './button-card';
 import { ListsCard } from './lists-card';
 import { MembersCard } from './members-card';
@@ -24,7 +25,6 @@ import { OverviewCard } from './overview-card';
 import { RulesEditor } from './rules-editor';
 import { SettingsCard } from './settings-card';
 import { SmtpCard } from './smtp-card';
-import { UnsavedGuardProvider, useConfirmLeave } from './unsaved-guard';
 
 /** What each tab needs from the server; the page reads only the open tab's data. */
 export type EmailVerifyTabProps =
@@ -37,10 +37,8 @@ export type EmailVerifyTabProps =
       blocklist: EmailBlocklist;
       config: EmailVerifyConfig;
     }
-  | { tab: 'blocklist'; blocklist: EmailBlocklist }
   | { tab: 'lists'; lists: EmailListSummary[] }
   | { tab: 'members'; members: EmailMemberPage; query: EmailMemberListQuery }
-  | { tab: 'button'; config: EmailVerifyConfig }
   | { tab: 'smtp' };
 
 type EmailVerifyViewProps = {
@@ -51,14 +49,6 @@ type EmailVerifyViewProps = {
 
 /** A server's email verification; the tab is in the URL so a link opens it and the server reads only that tab's data. */
 export function EmailVerifyView(props: EmailVerifyViewProps) {
-  return (
-    <UnsavedGuardProvider>
-      <EmailVerifyTabs {...props} />
-    </UnsavedGuardProvider>
-  );
-}
-
-function EmailVerifyTabs(props: EmailVerifyViewProps) {
   const { guildId, smtp } = props;
   const confirmLeave = useConfirmLeave();
   const t = useTranslations('web-email-verify');
@@ -71,9 +61,18 @@ function EmailVerifyTabs(props: EmailVerifyViewProps) {
   const panel = ((): ReactNode => {
     switch (props.tab) {
       case 'overview':
-        return <OverviewCard guildId={guildId} status={props.status} />;
+        return (
+          <FormColumn>
+            <OverviewCard guildId={guildId} status={props.status} />
+          </FormColumn>
+        );
       case 'settings':
-        return <SettingsCard guildId={guildId} config={props.config} />;
+        return (
+          <FormColumn>
+            <SettingsCard guildId={guildId} config={props.config} />
+            <ButtonCard guildId={guildId} verifyMessage={props.config.verifyMessage} />
+          </FormColumn>
+        );
       case 'rules':
         return (
           // Remounted when the saved rules change, so the editor starts from what the server now holds.
@@ -86,22 +85,16 @@ function EmailVerifyTabs(props: EmailVerifyViewProps) {
             config={props.config}
           />
         );
-      case 'blocklist':
-        return (
-          <BlocklistCard
-            key={props.blocklist.patterns.join('\n')}
-            guildId={guildId}
-            blocklist={props.blocklist}
-          />
-        );
       case 'lists':
         return <ListsCard guildId={guildId} lists={props.lists} />;
       case 'members':
         return <MembersCard guildId={guildId} page={props.members} query={props.query} />;
-      case 'button':
-        return <ButtonCard guildId={guildId} verifyMessage={props.config.verifyMessage} />;
       case 'smtp':
-        return <SmtpCard guildId={guildId} settings={smtp} />;
+        return (
+          <FormColumn>
+            <SmtpCard guildId={guildId} settings={smtp} />
+          </FormColumn>
+        );
     }
   })();
 

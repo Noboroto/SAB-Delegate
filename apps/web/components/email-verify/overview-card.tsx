@@ -85,7 +85,7 @@ export function OverviewCard({ guildId, status }: { guildId: string; status: Ema
                 sendTest.reset();
                 setEmail(event.target.value);
               }}
-              style={{ flex: '1 1 240px', width: 'auto', minWidth: 0 }}
+              style={{ flex: '1 1 var(--w-sm)', width: 'auto', minWidth: 0 }}
             />
             <Button
               htmlType="submit"

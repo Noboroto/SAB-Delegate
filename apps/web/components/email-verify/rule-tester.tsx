@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { Alert, Card, Input, Typography } from 'antd';
 import { useTranslations } from 'next-intl';
 import { EMAIL_ADDRESS_MAX } from '@sab/shared';
+import { ResultBlock } from '@/components/ui/result-block';
 import { useRoles } from '@/lib/discord/use-roles';
 import { testEmailAccess, type RuleDraft } from '@/lib/email-verify/rule-draft';
 
@@ -63,36 +64,38 @@ export function RuleTester({ guildId, drafts, blockPatterns, defaultRoleIds }: R
             onChange={(event) => setInvite(event.target.value)}
           />
         </div>
-        <div aria-live="polite" style={{ display: 'grid', gap: 'var(--space-2)' }}>
-          {outcome === undefined || status === undefined ? (
-            <Typography.Text type="secondary">{t('empty')}</Typography.Text>
-          ) : (
-            <>
-              <Alert
-                type={
-                  status === 'ACCEPTED' ? 'success' : status === 'BLOCKED' ? 'error' : 'warning'
-                }
-                showIcon
-                title={t(`results.${status}`)}
-                description={
-                  status === 'ACCEPTED'
-                    ? roleNames.length > 0
-                      ? t('roles', { names: roleNames.join(', ') })
-                      : t('noRoles')
-                    : undefined
-                }
-              />
-              {outcome.usesLists ? (
-                <Typography.Text type="secondary">{t('listNote')}</Typography.Text>
-              ) : null}
-              {outcome.skipped > 0 ? (
-                <Typography.Text type="secondary">
-                  {t('skipped', { count: outcome.skipped })}
-                </Typography.Text>
-              ) : null}
-            </>
-          )}
-        </div>
+        <ResultBlock>
+          <div aria-live="polite" style={{ display: 'grid', gap: 'var(--space-2)' }}>
+            {outcome === undefined || status === undefined ? (
+              <Typography.Text type="secondary">{t('empty')}</Typography.Text>
+            ) : (
+              <>
+                <Alert
+                  type={
+                    status === 'ACCEPTED' ? 'success' : status === 'BLOCKED' ? 'error' : 'warning'
+                  }
+                  showIcon
+                  title={t(`results.${status}`)}
+                  description={
+                    status === 'ACCEPTED'
+                      ? roleNames.length > 0
+                        ? t('roles', { names: roleNames.join(', ') })
+                        : t('noRoles')
+                      : undefined
+                  }
+                />
+                {outcome.usesLists ? (
+                  <Typography.Text type="secondary">{t('listNote')}</Typography.Text>
+                ) : null}
+                {outcome.skipped > 0 ? (
+                  <Typography.Text type="secondary">
+                    {t('skipped', { count: outcome.skipped })}
+                  </Typography.Text>
+                ) : null}
+              </>
+            )}
+          </div>
+        </ResultBlock>
       </div>
     </Card>
   );

@@ -142,6 +142,34 @@ describe('email-verify route', () => {
     expect(screen.getByRole('tab', { name: 'Tổng quan', selected: true })).toBeInTheDocument();
   });
 
+  it('shows six tabs, the blocklist and button having moved into rules and settings', async () => {
+    renderWithProviders(
+      await EmailVerifyPage({ params, searchParams: Promise.resolve({ tab: 'nope' }) }),
+    );
+    expect(screen.getAllByRole('tab')).toHaveLength(6);
+    expect(screen.queryByRole('tab', { name: 'Danh sách chặn' })).toBeNull();
+    expect(screen.queryByRole('tab', { name: 'Nút xác thực' })).toBeNull();
+  });
+
+  it('opens the rules tab, with the blocklist card, for the retired blocklist link', async () => {
+    renderWithProviders(
+      await EmailVerifyPage({ params, searchParams: Promise.resolve({ tab: 'blocklist' }) }),
+    );
+    expect(
+      screen.getByRole('tab', { name: 'Quy tắc truy cập', selected: true }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Lưu danh sách chặn')).toBeInTheDocument();
+  });
+
+  it('opens the settings tab, with the verify button card, for the retired button link', async () => {
+    renderWithProviders(
+      await EmailVerifyPage({ params, searchParams: Promise.resolve({ tab: 'button' }) }),
+    );
+    expect(screen.getByRole('tab', { name: 'Cài đặt', selected: true })).toBeInTheDocument();
+    expect(paths()).toContain(`${BASE}/config`);
+    expect(screen.getByText('Nút xác thực')).toBeInTheDocument();
+  });
+
   it('reads the rules, lists, blocklist and config the rule editor needs', async () => {
     renderWithProviders(
       await EmailVerifyPage({ params, searchParams: Promise.resolve({ tab: 'rules' }) }),

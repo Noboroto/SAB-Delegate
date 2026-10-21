@@ -6,10 +6,8 @@
     "overview": "Tổng quan",
     "settings": "Cài đặt",
     "rules": "Quy tắc truy cập",
-    "blocklist": "Danh sách chặn",
     "lists": "Danh sách email",
     "members": "Thành viên",
-    "button": "Nút xác thực",
     "smtp": "Máy chủ thư"
   },
   "overview": {
@@ -174,7 +172,9 @@
     "noEmails": "Chưa có địa chỉ nào để gửi.",
     "entries": "Địa chỉ của danh sách {name}",
     "deleteLabel": "Xoá danh sách {name}",
-    "tooManyEntries": "Một danh sách chứa tối đa {max} địa chỉ. Danh sách này có {count} và bạn đang thêm tối đa {adding}."
+    "tooManyEntries": "Một danh sách chứa tối đa {max} địa chỉ. Danh sách này có {count} và bạn đang thêm tối đa {adding}.",
+    "deleteTitle": "Xoá danh sách này?",
+    "clearTitle": "Xoá mọi địa chỉ?"
   },
   "members": {
     "title": "Thành viên đã xác thực",
@@ -197,7 +197,7 @@
     "manualEmail": "Địa chỉ email",
     "manualDone": "Đã xác thực thành viên.",
     "revoke": "Gỡ xác thực",
-    "revokeConfirm": "Gỡ xác thực của thành viên này? Các role đã cấp sẽ bị thu hồi.",
+    "revokeConfirm": "Gỡ xác thực của {name}? Các role đã cấp sẽ bị thu hồi.",
     "revoked": "Đã gỡ xác thực.",
     "export": "Xuất Excel",
     "exportConfirm": "File liệt kê mọi thành viên đã xác thực kèm địa chỉ email, tên Discord và role. File chứa dữ liệu cá nhân: hãy giữ cẩn thận và không chia sẻ.",
@@ -207,7 +207,8 @@
     "revokeLabel": "Gỡ xác thực của {name}",
     "exportTitle": "Xuất thành viên ra Excel?",
     "exportOk": "Xuất",
-    "exporting": "Đang tạo tệp..."
+    "exporting": "Đang tạo tệp...",
+    "revokeTitle": "Gỡ xác thực này?"
   },
   "button": {
     "title": "Nút xác thực",
@@ -221,7 +222,10 @@
     "defaultHelp": "Để trống một ô để dùng nội dung có sẵn.",
     "defaultText": "Nội dung có sẵn",
     "preview": "Xem trước",
-    "channelRequired": "Hãy chọn kênh để đăng."
+    "channelRequired": "Hãy chọn kênh để đăng.",
+    "postTo": "Đăng nút vào #{channel}",
+    "confirmTitle": "Đăng nút xác thực?",
+    "confirmPlan": "Một tin có nút xác thực sẽ được đăng vào #{channel}, giống bản xem trước."
   },
   "smtp": {
     "title": "Máy chủ thư",
@@ -233,8 +237,6 @@
     "username": "Tên đăng nhập",
     "password": "Mật khẩu",
     "passwordHelp": "Để trống để giữ mật khẩu đã lưu.",
-    "passwordSet": "Đã lưu một mật khẩu.",
-    "passwordNotSet": "Chưa lưu mật khẩu.",
     "fromAddress": "Địa chỉ người gửi",
     "fromName": "Tên người gửi",
     "enabled": "Bật gửi thư",
@@ -246,22 +248,15 @@
       "unreachable": "Không kết nối được tới máy chủ thư.",
       "auth": "Máy chủ thư từ chối tên đăng nhập hoặc mật khẩu.",
       "rejected": "Máy chủ thư từ chối yêu cầu.",
-      "blocked": "Địa chỉ máy chủ thư này không được phép."
+      "unresolved": "Không tìm thấy tên máy chủ thư. Hãy kiểm tra lại tên máy chủ."
     },
     "passwordUnchanged": "giữ nguyên",
     "fromAddressHelp": "Địa chỉ mà email được gửi đi từ đó.",
-    "unavailable": "Máy chủ chưa có LLM_KEY_SECRET nên chưa lưu được máy chủ thư.",
     "saveFirst": "Hãy lưu trước rồi mới thử. Phép thử dùng máy chủ thư đã lưu.",
     "errors": {
       "required": "Hãy điền ô này.",
       "invalid": "Giá trị này không hợp lệ.",
       "passwordAgain": "Hãy nhập lại mật khẩu cho máy chủ mới."
     }
-  },
-  "unsaved": {
-    "title": "Rời đi mà chưa lưu?",
-    "content": "Bạn có thay đổi chưa lưu. Rời đi bây giờ sẽ mất chúng.",
-    "leave": "Rời đi",
-    "stay": "Ở lại"
   }
 }

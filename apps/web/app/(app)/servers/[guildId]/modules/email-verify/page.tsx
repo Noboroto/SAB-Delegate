@@ -46,8 +46,6 @@ async function loadTab(
       ]);
       return { tab, rules, lists, blocklist, config };
     }
-    case 'blocklist':
-      return { tab, blocklist: await getEmailBlocklist(guildId) };
     case 'lists':
       return { tab, lists: await getEmailLists(guildId) };
     case 'members': {
@@ -61,8 +59,6 @@ async function loadTab(
       }
       return { tab, members, query: membersQuery };
     }
-    case 'button':
-      return { tab, config: await getEmailVerifyConfig(guildId) };
     case 'smtp':
       return { tab };
     case 'overview':

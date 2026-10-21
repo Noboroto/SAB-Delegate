@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useRef, useState } from 'react';
-import { App, Button, Input, Popconfirm, Typography } from 'antd';
+import { App, Button, Input, Typography } from 'antd';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import {
@@ -11,6 +11,7 @@ import {
   type EmailListSummary,
 } from '@sab/shared';
 import { ErrorAlert } from '@/components/data/error-alert';
+import { ConfirmAction } from '@/components/forms/confirm-action';
 import { ActionRow } from '@/components/ui/action-row';
 import { useApiMutation } from '@/lib/api/mutations';
 import {
@@ -52,12 +53,10 @@ export function ListEntriesPanel({ guildId, list }: { guildId: string; list: Ema
     }
     return total;
   });
-  const clear = useApiMutation(() => clearEmailListEntries(guildId, list.id));
-  const busy = apply.pending || clear.pending;
+  const busy = apply.pending;
   const hasEmails = parsed.emails.length > 0;
 
   const onApply = async (mode: Mode) => {
-    clear.reset();
     setResult(undefined);
     setOverflow(undefined);
     // Refused up front: the list would end up over its cap and the runs sent so far would stay.
@@ -73,16 +72,6 @@ export function ListEntriesPanel({ guildId, list }: { guildId: string; list: Ema
     setResult(outcome.data);
     setText('');
     setFileName(undefined);
-  };
-
-  const onClear = async () => {
-    apply.reset();
-    setResult(undefined);
-    setOverflow(undefined);
-    const outcome = await clear.run(undefined);
-    if (outcome?.ok !== true) return;
-    void message.success(t('cleared'));
-    router.refresh();
   };
 
   const onFile = async (file: File | undefined) => {
@@ -152,12 +141,9 @@ export function ListEntriesPanel({ guildId, list }: { guildId: string; list: Ema
       {result === undefined ? null : (
         <Typography.Text role="status">{t('result', { ...result })}</Typography.Text>
       )}
-      {apply.error === undefined && clear.error === undefined ? null : (
-        <ErrorAlert error={apply.error ?? clear.error} />
-      )}
+      {apply.error === undefined ? null : <ErrorAlert error={apply.error} />}
       <ActionRow>
         <Button
-          type="primary"
           loading={apply.pending}
           disabled={busy || !hasEmails}
           onClick={() => void onApply('add')}
@@ -167,17 +153,26 @@ export function ListEntriesPanel({ guildId, list }: { guildId: string; list: Ema
         <Button disabled={busy || !hasEmails} onClick={() => void onApply('remove')}>
           {t('remove')}
         </Button>
-        <Popconfirm
-          title={t('clearConfirm', { name: list.name })}
-          okText={t('clear')}
-          okButtonProps={{ danger: true }}
-          onConfirm={() => void onClear()}
+        <ConfirmAction
+          label={t('clear')}
+          modalTitle={t('clearTitle')}
+          confirmLabel={t('clear')}
           disabled={busy || list.entryCount === 0}
-        >
-          <Button danger loading={clear.pending} disabled={busy || list.entryCount === 0}>
-            {t('clear')}
-          </Button>
-        </Popconfirm>
+          // The service has no dry run for this; the plan is the count the table already shows.
+          preview={() => Promise.resolve(list)}
+          execute={() => clearEmailListEntries(guildId, list.id)}
+          renderPlan={(plan) => (
+            <Typography.Paragraph style={{ marginBottom: 0 }}>
+              {t('clearConfirm', { name: plan.name })}
+            </Typography.Paragraph>
+          )}
+          onDone={() => {
+            setResult(undefined);
+            setOverflow(undefined);
+            void message.success(t('cleared'));
+            router.refresh();
+          }}
+        />
       </ActionRow>
     </div>
   );

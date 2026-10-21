@@ -16,7 +16,7 @@ import {
   settingsPatch,
   type SettingsValues,
 } from '@/lib/email-verify/settings-patch';
-import { useReportUnsaved } from './unsaved-guard';
+import { useUnsavedChanges } from '@/components/forms/unsaved-guard';
 
 /** The switch, the roles, the log channel and the join behaviour of a server's email verification. */
 export function SettingsCard({ guildId, config }: { guildId: string; config: EmailVerifyConfig }) {
@@ -31,7 +31,7 @@ export function SettingsCard({ guildId, config }: { guildId: string; config: Ema
   const watched = Form.useWatch([], form);
   const dirty =
     Object.keys(settingsPatch(watched ?? settingsFromConfig(config), config)).length > 0;
-  useReportUnsaved(dirty);
+  useUnsavedChanges(dirty);
 
   const onFinish = async (values: SettingsValues) => {
     const outcome = await save.run(values);

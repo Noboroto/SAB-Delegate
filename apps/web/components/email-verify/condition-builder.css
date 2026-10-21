@@ -2,7 +2,8 @@
 .ev-builder .queryBuilder .ruleGroup {
   background: var(--surface-secondary);
   border: 1px solid var(--border-strong);
-  border-radius: 6px;
+  /* AntD's own radius variable, so the group follows the theme's corner size. */
+  border-radius: var(--ant-border-radius, 8px);
   padding: var(--space-2);
 }
 
@@ -22,12 +23,12 @@
 }
 
 .ev-builder .queryBuilder .rule .rule-fields {
-  flex: 0 1 160px;
+  flex: 0 1 var(--w-xs);
   min-width: 0;
 }
 
 .ev-builder .queryBuilder .rule .rule-value {
-  flex: 1 1 200px;
+  flex: 1 1 var(--w-sm);
   min-width: 0;
 }
 
@@ -35,4 +36,18 @@
 .ev-builder .queryBuilder .rule .rule-value .ant-select,
 .ev-builder .queryBuilder .rule .rule-fields .ant-select {
   width: 100%;
+}
+
+/* The AND/OR select keeps a width its label fits in, so it never squeezes to a sliver beside the buttons. */
+.ev-builder .queryBuilder .ruleGroup .ruleGroup-combinators {
+  flex: 0 0 auto;
+  min-width: var(--w-2xs);
+}
+
+/* On a phone every field takes a full row instead of overflowing the card. */
+@media (max-width: 480px) {
+  .ev-builder .queryBuilder .rule .rule-fields,
+  .ev-builder .queryBuilder .rule .rule-value {
+    flex: 1 1 100%;
+  }
 }

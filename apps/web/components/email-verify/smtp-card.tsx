@@ -12,6 +12,7 @@ import {
   type SmtpTestResult,
 } from '@sab/shared';
 import { ErrorAlert } from '@/components/data/error-alert';
+import { useUnsavedChanges } from '@/components/forms/unsaved-guard';
 import { ActionRow } from '@/components/ui/action-row';
 import { useApiMutation } from '@/lib/api/mutations';
 import { saveSmtpSettings, testSmtpSettings } from '@/lib/email-verify/email-verify-api';
@@ -76,6 +77,7 @@ export function SmtpCard({ guildId, settings }: { guildId: string; settings: Smt
   const test = useApiMutation(() => testSmtpSettings(guildId));
   const watched = Form.useWatch([], form);
   const unsaved = differsFromSaved(watched, settings);
+  useUnsavedChanges(unsaved);
   const busy = save.pending || test.pending;
 
   // The shared schema is the one check; a field it refuses is marked on the form with a sentence.
@@ -151,14 +153,6 @@ export function SmtpCard({ guildId, settings }: { guildId: string; settings: Smt
         onFinish={(values) => void onSave(values)}
       >
         <Alert type="info" showIcon title={t('intro')} style={{ marginBottom: 'var(--space-4)' }} />
-        {disabled ? (
-          <Alert
-            type="warning"
-            showIcon
-            title={t('unavailable')}
-            style={{ marginBottom: 'var(--space-4)' }}
-          />
-        ) : null}
         <Form.Item name="host" label={t('host')}>
           <Input autoComplete="off" maxLength={253} />
         </Form.Item>
@@ -171,11 +165,7 @@ export function SmtpCard({ guildId, settings }: { guildId: string; settings: Smt
         <Form.Item name="username" label={t('username')}>
           <Input autoComplete="off" maxLength={320} />
         </Form.Item>
-        <Form.Item
-          name="password"
-          label={t('password')}
-          extra={`${t('passwordHelp')} ${settings.passwordSet ? t('passwordSet') : t('passwordNotSet')}`}
-        >
+        <Form.Item name="password" label={t('password')} extra={t('passwordHelp')}>
           <Input.Password
             autoComplete="new-password"
             maxLength={500}

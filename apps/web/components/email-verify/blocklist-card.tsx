@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { EMAIL_BLOCK_PATTERNS_MAX, EmailBlocklistSchema, type EmailBlocklist } from '@sab/shared';
 import { ErrorAlert } from '@/components/data/error-alert';
+import { useUnsavedChanges } from '@/components/forms/unsaved-guard';
 import { ActionRow } from '@/components/ui/action-row';
 import { useApiMutation } from '@/lib/api/mutations';
 import { saveEmailBlocklist } from '@/lib/email-verify/email-verify-api';
@@ -35,6 +36,7 @@ export function BlocklistCard({
   );
   const tooMany = patterns.length > EMAIL_BLOCK_PATTERNS_MAX;
   const changed = JSON.stringify(patterns) !== JSON.stringify(blocklist.patterns);
+  useUnsavedChanges(changed);
 
   const onSave = async () => {
     const parsed = EmailBlocklistSchema.safeParse({ patterns });

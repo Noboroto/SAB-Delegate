@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useRef, useState } from 'react';
-import { Alert, App, Button, Card, Typography } from 'antd';
+import { Alert, App, Button, Card, Collapse, Typography } from 'antd';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import {
@@ -13,6 +13,7 @@ import {
 } from '@sab/shared';
 import { ErrorAlert } from '@/components/data/error-alert';
 import { ActionRow } from '@/components/ui/action-row';
+import { FormColumn } from '@/components/ui/form-column';
 import { useApiMutation } from '@/lib/api/mutations';
 import { saveEmailRules } from '@/lib/email-verify/email-verify-api';
 import {
@@ -21,9 +22,10 @@ import {
   resolveDraft,
   type RuleDraft,
 } from '@/lib/email-verify/rule-draft';
+import { BlocklistCard } from './blocklist-card';
 import { RuleCard } from './rule-card';
 import { RuleTester } from './rule-tester';
-import { useReportUnsaved } from './unsaved-guard';
+import { useUnsavedChanges } from '@/components/forms/unsaved-guard';
 
 interface RulesEditorProps {
   guildId: string;
@@ -75,7 +77,7 @@ export function RulesEditor({ guildId, view, lists, blocklist, config }: RulesEd
     [lists, missingLists],
   );
   const dirty = signatureOf(drafts) !== savedSignature;
-  useReportUnsaved(dirty);
+  useUnsavedChanges(dirty);
   const full = drafts.length >= ACCESS_RULES_MAX;
   const hasErrors = drafts.some((draft) => !resolveDraft(draft).ok);
 
@@ -116,19 +118,24 @@ export function RulesEditor({ guildId, view, lists, blocklist, config }: RulesEd
           <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
             {t('intro')}
           </Typography.Paragraph>
-          <Alert
-            type="info"
-            showIcon
-            title={t('help.title')}
-            description={
-              <div style={{ display: 'grid', gap: 'var(--space-1)' }}>
-                <span>{t('help.fields')}</span>
-                <span>{t('help.example')}</span>
-                <span>{t('help.example2')}</span>
-                <span>{t('help.precedence')}</span>
-                <span>{t('help.invite')}</span>
-              </div>
-            }
+          {/* Collapsed: it is reference text, and open it pushes the rules a screen down. */}
+          <Collapse
+            size="small"
+            items={[
+              {
+                key: 'help',
+                label: t('help.title'),
+                children: (
+                  <div style={{ display: 'grid', gap: 'var(--space-1)' }}>
+                    <span>{t('help.fields')}</span>
+                    <span>{t('help.example')}</span>
+                    <span>{t('help.example2')}</span>
+                    <span>{t('help.precedence')}</span>
+                    <span>{t('help.invite')}</span>
+                  </div>
+                ),
+              },
+            ]}
           />
           {missingLists.length === 0 ? null : (
             <Alert
@@ -185,12 +192,20 @@ export function RulesEditor({ guildId, view, lists, blocklist, config }: RulesEd
           </ActionRow>
         </div>
       </Card>
-      <RuleTester
-        guildId={guildId}
-        drafts={drafts}
-        blockPatterns={blocklist.patterns}
-        defaultRoleIds={config.defaultRoleIds}
-      />
+      <FormColumn>
+        {/* Remounted when the saved patterns change, so the field starts from what the server now holds. */}
+        <BlocklistCard
+          key={blocklist.patterns.join('\n')}
+          guildId={guildId}
+          blocklist={blocklist}
+        />
+        <RuleTester
+          guildId={guildId}
+          drafts={drafts}
+          blockPatterns={blocklist.patterns}
+          defaultRoleIds={config.defaultRoleIds}
+        />
+      </FormColumn>
     </div>
   );
 }
