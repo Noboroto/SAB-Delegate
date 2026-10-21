@@ -1,5 +1,4 @@
 import { createHash } from 'node:crypto';
-import { isIP } from 'node:net';
 import { Injectable, Logger, type OnModuleDestroy } from '@nestjs/common';
 import { AUDIT_ACTIONS, ErrorCode, type ActorContext, type SmtpTestResult } from '@sab/shared';
 import { createTransport } from 'nodemailer';
@@ -7,7 +6,6 @@ import { AuditService } from '../../common/audit/audit.service.js';
 import { ServiceError } from '../../common/errors/service-error.js';
 import { buildCodeMail, buildTestMail } from './mail-template.js';
 import { SmtpConfigService } from './smtp-config.service.js';
-import { resolveSafeSmtpAddress } from './smtp-host-guard.js';
 import { SmtpTestLimiter } from './smtp-test-limiter.js';
 
 type Transporter = ReturnType<typeof createTransport>;
@@ -17,6 +15,7 @@ type SmtpTarget = NonNullable<Awaited<ReturnType<SmtpConfigService['resolve']>>>
 const CONNECTION_TIMEOUT_MS = 10_000;
 const GREETING_TIMEOUT_MS = 10_000;
 const SOCKET_TIMEOUT_MS = 20_000;
+const DNS_TIMEOUT_MS = 15_000;
 const ERROR_MAX = 200;
 
 /** What of a failed send is safe to log: codes only, since the text can quote the address. */
@@ -27,11 +26,12 @@ function failureLabel(error: unknown): string {
 }
 
 function testFailureReason(error: unknown): Exclude<SmtpTestResult['reason'], undefined> {
-  if (error instanceof ServiceError) return 'blocked';
   const { code, responseCode } = (typeof error === 'object' && error !== null ? error : {}) as {
     code?: unknown;
     responseCode?: unknown;
   };
+  // A name that does not resolve is told apart from a server that does not answer.
+  if (code === 'EDNS' || code === 'ENOTFOUND' || code === 'EAI_AGAIN') return 'unresolved';
   if (code === 'EAUTH') return 'auth';
   if (code === 'EENVELOPE' || (typeof responseCode === 'number' && responseCode >= 500)) {
     return 'rejected';
@@ -61,12 +61,8 @@ export function scrubSmtpError(error: unknown, target: Pick<SmtpTarget, 'auth'> 
  * Sends the mails of email verification through the saved SMTP account. One
  * connection setup per mail is fine at the volume the per-server daily cap
  * allows, so there is no pool. The transporter is cached under a hash of the
- * account (host, port, secure, user, password) and the address the host
- * resolved to, so a saved change, or a host that moved, takes effect on the
- * next mail and the old transporter is closed.
- *
- * The host is resolved and checked on every use and the connection goes to
- * the checked address, never to the name again.
+ * account (host, port, secure, user, password), so a saved change takes
+ * effect on the next mail and the old transporter is closed.
  */
 @Injectable()
 export class MailerService implements OnModuleDestroy {
@@ -108,7 +104,7 @@ export class MailerService implements OnModuleDestroy {
     let result: SmtpTestResult;
     let detail: string | undefined;
     try {
-      transport = createTransport(await this.optionsFor(target));
+      transport = createTransport(this.optionsFor(target));
       await transport.verify();
       result = { ok: true };
     } catch (error) {
@@ -138,8 +134,7 @@ export class MailerService implements OnModuleDestroy {
     const target = await this.smtp.resolve();
     if (target === null) throw new ServiceError(ErrorCode.SMTP_NOT_CONFIGURED);
     try {
-      const options = await this.optionsFor(target);
-      const transport = this.transportFor(keyOf(target, options.host), options);
+      const transport = this.transportFor(keyOf(target), this.optionsFor(target));
       await transport.sendMail({
         from: { name: target.fromName ?? '', address: target.fromAddress },
         to,
@@ -162,33 +157,30 @@ export class MailerService implements OnModuleDestroy {
     return transport;
   }
 
-  private async optionsFor(target: SmtpTarget) {
-    const address = await resolveSafeSmtpAddress(target.host);
+  /**
+   * Connects to the saved host by name, with no address pre-check: only
+   * managers of the admin server can save the account. Nodemailer resolves the
+   * name itself, IPv4 before IPv6.
+   */
+  private optionsFor(target: SmtpTarget) {
     return {
-      host: address,
+      host: target.host,
       port: target.port,
       secure: target.secure,
-      // Names the host the certificate is checked against when connecting to a pinned address.
-      ...(isIP(target.host) === 0 && address !== target.host
-        ? { tls: { servername: target.host } }
-        : {}),
       // The login is never sent over a connection that was not upgraded to TLS.
       requireTLS: !target.secure,
       auth: target.auth,
       connectionTimeout: CONNECTION_TIMEOUT_MS,
       greetingTimeout: GREETING_TIMEOUT_MS,
       socketTimeout: SOCKET_TIMEOUT_MS,
+      dnsTimeout: DNS_TIMEOUT_MS,
     };
   }
 }
 
 /** The cache key of a transporter: a hash, so the password is not kept as a map key. */
-function keyOf(target: SmtpTarget, address: string): string {
+function keyOf(target: SmtpTarget): string {
   return createHash('sha256')
-    .update(
-      [target.host, target.port, target.secure, target.auth.user, target.auth.pass, address].join(
-        '|',
-      ),
-    )
+    .update([target.host, target.port, target.secure, target.auth.user, target.auth.pass].join('|'))
     .digest('hex');
 }

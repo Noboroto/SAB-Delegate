@@ -11,7 +11,6 @@ import { ServiceError } from '../../common/errors/service-error.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { EMAIL_VERIFY_ENV, EmailCryptoService } from './email-crypto.js';
 import type { EmailVerifyEnv } from './email-verify.env.js';
-import { resolveSafeSmtpAddress } from './smtp-host-guard.js';
 
 /** A mail account ready to connect to, the password decrypted. Never log or return it. */
 type SmtpTarget = {
@@ -119,7 +118,6 @@ export class SmtpConfigService {
     const parsed = SmtpSettingsInputSchema.safeParse(input);
     if (!parsed.success) throw new ServiceError(ErrorCode.VALIDATION_FAILED);
     const { password, ...data } = parsed.data;
-    await resolveSafeSmtpAddress(data.host);
 
     // The database, not the cache: a kept password must be the one stored now.
     const current = await this.row();

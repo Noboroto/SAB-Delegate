@@ -3,10 +3,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { EmailCryptoService } from './email-crypto.js';
 import { SMTP_CACHE_TTL_MS, SmtpConfigService } from './smtp-config.service.js';
 
-vi.mock('./smtp-host-guard.js', () => ({
-  resolveSafeSmtpAddress: vi.fn((host: string) => Promise.resolve(host)),
-}));
-
 const ADMIN = '300000000000000001';
 const secret = randomBytes(24).toString('hex');
 const password = `pw-${randomBytes(9).toString('hex')}`;

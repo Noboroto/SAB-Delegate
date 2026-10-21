@@ -1,7 +1,5 @@
 import 'reflect-metadata';
-import { GUARDS_METADATA } from '@nestjs/common/constants';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { FreshAuthGuard } from '../../auth/session.guard.js';
 import {
   GUILD,
   asUser,
@@ -155,12 +153,6 @@ describe('email-verify REST: SMTP', () => {
     passwordSet: true,
     passwordEnc: 'leak',
   };
-
-  it('needs a recent login to save', () => {
-    const handler = Object.getOwnPropertyDescriptor(EmailVerifyController.prototype, 'saveSmtp')
-      ?.value as object;
-    expect(Reflect.getMetadata(GUARDS_METADATA, handler)).toContain(FreshAuthGuard);
-  });
 
   it('never returns the password or its ciphertext', async () => {
     smtp.view.mockResolvedValue(smtpView);

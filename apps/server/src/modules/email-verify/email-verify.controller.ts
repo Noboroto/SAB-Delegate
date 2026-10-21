@@ -53,7 +53,6 @@ import {
 } from '@sab/shared';
 import type { FastifyReply } from 'fastify';
 import { Principal, type SessionPrincipal } from '../../auth/principal.decorator.js';
-import { FreshAuthGuard } from '../../auth/session.guard.js';
 import { ServiceError } from '../../common/errors/service-error.js';
 import { ManageGuildGuard } from '../../common/guild-access/manage-guild.guard.js';
 import { httpActor } from '../../common/rest/rest-wiring.js';
@@ -290,9 +289,7 @@ export class EmailVerifyController {
     return SmtpSettingsSchema.parse(await this.smtp.view(guildId));
   }
 
-  /** A recent login only: the account mail is sent through is changed here. */
   @Put('smtp')
-  @UseGuards(FreshAuthGuard)
   async saveSmtp(
     @Param('guildId') guildId: string,
     @Principal() principal: SessionPrincipal,

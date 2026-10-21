@@ -39,7 +39,6 @@
   "EMAIL_LIST_FULL": "Danh sách email này đã đầy: không chứa thêm được từng ấy địa chỉ.",
   "EMAIL_EXPORT_TOO_LARGE": "Có quá nhiều thành viên đã xác thực để xuất vào một tệp (giới hạn {max}).",
   "SMTP_NOT_CONFIGURED": "Chưa cài tài khoản SMTP nên chưa gửi được email.",
-  "SMTP_ADDRESS_BLOCKED": "Địa chỉ máy chủ thư này không được phép.",
   "VALIDATION_FAILED": "Một số giá trị không hợp lệ. Hãy kiểm tra lại những gì đã nhập.",
   "SCHEDULE_LIMIT_REACHED": "Server này đã đạt số tin nhắn hẹn giờ tối đa đang chờ. Hãy huỷ bớt hoặc chờ chúng được gửi.",
   "SCHEDULE_TOO_FAR": "Thời điểm này quá xa. Hãy chọn thời điểm sớm hơn.",

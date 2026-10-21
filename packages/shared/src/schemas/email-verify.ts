@@ -258,7 +258,7 @@ export type SmtpSettingsInput = z.infer<typeof SmtpSettingsInputSchema>;
 export const SmtpTestResultSchema = z.object({
   ok: z.boolean(),
   /** Why the test failed; the server's own error text is never passed on. */
-  reason: z.enum(['unreachable', 'auth', 'rejected', 'blocked']).optional(),
+  reason: z.enum(['unreachable', 'unresolved', 'auth', 'rejected']).optional(),
 });
 
 export type SmtpTestResult = z.infer<typeof SmtpTestResultSchema>;

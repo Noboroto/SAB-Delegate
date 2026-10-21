@@ -8,9 +8,6 @@ const createTransport = vi.fn(() => transport);
 vi.mock('nodemailer', () => ({
   createTransport: (...args: unknown[]) => createTransport(...(args as [])),
 }));
-vi.mock('./smtp-host-guard.js', () => ({
-  resolveSafeSmtpAddress: vi.fn((host: string) => Promise.resolve(host)),
-}));
 
 const pass = `pw-${randomBytes(9).toString('hex')}`;
 const target = {
@@ -120,6 +117,24 @@ describe('MailerService.testStored', () => {
     expect(entry?.error).not.toContain(pass);
     expect(entry?.error).not.toContain(Buffer.from(pass).toString('base64'));
     expect(entry?.error.length).toBeLessThanOrEqual(200);
+  });
+
+  it.each(['EDNS', 'ENOTFOUND', 'EAI_AGAIN'])(
+    'tells a host name that does not resolve (%s) apart from a server that does not answer',
+    async (code) => {
+      const { mailer } = setup();
+      transport.verify.mockRejectedValue(Object.assign(new Error('lookup failed'), { code }));
+      expect(await mailer.testStored(actor)).toEqual({ ok: false, reason: 'unresolved' });
+    },
+  );
+
+  it('connects to the saved host by name, upgrading to TLS on a plain port', async () => {
+    const { mailer } = setup();
+    await mailer.testStored(actor);
+    const options = (createTransport.mock.calls.at(-1) as unknown[] | undefined)?.[0] as
+      { host: string; requireTLS: boolean } | undefined;
+    expect(options?.host).toBe(target.host);
+    expect(options?.requireTLS).toBe(!target.secure);
   });
 
   it('refuses a sixth test in the window, and nothing is audited for the refused one', async () => {
