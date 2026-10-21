@@ -17,6 +17,7 @@
   "shortcuts": {
     "title": "Go to",
     "modules": "What the bot does: birthdays, notes, the word game, scheduled messages.",
+    "tools": "Bulk actions: mentions, role assignment, purging messages, creating threads.",
     "commands": "The commands the bot understands, with descriptions.",
     "auditLog": "Who changed what on this server.",
     "settings": "Language, channels and the bot's display name."

@@ -2,7 +2,7 @@
   "title": "Choose a server",
   "subtitle": "The servers you manage.",
   "open": "Open dashboard",
-  "openTo": "Open the dashboard of {name}",
+  "openTo": "Open dashboard — {name}",
   "invite": "Invite bot",
   "inviteTo": "Invite the bot to {name}",
   "inviteShort": "Invite",
@@ -15,7 +15,9 @@
   "empty": {
     "botAbsent": "The bot is not in any of your servers yet. Invite it below.",
     "title": "No servers yet",
-    "body": "You need the Manage Server permission in a server."
+    "body": "You need the Manage Server permission in a server.",
+    "reload": "Reload the list",
+    "none": "No servers yet. You need the Manage Server permission in a server."
   },
   "reauth": {
     "title": "Please sign in again",

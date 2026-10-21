@@ -29,7 +29,14 @@ export function BotStatusCard({ uptimeMs, wsPing }: SystemOverview) {
       extra={<Tag color="success">{t('status.online')}</Tag>}
       style={{ height: '100%' }}
     >
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px 48px' }}>
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          columnGap: 'var(--space-6)',
+          rowGap: 'var(--space-4)',
+        }}
+      >
         <Statistic title={t('status.uptime')} value={uptime} />
         {/* -1 is discord.js saying no heartbeat has been measured yet. */}
         <Statistic

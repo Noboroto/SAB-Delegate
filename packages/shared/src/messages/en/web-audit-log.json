@@ -25,6 +25,7 @@
   },
   "empty": "No actions have been recorded yet.",
   "emptyFiltered": "No action matches the filter.",
+  "clearFilters": "Clear filters",
   "older": "Older",
   "newest": "Back to newest",
   "actions": {

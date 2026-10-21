@@ -69,7 +69,7 @@ export function GuildBar({ guilds, currentId }: GuildBarProps) {
       <Select
         aria-label={t('switcher.label')}
         value={currentId}
-        style={{ minWidth: 200, maxWidth: '100%' }}
+        style={{ minWidth: 'var(--w-sm)', maxWidth: '100%' }}
         onChange={(id: string) => router.push(`/servers/${id}`)}
         options={[
           ...guilds.map((guild) => ({

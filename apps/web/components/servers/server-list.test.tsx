@@ -148,7 +148,7 @@ describe('ServerList', () => {
     expect(screen.queryByText(/Chưa có máy chủ nào/)).toBeNull();
     second.unmount();
     renderWithProviders(<ServerList guilds={[]} />);
-    expect(screen.getByText(/Chưa có máy chủ nào/)).toBeInTheDocument();
+    expect(screen.getByText(/Chưa có máy chủ nào\. Bạn cần quyền/)).toBeInTheDocument();
   });
 
   it('leaves out servers that have no invite link', () => {

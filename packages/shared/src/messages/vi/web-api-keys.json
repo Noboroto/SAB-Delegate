@@ -6,6 +6,7 @@
   "usage": "Đang dùng {count}/{max} khoá.",
   "limitReached": "Bạn đã dùng hết {max} khoá. Thu hồi một khoá hoặc chờ nó hết hạn để tạo thêm.",
   "created": "Đã tạo khoá.",
+  "emptyTitle": "Chưa có khoá API nào",
   "empty": "Chưa có khoá nào. Tạo khoá để kết nối công cụ AI.",
   "form": {
     "title": "Tạo khoá API",
@@ -23,12 +24,6 @@
     "submit": "Tạo khoá",
     "cancel": "Huỷ",
     "invalid": "Thông tin khoá chưa hợp lệ. Kiểm tra lại rồi thử lại."
-  },
-  "reauth": {
-    "title": "Cần đăng nhập lại",
-    "body": "Khoá có quyền thay đổi chỉ tạo được ngay sau khi bạn đăng nhập. Hãy đăng nhập lại rồi tạo khoá.",
-    "action": "Đăng nhập lại",
-    "failed": "Không bắt đầu được việc đăng nhập. Hãy thử lại."
   },
   "secret": {
     "title": "Khoá của bạn đã sẵn sàng",
@@ -67,7 +62,6 @@
     "title": "Thu hồi khoá “{name}”?",
     "body": "Khoá ngừng dùng được ngay. Các lịch hẹn giờ do khoá này tạo và chưa chạy sẽ bị huỷ.",
     "confirm": "Thu hồi",
-    "cancel": "Giữ lại",
     "done": "Đã thu hồi khoá."
   },
   "connect": {

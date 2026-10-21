@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import type { LlmSettings } from '@sab/shared';
+import { FormColumn } from '@/components/ui/form-column';
 import { Heading } from '@/components/ui/heading';
 import { PageState } from '@/components/ui/page-state';
 import { LlmSettingsForm } from './llm-settings-form';
@@ -30,10 +31,10 @@ export function LlmSettingsView({ guildId, guildName, settings }: LlmSettingsVie
   return (
     <>
       <Heading title={t('llm.page.title')} subtitle={`${t('llm.page.subtitle')} (${guildName})`} />
-      <div style={{ maxWidth: 720 }}>
+      <FormColumn>
         {/* Remounted when the stored values change, so the form starts from what the server now holds. */}
         <LlmSettingsForm key={JSON.stringify(settings)} guildId={guildId} settings={settings} />
-      </div>
+      </FormColumn>
     </>
   );
 }

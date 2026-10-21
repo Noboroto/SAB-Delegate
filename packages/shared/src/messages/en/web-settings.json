@@ -65,6 +65,7 @@
       "back": "Back to settings"
     },
     "form": {
+      "title": "AI service connection",
       "unavailable": "The server cannot store API keys yet (LLM_KEY_SECRET is missing), so LLM settings cannot be saved.",
       "preset": "Provider",
       "presetCustom": "Other",

@@ -75,7 +75,7 @@ export function LlmModelField({ fetchModels }: { fetchModels: FetchModels }) {
             <AutoComplete
               id={inputId}
               // Wraps under the button on a narrow screen instead of shrinking to a sliver.
-              style={{ flex: '1 1 220px', minWidth: 0 }}
+              style={{ flex: '1 1 var(--w-sm)', minWidth: 0 }}
               options={ids?.map((id) => ({ value: id }))}
               showSearch={{
                 filterOption: (input, option) =>

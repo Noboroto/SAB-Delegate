@@ -1,5 +1,5 @@
 /** Sections of a server's dashboard besides the overview; the overview page links one card to each. */
-export const GUILD_SECTIONS = ['modules', 'commands', 'auditLog', 'settings'] as const;
+export const GUILD_SECTIONS = ['modules', 'tools', 'commands', 'auditLog', 'settings'] as const;
 
 export type GuildSection = (typeof GUILD_SECTIONS)[number];
 
@@ -25,7 +25,7 @@ export type GuildNavChildKey =
   | 'attendance'
   | 'info';
 
-export type GuildNavKey = 'overview' | 'tools' | GuildSection;
+export type GuildNavKey = 'overview' | GuildSection;
 
 export interface GuildNavChild {
   key: GuildNavChildKey;

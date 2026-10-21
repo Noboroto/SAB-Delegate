@@ -41,3 +41,17 @@ export async function signOut(): Promise<void> {
   if (error) throw new AuthClientError(error.code);
   window.location.assign('/login');
 }
+
+/**
+ * Reads the session through the browser, which is what makes Better Auth slide
+ * the expiry and re-issue the cookie once `updateAge` has passed (the server
+ * only reads it on page renders, where the response cannot set cookies).
+ * Failures are ignored on purpose: other calls already handle a 401.
+ */
+export async function touchSession(): Promise<void> {
+  try {
+    await authClient().getSession();
+  } catch {
+    // Offline or the server restarting: the next focus or page load tries again.
+  }
+}

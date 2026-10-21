@@ -15,7 +15,9 @@
   "empty": {
     "botAbsent": "Bot chưa ở máy chủ nào của bạn. Mời bot ở bên dưới.",
     "title": "Chưa có máy chủ nào",
-    "body": "Bạn cần quyền Quản lý máy chủ ở ít nhất một máy chủ."
+    "body": "Bạn cần quyền Quản lý máy chủ ở ít nhất một máy chủ.",
+    "reload": "Tải lại danh sách",
+    "none": "Chưa có máy chủ nào. Bạn cần quyền Quản lý máy chủ ở ít nhất một máy chủ."
   },
   "reauth": {
     "title": "Cần đăng nhập lại",

@@ -141,10 +141,13 @@ describe('BotProfileForm', () => {
     );
 
     await userEvent.click(screen.getByRole('button', { name: "Use the bot's own picture" }));
-    expect(bodies).toEqual([]);
     await userEvent.click(await screen.findByRole('button', { name: 'Use own picture' }));
     expect(await screen.findByText('The bot uses its own picture again.')).toBeInTheDocument();
-    expect(bodies).toEqual([{ avatar: null }]);
+    // The service previews the change first; only the second call changes anything.
+    expect(bodies).toEqual([
+      { avatar: null, dryRun: true },
+      { avatar: null, dryRun: false },
+    ]);
   });
 
   it('keeps an unsaved nickname when the picture is restored, and a picked picture when the name is', async () => {

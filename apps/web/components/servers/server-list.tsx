@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { buildBotInviteUrl, type GuildPickerItem } from '@sab/shared';
 import { ActionRow } from '@/components/ui/action-row';
 import { LinkButton } from '@/components/ui/link-button';
+import { SectionTitle } from '@/components/ui/section-title';
 import { guildIconUrl } from '@/lib/discord-icon';
 
 /** Column spans of both card grids; the invite preview is exactly one row of them. */
@@ -58,34 +59,19 @@ export function ServerList({ guilds }: { guilds: readonly GuildPickerItem[] }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
       <section aria-labelledby="servers-manage">
-        <Typography.Title level={2} id="servers-manage" style={{ fontSize: 18, marginTop: 0 }}>
-          {t('groups.manage')}
-        </Typography.Title>
+        <SectionTitle id="servers-manage">{t('groups.manage')}</SectionTitle>
         {managed.length === 0 ? (
           <Typography.Text type="secondary">
-            {invitable.length > 0 ? (
-              t('empty.botAbsent')
-            ) : (
-              <>
-                {t('empty.title')}. {t('empty.body')}
-              </>
-            )}
+            {invitable.length > 0 ? t('empty.botAbsent') : t('empty.none')}
           </Typography.Text>
         ) : (
-          <Row gutter={[16, 16]}>
+          <Row gutter={[16, 16]} role="list">
             {managed.map((guild) => (
-              <Col key={guild.id} {...COL_SPANS}>
+              <Col key={guild.id} role="listitem" {...COL_SPANS}>
                 <Card>
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 'var(--space-3)',
-                      marginBottom: 'var(--space-4)',
-                    }}
-                  >
+                  <ActionRow style={{ gap: 'var(--space-3)', marginBottom: 'var(--space-4)' }}>
                     <GuildIdentity guild={guild} size={48} />
-                  </div>
+                  </ActionRow>
                   <LinkButton
                     href={`/servers/${guild.id}`}
                     variant="primary"
@@ -102,14 +88,11 @@ export function ServerList({ guilds }: { guilds: readonly GuildPickerItem[] }) {
 
       {invitable.length > 0 && (
         <section aria-labelledby="servers-invite">
-          <Typography.Title level={2} id="servers-invite" style={{ fontSize: 18, marginTop: 0 }}>
-            {t('groups.invite')}
-          </Typography.Title>
+          <SectionTitle id="servers-invite">{t('groups.invite')}</SectionTitle>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
             {anyInvite !== null && (
               <ActionRow>
                 <Button
-                  type="primary"
                   href={buildBotInviteUrl(anyInvite)}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -123,13 +106,7 @@ export function ServerList({ guilds }: { guilds: readonly GuildPickerItem[] }) {
                 {shown.map((guild) => (
                   <Col key={guild.id} role="listitem" {...COL_SPANS}>
                     <Card size="small">
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 'var(--space-3)',
-                        }}
-                      >
+                      <ActionRow style={{ flexWrap: 'nowrap', gap: 'var(--space-3)' }}>
                         <GuildIdentity guild={guild} size={32} />
                         {guild.invite !== null && (
                           <Button
@@ -143,7 +120,7 @@ export function ServerList({ guilds }: { guilds: readonly GuildPickerItem[] }) {
                             {t('inviteShort')}
                           </Button>
                         )}
-                      </div>
+                      </ActionRow>
                     </Card>
                   </Col>
                 ))}

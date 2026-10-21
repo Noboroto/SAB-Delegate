@@ -13,16 +13,21 @@ export function SectionShortcuts({ guildId }: { guildId: string }) {
   // A record, so a section added to the navigation cannot ship without a description.
   const descriptions: Record<GuildSection, string> = {
     modules: t('shortcuts.modules'),
+    tools: t('shortcuts.tools'),
     commands: t('shortcuts.commands'),
     auditLog: t('shortcuts.auditLog'),
     settings: t('shortcuts.settings'),
   };
 
   return (
-    <section aria-label={t('shortcuts.title')}>
+    <section aria-labelledby="overview-shortcuts">
+      {/* Names the region for the page outline without adding a visible title above the cards. */}
+      <h2 id="overview-shortcuts" className="sr-only">
+        {t('shortcuts.title')}
+      </h2>
       <Row gutter={[16, 16]}>
         {GUILD_SECTIONS.map((section) => (
-          <Col key={section} xs={24} sm={12} xl={6}>
+          <Col key={section} xs={24} sm={12} xl={8}>
             <Link
               href={`/servers/${guildId}/${guildSectionPath(section)}`}
               style={{ display: 'block', height: '100%' }}

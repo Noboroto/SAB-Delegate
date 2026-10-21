@@ -6,6 +6,7 @@
   "usage": "Using {count} of {max} keys.",
   "limitReached": "You have used all {max} keys. Revoke one or wait for it to expire to create another.",
   "created": "Key created.",
+  "emptyTitle": "No API keys yet",
   "empty": "No keys yet. Create one to connect an AI tool.",
   "form": {
     "title": "Create an API key",
@@ -23,12 +24,6 @@
     "submit": "Create key",
     "cancel": "Cancel",
     "invalid": "The key details are not valid. Check them and try again."
-  },
-  "reauth": {
-    "title": "Sign in again",
-    "body": "A key that can change things can only be created right after you sign in. Sign in again, then create the key.",
-    "action": "Sign in again",
-    "failed": "Could not start the sign-in. Please try again."
   },
   "secret": {
     "title": "Your key is ready",
@@ -67,7 +62,6 @@
     "title": "Revoke the key “{name}”?",
     "body": "The key stops working at once. Scheduled messages this key created that have not run yet are cancelled.",
     "confirm": "Revoke",
-    "cancel": "Keep it",
     "done": "Key revoked."
   },
   "connect": {

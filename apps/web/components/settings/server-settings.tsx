@@ -1,8 +1,9 @@
 'use client';
 
-import { Card, Space, Typography } from 'antd';
+import { Card, Typography } from 'antd';
 import { useTranslations } from 'next-intl';
 import type { BotProfile, GuildSettings } from '@sab/shared';
+import { FormColumn } from '@/components/ui/form-column';
 import { Heading } from '@/components/ui/heading';
 import { LinkButton } from '@/components/ui/link-button';
 import { BotProfileForm } from './bot-profile-form';
@@ -24,7 +25,7 @@ export function ServerSettings({ guildId, guildName, settings, botProfile }: Ser
   return (
     <>
       <Heading title={t('title')} subtitle={t('subtitle', { guild: guildName })} />
-      <Space orientation="vertical" size={16} style={{ display: 'flex', maxWidth: 720 }}>
+      <FormColumn>
         {/* Remounted when the stored values change, so the form starts from what the server now holds. */}
         <SettingsForm key={JSON.stringify(settings)} guildId={guildId} settings={settings} />
         {botProfile === undefined ? (
@@ -36,7 +37,7 @@ export function ServerSettings({ guildId, guildName, settings, botProfile }: Ser
           <Typography.Paragraph>{t('llm.link.description')}</Typography.Paragraph>
           <LinkButton href={`/servers/${guildId}/settings/llm`}>{t('llm.link.open')}</LinkButton>
         </Card>
-      </Space>
+      </FormColumn>
     </>
   );
 }

@@ -12,6 +12,7 @@ import {
 } from '@sab/shared';
 import { ErrorAlert } from '@/components/data/error-alert';
 import { LlmModelField } from '@/components/llm/llm-model-field';
+import { useUnsavedChanges } from '@/components/forms/unsaved-guard';
 import { ActionRow } from '@/components/ui/action-row';
 import { useApiMutation } from '@/lib/api/mutations';
 import { listLlmModels, saveLlmSettings, testLlmSettings } from '@/lib/llm/llm-api';
@@ -32,6 +33,15 @@ export function LlmSettingsForm({ guildId, settings }: { guildId: string; settin
   const [testResult, setTestResult] = useState<LlmTestResult | undefined>(undefined);
   const baseUrl = Form.useWatch('baseUrl', form) as string | undefined;
   const disabled = !settings.available;
+  const values = Form.useWatch([], form) as LlmFormValues | undefined;
+  // Unsaved means "differs from what the server holds", so typing a value back to the stored one is clean again.
+  const dirty =
+    values !== undefined &&
+    ((values.baseUrl ?? '').trim() !== (settings.baseUrl ?? '') ||
+      (values.model ?? '').trim() !== (settings.model ?? '') ||
+      values.enabled !== settings.enabled ||
+      (values.apiKey ?? '') !== '');
+  useUnsavedChanges(dirty);
 
   const save = useApiMutation((input: LlmSettingsInput) => saveLlmSettings(guildId, input));
   const test = useApiMutation((input: LlmSettingsInput) => testLlmSettings(guildId, input));
@@ -72,7 +82,7 @@ export function LlmSettingsForm({ guildId, settings }: { guildId: string; settin
   const failure = save.error ?? test.error;
 
   return (
-    <Card>
+    <Card title={t('llm.form.title')}>
       <Form<LlmFormValues>
         form={form}
         layout="vertical"
@@ -95,7 +105,7 @@ export function LlmSettingsForm({ guildId, settings }: { guildId: string; settin
             type="info"
             showIcon
             title={t('llm.form.unavailable')}
-            style={{ marginBottom: 16 }}
+            style={{ marginBottom: 'var(--space-4)' }}
           />
         ) : null}
         <Form.Item label={t('llm.form.preset')} htmlFor="llm-preset">

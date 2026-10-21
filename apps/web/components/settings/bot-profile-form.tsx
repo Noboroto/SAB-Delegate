@@ -2,10 +2,11 @@
 
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { App, Avatar, Button, Card, Form, Input, Popconfirm, Space, Typography } from 'antd';
+import { App, Avatar, Button, Card, Form, Input, Space, Typography } from 'antd';
 import { useTranslations } from 'next-intl';
 import { BotProfileSetResultSchema, type BotProfile } from '@sab/shared';
 import { ErrorAlert } from '@/components/data/error-alert';
+import { useUnsavedChanges } from '@/components/forms/unsaved-guard';
 import { ActionRow } from '@/components/ui/action-row';
 import { apiFetch } from '@/lib/api/api-fetch';
 import { useApiMutation } from '@/lib/api/mutations';
@@ -16,6 +17,7 @@ import {
   type AvatarFileError,
 } from '@/lib/settings/avatar-file';
 import { guildApiPath } from '@/lib/guild-path';
+import { RestoreAvatarAction } from './restore-avatar-action';
 
 /** Discord's limit for a nickname; the server rejects anything longer. */
 const NICK_MAX_LENGTH = 32;
@@ -39,7 +41,6 @@ interface PickedAvatar {
 /** The bot's nickname and picture on this one server. */
 export function BotProfileForm({ guildId, profile }: BotProfileFormProps) {
   const t = useTranslations('web-settings.botProfile');
-  const tCommon = useTranslations('web-common');
   const { message } = App.useApp();
   const router = useRouter();
   const fileInput = useRef<HTMLInputElement>(null);
@@ -58,6 +59,7 @@ export function BotProfileForm({ guildId, profile }: BotProfileFormProps) {
   const trimmedNick = nick.trim();
   const nickChanged = trimmedNick !== (profile.nick ?? '');
   const changed = nickChanged || picked !== undefined;
+  useUnsavedChanges(changed);
 
   const submit = async (
     body: ProfileChange,
@@ -100,7 +102,7 @@ export function BotProfileForm({ guildId, profile }: BotProfileFormProps) {
 
   return (
     <Card title={t('title')}>
-      <Space orientation="vertical" size={16} style={{ display: 'flex' }}>
+      <Space orientation="vertical" size={16} style={{ width: '100%' }}>
         <Typography.Text type="secondary">{t('description')}</Typography.Text>
         <Form layout="vertical" onFinish={() => void onSave()} disabled={save.pending}>
           <Form.Item
@@ -127,7 +129,14 @@ export function BotProfileForm({ guildId, profile }: BotProfileFormProps) {
             }
           >
             <ActionRow>
-              <Space orientation="vertical" size={4} align="center">
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 'var(--space-1)',
+                }}
+              >
                 <Avatar size={64} src={picked?.previewUrl ?? profile.avatarUrl ?? undefined} />
                 <Typography.Text type="secondary">
                   {picked !== undefined
@@ -136,7 +145,7 @@ export function BotProfileForm({ guildId, profile }: BotProfileFormProps) {
                       ? t('avatarDefault')
                       : t('avatarCurrent')}
                 </Typography.Text>
-              </Space>
+              </div>
               <input
                 ref={fileInput}
                 type="file"
@@ -171,20 +180,15 @@ export function BotProfileForm({ guildId, profile }: BotProfileFormProps) {
               >
                 {t('restoreNick')}
               </Button>
-              <Popconfirm
-                title={t('restoreAvatarConfirm')}
-                okText={t('restoreAvatarConfirmOk')}
-                cancelText={tCommon('cancel')}
-                okButtonProps={{ danger: true }}
+              <RestoreAvatarAction
+                guildId={guildId}
                 disabled={save.pending || profile.avatarUrl === null}
-                onConfirm={() =>
-                  void submit({ avatar: null }, t('restoreAvatarDone'), () => setPicked(undefined))
-                }
-              >
-                <Button danger disabled={save.pending || profile.avatarUrl === null}>
-                  {t('restoreAvatar')}
-                </Button>
-              </Popconfirm>
+                onDone={() => {
+                  void message.success(t('restoreAvatarDone'));
+                  setPicked(undefined);
+                  router.refresh();
+                }}
+              />
             </ActionRow>
           </Form.Item>
         </Form>
