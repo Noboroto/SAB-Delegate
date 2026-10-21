@@ -24,7 +24,7 @@ export function DryRunPreview<TPlan>({ state, renderPlan, onRetry }: DryRunPrevi
       <div
         role="status"
         aria-label={t('dryRun.loading')}
-        style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+        style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}
       >
         <Spin size="small" />
         <span>{t('dryRun.loading')}</span>
@@ -36,7 +36,7 @@ export function DryRunPreview<TPlan>({ state, renderPlan, onRetry }: DryRunPrevi
   return (
     <section aria-label={t('dryRun.title')}>
       <Typography.Text strong>{t('dryRun.title')}</Typography.Text>
-      <div style={{ marginTop: 8 }}>{renderPlan(state.plan)}</div>
+      <div style={{ marginTop: 'var(--space-2)' }}>{renderPlan(state.plan)}</div>
     </section>
   );
 }

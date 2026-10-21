@@ -24,6 +24,7 @@ function valueOf(scope: string, token: string): string {
   return (match?.[1] ?? '').trim();
 }
 
+const WIDTHS = ['--w-2xs', '--w-xs', '--w-sm', '--w-md', '--w-lg'];
 const SEMANTIC = ['green', 'red', 'amber', 'blue', 'gray'];
 const THEMED = [
   '--bg',
@@ -54,7 +55,14 @@ describe('tokens.css', () => {
   });
 
   it('keeps layout tokens theme-independent, and --danger an alias that follows the theme', () => {
-    for (const token of ['--page-px', '--measure', '--control-h', '--control-h-sm']) {
+    for (const token of [
+      '--page-px',
+      '--measure',
+      '--form-w',
+      '--control-h',
+      '--control-h-sm',
+      ...WIDTHS,
+    ]) {
       expect(light, token).toContain(`${token}:`);
       expect(dark, token).not.toContain(`${token}:`);
     }
@@ -64,6 +72,24 @@ describe('tokens.css', () => {
 
   it('sizes the reading measure in ch so it holds ~65 characters when zoomed', () => {
     expect(valueOf(light, '--measure')).toMatch(/^\d+ch$/);
+  });
+});
+
+describe('width tokens', () => {
+  it('grow in pixels, so a bigger name is always a wider box', () => {
+    const px = WIDTHS.map((token) => parseInt(valueOf(light, token), 10));
+    expect(px).toEqual([...px].sort((a, b) => a - b));
+    expect(new Set(px).size).toBe(WIDTHS.length);
+  });
+});
+
+describe('heading scale', () => {
+  it('shrinks from h1 to h3, so a title level means one size', () => {
+    const token = theme.getDesignToken(lightTheme);
+    expect([token.fontSizeHeading1, token.fontSizeHeading2, token.fontSizeHeading3]).toEqual([
+      24, 18, 16,
+    ]);
+    expect(darkTokens.fontSizeHeading1).toBe(lightTokens.fontSizeHeading1);
   });
 });
 

@@ -38,6 +38,14 @@
   --space-3: 12px;
   --space-4: 16px;
   --space-6: 24px;
+  /* One column for every settings form: wide enough for a label and a field, narrow enough to scan. */
+  /* Widths for filters, table columns and flex bases, so no component carries its own pixel guess. */
+  --w-2xs: 80px;
+  --w-xs: 160px;
+  --w-sm: 240px;
+  --w-md: 360px;
+  --w-lg: 480px;
+  --form-w: 720px;
   --page-px: clamp(16px, 2.5vw, 40px);
   --measure: 65ch;
   --shadow: 0 1px 2px rgba(26, 31, 54, 0.05), 0 1px 3px rgba(26, 31, 54, 0.06);

@@ -18,5 +18,11 @@
   "confirm": {
     "refreshPlan": "Xem lại kế hoạch",
     "expired": "Kế hoạch này đã cũ. Hãy xem lại kế hoạch trước khi xác nhận."
+  },
+  "unsaved": {
+    "title": "Rời đi mà chưa lưu?",
+    "content": "Bạn có thay đổi chưa lưu. Rời đi bây giờ sẽ mất chúng.",
+    "leave": "Rời đi",
+    "stay": "Ở lại"
   }
 }

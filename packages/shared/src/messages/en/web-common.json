@@ -18,5 +18,11 @@
   "confirm": {
     "refreshPlan": "Review the plan again",
     "expired": "This plan is out of date. Review the plan again before you confirm."
+  },
+  "unsaved": {
+    "title": "Leave without saving?",
+    "content": "You have changes that are not saved. If you leave now they are lost.",
+    "leave": "Leave",
+    "stay": "Stay"
   }
 }

@@ -89,6 +89,28 @@ a {
   color: var(--primary-fg);
 }
 
+/* A button whose label names its scope can be longer than a 390px column: it wraps instead of overflowing. */
+.btn-wrap {
+  height: auto;
+  min-height: var(--control-h);
+  padding-block: 4px;
+  white-space: normal;
+  text-align: start;
+}
+
+/* Text for screen readers only (the accessible name of a control that is otherwise just an icon or a heading). */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
 /*
  * Touch screens: iOS Safari zooms the page when a focused field is under 16px,
  * and a finger needs 44px (--control-h grows to that in tokens.css). The doubled

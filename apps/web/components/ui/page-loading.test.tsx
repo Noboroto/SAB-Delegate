@@ -8,4 +8,14 @@ describe('PageLoading', () => {
     renderWithProviders(<PageLoading />, 'en');
     expect(screen.getByRole('status', { name: 'Loading...' })).toBeInTheDocument();
   });
+
+  it.each(['form', 'table', 'cards'] as const)(
+    'draws a %s skeleton instead of the spinner',
+    (variant) => {
+      const { container } = renderWithProviders(<PageLoading variant={variant} />, 'en');
+      expect(screen.getByRole('status', { name: 'Loading...' })).toBeInTheDocument();
+      expect(container.querySelector('.ant-skeleton')).not.toBeNull();
+      expect(container.querySelector('.ant-spin')).toBeNull();
+    },
+  );
 });

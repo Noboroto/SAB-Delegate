@@ -1,11 +1,31 @@
 import { theme as antdTheme, type ThemeConfig } from 'antd';
 
 /**
+ * The one heading scale: the page title is h1 (24), a section or card title h2
+ * (18), a block inside a card h3 (16). `Heading`, `SectionTitle` and AntD's own
+ * `Typography.Title` all read these, so a level means one size everywhere. The
+ * line heights are set too: AntD derives them from its default sizes, not ours.
+ */
+const headingScale = {
+  fontSizeHeading1: 24,
+  fontSizeHeading2: 18,
+  fontSizeHeading3: 16,
+  fontSizeHeading4: 14,
+  fontSizeHeading5: 14,
+  lineHeightHeading1: 1.3333,
+  lineHeightHeading2: 1.4444,
+  lineHeightHeading3: 1.5,
+  lineHeightHeading4: 1.5714,
+  lineHeightHeading5: 1.5714,
+} satisfies ThemeConfig['token'];
+
+/**
  * AntD's tokens, kept numerically equal to `styles/tokens.css` (see the table
  * at its top; `tokens.test.ts` compares both, on the values AntD actually
  * computes). Plain data with no React so a test can read it without a DOM.
  */
 export const lightTokens = {
+  ...headingScale,
   colorPrimary: '#4b5fab',
   // AntD would lighten the hover to 3.9:1 on white; Tabs and Buttons use it as text.
   colorPrimaryHover: '#3f5097',
