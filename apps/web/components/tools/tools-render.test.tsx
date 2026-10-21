@@ -5,7 +5,11 @@ import { SUPPORTED_LOCALES } from '@/lib/locale';
 import { renderWithProviders } from '@/lib/test/render-with-providers';
 import { expectNoBareKeys, GUILD, stubToolApi } from '@/lib/tools/test-support';
 
-vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
+vi.mock('next/navigation', () => ({
+  useSearchParams: () => new URLSearchParams(),
+  useRouter: () => ({ refresh: vi.fn(), replace: vi.fn() }),
+  usePathname: () => '/servers/1/tools/threads',
+}));
 vi.mock('next/link', () => ({
   default: ({ href, children }: { href: string; children: React.ReactNode }) => (
     <a href={href}>{children}</a>

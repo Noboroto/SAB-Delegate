@@ -45,7 +45,9 @@
     "messageRefInvalid": "Paste a message link (right-click the message, Copy Message Link).",
     "messageRefPlaceholder": "https://discord.com/channels/...",
     "emojiPlaceholder": "For example a thumbs up or :name:",
-    "idListTitle": "{title} ({count})"
+    "idListTitle": "{title} ({count})",
+    "copyList": "Copy {title}",
+    "copyThreadId": "Copy thread id"
   },
   "mention": {
     "reactors": {
@@ -78,7 +80,12 @@
     "failure": "Reason: {reason}",
     "delivered": "{count, plural, one {# message posted.} other {# messages posted.}}",
     "sampleTitle": "First members",
-    "chunkTitle": "Message {index} of {total}"
+    "chunkTitle": "Message {index} of {total}",
+    "copyChunk": "Copy message {index}",
+    "previewLabel": "Preview and post the reply",
+    "postModalTitle": "Post the list as a reply",
+    "postConfirm": "Post the reply",
+    "planIntro": "These messages will be posted as a reply to the message you linked."
   },
   "roleAssign": {
     "members": {
@@ -113,7 +120,9 @@
     "done": "The roles were updated.",
     "outcome": "Done for {done} of {planned, plural, one {# member} other {# members}}.",
     "failuresTitle": "Could not change {count, plural, one {# member} other {# members}}",
-    "failure": "{name} ({id}): {reason}"
+    "failure": "{name} ({id}): {reason}",
+    "membersRequired": "Paste member ids or pick a role.",
+    "tooManyIds": "The list has {count} ids; at most {max} fit in one run."
   },
   "threads": {
     "channelLabel": "Channel",
@@ -134,22 +143,21 @@
       "failure": "{name} ({id}): {reason}"
     },
     "create": {
-      "title": "Open a thread",
       "description": "Opens a thread in a channel and posts its first message.",
       "nameLabel": "Thread name",
       "messageLabel": "First message",
       "privateLabel": "Private thread",
       "privateHelp": "Ignored in a forum channel, whose posts are always public.",
-      "submit": "Open the thread",
+      "submit": "Open thread and post",
       "done": "The thread was opened.",
       "status": {
         "CREATED": "The thread was opened.",
         "CHANNEL_CANNOT_HOLD_THREADS": "This channel cannot hold threads.",
         "PRIVATE_NEEDS_TEXT_CHANNEL": "Private threads need a text channel."
-      }
+      },
+      "submitPrivate": "Open private thread and post"
     },
     "private": {
-      "title": "Private threads for members",
       "description": "Opens one private thread per member, named prefix-username, with the same first message.",
       "prefixLabel": "Name prefix",
       "prefixHelp": "The thread is named prefix-username.",
@@ -168,16 +176,24 @@
         "NO_ACCESS": "The bot cannot read that message."
       },
       "failuresTitle": "Left out: {count, plural, one {# member} other {# members}}",
-      "failure": "{id}: {reason}"
+      "failure": "{id}: {reason}",
+      "previewLabel": "Preview and open the threads",
+      "modalTitle": "Open private threads",
+      "membersRequired": "Paste member ids or pick a role.",
+      "tooManyMembers": "The list has {count} ids; at most {max} fit in one run.",
+      "planMembers": "{count, plural, one {In {channel}, a private thread named {prefix}-username is opened for # listed member.} other {In {channel}, a private thread named {prefix}-username is opened for each of # listed members.}}",
+      "planReactors": "{count, plural, one {In {channel}, a private thread named {prefix}-username is opened for # member who reacted with {emoji}.} other {In {channel}, a private thread named {prefix}-username is opened for each of # members who reacted with {emoji}.}}",
+      "planRole": "Also one for every member of the role {role}.",
+      "planMessage": "First message in each thread:",
+      "planNobody": "There is nobody to open a thread for yet.",
+      "planReactorsUncounted": "In {channel}, a private thread named {prefix}-username is opened for each member who reacted with {emoji}. The number of members could not be counted right now."
     },
     "privateReactors": {
-      "title": "Private threads for reactors",
       "description": "Opens a private thread for everyone who reacted to a message with one emoji.",
       "messageLabel": "Message link",
       "emojiLabel": "Emoji"
     },
     "rename": {
-      "title": "Rename threads by prefix",
       "description": "Replaces the start of the name of every active thread in a channel.",
       "oldPrefixLabel": "Current prefix",
       "newPrefixLabel": "New prefix",
@@ -188,17 +204,22 @@
       "done": "The threads were renamed."
     },
     "delete": {
-      "title": "Delete threads by prefix",
       "description": "Deletes every active thread in a channel whose name starts with the prefix. This cannot be undone.",
       "prefixLabel": "Prefix",
       "label": "Preview and delete",
       "modalTitle": "Delete threads",
       "confirm": "Delete the threads",
       "done": "The threads were deleted."
+    },
+    "tabs": {
+      "create": "Open a thread",
+      "private": "Private threads",
+      "reactors": "From reactions",
+      "rename": "Rename",
+      "delete": "Delete"
     }
   },
   "purge": {
-    "title": "Delete messages",
     "description": "Deleted messages cannot be brought back. You see what would go before you confirm.",
     "modeLabel": "What to delete",
     "modeLast": "The newest messages",
@@ -230,8 +251,6 @@
     "outcomeFailed": "{count, plural, one {# message could not be deleted.} other {# messages could not be deleted.}}"
   },
   "activity": {
-    "title": "New activity",
-    "description": "Creates three roles and three channels for an activity in the activity category.",
     "emojiLabel": "Emoji",
     "nameLabel": "Name",
     "shortNameLabel": "Short name",
@@ -249,11 +268,15 @@
       "channelGeneral": "General channel",
       "channelThreadOnly": "Thread-only channel",
       "channelVoice": "Voice channel"
-    }
+    },
+    "previewLabel": "Preview and create the activity",
+    "modalTitle": "Create the activity",
+    "planIntro": "These roles and channels will be created:",
+    "planRoles": "Roles",
+    "planChannels": "Channels",
+    "planDefaultCategory": "The server's activity category"
   },
   "attendance": {
-    "title": "Voice attendance",
-    "description": "Splits the members of a role by whether they are in a voice channel right now.",
     "roleLabel": "Role",
     "channelLabel": "Voice channel",
     "submit": "Check",
@@ -261,7 +284,7 @@
     "present": "In the channel",
     "absent": "Not in the channel",
     "listTitle": "{title} ({count})",
-    "copyIds": "Copy ids"
+    "copyIds": "Copy ids: {title}"
   },
   "info": {
     "memberLabel": "Member",
@@ -275,7 +298,9 @@
       "noChannel": "This server has no intro channel set.",
       "notFound": "No introduction found in the newest {count, plural, one {# message} other {# messages}}.",
       "found": "Introduction",
-      "link": "Link to the message"
+      "link": "Link to the message",
+      "copyText": "Copy introduction",
+      "copyLink": "Copy link"
     },
     "reactors": {
       "title": "Who reacted",
@@ -300,7 +325,8 @@
       "reasonHelp": "Optional. Kept in the server audit log.",
       "submit": "Create the invite",
       "done": "The invite was created.",
-      "created": "Invite to {channel}"
+      "created": "Invite to {channel}",
+      "copy": "Copy link"
     }
   }
 }

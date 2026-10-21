@@ -45,7 +45,9 @@
     "messageRefInvalid": "Dán liên kết tin nhắn (nhấp chuột phải vào tin nhắn, chọn Sao chép liên kết tin nhắn).",
     "messageRefPlaceholder": "https://discord.com/channels/...",
     "emojiPlaceholder": "Ví dụ biểu tượng ngón cái hoặc :ten:",
-    "idListTitle": "{title} ({count})"
+    "idListTitle": "{title} ({count})",
+    "copyList": "Sao chép {title}",
+    "copyThreadId": "Sao chép id thread"
   },
   "mention": {
     "reactors": {
@@ -78,7 +80,12 @@
     "failure": "Lý do: {reason}",
     "delivered": "Đã đăng {count} tin nhắn.",
     "sampleTitle": "Các thành viên đầu tiên",
-    "chunkTitle": "Tin nhắn {index} trên {total}"
+    "chunkTitle": "Tin nhắn {index} trên {total}",
+    "copyChunk": "Sao chép tin nhắn {index}",
+    "previewLabel": "Xem trước và đăng trả lời",
+    "postModalTitle": "Đăng danh sách dưới dạng trả lời",
+    "postConfirm": "Đăng trả lời",
+    "planIntro": "Các tin nhắn này sẽ được đăng dưới dạng trả lời tin nhắn bạn đã dán liên kết."
   },
   "roleAssign": {
     "members": {
@@ -113,7 +120,9 @@
     "done": "Đã cập nhật vai trò.",
     "outcome": "Đã xong cho {done} trên {planned} thành viên.",
     "failuresTitle": "Không đổi được cho {count} thành viên",
-    "failure": "{name} ({id}): {reason}"
+    "failure": "{name} ({id}): {reason}",
+    "membersRequired": "Dán id thành viên hoặc chọn một vai trò.",
+    "tooManyIds": "Danh sách có {count} id; mỗi lần chỉ nhận tối đa {max}."
   },
   "threads": {
     "channelLabel": "Kênh",
@@ -134,22 +143,21 @@
       "failure": "{name} ({id}): {reason}"
     },
     "create": {
-      "title": "Mở thread",
       "description": "Mở một thread trong kênh và đăng tin nhắn đầu tiên.",
       "nameLabel": "Tên thread",
       "messageLabel": "Tin nhắn đầu tiên",
       "privateLabel": "Thread riêng",
       "privateHelp": "Bị bỏ qua trong kênh diễn đàn, nơi bài đăng luôn công khai.",
-      "submit": "Mở thread",
+      "submit": "Mở thread và đăng tin nhắn",
       "done": "Đã mở thread.",
       "status": {
         "CREATED": "Đã mở thread.",
         "CHANNEL_CANNOT_HOLD_THREADS": "Kênh này không chứa được thread.",
         "PRIVATE_NEEDS_TEXT_CHANNEL": "Thread riêng cần một kênh văn bản."
-      }
+      },
+      "submitPrivate": "Mở thread riêng và đăng tin nhắn"
     },
     "private": {
-      "title": "Thread riêng cho thành viên",
       "description": "Mở mỗi thành viên một thread riêng tên tiền-tố-tên-người-dùng, cùng một tin nhắn đầu tiên.",
       "prefixLabel": "Tiền tố tên",
       "prefixHelp": "Thread được đặt tên tiền-tố-tên-người-dùng.",
@@ -168,16 +176,24 @@
         "NO_ACCESS": "Bot không đọc được tin nhắn đó."
       },
       "failuresTitle": "Bị bỏ qua: {count} thành viên",
-      "failure": "{id}: {reason}"
+      "failure": "{id}: {reason}",
+      "previewLabel": "Xem trước và mở các thread",
+      "modalTitle": "Mở các thread riêng",
+      "membersRequired": "Dán id thành viên hoặc chọn một vai trò.",
+      "tooManyMembers": "Danh sách có {count} id; mỗi lần chỉ nhận tối đa {max}.",
+      "planMembers": "Trong {channel}, mỗi thành viên trong danh sách ({count}) được mở một thread riêng tên {prefix}-tên-người-dùng.",
+      "planReactors": "Trong {channel}, mỗi người trong {count} người đã thả {emoji} được mở một thread riêng tên {prefix}-tên-người-dùng.",
+      "planRole": "Cùng một thread cho mọi thành viên của vai trò {role}.",
+      "planMessage": "Tin nhắn đầu tiên trong mỗi thread:",
+      "planNobody": "Chưa có ai để mở thread.",
+      "planReactorsUncounted": "Trong {channel}, mỗi người đã thả {emoji} được mở một thread riêng tên {prefix}-tên-người-dùng. Hiện chưa đếm được số người."
     },
     "privateReactors": {
-      "title": "Thread riêng cho người thả cảm xúc",
       "description": "Mở một thread riêng cho mọi người đã thả một cảm xúc vào tin nhắn.",
       "messageLabel": "Liên kết tin nhắn",
       "emojiLabel": "Cảm xúc"
     },
     "rename": {
-      "title": "Đổi tên thread theo tiền tố",
       "description": "Thay phần đầu tên của mọi thread đang hoạt động trong một kênh.",
       "oldPrefixLabel": "Tiền tố hiện tại",
       "newPrefixLabel": "Tiền tố mới",
@@ -188,17 +204,22 @@
       "done": "Đã đổi tên các thread."
     },
     "delete": {
-      "title": "Xoá thread theo tiền tố",
       "description": "Xoá mọi thread đang hoạt động trong một kênh có tên bắt đầu bằng tiền tố. Không hoàn tác được.",
       "prefixLabel": "Tiền tố",
       "label": "Xem trước và xoá",
       "modalTitle": "Xoá thread",
       "confirm": "Xoá các thread",
       "done": "Đã xoá các thread."
+    },
+    "tabs": {
+      "create": "Mở thread",
+      "private": "Thread riêng",
+      "reactors": "Theo cảm xúc",
+      "rename": "Đổi tên",
+      "delete": "Xoá"
     }
   },
   "purge": {
-    "title": "Xoá tin nhắn",
     "description": "Tin nhắn đã xoá không khôi phục được. Bạn sẽ thấy những gì bị xoá trước khi xác nhận.",
     "modeLabel": "Xoá gì",
     "modeLast": "Những tin nhắn mới nhất",
@@ -230,8 +251,6 @@
     "outcomeFailed": "Không xoá được {count} tin nhắn."
   },
   "activity": {
-    "title": "Hoạt động mới",
-    "description": "Tạo ba vai trò và ba kênh cho một hoạt động trong danh mục hoạt động.",
     "emojiLabel": "Biểu tượng cảm xúc",
     "nameLabel": "Tên",
     "shortNameLabel": "Tên viết tắt",
@@ -249,11 +268,15 @@
       "channelGeneral": "Kênh chung",
       "channelThreadOnly": "Kênh chỉ dành cho thread",
       "channelVoice": "Kênh thoại"
-    }
+    },
+    "previewLabel": "Xem trước và tạo hoạt động",
+    "modalTitle": "Tạo hoạt động",
+    "planIntro": "Sẽ tạo các vai trò và kênh sau:",
+    "planRoles": "Vai trò",
+    "planChannels": "Kênh",
+    "planDefaultCategory": "Danh mục hoạt động của máy chủ"
   },
   "attendance": {
-    "title": "Điểm danh kênh thoại",
-    "description": "Chia các thành viên của một vai trò theo việc họ có đang ở trong kênh thoại hay không.",
     "roleLabel": "Vai trò",
     "channelLabel": "Kênh thoại",
     "submit": "Kiểm tra",
@@ -261,7 +284,7 @@
     "present": "Đang ở trong kênh",
     "absent": "Không ở trong kênh",
     "listTitle": "{title} ({count})",
-    "copyIds": "Sao chép id"
+    "copyIds": "Sao chép id: {title}"
   },
   "info": {
     "memberLabel": "Thành viên",
@@ -275,7 +298,9 @@
       "noChannel": "Máy chủ này chưa đặt kênh giới thiệu.",
       "notFound": "Không thấy bài giới thiệu trong {count} tin nhắn mới nhất.",
       "found": "Bài giới thiệu",
-      "link": "Liên kết tới tin nhắn"
+      "link": "Liên kết tới tin nhắn",
+      "copyText": "Sao chép phần giới thiệu",
+      "copyLink": "Sao chép liên kết"
     },
     "reactors": {
       "title": "Ai đã thả cảm xúc",
@@ -300,7 +325,8 @@
       "reasonHelp": "Không bắt buộc. Được lưu trong nhật ký kiểm tra của máy chủ.",
       "submit": "Tạo liên kết mời",
       "done": "Đã tạo liên kết mời.",
-      "created": "Liên kết mời vào {channel}"
+      "created": "Liên kết mời vào {channel}",
+      "copy": "Sao chép liên kết"
     }
   }
 }

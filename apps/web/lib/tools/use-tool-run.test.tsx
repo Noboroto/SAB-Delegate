@@ -21,6 +21,7 @@ function Probe({
       <button onClick={() => void action.submit(vars, { refresh: true, success: 'Saved.' })}>
         go
       </button>
+      <button onClick={() => void action.retry()}>again</button>
       <span>{action.pending ? 'pending' : 'idle'}</span>
       <span>{action.result ?? 'no result'}</span>
     </div>
@@ -66,5 +67,20 @@ describe('useToolRun', () => {
     await waitFor(() => expect(screen.getByText('idle')).toBeInTheDocument());
     expect(screen.getByText('no result')).toBeInTheDocument();
     expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it('repeats the last call with the same arguments on retry', async () => {
+    const call = vi
+      .fn<(vars: string) => Promise<string>>()
+      .mockRejectedValueOnce(new Error('boom'))
+      .mockResolvedValueOnce('answer');
+    renderWithProviders(<Probe call={call} vars="x" />);
+    await userEvent.click(screen.getByRole('button', { name: 'go' }));
+    await waitFor(() => expect(call).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.getByText('idle')).toBeInTheDocument());
+    await userEvent.click(screen.getByRole('button', { name: 'again' }));
+
+    expect(await screen.findByText('answer')).toBeInTheDocument();
+    expect(call).toHaveBeenNthCalledWith(2, 'x');
   });
 });
