@@ -4,30 +4,44 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import cookie from '@fastify/cookie';
 import { Controller, Get, Logger, Post, UseGuards } from '@nestjs/common';
+import {
+  SESSION_COOKIE_CACHE_SECONDS,
+  SESSION_EXPIRES_SECONDS,
+  SESSION_UPDATE_AGE_SECONDS,
+} from '@sab/shared';
+import { memoryAdapter } from 'better-auth/adapters/memory';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import Fastify from 'fastify';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { RestSettings } from '../config/env.js';
 import { mountAuth } from './auth.handler.js';
-import { AuthModule, authModules, restEnabledFromEnv } from './auth.module.js';
+import {
+  AuthModule,
+  AuthSessionCleanupModule,
+  authModules,
+  restEnabledFromEnv,
+} from './auth.module.js';
 import {
   ALLOWED_AUTH_PATHS,
   AUTH,
   AUTH_COOKIE_PREFIX,
   REST_SETTINGS,
-  SESSION_TTL_SECONDS,
   createAuth,
   type Auth,
 } from './better-auth.js';
 import { Principal, type SessionPrincipal } from './principal.decorator.js';
-import { FRESH_AUTH_WINDOW_MS, FreshAuthGuard, SessionGuard } from './session.guard.js';
+import * as sessionGuardModule from './session.guard.js';
+import { SessionGuard } from './session.guard.js';
 import { SessionService } from './session.service.js';
 
 // Every value is generated per run: nothing here may look like a real id or key.
 const DISCORD_USER = '8'.repeat(17);
 const ACCESS_TOKEN = `at-${randomBytes(12).toString('hex')}`;
 const REFRESH_TOKEN = `rt-${randomBytes(12).toString('hex')}`;
+const RENEWED_ACCESS_TOKEN = `at2-${randomBytes(12).toString('hex')}`;
+const RENEWED_REFRESH_TOKEN = `rt2-${randomBytes(12).toString('hex')}`;
+const DAY_MS = 24 * 60 * 60 * 1000;
 const ORIGIN = 'https://bot.example.test';
 const settings: RestSettings = {
   appUrl: ORIGIN,
@@ -50,19 +64,19 @@ class ProbeController {
   write(): { ok: true } {
     return { ok: true };
   }
-
-  @Post('sensitive')
-  @UseGuards(FreshAuthGuard)
-  sensitive(): { ok: true } {
-    return { ok: true };
-  }
 }
 
-type Calls = { guilds: Array<string | null>; urls: string[] };
+type Calls = {
+  guilds: Array<string | null>;
+  urls: string[];
+  /** Refresh-token grants sent to Discord, with the refresh token each carried. */
+  refreshes: string[];
+  refuseRefresh: boolean;
+};
 
 /** Answers Discord's token, profile and guild endpoints; everything else is refused. */
 function stubDiscord(): Calls {
-  const calls: Calls = { guilds: [], urls: [] };
+  const calls: Calls = { guilds: [], urls: [], refreshes: [], refuseRefresh: false };
   const json = (body: unknown): Response =>
     new Response(JSON.stringify(body), {
       status: 200,
@@ -73,6 +87,28 @@ function stubDiscord(): Calls {
     const url = decodeURIComponent(raw);
     calls.urls.push(url);
     if (url === 'https://discord.com/api/oauth2/token') {
+      const form = new URLSearchParams(
+        typeof init?.body === 'string'
+          ? init.body
+          : init?.body instanceof URLSearchParams
+            ? init.body
+            : '',
+      );
+      if (form.get('grant_type') === 'refresh_token') {
+        calls.refreshes.push(form.get('refresh_token') ?? '');
+        if (calls.refuseRefresh) {
+          return Promise.resolve(new Response('{"error":"invalid_grant"}', { status: 400 }));
+        }
+        return Promise.resolve(
+          json({
+            access_token: RENEWED_ACCESS_TOKEN,
+            token_type: 'Bearer',
+            expires_in: 604_800,
+            refresh_token: RENEWED_REFRESH_TOKEN,
+            scope: 'identify guilds',
+          }),
+        );
+      }
       return Promise.resolve(
         json({
           access_token: ACCESS_TOKEN,
@@ -169,6 +205,26 @@ async function login(app: NestFastifyApplication, jar: Jar): Promise<void> {
 
 const anyString = expect.any(String) as string;
 
+/** What the Prisma adapter would hold, in memory: no database is needed to test the HTTP behaviour. */
+type Tables = { user: unknown[]; session: unknown[]; account: unknown[] };
+const tables: Tables = { user: [], session: [], account: [] };
+
+/** The memory adapter has no `uuidv7()` column default, so ids come from the test. */
+const memoryAuth = (config: RestSettings = settings): Auth =>
+  createAuth(config, memoryAdapter(tables), () => randomBytes(16).toString('hex'));
+
+async function testModule(): Promise<TestingModule> {
+  return Test.createTestingModule({
+    imports: [AuthModule],
+    controllers: [ProbeController],
+  })
+    .overrideProvider(REST_SETTINGS)
+    .useValue(settings)
+    .overrideProvider(AUTH)
+    .useValue(memoryAuth())
+    .compile();
+}
+
 let moduleRef: TestingModule;
 let app: NestFastifyApplication;
 let sessions: SessionService;
@@ -176,13 +232,7 @@ let discord: Calls;
 
 beforeAll(async () => {
   discord = stubDiscord();
-  moduleRef = await Test.createTestingModule({
-    imports: [AuthModule],
-    controllers: [ProbeController],
-  })
-    .overrideProvider(REST_SETTINGS)
-    .useValue(settings)
-    .compile();
+  moduleRef = await testModule();
   app = await buildApp(moduleRef);
   sessions = moduleRef.get(SessionService);
 });
@@ -202,13 +252,20 @@ describe('AuthModule wiring', () => {
     expect(restEnabledFromEnv({})).toBe(false);
     expect(restEnabledFromEnv({ APP_URL: '  ' })).toBe(false);
     expect(authModules({})).toEqual([]);
-    expect(authModules({ APP_URL: ORIGIN })).toEqual([AuthModule]);
+    expect(authModules({ APP_URL: ORIGIN })).toEqual([AuthModule, AuthSessionCleanupModule]);
   });
 
-  it('resolves the session service and both guards through the container', () => {
+  it('resolves the session service and the session guard through the container', () => {
     expect(moduleRef.get(SessionService)).toBeInstanceOf(SessionService);
     expect(moduleRef.get(SessionGuard)).toBeInstanceOf(SessionGuard);
-    expect(moduleRef.get(FreshAuthGuard)).toBeInstanceOf(FreshAuthGuard);
+  });
+
+  it('has no fresh-login guard: an active session is never asked to sign in again', () => {
+    expect(Object.keys(sessionGuardModule)).toEqual(['SessionGuard']);
+    const exported = (Reflect.getMetadata('exports', AuthModule) as Array<{ name?: string }>).map(
+      (entry) => entry.name,
+    );
+    expect(exported).not.toContain('FreshAuthGuard');
   });
 
   it('builds its settings from the environment when not overridden', async () => {
@@ -229,7 +286,10 @@ describe('AuthModule wiring', () => {
     for (const [name, value] of Object.entries(stubbed)) vi.stubEnv(name, value);
     vi.stubEnv('DISCORD_DEV_GUILD_ID', '');
     try {
-      const built = await Test.createTestingModule({ imports: [AuthModule] }).compile();
+      const built = await Test.createTestingModule({ imports: [AuthModule] })
+        .overrideProvider(AUTH)
+        .useValue(memoryAuth())
+        .compile();
       expect(built.get(REST_SETTINGS)).toMatchObject({
         appUrl: ORIGIN,
         trustedProxies: ['10.0.0.0/8'],
@@ -238,6 +298,42 @@ describe('AuthModule wiring', () => {
     } finally {
       vi.unstubAllEnvs();
     }
+  });
+});
+
+describe('session configuration', () => {
+  const options = () => moduleRef.get<Auth>(AUTH).options;
+
+  it('keeps a login for 30 days of inactivity and renews it daily while active', () => {
+    expect(SESSION_EXPIRES_SECONDS).toBe(30 * 24 * 60 * 60);
+    expect(SESSION_UPDATE_AGE_SECONDS).toBe(24 * 60 * 60);
+    expect(options().session).toMatchObject({
+      expiresIn: SESSION_EXPIRES_SECONDS,
+      updateAge: SESSION_UPDATE_AGE_SECONDS,
+    });
+  });
+
+  it('never asks an active person for a fresh login: freshness lasts as long as the session', () => {
+    expect(options().session?.freshAge).toBe(SESSION_EXPIRES_SECONDS);
+  });
+
+  it('caches the signed session for one minute, which bounds how long a revoked login works', () => {
+    expect(SESSION_COOKIE_CACHE_SECONDS).toBe(60);
+    expect(options().session?.cookieCache).toEqual({
+      enabled: true,
+      maxAge: SESSION_COOKIE_CACHE_SECONDS,
+      refreshCache: false,
+    });
+  });
+
+  it('encrypts the Discord tokens at rest, keeps the OAuth state in a cookie, and uses no account cookie', () => {
+    expect(options().account).toEqual({ storeStateStrategy: 'cookie', encryptOAuthTokens: true });
+  });
+
+  it('leaves row ids to the database unless a test supplies a generator', () => {
+    expect(createAuth(settings, memoryAdapter(tables)).options.advanced?.database).toEqual({
+      generateId: false,
+    });
   });
 });
 
@@ -356,8 +452,8 @@ describe('Better Auth over HTTP', () => {
     expect(body.user['email']).toBe(`${DISCORD_USER}@discord.invalid`);
     expect(JSON.stringify(body)).not.toContain(ACCESS_TOKEN);
     const lifetime = new Date(body.session['expiresAt'] as string).getTime() - Date.now();
-    expect(lifetime).toBeLessThanOrEqual(SESSION_TTL_SECONDS * 1000);
-    expect(lifetime).toBeGreaterThan((SESSION_TTL_SECONDS - 60) * 1000);
+    expect(lifetime).toBeLessThanOrEqual(SESSION_EXPIRES_SECONDS * 1000);
+    expect(lifetime).toBeGreaterThan((SESSION_EXPIRES_SECONDS - 60) * 1000);
   });
 
   it('sets HttpOnly, Secure, SameSite=Lax cookies that stay far below the header limit', async () => {
@@ -416,6 +512,7 @@ describe('Better Auth over HTTP', () => {
     const jar = new Jar();
     await login(app, jar);
     const names = jar.names();
+    const rowsBefore = tables.session.length;
     const response = await app.inject({
       method: 'POST',
       url: '/api/auth/sign-out',
@@ -426,19 +523,28 @@ describe('Better Auth over HTTP', () => {
     const cleared = setCookiesOf(response)
       .filter((raw) => /max-age=0/i.test(raw))
       .map((raw) => raw.split('=')[0]);
-    for (const name of names.filter((n) => n.includes('session') || n.includes('account'))) {
+    for (const name of names.filter((n) => n.includes('session'))) {
       expect(cleared).toContain(name);
     }
+    expect(tables.session).toHaveLength(rowsBefore - 1);
   });
 });
 
+/** The account row Better Auth keeps for the Discord login, as the adapter stored it. */
+type AccountRow = { providerId: string; accessToken: string; refreshToken: string };
+const discordAccount = (): AccountRow => {
+  const row = (tables.account as AccountRow[]).find((entry) => entry.providerId === 'discord');
+  if (row === undefined) throw new Error('no Discord account row');
+  return row;
+};
+
 describe('SessionService', () => {
-  it('returns the Discord id and login time for a valid cookie', async () => {
+  it('returns the Discord id for a valid cookie', async () => {
     const jar = new Jar();
     await login(app, jar);
-    const principal = await sessions.getPrincipal({ cookie: jar.header() });
-    expect(principal?.discordUserId).toBe(DISCORD_USER);
-    expect(Math.abs((principal?.createdAt.getTime() ?? 0) - Date.now())).toBeLessThan(60_000);
+    expect((await sessions.getPrincipal({ cookie: jar.header() }))?.discordUserId).toBe(
+      DISCORD_USER,
+    );
   });
 
   it('returns null without a cookie and for a tampered one', async () => {
@@ -453,28 +559,87 @@ describe('SessionService', () => {
     const jar = new Jar();
     await login(app, jar);
     const other = new SessionService(
-      createAuth({ ...settings, authSecret: randomBytes(32).toString('base64') }),
+      memoryAuth({ ...settings, authSecret: randomBytes(32).toString('base64') }),
     );
     expect(await other.getPrincipal({ cookie: jar.header() })).toBeNull();
   });
 
-  it('rejects a cookie once the session is older than eight hours', async () => {
+  it('expires a login that stays unused for 30 days', async () => {
     const jar = new Jar();
     await login(app, jar);
     const issued = Date.now();
     vi.useFakeTimers({ toFake: ['Date'] });
-    vi.setSystemTime(issued + (SESSION_TTL_SECONDS - 120) * 1000);
-    expect(await sessions.getPrincipal({ cookie: jar.header() })).not.toBeNull();
-    vi.setSystemTime(issued + (SESSION_TTL_SECONDS + 120) * 1000);
+    vi.setSystemTime(issued + SESSION_EXPIRES_SECONDS * 1000 + 120_000);
     expect(await sessions.getPrincipal({ cookie: jar.header() })).toBeNull();
   });
 
-  it('reads the Discord access token from the account cookie, never from the session', async () => {
+  it('slides the expiry forward while the person keeps using the dashboard', async () => {
     const jar = new Jar();
     await login(app, jar);
+    const issued = Date.now();
+    vi.useFakeTimers({ toFake: ['Date'] });
+    for (const day of [20, 40, 60]) {
+      vi.setSystemTime(issued + day * DAY_MS);
+      expect(await sessions.getPrincipal({ cookie: jar.header() }), `day ${day}`).not.toBeNull();
+    }
+  });
+
+  it('stops honouring a revoked login within one cache window', async () => {
+    const known = new Set<unknown>(tables.session);
+    const jar = new Jar();
+    await login(app, jar);
+    const row = tables.session.find((entry) => !known.has(entry));
+    expect(row).toBeDefined();
+    tables.session.splice(tables.session.indexOf(row), 1);
+
+    expect(await sessions.getPrincipal({ cookie: jar.header() })).not.toBeNull();
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(Date.now() + (SESSION_COOKIE_CACHE_SECONDS + 5) * 1000);
+    expect(await sessions.getPrincipal({ cookie: jar.header() })).toBeNull();
+  });
+
+  it('keeps the Discord tokens encrypted in the account row and returns the access token server-side', async () => {
+    const jar = new Jar();
+    await login(app, jar);
+    const row = discordAccount();
+    expect(row.accessToken).not.toBe(ACCESS_TOKEN);
+    expect(row.refreshToken).not.toBe(REFRESH_TOKEN);
+    expect(JSON.stringify(tables)).not.toContain(ACCESS_TOKEN);
+    expect(JSON.stringify(tables)).not.toContain(REFRESH_TOKEN);
     expect(await sessions.discordAccessToken({ cookie: jar.header() })).toBe(ACCESS_TOKEN);
     expect(await sessions.discordAccessToken({})).toBeNull();
     expect(discord.urls.every((url) => url.startsWith('https://discord.com/'))).toBe(true);
+  });
+
+  it('refreshes an expired Discord access token and stores the rotated refresh token', async () => {
+    const jar = new Jar();
+    await login(app, jar);
+    const issued = Date.now();
+    const before = discord.refreshes.length;
+    vi.useFakeTimers({ toFake: ['Date'] });
+
+    vi.setSystemTime(issued + 8 * DAY_MS);
+    expect(await sessions.discordAccessToken({ cookie: jar.header() })).toBe(RENEWED_ACCESS_TOKEN);
+    expect(await sessions.discordAccessToken({ cookie: jar.header() })).toBe(RENEWED_ACCESS_TOKEN);
+    expect(discord.refreshes.slice(before)).toEqual([REFRESH_TOKEN]);
+    expect(JSON.stringify(tables)).not.toContain(RENEWED_REFRESH_TOKEN);
+
+    vi.setSystemTime(issued + 16 * DAY_MS);
+    expect(await sessions.discordAccessToken({ cookie: jar.header() })).toBe(RENEWED_ACCESS_TOKEN);
+    expect(discord.refreshes.slice(before)).toEqual([REFRESH_TOKEN, RENEWED_REFRESH_TOKEN]);
+  });
+
+  it('answers null when Discord refuses the refresh, so the caller asks for a new sign-in', async () => {
+    const jar = new Jar();
+    await login(app, jar);
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(Date.now() + 8 * DAY_MS);
+    discord.refuseRefresh = true;
+    try {
+      expect(await sessions.discordAccessToken({ cookie: jar.header() })).toBeNull();
+    } finally {
+      discord.refuseRefresh = false;
+    }
   });
 });
 
@@ -543,34 +708,20 @@ describe('guards behind the login', () => {
     expect(response.statusCode).toBe(200);
   });
 
-  it('accepts a fresh login for a sensitive action and asks for a new one after five minutes', async () => {
-    const fresh = await app.inject({
-      method: 'POST',
-      url: '/api/probe/sensitive',
-      headers: { cookie: jar.header(), origin: ORIGIN },
-    });
-    expect(fresh.statusCode).toBe(201);
-
+  it('keeps accepting the same login long after the first five minutes', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
-    vi.setSystemTime(Date.now() + FRESH_AUTH_WINDOW_MS + 60_000);
-    const stale = await app.inject({
+    vi.setSystemTime(Date.now() + 6 * 60_000);
+    const response = await app.inject({
       method: 'POST',
-      url: '/api/probe/sensitive',
+      url: '/api/probe/write',
       headers: { cookie: jar.header(), origin: ORIGIN },
     });
-    expect(stale.statusCode).toBe(403);
-    expect(stale.json()).toEqual(body('AUTH_REAUTH_REQUIRED'));
+    expect(response.statusCode).toBe(201);
   });
 
   it('fails closed, not open, when the cookie plugin is missing', async () => {
     vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
-    const bare = await Test.createTestingModule({
-      imports: [AuthModule],
-      controllers: [ProbeController],
-    })
-      .overrideProvider(REST_SETTINGS)
-      .useValue(settings)
-      .compile();
+    const bare = await testModule();
     const unplugged = await buildApp(bare, { useCookies: false });
     try {
       const response = await unplugged.inject({

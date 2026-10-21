@@ -4,13 +4,12 @@ import type { FastifyRequest } from 'fastify';
 import { ApiError } from '../common/errors/http-error.js';
 
 /**
- * Who is calling, as far as the cookie proves it: the Discord account and when
- * that login happened. Nothing else from the session leaves the auth module
- * (the raw session carries its token, IP and user agent).
+ * Who is calling, as far as the session proves it: the Discord account. Nothing
+ * else from the session leaves the auth module (the raw session carries its
+ * token, IP and user agent).
  */
 export const SessionPrincipalSchema = z.object({
   discordUserId: SnowflakeSchema,
-  createdAt: z.coerce.date(),
 });
 
 export type SessionPrincipal = z.infer<typeof SessionPrincipalSchema>;

@@ -4,15 +4,13 @@ import {
   ApiKeyMintResultSchema,
   ApiKeyMintSchema,
   ApiKeyViewSchema,
-  ErrorCode,
   z,
   type ApiKeyMint,
   type ApiKeyMintResult,
   type ApiKeyView,
 } from '@sab/shared';
 import { Principal, type SessionPrincipal } from '../../auth/principal.decorator.js';
-import { FRESH_AUTH_WINDOW_MS, SessionGuard } from '../../auth/session.guard.js';
-import { ApiError } from '../../common/errors/http-error.js';
+import { SessionGuard } from '../../auth/session.guard.js';
 import { httpActor } from '../../common/rest/rest-wiring.js';
 import { ApiKeyService } from './api-key.service.js';
 import { SessionOnlyGuard } from './session-only.guard.js';
@@ -34,12 +32,7 @@ export class ApiKeyController {
     return z.array(ApiKeyViewSchema).parse(await this.keys.list(principal.discordUserId));
   }
 
-  /**
-   * The answer carries the secret, which cannot be read again. A key that can
-   * change things needs a login from the last five minutes: a stolen cookie
-   * then cannot turn into a long-lived write credential. Checked here and not
-   * by `FreshAuthGuard` because only the body says which kind is requested.
-   */
+  /** The answer carries the secret, which cannot be read again. */
   @Post()
   @RouteConfig({ rateLimit: MINT_RATE_LIMIT })
   @Header('Cache-Control', 'no-store')
@@ -47,12 +40,6 @@ export class ApiKeyController {
     @Principal() principal: SessionPrincipal,
     @Body({ schema: ApiKeyMintSchema }) body: ApiKeyMint,
   ): Promise<ApiKeyMintResult> {
-    if (
-      body.mode === 'WRITE' &&
-      Date.now() - principal.createdAt.getTime() > FRESH_AUTH_WINDOW_MS
-    ) {
-      throw new ApiError(ErrorCode.AUTH_REAUTH_REQUIRED);
-    }
     const minted = await this.keys.mint(principal.discordUserId, body, httpActor(principal));
     return ApiKeyMintResultSchema.parse(minted);
   }

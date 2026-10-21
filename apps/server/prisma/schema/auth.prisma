@@ -1,0 +1,77 @@
+/// A person who signed in with Discord. The columns are what the Better Auth
+/// Prisma adapter reads and writes for its `user` model plus the `discordId`
+/// additional field; `name` is always empty and `email` a non-routable
+/// placeholder derived from the snowflake, because nothing about a person but
+/// the Discord id is kept. CHECK (migration `_auth_sessions`): `discordId` is
+/// a snowflake.
+model User {
+  id            String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  name          String
+  email         String   @unique
+  emailVerified Boolean  @default(false)
+  image         String?
+  discordId     String   @unique
+  createdAt     DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime @updatedAt @db.Timestamptz(3)
+
+  sessions Session[]
+  accounts Account[]
+}
+
+/// One login. `expiresAt` slides forward while the person is active; the daily
+/// cleanup job deletes the rows that expired, which the `expiresAt` index serves.
+model Session {
+  id        String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  expiresAt DateTime @db.Timestamptz(3)
+  token     String   @unique
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  ipAddress String?
+  userAgent String?
+  userId    String   @db.Uuid
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+/// The Discord account behind a login, with its OAuth tokens. The tokens are
+/// encrypted by Better Auth (`account.encryptOAuthTokens`) before they reach
+/// this table. One Discord account belongs to at most one user: (`providerId`,
+/// `accountId`) is the key Better Auth 1.7.7 looks an account up by.
+model Account {
+  id                    String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  accountId             String
+  providerId            String
+  userId                String    @db.Uuid
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime? @db.Timestamptz(3)
+  refreshTokenExpiresAt DateTime? @db.Timestamptz(3)
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime  @updatedAt @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+}
+
+/// Short-lived values Better Auth keeps for itself. The login stores its OAuth
+/// state in a cookie, so nothing is written here today, but Better Auth checks
+/// at startup that the table exists. The daily cleanup job deletes expired rows.
+model Verification {
+  id         String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  identifier String
+  value      String
+  expiresAt  DateTime @db.Timestamptz(3)
+  createdAt  DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([identifier])
+  @@index([expiresAt])
+}

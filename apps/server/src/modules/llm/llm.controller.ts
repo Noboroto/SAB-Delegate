@@ -12,7 +12,6 @@ import {
   type LlmTestResult,
 } from '@sab/shared';
 import { Principal, type SessionPrincipal } from '../../auth/principal.decorator.js';
-import { FreshAuthGuard } from '../../auth/session.guard.js';
 import { ServiceError } from '../../common/errors/service-error.js';
 import { ManageGuildGuard } from '../../common/guild-access/manage-guild.guard.js';
 import { httpActor } from '../../common/rest/rest-wiring.js';
@@ -33,9 +32,7 @@ export class LlmController {
     return LlmSettingsSchema.parse(await this.llm.settings(guildId));
   }
 
-  /** A recent login only: the key and the address calls go to are changed here. */
   @Put()
-  @UseGuards(FreshAuthGuard)
   async save(
     @Param('guildId') guildId: string,
     @Principal() principal: SessionPrincipal,

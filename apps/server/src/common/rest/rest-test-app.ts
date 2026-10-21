@@ -33,7 +33,7 @@ export async function createRestApp(controllers: Type[], providers: Provider[]) 
       if (typeof user !== 'string') {
         return Promise.reject(new ApiError(ErrorCode.AUTH_UNAUTHENTICATED));
       }
-      const principal = { discordUserId: user, createdAt: new Date() };
+      const principal = { discordUserId: user };
       request.principal = principal;
       return Promise.resolve(principal);
     },

@@ -49,7 +49,6 @@ import {
   type LlmTestResult,
 } from '@sab/shared';
 import { Principal, type SessionPrincipal } from '../../auth/principal.decorator.js';
-import { FreshAuthGuard } from '../../auth/session.guard.js';
 import { ServiceError } from '../../common/errors/service-error.js';
 import { ManageGuildGuard } from '../../common/guild-access/manage-guild.guard.js';
 import { httpActor } from '../../common/rest/rest-wiring.js';
@@ -117,9 +116,7 @@ export class ChatbotController {
     return ChatbotConfigSchema.parse(await this.config.get(guildId));
   }
 
-  /** A recent login only: the key and the address calls go to are changed here. */
   @Put('llm')
-  @UseGuards(FreshAuthGuard)
   async saveLlm(
     @Param('guildId') guildId: string,
     @Principal() principal: SessionPrincipal,
@@ -132,7 +129,6 @@ export class ChatbotController {
   }
 
   @Delete('llm')
-  @UseGuards(FreshAuthGuard)
   async clearLlm(
     @Param('guildId') guildId: string,
     @Principal() principal: SessionPrincipal,

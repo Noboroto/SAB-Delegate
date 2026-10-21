@@ -44,6 +44,11 @@ export {
 export { REACTION_PHRASES } from './constants/reaction-phrases.js';
 export { QUEUES, type QueueName } from './constants/queues.js';
 export {
+  SESSION_COOKIE_CACHE_SECONDS,
+  SESSION_EXPIRES_SECONDS,
+  SESSION_UPDATE_AGE_SECONDS,
+} from './constants/session.js';
+export {
   BUSINESS_TIME_ZONE,
   MESSAGE_MAX_LENGTH,
   REACTION_EMOJI_MAX_LENGTH,

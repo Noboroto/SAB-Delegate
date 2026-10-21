@@ -1,9 +1,12 @@
+import {
+  SESSION_COOKIE_CACHE_SECONDS,
+  SESSION_EXPIRES_SECONDS,
+  SESSION_UPDATE_AGE_SECONDS,
+} from '@sab/shared';
 import { betterAuth } from 'better-auth';
+import type { prismaAdapter } from 'better-auth/adapters/prisma';
 import { APIError, createAuthMiddleware } from 'better-auth/api';
 import type { RestSettings } from '../config/env.js';
-
-/** Absolute lifetime of a login. */
-export const SESSION_TTL_SECONDS = 8 * 60 * 60;
 
 /**
  * Prefix of every cookie Better Auth sets. Fixed here so the Origin guard can
@@ -35,40 +38,48 @@ export const ALLOWED_AUTH_PATHS: ReadonlySet<string> = new Set([
 /** User fields a request must never change; `discordId` is the identity the guards trust. */
 const PROTECTED_USER_FIELDS = ['name', 'image', 'discordId'] as const;
 
+/** What `database` takes here: an adapter instance, the Prisma one or the in-memory one of a test. */
+export type AuthDatabase = ReturnType<typeof prismaAdapter>;
+
 /**
- * Stateless Better Auth: no `database`, so the whole login lives in encrypted
- * cookies and nothing about a person is stored. Without a database Better Auth
- * forces `cookieCache` (jwe) and `storeAccountCookie`; the Discord access token
- * used for the server picker stays in the encrypted `account_data` cookie and
- * is read server-side only (`SessionService.discordAccessToken`). A stolen
- * cookie cannot be revoked before it expires; the 8 hour lifetime bounds that.
- * The routes of the dashboard rely on that lifetime and on a fresh Manage
- * Server check per write (`ManageGuildGuard`). `FreshAuthGuard` (login at most
- * five minutes old) is not on those routes; it is meant for creating a write
- * API key, which does not exist yet.
+ * Better Auth with logins in the database (`database` is the Prisma adapter in
+ * the application). A login is a `Session` row that slides forward while the
+ * person is active, and the Discord tokens live in `Account`, encrypted, so a
+ * rotated Discord refresh token persists: a cookie only a server-side call
+ * could rewrite cannot hold it. A session can be revoked by deleting its row;
+ * the signed cookie cache bounds how long a deleted session keeps working.
+ * Row ids come from the database (`uuidv7()`), not from Better Auth; only a
+ * test with an in-memory `database`, which has no default for an id, passes
+ * its own generator.
  */
-export function createAuth(settings: RestSettings) {
+export function createAuth(
+  settings: RestSettings,
+  database: AuthDatabase,
+  generateId: false | (() => string) = false,
+) {
   return betterAuth({
     appName: 'SAB',
     baseURL: settings.appUrl,
     secret: settings.authSecret,
     trustedOrigins: [settings.appUrl],
+    database,
     session: {
-      expiresIn: SESSION_TTL_SECONDS,
-      // `maxAge` must not outlive the session, and `refreshCache: false` keeps
-      // the expiry absolute: reading the cookie never extends it.
-      cookieCache: {
-        enabled: true,
-        strategy: 'jwe',
-        maxAge: SESSION_TTL_SECONDS,
-        refreshCache: false,
-      },
+      expiresIn: SESSION_EXPIRES_SECONDS,
+      updateAge: SESSION_UPDATE_AGE_SECONDS,
+      freshAge: SESSION_EXPIRES_SECONDS,
+      // `refreshCache: false` (the default, pinned): a re-signed cache would keep a
+      // deleted session alive past the 60 s revocation bound.
+      cookieCache: { enabled: true, maxAge: SESSION_COOKIE_CACHE_SECONDS, refreshCache: false },
     },
-    account: { storeStateStrategy: 'cookie', storeAccountCookie: true },
+    // The OAuth state rides an encrypted cookie, so nothing is written to `Verification`;
+    // the table must still exist, Better Auth checks the schema at startup.
+    // The Discord tokens are real credentials: encrypted at rest.
+    account: { storeStateStrategy: 'cookie', encryptOAuthTokens: true },
     // `/error` is behind the default-deny list, so errors land on a web page.
     onAPIError: { errorURL: `${settings.appUrl}/auth-error` },
     advanced: {
       cookiePrefix: AUTH_COOKIE_PREFIX,
+      database: { generateId },
       // The origin check is skipped by default when NODE_ENV=test, which would
       // make a test with a foreign Origin pass by luck.
       disableOriginCheck: false,

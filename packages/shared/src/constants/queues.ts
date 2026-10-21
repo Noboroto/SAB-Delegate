@@ -4,6 +4,7 @@ export const QUEUES = {
   scheduledMessageSend: 'scheduled-message-send',
   chatbotHistoryRetention: 'chatbot-history-retention',
   emailVerifyPurge: 'email-verify-purge',
+  authSessionCleanup: 'auth-session-cleanup',
 } as const;
 
 export type QueueName = (typeof QUEUES)[keyof typeof QUEUES];

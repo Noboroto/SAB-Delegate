@@ -1,7 +1,5 @@
 import 'reflect-metadata';
-import { GUARDS_METADATA } from '@nestjs/common/constants';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { FreshAuthGuard } from '../../auth/session.guard.js';
 import {
   GUILD,
   HTTP_ACTOR,
@@ -138,26 +136,6 @@ describe('guards', () => {
       { method: 'DELETE', url: `${base}/turns`, payload: { scope: 'all' } },
     ];
     for (const call of calls) await expectGuarded(test, call);
-  });
-
-  it('asks for a recent login where the key or its address changes, and nowhere else', () => {
-    const guardsOf = (name: keyof ChatbotController): unknown[] =>
-      (Reflect.getMetadata(
-        GUARDS_METADATA,
-        Object.getOwnPropertyDescriptor(ChatbotController.prototype, name)?.value as object,
-      ) ?? []) as unknown[];
-    expect(guardsOf('saveLlm')).toContain(FreshAuthGuard);
-    expect(guardsOf('clearLlm')).toContain(FreshAuthGuard);
-    for (const name of [
-      'testLlm',
-      'listLlmModels',
-      'configure',
-      'addChannel',
-      'listQuota',
-      'deleteTurns',
-    ] as const) {
-      expect(guardsOf(name)).not.toContain(FreshAuthGuard);
-    }
   });
 });
 

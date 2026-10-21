@@ -14,7 +14,7 @@ import {
 } from '@sab/shared';
 import { Client, DiscordAPIError, PermissionFlagsBits, RateLimitError } from 'discord.js';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { REST_SETTINGS } from '../../auth/better-auth.js';
+import { AUTH, REST_SETTINGS } from '../../auth/better-auth.js';
 import type { PrincipalRequest } from '../../auth/principal.decorator.js';
 import { SessionService } from '../../auth/session.service.js';
 import { ServiceError } from '../../common/errors/service-error.js';
@@ -98,6 +98,9 @@ beforeAll(async () => {
   const moduleRef = await Test.createTestingModule({ imports: [FakeDiscordModule, MeModule] })
     .overrideProvider(REST_SETTINGS)
     .useValue(settings)
+    // The session lookup is faked below, so Better Auth (and its database) is never built.
+    .overrideProvider(AUTH)
+    .useValue({})
     .overrideProvider(SessionService)
     .useValue(sessions)
     .overrideProvider(UserGuildsClient)

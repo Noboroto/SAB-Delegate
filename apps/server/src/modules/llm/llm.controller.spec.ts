@@ -1,7 +1,5 @@
 import 'reflect-metadata';
-import { GUARDS_METADATA } from '@nestjs/common/constants';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { FreshAuthGuard } from '../../auth/session.guard.js';
 import {
   GUILD,
   asUser,
@@ -38,12 +36,6 @@ const post = (payload: object, path = url) =>
 describe('POST llm/models', () => {
   it('is closed to strangers and to people who cannot manage the server', async () => {
     await expectGuarded(test, { method: 'POST', url, payload: body });
-  });
-
-  it('needs no recent login: it only reads', () => {
-    const handler = Object.getOwnPropertyDescriptor(LlmController.prototype, 'models')
-      ?.value as object;
-    expect(Reflect.getMetadata(GUARDS_METADATA, handler) ?? []).not.toContain(FreshAuthGuard);
   });
 
   it('answers 200 with the list and passes only the known fields on', async () => {

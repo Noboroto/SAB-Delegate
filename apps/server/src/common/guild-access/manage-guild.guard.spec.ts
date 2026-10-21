@@ -19,7 +19,7 @@ const GUILD = '100000000000000001';
 
 function setup(options: { signedIn?: boolean; allowed?: boolean; failure?: Error } = {}) {
   const { signedIn = true, allowed = true, failure } = options;
-  const principal: SessionPrincipal = { discordUserId: USER, createdAt: new Date() };
+  const principal: SessionPrincipal = { discordUserId: USER };
   const requirePrincipal = vi.fn(() =>
     signedIn
       ? Promise.resolve(principal)

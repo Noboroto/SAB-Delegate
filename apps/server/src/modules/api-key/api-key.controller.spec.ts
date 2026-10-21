@@ -38,15 +38,14 @@ const PLAINTEXT = `sab_${'x'.repeat(43)}`;
 
 const service = { list: vi.fn(), mint: vi.fn(), revoke: vi.fn() };
 
-/** `x-user` is the signed-in account, `x-login-age-min` how long ago that login happened. */
+/** `x-user` is the signed-in account. */
 const sessions = {
   requirePrincipal: (request: PrincipalRequest) => {
     const user = request.headers['x-user'];
     if (typeof user !== 'string') {
       return Promise.reject(new ApiError(ErrorCode.AUTH_UNAUTHENTICATED));
     }
-    const age = Number(request.headers['x-login-age-min'] ?? 0);
-    const principal = { discordUserId: user, createdAt: new Date(Date.now() - age * 60_000) };
+    const principal = { discordUserId: user };
     request.principal = principal;
     return Promise.resolve(principal);
   },
@@ -189,27 +188,14 @@ describe('POST /api/me/api-keys', () => {
     );
   });
 
-  it('lets a read key through on an old login', async () => {
-    expect((await mint({ name: 'agent' }, login({ 'x-login-age-min': '600' }))).statusCode).toBe(
-      201,
-    );
-  });
-
-  it('mints a write key on a login from the last five minutes', async () => {
-    const response = await mint({ name: 'w', mode: 'WRITE' }, login({ 'x-login-age-min': '4' }));
+  it('mints a write key for any signed-in session', async () => {
+    const response = await mint({ name: 'w', mode: 'WRITE' });
     expect(response.statusCode).toBe(201);
     expect(service.mint).toHaveBeenCalledWith(
       USER,
       { name: 'w', mode: 'WRITE', expiresInDays: 30 },
       expect.anything(),
     );
-  });
-
-  it('asks a write key on an older login to sign in again and mints nothing', async () => {
-    const response = await mint({ name: 'w', mode: 'WRITE' }, login({ 'x-login-age-min': '6' }));
-    expect(response.statusCode).toBe(403);
-    expect(response.json<{ code: string }>().code).toBe('AUTH_REAUTH_REQUIRED');
-    expect(service.mint).not.toHaveBeenCalled();
   });
 
   it.each([
