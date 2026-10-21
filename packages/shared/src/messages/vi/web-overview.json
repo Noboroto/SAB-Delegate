@@ -17,6 +17,7 @@
   "shortcuts": {
     "title": "Đi tới",
     "modules": "Các tính năng của bot: sinh nhật, ghi chú, trò chơi nối từ, tin nhắn hẹn giờ.",
+    "tools": "Công cụ thao tác hàng loạt: nhắc tên, gán vai trò, dọn tin nhắn, tạo chủ đề.",
     "commands": "Danh sách lệnh bot hiểu, kèm mô tả.",
     "auditLog": "Ai đã đổi gì trên máy chủ này.",
     "settings": "Ngôn ngữ, kênh và tên hiển thị của bot."

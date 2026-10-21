@@ -25,6 +25,7 @@
   },
   "empty": "Chưa có thao tác nào được ghi.",
   "emptyFiltered": "Không có thao tác nào khớp bộ lọc.",
+  "clearFilters": "Xoá bộ lọc",
   "older": "Cũ hơn",
   "newest": "Về mới nhất",
   "actions": {

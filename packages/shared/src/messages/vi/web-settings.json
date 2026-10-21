@@ -65,6 +65,7 @@
       "back": "Về cài đặt"
     },
     "form": {
+      "title": "Kết nối dịch vụ AI",
       "unavailable": "Máy chủ chưa bật tính năng lưu khoá API (thiếu LLM_KEY_SECRET) nên chưa lưu được cài đặt LLM.",
       "preset": "Nhà cung cấp",
       "presetCustom": "Khác",
