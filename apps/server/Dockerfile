@@ -3,7 +3,7 @@
 #
 # Base image pinned by digest, the same one the legacy bot image and the other
 # apps on the deploy host use, so its layers are already present there.
-ARG NODE_IMAGE=node:24.21.0-alpine3.23@sha256:9ec4a2e289874ed0d722e1772ec2de45d2801541db8612f3638b26f128c69ac2
+ARG NODE_IMAGE=node:24.22.1-alpine3.23@sha256:0468540aa58203ff9e40c2aab3907c52644ab818af6176b1c70a026137dc92a2
 
 # ── shared-build: workspace install plus the @sab/shared sources ────────────
 # Not compiled here: @sab/shared imports Zod schemas that `prisma generate`
