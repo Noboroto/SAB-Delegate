@@ -33,3 +33,9 @@ peerDependencyRules:
 # schema differs from the one the session code was measured against.
 overrides:
   '@better-auth/core': 1.7.7
+  # Security floors for transitive deps still locked to a vulnerable line.
+  # Drop an entry once every parent resolves to the patched version itself.
+  undici@>=7.0.0 <7.30.1: ^7.30.1
+  body-parser@>=2.0.0 <2.4.0: ^2.4.0
+  next@>=16.0.0 <16.4.3: 16.4.3
+  zod@>=4.0.0 <4.6.7: ^4.6.7
