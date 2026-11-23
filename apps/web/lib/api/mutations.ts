@@ -60,11 +60,13 @@ export function useApiErrorMessage(): (error: unknown) => string {
 
   return useCallback(
     (error: unknown) => {
-      const code = error instanceof ApiRequestError ? error.code : undefined;
-      const known = ErrorCodeSchema.safeParse(code);
-      // `permission` feeds the one message that varies by detail; the server's
-      // detail is not kept, so the neutral wording applies.
-      return known.success ? tErrors(known.data, { permission: 'other' }) : tWeb('genericError');
+      const request = error instanceof ApiRequestError ? error : undefined;
+      const known = ErrorCodeSchema.safeParse(request?.code);
+      // The server's values fill the message (a limit, a count). `permission`
+      // stays neutral: the web shows no permission names.
+      return known.success
+        ? tErrors(known.data, { ...request?.params, permission: 'other' })
+        : tWeb('genericError');
     },
     [tErrors, tWeb],
   );

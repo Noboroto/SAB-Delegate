@@ -70,6 +70,20 @@ describe('apiFetch', () => {
     expect(error.code).toBe('INTERNAL');
   });
 
+  it('keeps the text and number values of the details for the message, and nothing else', async () => {
+    stubFetch(
+      respond(409, {
+        code: 'BIRTHDAY_WISH_LIMIT_REACHED',
+        message: 'x',
+        details: { max: 200, unit: 'wish', issues: [{ path: 'text' }] },
+      }),
+    );
+    const error = (await apiFetch('/api/x', { parser }).catch(
+      (e: unknown) => e,
+    )) as ApiRequestError;
+    expect(error.params).toEqual({ max: 200, unit: 'wish' });
+  });
+
   it('survives a failure whose body is not JSON', async () => {
     stubFetch(new Response('<html>bad gateway</html>', { status: 502 }));
     const error = (await apiFetch('/api/x', { parser }).catch(

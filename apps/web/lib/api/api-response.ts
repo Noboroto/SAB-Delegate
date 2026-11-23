@@ -16,12 +16,15 @@ export interface ResponseParser<T> {
 export class ApiRequestError extends Error {
   readonly status: number;
   readonly code: string | undefined;
+  /** The values the error's message fills in (such as a limit), as the server sent them. */
+  readonly params: Readonly<Record<string, string | number>>;
 
-  constructor(status: number, code?: string) {
+  constructor(status: number, code?: string, params: Record<string, string | number> = {}) {
     super(`Request failed (HTTP ${status}${code === undefined ? '' : `, ${code}`})`);
     this.name = 'ApiRequestError';
     this.status = status;
     this.code = code;
+    this.params = params;
   }
 
   /** Unknown server, no permission and no bot all look the same on purpose. */
@@ -40,6 +43,19 @@ function codeOf(body: unknown): string | undefined {
   return typeof code === 'string' && code.length > 0 ? code : undefined;
 }
 
+/** The text and number values of the body's `details`; anything else is not a message value. */
+function paramsOf(body: unknown): Record<string, string | number> {
+  if (typeof body !== 'object' || body === null) return {};
+  const details = (body as { details?: unknown }).details;
+  if (typeof details !== 'object' || details === null) return {};
+  return Object.fromEntries(
+    Object.entries(details).filter(
+      (entry): entry is [string, string | number] =>
+        typeof entry[1] === 'string' || typeof entry[1] === 'number',
+    ),
+  );
+}
+
 /** Turns a failed response into the typed error; an unreadable body keeps only the status. */
 export async function toApiRequestError(res: Response): Promise<ApiRequestError> {
   let body: unknown;
@@ -48,7 +64,7 @@ export async function toApiRequestError(res: Response): Promise<ApiRequestError>
   } catch {
     body = undefined;
   }
-  return new ApiRequestError(res.status, codeOf(body));
+  return new ApiRequestError(res.status, codeOf(body), paramsOf(body));
 }
 
 /** The success path: parses the JSON body with `parser`; `204` parses `null`. */

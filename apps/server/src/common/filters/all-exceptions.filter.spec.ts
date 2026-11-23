@@ -49,7 +49,8 @@ class ThrowingController {
   }
   @Get('service-bot-missing')
   botMissing(): never {
-    throw new ServiceError(ErrorCode.GUILD_BOT_MISSING);
+    // A value that would tell the bot's absence apart if it got out.
+    throw new ServiceError(ErrorCode.GUILD_BOT_MISSING, { reason: 'bot-not-in-guild' });
   }
   @Get('service-permission')
   permission(): never {
@@ -186,6 +187,7 @@ describe('AllExceptionsFilter over HTTP', () => {
     expect(body['code']).toBe('DISCORD_MISSING_PERMISSIONS');
     expect(String(body['message'])).toContain('send messages');
     expect(String(body['message'])).not.toContain('{');
+    expect(body['details']).toEqual({ permission: 'send' });
   });
 
   it('passes an ApiError through unchanged', async () => {

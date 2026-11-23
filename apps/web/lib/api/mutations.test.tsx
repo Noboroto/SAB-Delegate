@@ -96,6 +96,14 @@ describe.each(SUPPORTED_LOCALES)('useApiErrorMessage (%s)', (locale) => {
     }
   });
 
+  it('fills the message with the values the server sent', () => {
+    const text = messageOf(
+      locale,
+      new ApiRequestError(409, 'BIRTHDAY_WISH_LIMIT_REACHED', { max: 200 }),
+    );
+    expect(text).toContain('200');
+  });
+
   it('falls back to the generic sentence, never to the error text', () => {
     const generic = messageOf(locale, new Error('boom'));
     expect(generic).not.toBe('');

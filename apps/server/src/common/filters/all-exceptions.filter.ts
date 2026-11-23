@@ -94,7 +94,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
     if (exception instanceof ServiceError) {
       return {
         status: statusOf(exception.code),
-        body: errorBody(exception.code, exception.params),
+        // The placeholder values go out too, so a client can fill in its own
+        // translation; they are never secrets (see ServiceError).
+        body: errorBody(exception.code, exception.params, exception.params),
       };
     }
     const discord = discordFailure(exception);
