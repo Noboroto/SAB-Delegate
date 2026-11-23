@@ -88,5 +88,53 @@
     "title": "Nobody is on the list yet",
     "body": "Add the first person, or import a CSV file, and the bot will wish them a happy birthday.",
     "action": "Add the first person"
+  },
+  "tabs": {
+    "list": "Birthday list",
+    "wishes": "Wishes"
+  },
+  "wishes": {
+    "label": "Wish list",
+    "help": "Each time someone has a birthday, the bot sends one wish from this list. A wish is sent only once per round; when all of them have been sent, a new round starts. {placeholder} is where the bot mentions (@) the person whose birthday it is.",
+    "count": "{count}/{max} wishes",
+    "limitReached": "The limit of {max} wishes is reached. Delete one to add another.",
+    "add": "Add a wish",
+    "used": "Sent in this round",
+    "empty": {
+      "title": "No wishes yet",
+      "body": "While the list is empty, the bot picks one of its built-in wishes at random. Add your own wishes for the bot to use instead."
+    },
+    "edit": {
+      "button": "Edit",
+      "label": "Edit wish {index}"
+    },
+    "remove": {
+      "button": "Delete",
+      "label": "Delete wish {index}",
+      "modalTitle": "Delete this wish?",
+      "confirm": "Delete",
+      "cancel": "Cancel",
+      "done": "The wish was deleted."
+    },
+    "form": {
+      "addTitle": "Add a wish",
+      "editTitle": "Edit the wish",
+      "text": "Wish text",
+      "textHelp": "Write {placeholder} where the bot should mention the person whose birthday it is.",
+      "insert": "Insert {placeholder}",
+      "preview": "Preview",
+      "previewName": "@You",
+      "previewEmpty": "Type the wish to see a preview.",
+      "save": "Save the wish",
+      "saved": "The wish was saved.",
+      "unknownOutcome": "It is not clear whether the wish was saved. Check the list before adding it again."
+    },
+    "validation": {
+      "required": "The wish cannot be empty.",
+      "missingName": "The wish needs {placeholder} at least once so the bot knows whom to mention.",
+      "tooManyNames": "Use {placeholder} at most {max} times.",
+      "tooLong": "A wish is at most {max} characters.",
+      "invalidCharacter": "The wish holds a character that is not allowed. Retype the part you pasted."
+    }
   }
 }

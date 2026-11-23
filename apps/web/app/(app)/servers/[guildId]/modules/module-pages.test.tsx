@@ -43,8 +43,22 @@ describe('birthday route', () => {
       await BirthdayModulePage({ params, searchParams: Promise.resolve({ month: '3' }) }),
     );
     expect(api.fetch).toHaveBeenCalledWith(`/api/guilds/${GUILD}/birthdays?month=3`);
+    // The wishes belong to the other tab and are not read for this one.
+    expect(api.fetch).toHaveBeenCalledTimes(1);
     expect(screen.getByRole('heading', { level: 1, name: 'Sinh nhật' })).toBeVisible();
     expect(screen.getByText('An')).toBeVisible();
+  });
+
+  it('reads only the wishes for the wishes tab', async () => {
+    api.fetch.mockResolvedValue([
+      { id: '11111111-1111-4111-8111-111111111111', text: 'Chúc ${name}', used: false },
+    ]);
+    renderWithProviders(
+      await BirthdayModulePage({ params, searchParams: Promise.resolve({ tab: 'wishes' }) }),
+    );
+    expect(api.fetch).toHaveBeenCalledTimes(1);
+    expect(api.fetch).toHaveBeenCalledWith(`/api/guilds/${GUILD}/birthday-wishes`);
+    expect(screen.getByRole('button', { name: 'Thêm lời chúc' })).toBeVisible();
   });
 
   it('ignores a month that is not a month', async () => {

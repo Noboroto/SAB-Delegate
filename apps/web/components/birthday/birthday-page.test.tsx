@@ -13,6 +13,7 @@ vi.mock('next/navigation', () => ({
 import { BirthdayPage } from './birthday-page';
 
 const GUILD = '1'.repeat(18);
+const WISH = { id: '11111111-1111-4111-8111-111111111111', text: 'Chúc ${name} vui!', used: false };
 const PERSON = { studentId: 'SE1', name: 'An', discordId: '2'.repeat(18), month: 3, day: 15 };
 
 beforeEach(() => {
@@ -27,7 +28,7 @@ beforeEach(() => {
 describe('BirthdayPage', () => {
   it.each(SUPPORTED_LOCALES)('has a title and the list in %s without bare keys', (locale) => {
     const { container } = renderWithProviders(
-      <BirthdayPage guildId={GUILD} entries={[PERSON]} month={undefined} />,
+      <BirthdayPage guildId={GUILD} tab="list" entries={[PERSON]} month={undefined} />,
       locale,
     );
     expect(
@@ -38,15 +39,33 @@ describe('BirthdayPage', () => {
   });
 
   it('shows the month the server filtered by', () => {
-    renderWithProviders(<BirthdayPage guildId={GUILD} entries={[PERSON]} month={3} />);
+    renderWithProviders(<BirthdayPage guildId={GUILD} tab="list" entries={[PERSON]} month={3} />);
     expect(screen.getByText('Tháng 3')).toBeVisible();
   });
 
   it('asks the server for a month through the URL instead of filtering the list itself', async () => {
-    renderWithProviders(<BirthdayPage guildId={GUILD} entries={[PERSON]} month={undefined} />);
+    renderWithProviders(
+      <BirthdayPage guildId={GUILD} tab="list" entries={[PERSON]} month={undefined} />,
+    );
     await userEvent.click(screen.getByRole('combobox', { name: 'Lọc theo tháng' }));
     await userEvent.click(await screen.findByText('Tháng 2'));
     expect(nav.push).toHaveBeenCalledWith('/servers/1/modules/birthday?month=2');
     expect(screen.getByText('An')).toBeVisible();
+  });
+
+  it('opens the wishes tab through the URL, which reads only that tab', async () => {
+    renderWithProviders(
+      <BirthdayPage guildId={GUILD} tab="list" entries={[PERSON]} month={undefined} />,
+    );
+    await userEvent.click(screen.getByRole('tab', { name: 'Lời chúc' }));
+    expect(nav.push).toHaveBeenCalledWith('/servers/1/modules/birthday?tab=wishes');
+  });
+
+  it('shows the wishes when the URL names their tab, and goes back to the plain list', async () => {
+    renderWithProviders(<BirthdayPage guildId={GUILD} tab="wishes" wishes={[WISH]} />);
+    expect(screen.getByRole('tab', { name: 'Lời chúc', selected: true })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Thêm lời chúc' })).toBeVisible();
+    await userEvent.click(screen.getByRole('tab', { name: 'Danh sách sinh nhật' }));
+    expect(nav.push).toHaveBeenCalledWith('/servers/1/modules/birthday');
   });
 });

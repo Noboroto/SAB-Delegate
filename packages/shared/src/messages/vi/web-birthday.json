@@ -88,5 +88,53 @@
     "title": "Chưa có ai trong danh sách",
     "body": "Thêm người đầu tiên hoặc nhập từ tệp CSV, bot sẽ chúc sinh nhật họ.",
     "action": "Thêm người đầu tiên"
+  },
+  "tabs": {
+    "list": "Danh sách sinh nhật",
+    "wishes": "Lời chúc"
+  },
+  "wishes": {
+    "label": "Danh sách lời chúc",
+    "help": "Mỗi lần có người sinh nhật, bot gửi một lời chúc trong danh sách này. Mỗi lời chúc chỉ được gửi một lần trong một vòng; khi đã gửi hết, bot bắt đầu vòng mới. {placeholder} là chỗ bot nhắc (@) người có sinh nhật.",
+    "count": "Đã có {count}/{max} lời chúc",
+    "limitReached": "Đã đạt tối đa {max} lời chúc. Hãy xoá bớt để thêm mới.",
+    "add": "Thêm lời chúc",
+    "used": "Đã gửi trong vòng này",
+    "empty": {
+      "title": "Chưa có lời chúc nào",
+      "body": "Khi danh sách trống, bot chọn ngẫu nhiên một lời chúc có sẵn. Thêm lời chúc của riêng bạn để bot dùng chúng."
+    },
+    "edit": {
+      "button": "Sửa",
+      "label": "Sửa lời chúc {index}"
+    },
+    "remove": {
+      "button": "Xoá",
+      "label": "Xoá lời chúc {index}",
+      "modalTitle": "Xoá lời chúc này?",
+      "confirm": "Xoá",
+      "cancel": "Huỷ",
+      "done": "Đã xoá lời chúc."
+    },
+    "form": {
+      "addTitle": "Thêm lời chúc",
+      "editTitle": "Sửa lời chúc",
+      "text": "Nội dung lời chúc",
+      "textHelp": "Viết {placeholder} ở chỗ bot sẽ nhắc người có sinh nhật.",
+      "insert": "Chèn {placeholder}",
+      "preview": "Xem trước",
+      "previewName": "@Bạn",
+      "previewEmpty": "Gõ nội dung để xem trước.",
+      "save": "Lưu lời chúc",
+      "saved": "Đã lưu lời chúc.",
+      "unknownOutcome": "Không rõ lời chúc đã được lưu chưa. Hãy xem lại danh sách trước khi thêm lại."
+    },
+    "validation": {
+      "required": "Lời chúc không được để trống.",
+      "missingName": "Lời chúc cần có {placeholder} ít nhất một lần để bot biết nhắc ai.",
+      "tooManyNames": "Chỉ được dùng {placeholder} tối đa {max} lần.",
+      "tooLong": "Lời chúc dài tối đa {max} ký tự.",
+      "invalidCharacter": "Lời chúc có ký tự không hợp lệ. Hãy gõ lại đoạn vừa dán."
+    }
   }
 }
