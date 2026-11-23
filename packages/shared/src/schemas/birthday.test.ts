@@ -6,6 +6,9 @@ import {
   BirthdayAddSchema,
   BirthdayImportSchema,
   BirthdaySelectorSchema,
+  BIRTHDAY_WISH_MAX_LENGTH,
+  BirthdayWishInputSchema,
+  countNamePlaceholders,
 } from './birthday.js';
 
 // Built at runtime: a literal 18-digit id next to `discordId` trips the secret scanner.
@@ -115,5 +118,27 @@ describe('BirthdaySelectorSchema', () => {
   it('refuses a blank student ID and a mention as Discord id', () => {
     expect(BirthdaySelectorSchema.safeParse({ studentId: '  ' }).success).toBe(false);
     expect(BirthdaySelectorSchema.safeParse({ discordId: '<@1>' }).success).toBe(false);
+  });
+});
+
+describe('BirthdayWishInputSchema', () => {
+  it('trims the ends and keeps the lines inside', () => {
+    expect(BirthdayWishInputSchema.parse({ text: '  Chúc ${name}\nvui vẻ  ' })).toEqual({
+      text: 'Chúc ${name}\nvui vẻ',
+    });
+  });
+
+  it('needs the name placeholder at least once and at most five times', () => {
+    expect(BirthdayWishInputSchema.safeParse({ text: 'Chúc mừng sinh nhật' }).success).toBe(false);
+    expect(BirthdayWishInputSchema.safeParse({ text: '${name}'.repeat(5) }).success).toBe(true);
+    expect(BirthdayWishInputSchema.safeParse({ text: '${name}'.repeat(6) }).success).toBe(false);
+    expect(countNamePlaceholders('${name} và ${name}')).toBe(2);
+  });
+
+  it('refuses a blank or an over-long wish', () => {
+    expect(BirthdayWishInputSchema.safeParse({ text: '   ' }).success).toBe(false);
+    expect(BirthdayWishInputSchema.safeParse({ text: 'a\u0000 ${name}' }).success).toBe(false);
+    const long = '${name}' + 'x'.repeat(BIRTHDAY_WISH_MAX_LENGTH);
+    expect(BirthdayWishInputSchema.safeParse({ text: long }).success).toBe(false);
   });
 });

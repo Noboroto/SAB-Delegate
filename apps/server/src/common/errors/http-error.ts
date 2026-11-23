@@ -26,6 +26,8 @@ const STATUS_BY_CODE: Readonly<Record<ErrorCode, number>> = {
   DISCORD_MESSAGE_NOT_FOUND: 404,
   VALIDATION_FAILED: 400,
   SCHEDULE_LIMIT_REACHED: 409,
+  BIRTHDAY_WISH_NOT_FOUND: 404,
+  BIRTHDAY_WISH_LIMIT_REACHED: 409,
   CHANNEL_IN_USE: 409,
   CHATBOT_CHANNEL_LIMIT_REACHED: 409,
   CHATBOT_TURN_NOT_FOUND: 404,
@@ -84,8 +86,12 @@ export function errorBody(
   details?: ApiErrorBody['details'],
 ): ApiErrorBody {
   const shown = publicCode(code);
-  const message = translatorFor('en')(`errors.${shown}`, shown === code ? params : undefined);
-  return details === undefined ? { code: shown, message } : { code: shown, message, details };
+  const masked = shown !== code;
+  const message = translatorFor('en')(`errors.${shown}`, masked ? undefined : params);
+  // A masked code hides which case it stands for, so nothing specific to that case goes out.
+  return details === undefined || masked
+    ? { code: shown, message }
+    : { code: shown, message, details };
 }
 
 /** An `HttpException` whose body is already the `{ code, message }` contract. */

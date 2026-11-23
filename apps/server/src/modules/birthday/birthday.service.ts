@@ -33,7 +33,7 @@ import {
   previousDay,
   type BusinessDay,
 } from './birthday.date.js';
-import { pickUnusedWish } from './birthday.wish.js';
+import { BirthdayWishService } from './birthday-wish.service.js';
 
 /** The configured birthday channel exists but is not a channel the bot can post in. */
 class UnsendableChannelError extends Error {
@@ -173,6 +173,7 @@ export class BirthdayService {
     private readonly client: Client,
     private readonly reporter: ErrorReporter,
     private readonly ready: DiscordReadyService,
+    private readonly wishes: BirthdayWishService,
   ) {}
 
   /** Everyone on the list, ordered as the list prints; `month` narrows it to one month. */
@@ -382,19 +383,6 @@ export class BirthdayService {
   }
 
   /**
-   * A wish this server has not used in the current cycle, as an index into
-   * `BIRTHDAY_WISHES`; the cycle restarts when all of them are used.
-   */
-  async pickWish(guildId: string): Promise<number> {
-    const guild = await this.prisma.guild.findUnique({
-      where: { discordId: parseGuildId(guildId) },
-      select: { id: true },
-    });
-    if (guild === null) throw new ServiceError(ErrorCode.GUILD_NOT_FOUND);
-    return this.pickWishFor(guild.id);
-  }
-
-  /**
    * Greets everyone whose birthday is `day` (29 February people on 28 February
    * in a year without a 29th), once per server and day however often this is
    * called and from however many places at once: the day's lease decides.
@@ -534,9 +522,9 @@ export class BirthdayService {
         // Asked before the send, not only after: a run that lost the day while
         // it was stalled must not greet people the new holder is greeting.
         if (!(await this.holdLease(run))) return this.lostLease(target);
-        const wishIndex = await this.pickWishFor(target.id);
+        const wish = await this.wishes.pickFor(target.id);
         await channel.send({
-          content: renderBirthdayWish(wishIndex, `<@${discordId}>`),
+          content: renderBirthdayWish(wish, `<@${discordId}>`),
           allowedMentions: { users: [discordId] },
           nonce: greetingNonce(run.id, discordId),
           enforceNonce: true,
@@ -703,10 +691,6 @@ export class BirthdayService {
     } catch (error) {
       this.logger.warn(`Could not release a birthday lease (${errorLabel(error)})`);
     }
-  }
-
-  private pickWishFor(guildId: string): Promise<number> {
-    return this.prisma.$transaction((tx) => pickUnusedWish(tx, guildId));
   }
 
   private async reportFailure(target: Target, error: unknown): Promise<void> {

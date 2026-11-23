@@ -12,7 +12,8 @@ model Guild {
   config         GuildConfig?
   birthdays      BirthdayEntry[]
   birthdayRuns   BirthdayCompletedDate[]
-  birthdayWishes BirthdayWishUsage[]
+  birthdayWishUsages BirthdayWishUsage[]
+  birthdayWishes     BirthdayWish[]
   notes          NoteEntry[]
   wordGame       WordGameState?
   gameChannels   GameChannel[]

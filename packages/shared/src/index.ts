@@ -34,6 +34,7 @@ export { ListQuerySchema, SEARCH_MAX_LENGTH } from './schemas/list-query.js';
 export {
   BIRTHDAY_NAME_PLACEHOLDER,
   BIRTHDAY_WISHES,
+  LEGACY_BIRTHDAY_WISH_COUNT,
   renderBirthdayWish,
 } from './constants/birthday-wishes.js';
 export {
@@ -100,6 +101,15 @@ export {
   BIRTHDAY_CSV_TEMPLATE,
   BIRTHDAY_IMPORT_MAX_ROWS,
   BIRTHDAY_SAMPLE_SIZE,
+  BIRTHDAY_WISHES_MAX,
+  BIRTHDAY_WISH_MAX_LENGTH,
+  BIRTHDAY_WISH_MAX_NAMES,
+  BirthdayWishIdParamSchema,
+  BirthdayWishInputSchema,
+  BirthdayWishViewSchema,
+  countNamePlaceholders,
+  type BirthdayWishInput,
+  type BirthdayWishView,
   BirthdayAddResultSchema,
   BirthdayAddSchema,
   BirthdayEntryViewSchema,

@@ -4,6 +4,8 @@ import { I18nModule } from '../../i18n/guild-locale.service.js';
 import { restControllers, restImports } from '../../common/rest/rest-wiring.js';
 import { PgBossModule } from '../../jobs/pg-boss.module.js';
 import { GuildConfigModule } from '../guild-config/guild-config.module.js';
+import { BirthdayWishController } from './birthday-wish.controller.js';
+import { BirthdayWishService } from './birthday-wish.service.js';
 import { BirthdayCommands } from './birthday.commands.js';
 import { BirthdayController } from './birthday.controller.js';
 import { BirthdayCron } from './birthday.cron.js';
@@ -16,8 +18,8 @@ import { BirthdayService } from './birthday.service.js';
  */
 @Module({
   imports: [AuditModule, I18nModule, PgBossModule, GuildConfigModule, ...restImports()],
-  providers: [BirthdayService, BirthdayCommands, BirthdayCron],
-  controllers: restControllers([BirthdayController]),
+  providers: [BirthdayService, BirthdayWishService, BirthdayCommands, BirthdayCron],
+  controllers: restControllers([BirthdayController, BirthdayWishController]),
   exports: [BirthdayService],
 })
 export class BirthdayModule {}

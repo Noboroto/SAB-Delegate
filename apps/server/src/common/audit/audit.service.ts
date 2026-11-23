@@ -40,6 +40,7 @@ const PARAM_KEYS: ReadonlySet<string> = new Set([
   'userId',
   'targetId',
   'scheduleId',
+  'wishId',
   'count',
   'total',
   'failed',

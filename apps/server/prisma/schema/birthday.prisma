@@ -37,7 +37,9 @@ model BirthdayCompletedDate {
   @@index([status, leaseUntil])
 }
 
-/// Wish `wishIndex` (position in the shared wish list) was used in the current cycle.
+/// Legacy record of which built-in wish (`wishIndex`, position in `BIRTHDAY_WISHES`) a
+/// server used in its current cycle. Read once, when the server's own wish list is first
+/// created, to carry that cycle over; nothing writes it any more except the quick.db import.
 /// CHECK (migration `_checks`): wishIndex >= 0.
 model BirthdayWishUsage {
   id        String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
@@ -48,4 +50,20 @@ model BirthdayWishUsage {
   guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
 
   @@unique([guildId, wishIndex])
+}
+
+/// One greeting a server can send; `${name}` marks where the celebrant is mentioned.
+/// CHECK (migration `birthday_wishes`): text holds `${name}`, 1..1800 characters.
+model BirthdayWish {
+  id        String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  guildId   String   @db.Uuid
+  text      String
+  /// Sent in the current cycle; once every wish of the server is used, all are reset.
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
+
+  @@index([guildId, used])
 }

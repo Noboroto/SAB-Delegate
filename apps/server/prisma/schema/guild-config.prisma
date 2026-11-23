@@ -9,6 +9,8 @@ model GuildConfig {
   wordChannelId      String?
   /// CHECK (migration `_checks`): >= 200.
   wordMaxWords       Int      @default(3000)
+  /// The server's wish list was filled with the built-in wishes; an emptied list stays empty.
+  birthdayWishesSeeded Boolean @default(false)
   updatedAt          DateTime @updatedAt @db.Timestamptz(3)
 
   guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)

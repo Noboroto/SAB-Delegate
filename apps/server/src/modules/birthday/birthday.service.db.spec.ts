@@ -10,6 +10,7 @@ import type { PrismaService } from '../../prisma/prisma.service.js';
 import { createTestDatabase, type TestDatabase } from '../../testing/test-database.js';
 import { GuildConfigService } from '../guild-config/guild-config.service.js';
 import { dateColumnValue, type BusinessDay } from './birthday.date.js';
+import { BirthdayWishService } from './birthday-wish.service.js';
 import { RUN_LEASE_MS, BirthdayService } from './birthday.service.js';
 
 const ACTOR: ActorContext = { source: 'DISCORD', userId: '100000000000000002' };
@@ -99,6 +100,7 @@ describe('BirthdayService against Postgres', () => {
         {
           isStopping: () => state.stopping || (state.stopWhen?.() ?? false),
         } as unknown as DiscordReadyService,
+        new BirthdayWishService(db, audit, guilds),
       );
     service = makeService(prisma);
   });
@@ -301,49 +303,6 @@ describe('BirthdayService against Postgres', () => {
     });
   });
 
-  describe('pickWish', () => {
-    it('never repeats within a cycle, then starts a new one', async () => {
-      const { guildId } = await seed(0);
-      const total = BIRTHDAY_WISHES.length;
-      const firstCycle: number[] = [];
-      for (let i = 0; i < total; i++) firstCycle.push(await service.pickWish(guildId));
-      expect(new Set(firstCycle).size).toBe(total);
-      expect(Math.min(...firstCycle)).toBe(0);
-      expect(Math.max(...firstCycle)).toBe(total - 1);
-
-      const secondCycle: number[] = [];
-      for (let i = 0; i < total; i++) secondCycle.push(await service.pickWish(guildId));
-      expect(new Set(secondCycle).size).toBe(total);
-
-      // Twenty-one picks in a row on a fresh server: no value out of range, no failure.
-      const other = (await seed(0)).guildId;
-      const picks: number[] = [];
-      for (let i = 0; i < total + 1; i++) picks.push(await service.pickWish(other));
-      expect(picks.every((pick) => pick >= 0 && pick < total)).toBe(true);
-    });
-
-    it('does not hand the same wish to concurrent pickers', async () => {
-      const { guildId } = await seed(0);
-      const picks = await Promise.all(Array.from({ length: 4 }, () => service.pickWish(guildId)));
-      expect(new Set(picks).size).toBe(4);
-    });
-
-    it('chooses among the unused wishes at random, not in order', async () => {
-      const firsts = new Set<number>();
-      for (let i = 0; i < 40; i++) {
-        const { guildId } = await seed(0);
-        firsts.add(await service.pickWish(guildId));
-      }
-      expect(firsts.size).toBeGreaterThan(5);
-    });
-
-    it('answers GUILD_NOT_FOUND for a server nobody recorded', async () => {
-      await expect(service.pickWish('199999999999999999')).rejects.toMatchObject({
-        code: 'GUILD_NOT_FOUND',
-      });
-    });
-  });
-
   describe('runDailyWishes', () => {
     it('sends one message per person, mentioning them and nobody else, then marks the day done', async () => {
       const { guildId, channelId, ids, today } = await seed(3);
@@ -354,9 +313,9 @@ describe('BirthdayService against Postgres', () => {
       expect(messages).toHaveLength(3);
       messages.forEach((message, index) => {
         const id = ids[index];
-        expect(BIRTHDAY_WISHES.map((_, wish) => renderBirthdayWish(wish, `<@${id}>`))).toContain(
-          message.content,
-        );
+        expect(
+          BIRTHDAY_WISHES.map((wish) => renderBirthdayWish(wish.trim(), `<@${id}>`)),
+        ).toContain(message.content);
         expect(message.content).not.toContain('${name}');
         expect(message.allowedMentions).toEqual({ users: [id] });
       });

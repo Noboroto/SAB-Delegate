@@ -1,5 +1,7 @@
 import { z } from 'zod';
+import { BIRTHDAY_NAME_PLACEHOLDER } from '../constants/birthday-wishes.js';
 import { BirthdayEntrySchema } from '../generated/zod/schemas/models/BirthdayEntry.schema.js';
+import { BirthdayWishSchema } from '../generated/zod/schemas/models/BirthdayWish.schema.js';
 import { isValidMonthDay } from '../utils/month-day.js';
 import { SnowflakeSchema } from './snowflake.js';
 
@@ -117,3 +119,48 @@ export const BirthdayImportProblemSchema = z.object({
 });
 
 export type BirthdayImportProblem = z.infer<typeof BirthdayImportProblemSchema>;
+
+/**
+ * A wish is at most this long, with the name placeholder at most
+ * `BIRTHDAY_WISH_MAX_NAMES` times, so that with every placeholder replaced by
+ * a mention (up to 22 characters) it still fits one Discord message. The
+ * database CHECK holds the same length.
+ */
+export const BIRTHDAY_WISH_MAX_LENGTH = 1800;
+
+export const BIRTHDAY_WISH_MAX_NAMES = 5;
+
+/** The most wishes one server keeps. */
+export const BIRTHDAY_WISHES_MAX = 200;
+
+/** How many times the name placeholder appears in a wish. */
+export function countNamePlaceholders(text: string): number {
+  return text.split(BIRTHDAY_NAME_PLACEHOLDER).length - 1;
+}
+
+/** A wish as written in the dashboard; line breaks inside are kept, the ends trimmed. */
+export const BirthdayWishInputSchema = z.object({
+  text: z
+    .string()
+    .trim()
+    .min(1)
+    .max(BIRTHDAY_WISH_MAX_LENGTH)
+    // Postgres text cannot hold a NUL character; refusing it here keeps it a 400, not a 500.
+    .refine((text) => !text.includes('\u0000'), { message: 'the wish holds a NUL character' })
+    .refine((text) => countNamePlaceholders(text) >= 1, {
+      message: 'the wish must mention the celebrant',
+    })
+    .refine((text) => countNamePlaceholders(text) <= BIRTHDAY_WISH_MAX_NAMES, {
+      message: 'the wish mentions the celebrant too often',
+    }),
+});
+
+export type BirthdayWishInput = z.infer<typeof BirthdayWishInputSchema>;
+
+/** A wish as the dashboard lists it; `used` means it was sent in the current cycle. */
+export const BirthdayWishViewSchema = BirthdayWishSchema.pick({ id: true, text: true, used: true });
+
+export type BirthdayWishView = z.infer<typeof BirthdayWishViewSchema>;
+
+/** The wish an edit or a removal names, by its id. */
+export const BirthdayWishIdParamSchema = z.object({ id: z.uuid() });

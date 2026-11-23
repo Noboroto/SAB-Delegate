@@ -41,6 +41,8 @@
   "SMTP_NOT_CONFIGURED": "Chưa cài tài khoản SMTP nên chưa gửi được email.",
   "VALIDATION_FAILED": "Một số giá trị không hợp lệ. Hãy kiểm tra lại những gì đã nhập.",
   "SCHEDULE_LIMIT_REACHED": "Server này đã đạt số tin nhắn hẹn giờ tối đa đang chờ. Hãy huỷ bớt hoặc chờ chúng được gửi.",
+  "BIRTHDAY_WISH_NOT_FOUND": "Không tìm thấy lời chúc này. Có thể nó đã bị xoá.",
+  "BIRTHDAY_WISH_LIMIT_REACHED": "Server này đã có số lời chúc tối đa ({max}). Hãy xoá bớt trước khi thêm.",
   "SCHEDULE_TOO_FAR": "Thời điểm này quá xa. Hãy chọn thời điểm sớm hơn.",
   "MESSAGE_TOO_LONG": "Tin nhắn dài hơn 2000 ký tự nên bot không gửi được.",
   "ATTACHMENTS_TOO_LARGE": "Tệp lớn hơn mức server đích cho phép.",

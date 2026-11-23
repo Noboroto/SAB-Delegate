@@ -41,6 +41,8 @@
   "SMTP_NOT_CONFIGURED": "No SMTP account is set up, so no email can be sent yet.",
   "VALIDATION_FAILED": "Some values are not valid. Check what you entered and try again.",
   "SCHEDULE_LIMIT_REACHED": "This server already has the maximum number of scheduled messages waiting. Cancel some or wait for them to be sent.",
+  "BIRTHDAY_WISH_NOT_FOUND": "This wish was not found. It may have been removed.",
+  "BIRTHDAY_WISH_LIMIT_REACHED": "This server already has the maximum number of wishes ({max}). Remove some before adding more.",
   "SCHEDULE_TOO_FAR": "That time is too far ahead. Choose an earlier time.",
   "MESSAGE_TOO_LONG": "The message is longer than 2000 characters, which the bot cannot send.",
   "ATTACHMENTS_TOO_LARGE": "The files are larger than the destination server accepts.",

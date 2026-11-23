@@ -1,4 +1,9 @@
-import { BIRTHDAY_WISHES, BUSINESS_TIME_ZONE, SnowflakeSchema, isValidMonthDay } from '@sab/shared';
+import {
+  BUSINESS_TIME_ZONE,
+  LEGACY_BIRTHDAY_WISH_COUNT,
+  SnowflakeSchema,
+  isValidMonthDay,
+} from '@sab/shared';
 import {
   PlanSchema,
   type LegacyData,
@@ -20,8 +25,8 @@ import {
  *   cycle (`true` = still available), so exactly the false entries become
  *   BirthdayWishUsage rows. `count` and `max` are derived and dropped. The
  *   value is an array when lodash created it and an object when its parent
- *   already existed; both are read the same way. Indexes past the shared wish
- *   list cannot be picked any more and are dropped.
+ *   already existed; both are read the same way. Indexes past the legacy wish
+ *   list never named a real wish and are dropped.
  * - `completedDates["Y-M-D"] === true` is a finished greeting run for that
  *   business day. Only the last three days are loaded (as DONE): they are the
  *   ones that stop the first run after cutover from greeting twice. The older
@@ -156,7 +161,7 @@ export function transform(data: LegacyData, now: Date = new Date()): Plan {
       if (used !== false) continue;
       if (!/^\d+$/.test(key)) {
         skip('WISH_INDEX_INVALID');
-      } else if (Number(key) >= BIRTHDAY_WISHES.length) {
+      } else if (Number(key) >= LEGACY_BIRTHDAY_WISH_COUNT) {
         skip('WISH_INDEX_OUT_OF_RANGE');
       } else {
         guild.wishIndexes.push(Number(key));

@@ -71,6 +71,7 @@ describe('translatorFor', () => {
       EMAIL_RESEND_COOLDOWN: { seconds: 30 },
       EMAIL_RULE_INVALID: { rule: 1, term: 'domain', reason: 'TOO_DEEP' },
       EMAIL_EXPORT_TOO_LARGE: { max: 5000 },
+      BIRTHDAY_WISH_LIMIT_REACHED: { max: 200 },
     };
     for (const locale of ['vi', 'en']) {
       const t = translatorFor(locale);

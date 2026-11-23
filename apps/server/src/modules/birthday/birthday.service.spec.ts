@@ -8,6 +8,7 @@ import type { DiscordReadyService } from '../../discord/discord-ready.service.js
 import type { ErrorReporter } from '../../discord/error-reporter.service.js';
 import type { PrismaService } from '../../prisma/prisma.service.js';
 import type { GuildConfigService } from '../guild-config/guild-config.service.js';
+import type { BirthdayWishService } from './birthday-wish.service.js';
 import { BirthdayService } from './birthday.service.js';
 
 const GUILD = '100000000000000001';
@@ -54,6 +55,7 @@ function build(overrides: { existing?: string[]; matches?: number } = {}) {
     {} as never,
     { report: vi.fn() } as unknown as ErrorReporter,
     { isStopping: () => false } as unknown as DiscordReadyService,
+    { pickFor: vi.fn().mockResolvedValue('Hi ${name}') } as unknown as BirthdayWishService,
   );
   return { service, prisma, entry, audit, guilds };
 }
@@ -360,6 +362,7 @@ describe('BirthdayService.runDailyWishes', () => {
       } as never,
       reporter as unknown as ErrorReporter,
       { isStopping: () => false } as unknown as DiscordReadyService,
+      { pickFor: vi.fn().mockResolvedValue('Hi ${name}') } as unknown as BirthdayWishService,
     );
     return { service, created, reporter };
   }
